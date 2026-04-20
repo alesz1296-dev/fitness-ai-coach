@@ -1,0 +1,35 @@
+import { Request, Response, NextFunction } from "express";
+import logger from "../lib/logger.js";
+
+export interface AppError extends Error {
+  statusCode?: number;
+  isOperational?: boolean;
+}
+
+export const errorHandler = (
+  err: AppError,
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const statusCode = err.statusCode || 500;
+  const message = err.isOperational ? err.message : "Internal server error";
+
+  logger.error(`${statusCode} - ${err.message} - ${req.originalUrl} - ${req.method}`, err);
+
+  res.status(statusCode).json({
+    error: message,
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+  });
+};
+
+export const notFound = (req: Request, res: Response): void => {
+  res.status(404).json({ error: `Route ${req.originalUrl} not found` });
+};
+
+export const createError = (message: string, statusCode: number): AppError => {
+  const error: AppError = new Error(message);
+  error.statusCode = statusCode;
+  error.isOperational = true;
+  return error;
+};

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+logs/*.log
+.env
+dev.db
+dev.db-journal
+*.backup
