@@ -1,0 +1,114 @@
+﻿generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  username String @unique
+  password String
+  firstName String?
+  lastName String?
+  age Int?
+  weight Float?
+  height Float?
+  fitnessLevel String?
+  goal String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  goals Goal[]
+  workouts Workout[]
+  foods FoodLog[]
+  weights WeightLog[]
+  conversations Conversation[]
+}
+
+model Goal {
+  id    Int     @id @default(autoincrement())
+  userId Int
+  type String
+  target Float
+  current Float @default(0)
+  unit String
+  startDate DateTime @default(now())
+  endDate DateTime?
+  achieved Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Workout {
+  id    Int     @id @default(autoincrement())
+  userId Int
+  name String
+  date DateTime @default(now())
+  duration Int
+  caloriesBurned Float?
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises WorkoutExercise[]
+}
+
+model WorkoutExercise {
+  id    Int     @id @default(autoincrement())
+  workoutId Int
+  exerciseName String
+  sets Int
+  reps Int
+  weight Float?
+  rpe Int?
+  notes String?
+  createdAt DateTime @default(now())
+
+  workout Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+}
+
+model FoodLog {
+  id    Int     @id @default(autoincrement())
+  userId Int
+  foodName String
+  calories Float
+  protein Float?
+  carbs Float?
+  fats Float?
+  quantity Float
+  unit String
+  date DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model WeightLog {
+  id    Int     @id @default(autoincrement())
+  userId Int
+  weight Float
+  date DateTime @default(now())
+  notes String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Conversation {
+  id    Int     @id @default(autoincrement())
+  userId Int
+  role String
+  message String
+  response String?
+  agentType String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
