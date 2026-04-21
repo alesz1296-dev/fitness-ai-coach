@@ -20,6 +20,7 @@ model User {
   age          Int?
   weight       Float?
   height       Float?
+  sex          String? // male | female
   fitnessLevel String? // beginner | intermediate | advanced
   goal         String? // short description
   activityLevel String? // sedentary | light | moderate | active | very_active
@@ -53,6 +54,8 @@ model Goal {
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // ─────────────────────────────────────────────
@@ -79,6 +82,9 @@ model CalorieGoal {
   updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([active])
 }
 
 // ─────────────────────────────────────────────
@@ -98,6 +104,9 @@ model Workout {
 
   user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercises WorkoutExercise[]
+
+  @@index([userId])
+  @@index([date])
 }
 
 model WorkoutExercise {
@@ -114,6 +123,9 @@ model WorkoutExercise {
   updatedAt    DateTime @updatedAt   // allow inline edits
 
   workout Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@index([workoutId])
+  @@index([exerciseName])
 }
 
 // ─────────────────────────────────────────────
@@ -136,6 +148,10 @@ model WorkoutTemplate {
 
   user      User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercises TemplateExercise[]
+
+  @@index([userId])
+  @@index([isSystem])
+  @@index([splitType])
 }
 
 model TemplateExercise {
@@ -150,6 +166,8 @@ model TemplateExercise {
   createdAt    DateTime @default(now())
 
   template WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
 }
 
 // ─────────────────────────────────────────────
@@ -170,6 +188,9 @@ model FoodLog {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
 }
 
 // ─────────────────────────────────────────────
@@ -184,6 +205,9 @@ model WeightLog {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
 }
 
 // ─────────────────────────────────────────────
@@ -199,6 +223,9 @@ model Conversation {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([agentType])
 }
 
 // ─────────────────────────────────────────────
@@ -225,4 +252,5 @@ model MonthlyReport {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, month, year])
+  @@index([userId])
 }

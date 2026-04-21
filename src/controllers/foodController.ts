@@ -79,6 +79,46 @@ export const logFood = async (
   }
 };
 
+// PUT /api/foods/:id
+export const updateFoodLog = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const logId   = Number(req.params.id);
+    const existing = await prisma.foodLog.findFirst({
+      where: { id: logId, userId: req.user!.id },
+    });
+
+    if (!existing) {
+      return next(createError("Food log entry not found", 404));
+    }
+
+    const { foodName, calories, protein, carbs, fats, quantity, unit, meal, date } = req.body;
+
+    const updated = await prisma.foodLog.update({
+      where: { id: logId },
+      data: {
+        ...(foodName  !== undefined && { foodName }),
+        ...(calories  !== undefined && { calories:  Number(calories) }),
+        ...(protein   !== undefined && { protein:   Number(protein) }),
+        ...(carbs     !== undefined && { carbs:     Number(carbs) }),
+        ...(fats      !== undefined && { fats:      Number(fats) }),
+        ...(quantity  !== undefined && { quantity:  Number(quantity) }),
+        ...(unit      !== undefined && { unit }),
+        ...(meal      !== undefined && { meal }),
+        ...(date      !== undefined && { date: new Date(date) }),
+      },
+    });
+
+    logger.info(`Food log ${logId} updated for user ${req.user!.id}`);
+    res.json({ message: "Food log updated", log: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // DELETE /api/foods/:id
 export const deleteFoodLog = async (
   req: AuthRequest,

@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { validate, validateIdParam } from "../middleware/validate.js";
+import { logWeightSchema } from "../middleware/schemas.js";
 import {
   getWeightLogs,
   logWeight,
@@ -14,9 +16,9 @@ router.use(authenticate);
 router.get("/", getWeightLogs);
 
 // POST   /api/weight
-router.post("/", logWeight);
+router.post("/", validate(logWeightSchema), logWeight);
 
 // DELETE /api/weight/:id
-router.delete("/:id", deleteWeightLog);
+router.delete("/:id", validateIdParam(), deleteWeightLog);
 
 export default router;

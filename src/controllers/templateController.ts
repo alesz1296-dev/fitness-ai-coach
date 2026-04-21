@@ -3,6 +3,7 @@ import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
 import { recommendedSplits } from "../lib/seedSplits.js";
+import { normalizeExerciseName } from "../lib/normalizeExercise.js";
 import logger from "../lib/logger.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -133,7 +134,7 @@ export const createTemplate = async (
         aiGenerated: Boolean(aiGenerated),
         exercises: {
           create: (exercises || []).map((ex: any, i: number) => ({
-            exerciseName: ex.exerciseName,
+            exerciseName: normalizeExerciseName(ex.exerciseName),
             sets: Number(ex.sets),
             reps: String(ex.reps),
             restSeconds: ex.restSeconds ? Number(ex.restSeconds) : null,
@@ -212,7 +213,7 @@ export const addExercise = async (
     const exercise = await prisma.templateExercise.create({
       data: {
         templateId,
-        exerciseName,
+        exerciseName: normalizeExerciseName(exerciseName),
         sets: Number(sets),
         reps: String(reps),
         restSeconds: restSeconds ? Number(restSeconds) : null,
@@ -251,7 +252,7 @@ export const updateExercise = async (
     const updated = await prisma.templateExercise.update({
       where: { id: exerciseId },
       data: {
-        ...(exerciseName && { exerciseName }),
+        ...(exerciseName && { exerciseName: normalizeExerciseName(exerciseName) }),
         ...(sets !== undefined && { sets: Number(sets) }),
         ...(reps !== undefined && { reps: String(reps) }),
         ...(restSeconds !== undefined && { restSeconds: Number(restSeconds) }),
@@ -337,7 +338,7 @@ export const createFromWorkout = async (
         muscleGroups: JSON.stringify(muscleGroups),
         exercises: {
           create: workout.exercises.map((ex) => ({
-            exerciseName: ex.exerciseName,
+            exerciseName: normalizeExerciseName(ex.exerciseName),
             sets: ex.sets,
             reps: String(ex.reps),
             notes: ex.notes || null,

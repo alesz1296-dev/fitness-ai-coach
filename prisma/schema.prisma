@@ -1,114 +1,251 @@
-﻿generator client {
+generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  username String @unique
-  password String
-  firstName String?
-  lastName String?
-  age Int?
-  weight Float?
-  height Float?
-  fitnessLevel String?
-  goal String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ── Auth ──────────────────────────────────────────────────────────────────────
 
-  goals Goal[]
-  workouts Workout[]
-  foods FoodLog[]
-  weights WeightLog[]
-  conversations Conversation[]
+model User {
+  id            Int     @id @default(autoincrement())
+  email         String  @unique
+  username      String  @unique
+  password      String
+  firstName     String?
+  lastName      String?
+  age           Int?
+  weight        Float?
+  height        Float?
+  sex           String? // "male" | "female"
+  activityLevel String? // "sedentary" | "light" | "moderate" | "active" | "very_active"
+  fitnessLevel  String?
+  goal          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  goals          Goal[]
+  workouts       Workout[]
+  foods          FoodLog[]
+  weights        WeightLog[]
+  conversations  Conversation[]
+  calorieGoals   CalorieGoal[]
+  reports        MonthlyReport[]
+  templates      WorkoutTemplate[]
+
+  @@index([email])
 }
+
+// ── Goals ─────────────────────────────────────────────────────────────────────
 
 model Goal {
-  id    Int     @id @default(autoincrement())
-  userId Int
-  type String
-  target Float
-  current Float @default(0)
-  unit String
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String
+  target    Float
+  current   Float    @default(0)
+  unit      String
   startDate DateTime @default(now())
-  endDate DateTime?
-  achieved Boolean @default(false)
+  endDate   DateTime?
+  achieved  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
-model Workout {
-  id    Int     @id @default(autoincrement())
-  userId Int
-  name String
-  date DateTime @default(now())
-  duration Int
-  caloriesBurned Float?
-  notes String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// ── Workouts ──────────────────────────────────────────────────────────────────
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Workout {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  name           String
+  date           DateTime @default(now())
+  duration       Int
+  caloriesBurned Float?
+  notes          String?
+  templateId     Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercises WorkoutExercise[]
+
+  @@index([userId])
+  @@index([date])
 }
 
 model WorkoutExercise {
-  id    Int     @id @default(autoincrement())
-  workoutId Int
+  id           Int      @id @default(autoincrement())
+  workoutId    Int
   exerciseName String
-  sets Int
-  reps Int
-  weight Float?
-  rpe Int?
-  notes String?
-  createdAt DateTime @default(now())
+  sets         Int
+  reps         Int
+  weight       Float?
+  rpe          Int?
+  notes        String?
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   workout Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@index([workoutId])
+  @@index([exerciseName])
 }
+
+// ── Templates ─────────────────────────────────────────────────────────────────
+
+model WorkoutTemplate {
+  id           Int      @id @default(autoincrement())
+  userId       Int?     // null = system template
+  name         String
+  description  String?
+  splitType    String   // "PPL" | "Upper_Lower" | "Bro_Split" | "Full_Body" | "Custom"
+  objective    String   // "hypertrophy" | "strength" | "fat_loss" | "endurance" | "general"
+  frequency    Int      // sessions per week
+  dayLabel     String   // e.g. "Push Day", "Leg Day"
+  muscleGroups String   @default("[]") // JSON array stored as string (SQLite)
+  isSystem     Boolean  @default(false)
+  aiGenerated  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user      User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  exercises TemplateExercise[]
+
+  @@index([userId])
+  @@index([isSystem])
+}
+
+model TemplateExercise {
+  id           Int      @id @default(autoincrement())
+  templateId   Int
+  exerciseName String
+  sets         Int
+  reps         String   // allows ranges like "8-12"
+  restSeconds  Int?
+  notes        String?
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  template WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+// ── Food & Nutrition ──────────────────────────────────────────────────────────
 
 model FoodLog {
-  id    Int     @id @default(autoincrement())
-  userId Int
-  foodName String
-  calories Float
-  protein Float?
-  carbs Float?
-  fats Float?
-  quantity Float
-  unit String
-  date DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  foodName  String
+  calories  Float
+  protein   Float?
+  carbs     Float?
+  fats      Float?
+  quantity  Float
+  unit      String
+  meal      String?  // "breakfast" | "lunch" | "dinner" | "snack"
+  date      DateTime @default(now())
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
 }
+
+// ── Weight Logs ───────────────────────────────────────────────────────────────
 
 model WeightLog {
-  id    Int     @id @default(autoincrement())
-  userId Int
-  weight Float
-  date DateTime @default(now())
-  notes String?
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  weight    Float
+  date      DateTime @default(now())
+  notes     String?
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
 }
 
+// ── Calorie Goals ─────────────────────────────────────────────────────────────
+
+model CalorieGoal {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  name           String?
+  type           String   // "cut" | "bulk" | "maintain"
+  currentWeight  Float
+  targetWeight   Float
+  targetDate     DateTime
+  dailyCalories  Float
+  proteinGrams   Float
+  carbsGrams     Float
+  fatsGrams      Float
+  weeklyChange   Float    // kg per week (negative = cut)
+  tdee           Float
+  active         Boolean  @default(true)
+  feasible       Boolean  @default(true)
+  warning        String?
+  aiGenerated    Boolean  @default(false)
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([active])
+}
+
+// ── Chat / AI ─────────────────────────────────────────────────────────────────
+
 model Conversation {
-  id    Int     @id @default(autoincrement())
-  userId Int
-  role String
-  message String
-  response String?
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  role      String
+  message   String
+  response  String?
   agentType String
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([agentType])
+}
+
+// ── Monthly Reports ───────────────────────────────────────────────────────────
+
+model MonthlyReport {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  year            Int
+  month           Int
+  totalWorkouts   Int
+  totalVolume     Float    @default(0)
+  avgCalories     Float    @default(0)
+  avgProtein      Float    @default(0)
+  weightStart     Float?
+  weightEnd       Float?
+  weightDelta     Float?
+  prsHit          Int      @default(0)
+  goalProgress    Float?
+  aiSummary       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year, month])
+  @@index([userId])
 }

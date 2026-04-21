@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import { updateProfileSchema, changePasswordSchema } from "../middleware/schemas.js";
 import {
   getProfile,
   updateProfile,
@@ -16,10 +18,10 @@ router.use(authenticate);
 router.get("/profile", getProfile);
 
 // PUT  /api/users/profile
-router.put("/profile", updateProfile);
+router.put("/profile", validate(updateProfileSchema), updateProfile);
 
 // PUT  /api/users/password
-router.put("/password", changePassword);
+router.put("/password", validate(changePasswordSchema), changePassword);
 
 // DELETE /api/users/account
 router.delete("/account", deleteAccount);

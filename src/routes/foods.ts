@@ -1,8 +1,11 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { validate, validateIdParam } from "../middleware/validate.js";
+import { logFoodSchema } from "../middleware/schemas.js";
 import {
   getFoodLogs,
   logFood,
+  updateFoodLog,
   deleteFoodLog,
   getFoodHistory,
 } from "../controllers/foodController.js";
@@ -18,9 +21,12 @@ router.get("/history", getFoodHistory);
 router.get("/", getFoodLogs);
 
 // POST   /api/foods
-router.post("/", logFood);
+router.post("/", validate(logFoodSchema), logFood);
+
+// PUT    /api/foods/:id  ← edit a logged entry
+router.put("/:id", validateIdParam(), validate(logFoodSchema.partial()), updateFoodLog);
 
 // DELETE /api/foods/:id
-router.delete("/:id", deleteFoodLog);
+router.delete("/:id", validateIdParam(), deleteFoodLog);
 
 export default router;

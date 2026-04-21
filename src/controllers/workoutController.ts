@@ -2,9 +2,11 @@ import { Response, NextFunction } from "express";
 import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
+import { normalizeExerciseName } from "../lib/normalizeExercise.js";
 import logger from "../lib/logger.js";
 
-// GET /api/workouts
+// ── GET /api/workouts ─────────────────────────────────────────────────────────
+
 export const getWorkouts = async (
   req: AuthRequest,
   res: Response,
@@ -12,13 +14,13 @@ export const getWorkouts = async (
 ): Promise<void> => {
   try {
     const limit = Number(req.query.limit) || 20;
-    const page = Number(req.query.page) || 1;
-    const skip = (page - 1) * limit;
+    const page  = Number(req.query.page)  || 1;
+    const skip  = (page - 1) * limit;
 
     const [workouts, total] = await Promise.all([
       prisma.workout.findMany({
         where: { userId: req.user!.id },
-        include: { exercises: true },
+        include: { exercises: { orderBy: { order: "asc" } } },
         orderBy: { date: "desc" },
         take: limit,
         skip,
@@ -32,7 +34,8 @@ export const getWorkouts = async (
   }
 };
 
-// GET /api/workouts/:id
+// ── GET /api/workouts/:id ─────────────────────────────────────────────────────
+
 export const getWorkout = async (
   req: AuthRequest,
   res: Response,
@@ -41,7 +44,7 @@ export const getWorkout = async (
   try {
     const workout = await prisma.workout.findFirst({
       where: { id: Number(req.params.id), userId: req.user!.id },
-      include: { exercises: true },
+      include: { exercises: { orderBy: { order: "asc" } } },
     });
 
     if (!workout) {
@@ -54,18 +57,78 @@ export const getWorkout = async (
   }
 };
 
-// POST /api/workouts
+// ── PR detection helper ────────────────────────────────────────────────────────
+
+interface PRResult {
+  exerciseName: string;
+  weight: number;
+  reps: number;
+  previousBest: number;
+}
+
+async function detectNewPRs(
+  userId: number,
+  exercises: Array<{ exerciseName: string; weight?: number | null; reps: number; sets: number }>
+): Promise<PRResult[]> {
+  const newPRs: PRResult[] = [];
+
+  // Only exercises that have weight
+  const weightedExercises = exercises.filter((e) => e.weight && e.weight > 0);
+  if (!weightedExercises.length) return newPRs;
+
+  const names = [...new Set(weightedExercises.map((e) => e.exerciseName))];
+
+  // Fetch current PRs for these exercise names
+  const historicPRs = await prisma.workoutExercise.findMany({
+    where: {
+      exerciseName: { in: names },
+      workout: { userId },
+      weight: { not: null },
+    },
+    select: { exerciseName: true, weight: true },
+  });
+
+  const prMap: Record<string, number> = {};
+  for (const h of historicPRs) {
+    if (!prMap[h.exerciseName] || (h.weight ?? 0) > prMap[h.exerciseName]) {
+      prMap[h.exerciseName] = h.weight ?? 0;
+    }
+  }
+
+  for (const ex of weightedExercises) {
+    const currentBest = prMap[ex.exerciseName] ?? 0;
+    if ((ex.weight ?? 0) > currentBest) {
+      newPRs.push({
+        exerciseName: ex.exerciseName,
+        weight:       ex.weight!,
+        reps:         ex.reps,
+        previousBest: currentBest,
+      });
+    }
+  }
+
+  return newPRs;
+}
+
+// ── POST /api/workouts ────────────────────────────────────────────────────────
+
 export const createWorkout = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { name, duration, caloriesBurned, notes, exercises, date } = req.body;
+    const { name, duration, caloriesBurned, notes, exercises, date, templateId } = req.body;
 
-    if (!name || !duration) {
-      return next(createError("name and duration are required", 400));
-    }
+    // Normalise exercise names
+    const normalisedExercises = (exercises || []).map((ex: any, idx: number) => ({
+      ...ex,
+      exerciseName: normalizeExerciseName(ex.exerciseName),
+      order: ex.order ?? idx,
+    }));
+
+    // Detect PRs before saving (compare against history)
+    const newPRs = await detectNewPRs(req.user!.id, normalisedExercises);
 
     const workout = await prisma.workout.create({
       data: {
@@ -73,30 +136,38 @@ export const createWorkout = async (
         name,
         duration: Number(duration),
         ...(caloriesBurned !== undefined && { caloriesBurned: Number(caloriesBurned) }),
-        ...(notes && { notes }),
-        ...(date && { date: new Date(date) }),
+        ...(notes      && { notes }),
+        ...(date       && { date: new Date(date) }),
+        ...(templateId && { templateId: Number(templateId) }),
         exercises: {
-          create: (exercises || []).map((ex: any) => ({
+          create: normalisedExercises.map((ex: any) => ({
             exerciseName: ex.exerciseName,
-            sets: Number(ex.sets),
-            reps: Number(ex.reps),
-            ...(ex.weight !== undefined && { weight: Number(ex.weight) }),
-            ...(ex.rpe !== undefined && { rpe: Number(ex.rpe) }),
+            sets:  Number(ex.sets),
+            reps:  Number(ex.reps),
+            order: Number(ex.order ?? 0),
+            ...(ex.weight !== undefined && ex.weight !== null && { weight: Number(ex.weight) }),
+            ...(ex.rpe   !== undefined && { rpe: Number(ex.rpe) }),
             ...(ex.notes && { notes: ex.notes }),
           })),
         },
       },
-      include: { exercises: true },
+      include: { exercises: { orderBy: { order: "asc" } } },
     });
 
-    logger.info(`Workout logged for user ${req.user!.id}: ${name}`);
-    res.status(201).json({ message: "Workout logged", workout });
+    logger.info(`Workout logged for user ${req.user!.id}: ${name}${newPRs.length ? ` (${newPRs.length} new PR${newPRs.length > 1 ? "s" : ""})` : ""}`);
+
+    res.status(201).json({
+      message: "Workout logged",
+      workout,
+      newPRs: newPRs.length ? newPRs : undefined,
+    });
   } catch (error) {
     next(error);
   }
 };
 
-// PUT /api/workouts/:id
+// ── PUT /api/workouts/:id ─────────────────────────────────────────────────────
+
 export const updateWorkout = async (
   req: AuthRequest,
   res: Response,
@@ -104,7 +175,7 @@ export const updateWorkout = async (
 ): Promise<void> => {
   try {
     const workoutId = Number(req.params.id);
-    const existing = await prisma.workout.findFirst({
+    const existing  = await prisma.workout.findFirst({
       where: { id: workoutId, userId: req.user!.id },
     });
 
@@ -117,13 +188,13 @@ export const updateWorkout = async (
     const updated = await prisma.workout.update({
       where: { id: workoutId },
       data: {
-        ...(name !== undefined && { name }),
-        ...(duration !== undefined && { duration: Number(duration) }),
+        ...(name           !== undefined && { name }),
+        ...(duration       !== undefined && { duration: Number(duration) }),
         ...(caloriesBurned !== undefined && { caloriesBurned: Number(caloriesBurned) }),
-        ...(notes !== undefined && { notes }),
-        ...(date !== undefined && { date: new Date(date) }),
+        ...(notes          !== undefined && { notes }),
+        ...(date           !== undefined && { date: new Date(date) }),
       },
-      include: { exercises: true },
+      include: { exercises: { orderBy: { order: "asc" } } },
     });
 
     res.json({ message: "Workout updated", workout: updated });
@@ -132,7 +203,8 @@ export const updateWorkout = async (
   }
 };
 
-// DELETE /api/workouts/:id
+// ── DELETE /api/workouts/:id ──────────────────────────────────────────────────
+
 export const deleteWorkout = async (
   req: AuthRequest,
   res: Response,
@@ -140,7 +212,7 @@ export const deleteWorkout = async (
 ): Promise<void> => {
   try {
     const workoutId = Number(req.params.id);
-    const existing = await prisma.workout.findFirst({
+    const existing  = await prisma.workout.findFirst({
       where: { id: workoutId, userId: req.user!.id },
     });
 
@@ -155,7 +227,8 @@ export const deleteWorkout = async (
   }
 };
 
-// GET /api/workouts/stats — personal records and totals
+// ── GET /api/workouts/stats ───────────────────────────────────────────────────
+
 export const getStats = async (
   req: AuthRequest,
   res: Response,
@@ -164,7 +237,7 @@ export const getStats = async (
   try {
     const userId = req.user!.id;
 
-    const [totalWorkouts, totalCaloriesBurned, recentWorkouts] = await Promise.all([
+    const [totalWorkouts, totalCaloriesResult, recentWorkouts] = await Promise.all([
       prisma.workout.count({ where: { userId } }),
       prisma.workout.aggregate({
         where: { userId },
@@ -174,13 +247,13 @@ export const getStats = async (
         where: { userId },
         orderBy: { date: "desc" },
         take: 5,
-        include: { exercises: true },
+        include: { exercises: { orderBy: { order: "asc" } } },
       }),
     ]);
 
-    // Best lifts per exercise (highest weight)
+    // Best lifts per exercise (highest weight × reps ≈ 1RM)
     const exercises = await prisma.workoutExercise.findMany({
-      where: { workout: { userId } },
+      where: { workout: { userId }, weight: { not: null } },
       orderBy: { weight: "desc" },
     });
 
@@ -193,7 +266,7 @@ export const getStats = async (
 
     res.json({
       totalWorkouts,
-      totalCaloriesBurned: totalCaloriesBurned._sum.caloriesBurned || 0,
+      totalCaloriesBurned: totalCaloriesResult._sum.caloriesBurned || 0,
       personalRecords: prs,
       recentWorkouts,
     });
@@ -202,16 +275,16 @@ export const getStats = async (
   }
 };
 
-// GET /api/workouts/exercises/:name/progression
-// Returns date + max weight per session for a specific exercise — for charting
+// ── GET /api/workouts/exercises/:name/progression ─────────────────────────────
+
 export const getExerciseProgression = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const exerciseName = decodeURIComponent(req.params.name);
-    const limit = Number(req.query.limit) || 30;
+    const exerciseName = normalizeExerciseName(decodeURIComponent(req.params.name));
+    const limit        = Number(req.query.limit) || 30;
 
     const logs = await prisma.workoutExercise.findMany({
       where: {
@@ -220,22 +293,25 @@ export const getExerciseProgression = async (
       },
       include: { workout: { select: { date: true, name: true } } },
       orderBy: { workout: { date: "asc" } },
-      take: limit * 5, // fetch more to aggregate per session
+      take: limit * 5,
     });
 
-    // Group by workout session — keep best set (highest weight) per session
-    const bySession: Record<string, { date: string; workoutName: string; maxWeight: number; bestReps: number; totalVolume: number }> = {};
+    // Group by workout session — best set per session
+    const bySession: Record<string, {
+      date: string; workoutName: string; maxWeight: number; bestReps: number; totalVolume: number;
+    }> = {};
+
     for (const log of logs) {
-      const key = String(log.workoutId);
+      const key     = String(log.workoutId);
       const dateStr = log.workout.date.toISOString().split("T")[0];
-      const vol = (log.weight || 0) * log.sets * log.reps;
+      const vol     = (log.weight || 0) * log.sets * log.reps;
 
       if (!bySession[key]) {
         bySession[key] = { date: dateStr, workoutName: log.workout.name, maxWeight: log.weight || 0, bestReps: log.reps, totalVolume: vol };
       } else {
         if ((log.weight || 0) > bySession[key].maxWeight) {
           bySession[key].maxWeight = log.weight || 0;
-          bySession[key].bestReps = log.reps;
+          bySession[key].bestReps  = log.reps;
         }
         bySession[key].totalVolume += vol;
       }
@@ -245,15 +321,14 @@ export const getExerciseProgression = async (
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(-limit);
 
-    // Calculate estimated 1RM using Epley formula: weight * (1 + reps/30)
     const withORM = progression.map((p) => ({
       ...p,
       estimated1RM: p.maxWeight > 0 ? Math.round(p.maxWeight * (1 + p.bestReps / 30)) : null,
     }));
 
-    // All-time PR
-    const allTimePR = progression.reduce((best, p) =>
-      p.maxWeight > best.maxWeight ? p : best, progression[0] || { maxWeight: 0, date: "" }
+    const allTimePR = progression.reduce(
+      (best, p) => (p.maxWeight > best.maxWeight ? p : best),
+      progression[0] || { maxWeight: 0, date: "" }
     );
 
     res.json({
@@ -267,7 +342,8 @@ export const getExerciseProgression = async (
   }
 };
 
-// PUT /api/workouts/exercises/:exerciseId — inline edit a single exercise entry
+// ── PUT /api/workouts/exercises/:exerciseId ───────────────────────────────────
+
 export const updateExerciseEntry = async (
   req: AuthRequest,
   res: Response,
@@ -276,7 +352,6 @@ export const updateExerciseEntry = async (
   try {
     const exerciseId = Number(req.params.exerciseId);
 
-    // Verify the exercise belongs to this user's workout
     const exercise = await prisma.workoutExercise.findFirst({
       where: { id: exerciseId, workout: { userId: req.user!.id } },
     });
@@ -287,12 +362,12 @@ export const updateExerciseEntry = async (
     const updated = await prisma.workoutExercise.update({
       where: { id: exerciseId },
       data: {
-        ...(sets !== undefined && { sets: Number(sets) }),
-        ...(reps !== undefined && { reps: Number(reps) }),
+        ...(sets   !== undefined && { sets:   Number(sets) }),
+        ...(reps   !== undefined && { reps:   Number(reps) }),
         ...(weight !== undefined && { weight: weight === null ? null : Number(weight) }),
-        ...(rpe !== undefined && { rpe: Number(rpe) }),
-        ...(notes !== undefined && { notes }),
-        ...(order !== undefined && { order: Number(order) }),
+        ...(rpe    !== undefined && { rpe:    Number(rpe) }),
+        ...(notes  !== undefined && { notes }),
+        ...(order  !== undefined && { order:  Number(order) }),
       },
     });
 
@@ -302,7 +377,8 @@ export const updateExerciseEntry = async (
   }
 };
 
-// DELETE /api/workouts/exercises/:exerciseId — remove a single exercise from a workout
+// ── DELETE /api/workouts/exercises/:exerciseId ────────────────────────────────
+
 export const deleteExerciseEntry = async (
   req: AuthRequest,
   res: Response,
@@ -318,6 +394,82 @@ export const deleteExerciseEntry = async (
 
     await prisma.workoutExercise.delete({ where: { id: exerciseId } });
     res.json({ message: "Exercise removed from workout" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ── POST /api/workouts/start-from-template/:templateId ────────────────────────
+// Creates a new (empty/pre-filled) workout session from a template.
+// The frontend can edit it before formally saving; this is just the starter object.
+
+export const startFromTemplate = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const templateId = Number(req.params.templateId);
+
+    // Load template with exercises
+    const template = await prisma.workoutTemplate.findFirst({
+      where: {
+        id: templateId,
+        OR: [
+          { userId: req.user!.id },  // user's own template
+          { isSystem: true },         // system / recommended template
+        ],
+      },
+      include: { exercises: { orderBy: { order: "asc" } } },
+    });
+
+    if (!template) {
+      return next(createError("Template not found", 404));
+    }
+
+    // Build default workout name  (e.g. "Push Day — Apr 20")
+    const today       = new Date();
+    const dateLabel   = today.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const workoutName = req.body.name ?? `${template.dayLabel} — ${dateLabel}`;
+
+    // Create the workout pre-filled with the template's exercises.
+    // Reps in templates are strings ("8-12"), so we take the lower bound as a default.
+    const workout = await prisma.workout.create({
+      data: {
+        userId:     req.user!.id,
+        name:       workoutName,
+        duration:   0, // user fills this in after the session
+        templateId: template.id,
+        exercises: {
+          create: template.exercises.map((te, idx) => {
+            // Parse "8-12" → 8, "5" → 5
+            const repsDefault = parseInt(te.reps.split("-")[0], 10) || 8;
+            return {
+              exerciseName: normalizeExerciseName(te.exerciseName),
+              sets:  te.sets,
+              reps:  repsDefault,
+              order: te.order ?? idx,
+              ...(te.notes && { notes: te.notes }),
+            };
+          }),
+        },
+      },
+      include: { exercises: { orderBy: { order: "asc" } } },
+    });
+
+    logger.info(`Workout started from template ${templateId} for user ${req.user!.id}`);
+
+    res.status(201).json({
+      message: "Workout session started",
+      workout,
+      template: {
+        id:          template.id,
+        name:        template.name,
+        dayLabel:    template.dayLabel,
+        objective:   template.objective,
+        description: template.description,
+      },
+    });
   } catch (error) {
     next(error);
   }

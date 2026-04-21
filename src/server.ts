@@ -20,7 +20,9 @@ import weightRoutes from "./routes/weight.js";
 import chatRoutes from "./routes/chat.js";
 import templateRoutes from "./routes/templates.js";
 import calorieGoalRoutes from "./routes/calorieGoals.js";
-import reportRoutes from "./routes/reports.js";
+import reportRoutes    from "./routes/reports.js";
+import dashboardRoutes from "./routes/dashboard.js";
+import searchRoutes    from "./routes/search.js";
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -29,9 +31,11 @@ const PORT = process.env.PORT || 3000;
 app.use(helmet());
 app.use(cors({
   origin: process.env.CLIENT_URL || "*",
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
 }));
+app.options("*", cors()); // handle preflight for all routes
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -61,7 +65,9 @@ app.use("/api/weight", weightRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/templates", templateRoutes);
 app.use("/api/calorie-goals", calorieGoalRoutes);
-app.use("/api/reports", reportRoutes);
+app.use("/api/reports",    reportRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/search",   searchRoutes);
 
 // ── 404 & Error Handlers ─────────────────────────────────────────────────────
 app.use(notFound);
@@ -79,14 +85,33 @@ const server = app.listen(PORT, async () => {
   logger.info(`📍 Health: http://localhost:${PORT}/api/health`);
 });
 
-// Graceful shutdown
-process.on("SIGTERM", async () => {
-  logger.info("SIGTERM received — shutting down gracefully");
+// Handle port already in use — gives a clear message instead of a stack trace
+server.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EADDRINUSE") {
+    logger.error(`❌ Port ${PORT} is already in use.`);
+    logger.error(`   Run this to free it:  npx kill-port ${PORT}`);
+    process.exit(1);
+  } else {
+    throw err;
+  }
+});
+
+// ── Graceful Shutdown (works on Windows too) ─────────────────────────────────
+const shutdown = async (signal: string) => {
+  logger.info(`${signal} received — shutting down`);
   server.close(async () => {
     await prisma.$disconnect();
     logger.info("Server closed");
     process.exit(0);
   });
-});
+  // Force-kill after 3 s if graceful close hangs (common on Windows)
+  setTimeout(() => {
+    logger.warn("Forced exit after timeout");
+    process.exit(0);
+  }, 3000).unref();
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT",  () => shutdown("SIGINT"));   // Ctrl+C on Windows
 
 export default app;

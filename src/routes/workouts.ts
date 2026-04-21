@@ -1,5 +1,11 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { validate, validateIdParam } from "../middleware/validate.js";
+import {
+  createWorkoutSchema,
+  updateWorkoutSchema,
+  updateExerciseEntrySchema,
+} from "../middleware/schemas.js";
 import {
   getWorkouts,
   getWorkout,
@@ -10,6 +16,7 @@ import {
   getExerciseProgression,
   updateExerciseEntry,
   deleteExerciseEntry,
+  startFromTemplate,
 } from "../controllers/workoutController.js";
 
 const router = Router();
@@ -23,25 +30,37 @@ router.get("/stats", getStats);
 router.get("/exercises/:name/progression", getExerciseProgression);
 
 // PUT    /api/workouts/exercises/:exerciseId  (inline edit a set/rep/weight row)
-router.put("/exercises/:exerciseId", updateExerciseEntry);
+router.put(
+  "/exercises/:exerciseId",
+  validateIdParam("exerciseId"),
+  validate(updateExerciseEntrySchema),
+  updateExerciseEntry
+);
 
 // DELETE /api/workouts/exercises/:exerciseId  (remove a row from a workout)
-router.delete("/exercises/:exerciseId", deleteExerciseEntry);
+router.delete(
+  "/exercises/:exerciseId",
+  validateIdParam("exerciseId"),
+  deleteExerciseEntry
+);
+
+// POST   /api/workouts/start-from-template/:templateId
+router.post("/start-from-template/:templateId", validateIdParam("templateId"), startFromTemplate);
 
 // ── Workout CRUD ──────────────────────────────────────────────────────────────
 // GET  /api/workouts
 router.get("/", getWorkouts);
 
 // POST /api/workouts
-router.post("/", createWorkout);
+router.post("/", validate(createWorkoutSchema), createWorkout);
 
 // GET  /api/workouts/:id
-router.get("/:id", getWorkout);
+router.get("/:id", validateIdParam(), getWorkout);
 
 // PUT  /api/workouts/:id
-router.put("/:id", updateWorkout);
+router.put("/:id", validateIdParam(), validate(updateWorkoutSchema), updateWorkout);
 
 // DELETE /api/workouts/:id
-router.delete("/:id", deleteWorkout);
+router.delete("/:id", validateIdParam(), deleteWorkout);
 
 export default router;
