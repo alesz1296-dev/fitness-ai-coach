@@ -226,6 +226,31 @@ export interface MonthlyReport {
   createdAt: string;
 }
 
+// ── Weekly Plan ───────────────────────────────────────────────────────────────
+export interface WeeklyPlanDay {
+  id:             number;
+  planId:         number;
+  dayIndex:       number;  // 0 = Monday … 6 = Sunday
+  label:          string;
+  targetCalories: number | null;
+  actualCalories: number | null;
+  completed:      boolean;
+  completedAt:    string | null;
+  workoutId:      number | null;
+  notes:          string | null;
+  createdAt:      string;
+  updatedAt:      string;
+}
+
+export interface WeeklyPlan {
+  id:        number;
+  userId:    number;
+  weekStart: string;
+  days:      WeeklyPlanDay[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── API helpers ───────────────────────────────────────────────────────────────
 export interface PaginatedResponse<T> {
   data: T[];

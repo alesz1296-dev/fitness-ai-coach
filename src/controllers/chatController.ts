@@ -3,7 +3,7 @@ import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
 import { chat, ChatMessage } from "../ai/agent.js";
-import { AgentType } from "../ai/prompts.js";
+import { AgentType, extractWorkoutJson, extractNutritionJson } from "../ai/prompts.js";
 import { calculateCalorieGoal } from "../lib/calorieCalculator.js";
 import logger from "../lib/logger.js";
 
@@ -80,11 +80,18 @@ export const sendMessage = async (
 
     logger.info(`Chat (${agentType}) — user ${req.user!.id} — ${tokensUsed} tokens`);
 
+    // Extract structured JSON blocks from the AI response so the frontend
+    // can render "Save as Template" / "Save as Goal" buttons without parsing raw text.
+    const suggestedWorkout  = extractWorkoutJson(aiResponse);
+    const suggestedPlan     = extractNutritionJson(aiResponse);
+
     res.json({
       message: aiResponse,
       agentType,
       conversationId: conversation.id,
       tokensUsed,
+      ...(suggestedWorkout && { suggestedWorkout }),
+      ...(suggestedPlan    && { suggestedPlan }),
     });
   } catch (error: any) {
     // Handle OpenAI API errors gracefully

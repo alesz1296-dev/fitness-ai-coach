@@ -6,10 +6,18 @@ import { Button } from "../../components/ui/Button";
 
 type AgentType = "coach" | "nutritionist" | "general";
 
-const AGENTS: { id: AgentType; label: string; icon: string; desc: string; color: string }[] = [
-  { id: "coach",       label: "AI Coach",      icon: "🏋️", desc: "Workout plans, recovery, technique tips",    color: "bg-brand-600" },
-  { id: "nutritionist",label: "Nutritionist",  icon: "🥗", desc: "Meal plans, macros, food advice",            color: "bg-green-600" },
-  { id: "general",     label: "General",       icon: "🤖", desc: "Any fitness or health question",              color: "bg-purple-600" },
+interface ChatMessage {
+  role: string;
+  content: string;
+  id?: number;
+  suggestedWorkout?: Record<string, any>;
+  suggestedPlan?: Record<string, any>;
+}
+
+const AGENTS: { id: AgentType; label: string; icon: string; desc: string }[] = [
+  { id: "coach",        label: "AI Coach",     icon: "🏋️", desc: "Workout plans, recovery, technique tips" },
+  { id: "nutritionist", label: "Nutritionist", icon: "🥗", desc: "Meal plans, macros, food advice" },
+  { id: "general",      label: "General",      icon: "🤖", desc: "Any fitness or health question" },
 ];
 
 const STARTERS: Record<AgentType, string[]> = {
@@ -50,47 +58,43 @@ function TypingDots() {
 
 // ── Chat bubble ───────────────────────────────────────────────────────────────
 function ChatBubble({ msg, agentIcon, onSaveWorkout, onSavePlan }: {
-  msg:           { role: string; content: string; id?: number };
+  msg:           ChatMessage;
   agentIcon:     string;
-  onSaveWorkout: (text: string) => void;
-  onSavePlan:    (text: string) => void;
+  onSaveWorkout: (workout: Record<string, any>) => void;
+  onSavePlan:    (plan: Record<string, any>) => void;
 }) {
   const isUser = msg.role === "user";
-  const text   = msg.content;
 
-  // Detect if AI message contains a saveable workout or plan
-  const hasSaveWorkout = !isUser && (
-    text.toLowerCase().includes("workout") ||
-    text.toLowerCase().includes("exercise") ||
-    text.toLowerCase().includes("sets") ||
-    text.toLowerCase().includes("reps")
-  );
-  const hasSavePlan = !isUser && (
-    text.toLowerCase().includes("calorie") ||
-    text.toLowerCase().includes("macro") ||
-    text.toLowerCase().includes("protein") ||
-    text.toLowerCase().includes("meal plan")
-  );
+  // Strip the fenced JSON blocks from displayed text so users don't see raw JSON
+  const displayText = msg.content
+    .replace(/```workout-json[\s\S]*?```/g, "")
+    .replace(/```nutrition-json[\s\S]*?```/g, "")
+    .trim();
 
-  // Simple markdown-ish rendering: bold (**text**), code, line breaks
+  // Simple markdown-ish rendering: bold (**text**), line breaks
   const renderText = (raw: string) => {
     const lines = raw.split("\n");
     return lines.map((line, li) => {
-      // Bold
       const parts = line.split(/(\*\*[^*]+\*\*)/g);
       const rendered = parts.map((p, pi) =>
         p.startsWith("**") && p.endsWith("**")
           ? <strong key={pi}>{p.slice(2, -2)}</strong>
           : <span key={pi}>{p}</span>
       );
-      return <p key={li} className={line.startsWith("- ") || line.startsWith("• ") ? "ml-3" : ""}>{rendered}</p>;
+      return (
+        <p key={li} className={line.startsWith("- ") || line.startsWith("• ") ? "ml-3" : ""}>
+          {rendered}
+        </p>
+      );
     });
   };
 
   return (
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
       {/* Avatar */}
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 ${isUser ? "bg-brand-600 text-white" : "bg-gray-100"}`}>
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 ${
+        isUser ? "bg-brand-600 text-white" : "bg-gray-100"
+      }`}>
         {isUser ? "Me" : agentIcon}
       </div>
 
@@ -101,23 +105,23 @@ function ChatBubble({ msg, agentIcon, onSaveWorkout, onSavePlan }: {
             ? "bg-brand-600 text-white rounded-tr-sm"
             : "bg-white border border-gray-100 text-gray-800 rounded-tl-sm shadow-sm"
         }`}>
-          {renderText(text)}
+          {renderText(displayText)}
         </div>
 
-        {/* Save buttons */}
-        {(hasSaveWorkout || hasSavePlan) && (
-          <div className="flex gap-2 mt-1">
-            {hasSaveWorkout && (
+        {/* Save buttons — only when structured data came back from the API */}
+        {(msg.suggestedWorkout || msg.suggestedPlan) && (
+          <div className="flex gap-2 mt-1 flex-wrap">
+            {msg.suggestedWorkout && (
               <button
-                onClick={() => onSaveWorkout(text)}
+                onClick={() => onSaveWorkout(msg.suggestedWorkout!)}
                 className="text-xs text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-3 py-1 rounded-full transition-colors font-medium"
               >
                 💾 Save as Template
               </button>
             )}
-            {hasSavePlan && (
+            {msg.suggestedPlan && (
               <button
-                onClick={() => onSavePlan(text)}
+                onClick={() => onSavePlan(msg.suggestedPlan!)}
                 className="text-xs text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-full transition-colors font-medium"
               >
                 🎯 Save as Goal
@@ -136,20 +140,21 @@ export default function ChatPage() {
   const defaultAgent   = (searchParams.get("agent") as AgentType) || "general";
 
   const [agent,    setAgent]    = useState<AgentType>(defaultAgent);
-  const [messages, setMessages] = useState<{ role: string; content: string; id?: number }[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input,    setInput]    = useState("");
   const [typing,   setTyping]   = useState(false);
   const [loading,  setLoading]  = useState(false);
-  const [saveMsg,  setSaveMsg]  = useState("");
+  const [saveMsg,  setSaveMsg]  = useState<{ text: string; ok: boolean } | null>(null);
   const bottomRef              = useRef<HTMLDivElement>(null);
   const inputRef               = useRef<HTMLTextAreaElement>(null);
 
-  // Load history
+  // Load conversation history — history entries don't carry structured JSON
+  // (they're loaded from DB text), so save buttons won't appear on old messages.
   const loadHistory = useCallback(async (a: AgentType) => {
     setLoading(true);
     try {
       const res = await chatApi.getHistory(a, 1, 30);
-      const convs: { role: string; content: string; id: number }[] = [];
+      const convs: ChatMessage[] = [];
       for (const c of [...res.data.conversations].reverse()) {
         convs.push({ role: "user",      content: c.message,  id: c.id });
         if (c.response) convs.push({ role: "assistant", content: c.response, id: c.id });
@@ -163,6 +168,11 @@ export default function ChatPage() {
 
   const agentInfo = AGENTS.find((a) => a.id === agent)!;
 
+  const showToast = (text: string, ok = true) => {
+    setSaveMsg({ text, ok });
+    setTimeout(() => setSaveMsg(null), 3500);
+  };
+
   const send = async (text?: string) => {
     const msg = (text ?? input).trim();
     if (!msg || typing) return;
@@ -172,9 +182,21 @@ export default function ChatPage() {
 
     try {
       const res = await chatApi.send({ message: msg, agentType: agent });
-      setMessages((prev) => [...prev, { role: "assistant", content: res.data.message }]);
-    } catch (e: any) {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Sorry, I couldn't respond right now. Please try again." }]);
+      const { message: aiText, suggestedWorkout, suggestedPlan } = res.data;
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: aiText,
+          ...(suggestedWorkout && { suggestedWorkout }),
+          ...(suggestedPlan    && { suggestedPlan }),
+        },
+      ]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Sorry, I couldn't respond right now. Please try again." },
+      ]);
     } finally { setTyping(false); }
   };
 
@@ -184,24 +206,45 @@ export default function ChatPage() {
     setMessages([]);
   };
 
-  const handleSaveWorkout = async (text: string) => {
+  // Save workout template using the structured JSON the AI embedded
+  const handleSaveWorkout = async (workout: Record<string, any>) => {
     try {
       await chatApi.saveWorkout({
-        name:      `${agentInfo.label} Workout`,
-        splitType: "Custom",
-        objective: "general",
-        frequency: 3,
-        dayLabel:  "AI Workout",
-        exercises: [],            // parsed by backend from chat context
+        name:         workout.name        || `${agentInfo.label} Workout`,
+        description:  workout.description || "Suggested by AI Coach",
+        splitType:    workout.splitType   || "Custom",
+        objective:    workout.objective   || "general",
+        frequency:    workout.frequency   ?? 3,
+        dayLabel:     workout.dayLabel    || workout.name || "AI Workout",
+        muscleGroups: workout.muscleGroups ?? [],
+        exercises:    workout.exercises   ?? [],
       });
-      setSaveMsg("Template saved! Check your Templates page.");
-    } catch { setSaveMsg("Couldn't auto-parse — copy the workout and add it manually."); }
-    setTimeout(() => setSaveMsg(""), 3000);
+      showToast("✅ Template saved! Check your Templates page.");
+    } catch (err: any) {
+      const detail = err?.response?.data?.error || "Unknown error";
+      showToast(`❌ Couldn't save template: ${detail}`, false);
+    }
   };
 
-  const handleSavePlan = async (text: string) => {
-    setSaveMsg("Go to Goals → New Goal to set up your calorie plan from the AI recommendation.");
-    setTimeout(() => setSaveMsg(""), 4000);
+  // Save calorie / macro plan using the structured JSON the AI embedded
+  const handleSavePlan = async (plan: Record<string, any>) => {
+    try {
+      await chatApi.saveCaloriePlan({
+        name:          plan.name,
+        currentWeight: plan.currentWeight,
+        targetWeight:  plan.targetWeight,
+        targetDate:    plan.targetDate,
+        dailyCalories: plan.dailyCalories,
+        proteinGrams:  plan.proteinGrams,
+        carbsGrams:    plan.carbsGrams,
+        fatsGrams:     plan.fatsGrams,
+        notes:         plan.notes,
+      });
+      showToast("✅ Calorie goal saved! Check your Goals page.");
+    } catch (err: any) {
+      const detail = err?.response?.data?.error || "Unknown error";
+      showToast(`❌ Couldn't save plan: ${detail}`, false);
+    }
   };
 
   return (
@@ -212,7 +255,10 @@ export default function ChatPage() {
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-lg font-bold text-gray-900">AI Coach</h1>
             {messages.length > 0 && (
-              <button onClick={clearHistory} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+              <button
+                onClick={clearHistory}
+                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+              >
                 Clear history
               </button>
             )}
@@ -244,7 +290,7 @@ export default function ChatPage() {
               <div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" />
             </div>
           ) : messages.length === 0 ? (
-            /* Welcome state */
+            /* Welcome / starter prompts */
             <div className="text-center py-10">
               <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">
                 {agentInfo.icon}
@@ -277,23 +323,27 @@ export default function ChatPage() {
 
           {typing && (
             <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm shrink-0">{agentInfo.icon}</div>
+              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm shrink-0">
+                {agentInfo.icon}
+              </div>
               <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm shadow-sm">
                 <TypingDots />
               </div>
             </div>
           )}
 
-          {/* Save feedback toast */}
-          {saveMsg && (
-            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-lg z-50 animate-fade-in">
-              {saveMsg}
-            </div>
-          )}
-
           <div ref={bottomRef} />
         </div>
       </div>
+
+      {/* Toast notification */}
+      {saveMsg && (
+        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 text-white text-sm px-5 py-3 rounded-xl shadow-lg z-50 transition-all ${
+          saveMsg.ok ? "bg-gray-900" : "bg-red-600"
+        }`}>
+          {saveMsg.text}
+        </div>
+      )}
 
       {/* Input bar */}
       <div className="bg-white border-t border-gray-100 px-4 py-4 shrink-0">

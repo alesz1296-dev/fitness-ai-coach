@@ -8,6 +8,7 @@ import { useAuthStore } from "../../store/authStore";
 import { dashboardApi } from "../../api";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import WeeklyPlanWidget from "../../components/WeeklyPlanWidget";
 import type { DashboardData } from "../../types";
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
@@ -326,6 +327,9 @@ export default function Dashboard() {
               </div>
             )}
           </Card>
+
+          {/* Weekly Plan */}
+          <WeeklyPlanWidget />
 
           {/* Quick actions */}
           <Card>

@@ -3,6 +3,7 @@ import type {
   AuthResponse, User, Workout, WorkoutStats, WorkoutTemplate,
   FoodLog, FoodTotals, WeightLog, WeightStats, Goal, CalorieGoal,
   Conversation, MonthlyReport, ExerciseProgression, DashboardData,
+  WeeklyPlan, WeeklyPlanDay,
 } from "../types";
 
 // ── Search ────────────────────────────────────────────────────────────────────
@@ -127,13 +128,34 @@ export const calorieGoalsApi = {
 // ── Chat ──────────────────────────────────────────────────────────────────────
 export const chatApi = {
   send: (data: { message: string; agentType?: "coach" | "nutritionist" | "general" }) =>
-    api.post<{ message: string; agentType: string; conversationId: number }>("/chat", data),
+    api.post<{
+      message: string;
+      agentType: string;
+      conversationId: number;
+      tokensUsed?: number;
+      suggestedWorkout?: Record<string, any>;
+      suggestedPlan?: Record<string, any>;
+    }>("/chat", data),
   getHistory: (agentType?: string, page = 1, limit = 20) =>
     api.get<{ conversations: Conversation[]; total: number }>(`/chat/history?page=${page}&limit=${limit}${agentType ? `&agentType=${agentType}` : ""}`),
   clearHistory: (agentType?: string) =>
     api.delete(`/chat/history${agentType ? `?agentType=${agentType}` : ""}`),
   saveWorkout: (data: any) => api.post("/chat/save-workout", data),
   saveCaloriePlan: (data: any) => api.post("/chat/save-calorie-plan", data),
+};
+
+// ── Weekly Plan ───────────────────────────────────────────────────────────────
+export const weeklyPlanApi = {
+  get: (week?: string) =>
+    api.get<{ plan: WeeklyPlan | null; weekStart: string }>(`/weekly-plan${week ? `?week=${week}` : ""}`),
+  upsert: (data: { week?: string; days: Array<{ dayIndex: number; label?: string; targetCalories?: number | null; notes?: string }> }) =>
+    api.post<{ plan: WeeklyPlan }>("/weekly-plan", data),
+  toggleDay: (dayId: number, data?: { actualCalories?: number; workoutId?: number }) =>
+    api.patch<{ day: WeeklyPlanDay }>(`/weekly-plan/days/${dayId}/toggle`, data ?? {}),
+  updateDay: (dayId: number, data: Partial<WeeklyPlanDay>) =>
+    api.put<{ day: WeeklyPlanDay }>(`/weekly-plan/days/${dayId}`, data),
+  deletePlan: (planId: number) =>
+    api.delete(`/weekly-plan/${planId}`),
 };
 
 // ── Reports ───────────────────────────────────────────────────────────────────

@@ -9,6 +9,7 @@ dotenv.config();
 import logger from "./lib/logger.js";
 import prisma from "./lib/prisma.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
+import { generalLimiter } from "./middleware/rateLimiter.js";
 
 // Routes
 import authRoutes from "./routes/auth.js";
@@ -21,8 +22,9 @@ import chatRoutes from "./routes/chat.js";
 import templateRoutes from "./routes/templates.js";
 import calorieGoalRoutes from "./routes/calorieGoals.js";
 import reportRoutes    from "./routes/reports.js";
-import dashboardRoutes from "./routes/dashboard.js";
-import searchRoutes    from "./routes/search.js";
+import dashboardRoutes  from "./routes/dashboard.js";
+import searchRoutes     from "./routes/search.js";
+import weeklyPlanRoutes from "./routes/weeklyPlan.js";
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -38,6 +40,9 @@ app.use(cors({
 app.options("*", cors()); // handle preflight for all routes
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// ── Rate limiting (general — 100 req/15 min per IP) ─────────────────────────
+app.use("/api/", generalLimiter);
 
 // ── Request Logging ─────────────────────────────────────────────────────────
 app.use((req: Request, _res: Response, next) => {
@@ -67,7 +72,8 @@ app.use("/api/templates", templateRoutes);
 app.use("/api/calorie-goals", calorieGoalRoutes);
 app.use("/api/reports",    reportRoutes);
 app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/search",   searchRoutes);
+app.use("/api/search",      searchRoutes);
+app.use("/api/weekly-plan", weeklyPlanRoutes);
 
 // ── 404 & Error Handlers ─────────────────────────────────────────────────────
 app.use(notFound);

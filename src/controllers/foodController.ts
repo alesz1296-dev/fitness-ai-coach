@@ -52,7 +52,7 @@ export const logFood = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { foodName, calories, protein, carbs, fats, quantity, unit, date } = req.body;
+    const { foodName, calories, protein, carbs, fats, quantity, unit, meal, date } = req.body;
 
     if (!foodName || calories === undefined || !quantity || !unit) {
       return next(createError("foodName, calories, quantity, and unit are required", 400));
@@ -64,10 +64,11 @@ export const logFood = async (
         foodName,
         calories: Number(calories),
         ...(protein !== undefined && { protein: Number(protein) }),
-        ...(carbs !== undefined && { carbs: Number(carbs) }),
-        ...(fats !== undefined && { fats: Number(fats) }),
+        ...(carbs   !== undefined && { carbs:   Number(carbs) }),
+        ...(fats    !== undefined && { fats:    Number(fats) }),
         quantity: Number(quantity),
         unit,
+        ...(meal && { meal }),
         ...(date && { date: new Date(date) }),
       },
     });
