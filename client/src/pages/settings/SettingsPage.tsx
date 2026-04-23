@@ -176,12 +176,17 @@ function ProfileForm() {
         />
 
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">Fitness Goal (optional)</label>
+          <label className="text-sm font-medium text-gray-700 block mb-1">
+            Active Goal
+            {form.goal && (
+              <span className="ml-2 text-xs font-normal text-gray-400">(set from Goals tab — edit freely)</span>
+            )}
+          </label>
           <textarea
             value={form.goal}
             onChange={set("goal")}
             rows={2}
-            placeholder="e.g. Lose 10kg for summer, build a bigger chest, run a 5k…"
+            placeholder="Set a goal in the Goals tab, or describe it here — e.g. Lose 10kg for summer…"
             className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
           />
         </div>

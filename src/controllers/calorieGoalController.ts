@@ -78,10 +78,12 @@ export const createCalorieGoal = async (
       data: { active: false },
     });
 
+    const goalName = name || `${calc.type === "cut" ? "Cut" : calc.type === "bulk" ? "Bulk" : "Maintain"} — ${new Date(targetDate).toLocaleDateString()}`;
+
     const goal = await prisma.calorieGoal.create({
       data: {
         userId: req.user!.id,
-        name: name || `${calc.type === "cut" ? "Cut" : calc.type === "bulk" ? "Bulk" : "Maintain"} — ${new Date(targetDate).toLocaleDateString()}`,
+        name: goalName,
         type: calc.type,
         currentWeight: Number(currentWeight),
         targetWeight: Number(targetWeight),
@@ -95,6 +97,12 @@ export const createCalorieGoal = async (
         aiGenerated: Boolean(aiGenerated),
         notes: notes || null,
       },
+    });
+
+    // Keep user.goal in sync so the Settings page reflects the active goal
+    await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { goal: goalName },
     });
 
     logger.info(`Calorie goal created for user ${req.user!.id}: ${goal.name}`);
@@ -196,6 +204,14 @@ export const updateCalorieGoal = async (
         ...(active !== undefined && { active: Boolean(active) }),
       },
     });
+
+    // If this goal is being activated (or renamed while active), sync user.goal
+    if (active === true || (name && existing.active)) {
+      await prisma.user.update({
+        where: { id: req.user!.id },
+        data: { goal: updated.name ?? undefined },
+      });
+    }
 
     res.json({ message: "Calorie goal updated", goal: updated });
   } catch (error) {
