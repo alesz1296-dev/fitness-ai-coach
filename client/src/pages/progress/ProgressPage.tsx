@@ -13,29 +13,88 @@ import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // Body composition formulas
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Deurenberg equation (1991) — estimates body fat % from BMI, age, and sex.
- * Returns null if any input is missing / out of range.
- */
-function calcBodyFat(weight: number, heightCm: number, age: number, sex: "male" | "female"): number | null {
-  if (!weight || !heightCm || !age) return null;
-  const heightM = heightCm / 100;
-  const bmi = weight / (heightM * heightM);
-  if (bmi < 10 || bmi > 60) return null;
-  const fat =
-    sex === "male"
-      ? 1.20 * bmi + 0.23 * age - 16.2
-      : 1.20 * bmi + 0.23 * age - 5.4;
-  return Math.max(3, Math.min(60, Math.round(fat * 10) / 10));
-}
+export type BFFormula = "deurenberg" | "boer" | "james" | "hume" | "cunbae";
+
+export const BF_FORMULA_LABELS: Record<BFFormula, string> = {
+  deurenberg: "Deurenberg (1991) — BMI-based",
+  boer:       "Boer (1984) — Lean mass",
+  james:      "James (1976) — Lean mass",
+  hume:       "Hume (1966) — Lean mass",
+  cunbae:     "CUN-BAE — BMI polynomial",
+};
 
 function calcBMI(weight: number, heightCm: number): number | null {
   if (!weight || !heightCm) return null;
   const h = heightCm / 100;
   return Math.round((weight / (h * h)) * 10) / 10;
+}
+
+/**
+ * Returns body fat % for the given formula.
+ * LBM-based formulas (Boer, James, Hume) return lean body mass first,
+ * then derive fat % as (weight - LBM) / weight × 100.
+ */
+function calcBodyFat(
+  weight: number,
+  heightCm: number,
+  age: number,
+  sex: "male" | "female",
+  formula: BFFormula = "deurenberg",
+): number | null {
+  if (!weight || !heightCm || !age) return null;
+  const h = heightCm / 100;
+  const bmi = weight / (h * h);
+  if (bmi < 10 || bmi > 60) return null;
+
+  let fatPct: number;
+
+  if (formula === "deurenberg") {
+    // Deurenberg et al. (1991) — Int J Obes Relat Metab Disord
+    // BF% = 1.20×BMI + 0.23×age − 10.8×sex − 5.4   (sex: 1=male, 0=female)
+    fatPct = 1.20 * bmi + 0.23 * age - (sex === "male" ? 10.8 : 0) - 5.4;
+
+  } else if (formula === "boer") {
+    // Boer (1984) lean body mass formula — derives BF% from LBM
+    const lbm = sex === "male"
+      ? 0.407 * weight + 0.267 * heightCm - 19.2
+      : 0.252 * weight + 0.473 * heightCm - 48.3;
+    fatPct = ((weight - lbm) / weight) * 100;
+
+  } else if (formula === "james") {
+    // James (1976) LBM — widely used in pharmacokinetics
+    const lbm = sex === "male"
+      ? 1.1 * weight - 128 * Math.pow(weight / heightCm, 2)
+      : 1.07 * weight - 148 * Math.pow(weight / heightCm, 2);
+    fatPct = ((weight - lbm) / weight) * 100;
+
+  } else if (formula === "hume") {
+    // Hume (1966) LBM — early clinical reference
+    const lbm = sex === "male"
+      ? 0.3281 * weight + 0.3393 * heightCm - 29.5336
+      : 0.2994 * weight + 0.7869 * heightCm - 14.6461;
+    fatPct = ((weight - lbm) / weight) * 100;
+
+  } else {
+    // CUN-BAE — Clínica Universidad de Navarra Body Adiposity Estimator
+    // Gómez-Ambrosi et al. (2012)  sex: 0=male, 1=female
+    const s = sex === "female" ? 1 : 0;
+    fatPct =
+      -44.988 +
+      0.503 * age +
+      10.689 * s +
+      3.172 * bmi -
+      0.026 * bmi * bmi +
+      0.181 * bmi * s -
+      0.02  * bmi * age -
+      0.005 * bmi * bmi * s +
+      0.00021 * bmi * bmi * age;
+  }
+
+  return Math.max(3, Math.min(65, Math.round(fatPct * 10) / 10));
 }
 
 interface BodyComp {
@@ -55,14 +114,15 @@ function computeBodyComp(
   heightCm: number,
   age: number,
   sex: "male" | "female",
+  formula: BFFormula = "deurenberg",
 ): BodyComp | null {
   const bmi = calcBMI(weight, heightCm);
-  const fatPct = calcBodyFat(weight, heightCm, age, sex);
+  const fatPct = calcBodyFat(weight, heightCm, age, sex, formula);
   if (!bmi || fatPct === null) return null;
 
-  const fatKg   = Math.round(weight * fatPct / 100 * 10) / 10;
-  const leanKg  = Math.round((weight - fatKg) * 10) / 10;
-  // Muscle mass ≈ 85% of lean mass (lean = muscle + bone + organs + water)
+  const fatKg    = Math.round(weight * fatPct / 100 * 10) / 10;
+  const leanKg   = Math.round((weight - fatKg) * 10) / 10;
+  // Skeletal muscle ≈ 85% of lean mass (lean = muscle + bone + organs + water)
   const muscleKg  = Math.round(leanKg * 0.85 * 10) / 10;
   const musclePct = Math.round(muscleKg / weight * 100 * 10) / 10;
 
@@ -72,7 +132,7 @@ function computeBodyComp(
     : bmi < 30  ? "Overweight"
     : "Obese";
 
-  // Fat category thresholds (American Council on Exercise)
+  // ACE fat-category thresholds
   let fatCategory: string;
   let fatColor: string;
   if (sex === "male") {
@@ -138,17 +198,19 @@ function BodyCompositionCard({
   age: number | null | undefined;
   sex: "male" | "female" | null | undefined;
 }) {
+  const [formula, setFormula] = useState<BFFormula>("deurenberg");
+
   const missingFields = !weight || !heightCm || !age || !sex;
   const latestWeight = logs.length > 0 ? logs[logs.length - 1].weight : weight;
   const comp = !missingFields && latestWeight
-    ? computeBodyComp(latestWeight, heightCm!, age!, sex!)
+    ? computeBodyComp(latestWeight, heightCm!, age!, sex!, formula)
     : null;
 
-  // Build fat% trend from weight logs
+  // Build fat% trend from weight logs using the selected formula
   const fatTrend = !missingFields
     ? logs
         .map((l) => {
-          const f = calcBodyFat(l.weight, heightCm!, age!, sex!);
+          const f = calcBodyFat(l.weight, heightCm!, age!, sex!, formula);
           return f !== null
             ? { date: format(parseISO(l.date), "MMM d"), fatPct: f, weight: l.weight }
             : null;
@@ -183,9 +245,23 @@ function BodyCompositionCard({
     <Card>
       <CardHeader
         title="Body Composition"
-        subtitle={`Estimated · ${latestWeight} kg · Deurenberg formula`}
+        subtitle={`Estimated · ${latestWeight} kg`}
       />
       <div className="space-y-5">
+
+        {/* Formula selector */}
+        <div>
+          <label className="text-xs font-medium text-gray-500 block mb-1">Estimation formula</label>
+          <select
+            value={formula}
+            onChange={(e) => setFormula(e.target.value as BFFormula)}
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+          >
+            {(Object.entries(BF_FORMULA_LABELS) as [BFFormula, string][]).map(([k, label]) => (
+              <option key={k} value={k}>{label}{k === "deurenberg" ? " ★" : ""}</option>
+            ))}
+          </select>
+        </div>
 
         {/* BMI gauge */}
         <div>
@@ -271,7 +347,7 @@ function BodyCompositionCard({
         )}
 
         <p className="text-[10px] text-gray-300 text-center">
-          Estimated via Deurenberg equation (BMI + age + sex). For precise results, use DEXA or hydrostatic weighing.
+          Estimated via {BF_FORMULA_LABELS[formula]}. Results vary by formula — for clinical accuracy use DEXA or hydrostatic weighing.
         </p>
       </div>
     </Card>

@@ -16,6 +16,16 @@ const MEAL_OPTIONS = [
   { value: "snack",     label: "🍎 Snack" },
 ];
 
+// Cooking oil presets — kcal and fat grams added on top of the food's macros
+const COOKING_OILS: Record<string, { label: string; kcal: number; fat: number }> = {
+  none:          { label: "No oil",             kcal: 0,   fat: 0    },
+  spray:         { label: "Spray oil (~1 sec)", kcal: 10,  fat: 1.1  },
+  olive_tsp:     { label: "Olive oil – 1 tsp",  kcal: 40,  fat: 4.5  },
+  olive_tbsp:    { label: "Olive oil – 1 tbsp", kcal: 119, fat: 13.4 },
+  oil_tsp:       { label: "Oil – 1 tsp",        kcal: 35,  fat: 4.0  },
+  oil_tbsp:      { label: "Oil – 1 tbsp",       kcal: 106, fat: 12.0 },
+};
+
 const MEAL_ICONS: Record<string, string> = {
   breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎",
 };
@@ -117,6 +127,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   const [meal,     setMeal]     = useState<"breakfast" | "lunch" | "dinner" | "snack" | "">(
     (editItem?.meal as "breakfast" | "lunch" | "dinner" | "snack" | undefined) ?? ""
   );
+  const [cookingOil, setCookingOil] = useState<keyof typeof COOKING_OILS>("none");
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
 
@@ -159,12 +170,13 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
 
     setLoading(true); setError("");
     try {
+      const oil = COOKING_OILS[cookingOil];
       const payload = {
         foodName: foodName.trim(),
-        calories: Number(calories),
+        calories: Math.round(Number(calories) + oil.kcal),
         protein:  protein ? Number(protein) : undefined,
         carbs:    carbs   ? Number(carbs)   : undefined,
-        fats:     fats    ? Number(fats)    : undefined,
+        fats:     fats    ? Math.round((Number(fats) + oil.fat) * 10) / 10 : oil.fat > 0 ? oil.fat : undefined,
         quantity: Number(quantity),
         unit:     unit.trim(),
         meal:     meal || undefined,
@@ -233,6 +245,19 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
         </p>
       )}
 
+      {/* Cooking oil — adds its kcal/fat on top of food macros at save time */}
+      <Select
+        label="Cooking oil"
+        value={cookingOil}
+        onChange={(e) => setCookingOil(e.target.value as keyof typeof COOKING_OILS)}
+        options={Object.entries(COOKING_OILS).map(([v, o]) => ({ value: v, label: o.label }))}
+      />
+      {cookingOil !== "none" && (
+        <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+          +{COOKING_OILS[cookingOil].kcal} kcal · +{COOKING_OILS[cookingOil].fat}g fat will be added when saved
+        </p>
+      )}
+
       <Select
         label="Meal"
         value={meal}
@@ -270,6 +295,150 @@ function MacroRing({ label, value, total, color }: {
       </div>
       <p className="text-xs text-gray-500 mt-1">{label}</p>
       <p className="text-sm font-semibold text-gray-800">{Math.round(value)}g</p>
+    </div>
+  );
+}
+
+// ── Macro breakdown (calorie-split stacked bar + detail table) ────────────────
+function MacroBreakdown({ protein, carbs, fats }: {
+  protein: number; carbs: number; fats: number;
+}) {
+  const pCal  = Math.round(protein * 4);
+  const cCal  = Math.round(carbs   * 4);
+  const fCal  = Math.round(fats    * 9);
+  const total = pCal + cCal + fCal;
+
+  const pPct = total > 0 ? (pCal / total) * 100 : 0;
+  const cPct = total > 0 ? (cCal / total) * 100 : 0;
+  const fPct = total > 0 ? (fCal / total) * 100 : 0;
+
+  const rows = [
+    { label: "🥩 Protein", g: protein, cal: pCal, pct: pPct, color: "#3b82f6", textColor: "text-blue-600" },
+    { label: "🍞 Carbs",   g: carbs,   cal: cCal, pct: cPct, color: "#f59e0b", textColor: "text-amber-600" },
+    { label: "🥑 Fats",    g: fats,    cal: fCal, pct: fPct, color: "#ef4444", textColor: "text-red-500" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Stacked calorie bar */}
+      <div>
+        <p className="text-xs text-gray-400 mb-1.5">Calorie composition</p>
+        <div className="h-6 rounded-full overflow-hidden flex">
+          {rows.map((r) => (
+            <div
+              key={r.label}
+              style={{ width: `${r.pct}%`, backgroundColor: r.color }}
+              className="transition-all duration-500 first:rounded-l-full last:rounded-r-full"
+            />
+          ))}
+        </div>
+        <div className="flex justify-between mt-1.5 text-xs">
+          {rows.map((r) => (
+            <span key={r.label} className={r.textColor}>
+              ● {r.label.split(" ")[1]} {Math.round(r.pct)}%
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Detail table */}
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-100 text-xs text-gray-400">
+            <th className="text-left pb-2 font-medium">Macro</th>
+            <th className="text-right pb-2 font-medium">Grams</th>
+            <th className="text-right pb-2 font-medium">Calories</th>
+            <th className="text-right pb-2 font-medium">% of kcal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label} className="border-b border-gray-50">
+              <td className={`py-2 font-medium ${r.textColor}`}>{r.label}</td>
+              <td className="py-2 text-right text-gray-700">{Math.round(r.g)}g</td>
+              <td className="py-2 text-right text-gray-700">{r.cal} kcal</td>
+              <td className="py-2 text-right">
+                <div className="flex items-center justify-end gap-1.5">
+                  <div className="w-12 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${r.pct}%`, backgroundColor: r.color }} />
+                  </div>
+                  <span className="text-gray-500 w-7 text-right">{Math.round(r.pct)}%</span>
+                </div>
+              </td>
+            </tr>
+          ))}
+          <tr className="font-semibold text-gray-800 text-sm border-t border-gray-200">
+            <td className="pt-2.5">Total</td>
+            <td className="pt-2.5 text-right">{Math.round(protein + carbs + fats)}g</td>
+            <td className="pt-2.5 text-right">{total} kcal</td>
+            <td className="pt-2.5 text-right text-gray-500">100%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Macro by meal (per-meal stacked bars) ─────────────────────────────────────
+function MacroByMeal({ grouped, mealOrder }: {
+  grouped: Record<string, FoodLog[]>; mealOrder: string[];
+}) {
+  const meals = mealOrder.filter((m) => grouped[m]);
+  if (meals.length === 0) return null;
+
+  const data = meals.map((meal) => {
+    const logs = grouped[meal];
+    const cal  = logs.reduce((s, l) => s + l.calories,          0);
+    const p    = logs.reduce((s, l) => s + (l.protein ?? 0),    0);
+    const c    = logs.reduce((s, l) => s + (l.carbs   ?? 0),    0);
+    const f    = logs.reduce((s, l) => s + (l.fats    ?? 0),    0);
+    const macroG = p + c + f;
+    return { meal, cal, p, c, f, macroG };
+  });
+
+  const maxCal = Math.max(...data.map((d) => d.cal), 1);
+
+  return (
+    <div className="space-y-3.5">
+      {data.map(({ meal, cal, p, c, f, macroG }) => {
+        const barW = (cal / maxCal) * 100;
+        const pPct = macroG > 0 ? (p / macroG) * 100 : 0;
+        const cPct = macroG > 0 ? (c / macroG) * 100 : 0;
+        const fPct = macroG > 0 ? (f / macroG) * 100 : 0;
+
+        return (
+          <div key={meal}>
+            <div className="flex items-baseline justify-between mb-1">
+              <span className="text-sm font-medium text-gray-700 capitalize">
+                {MEAL_ICONS[meal] ?? "🍽️"}{" "}
+                {meal === "other" ? "Other" : meal.charAt(0).toUpperCase() + meal.slice(1)}
+              </span>
+              <span className="text-xs text-gray-400">
+                <span className="font-semibold text-gray-600">{Math.round(cal)}</span> kcal
+                {" · "}P:{Math.round(p)}g C:{Math.round(c)}g F:{Math.round(f)}g
+              </span>
+            </div>
+            {/* Outer track shows relative calorie size vs largest meal */}
+            <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full flex rounded-full overflow-hidden" style={{ width: `${barW}%` }}>
+                <div style={{ width: `${pPct}%`, backgroundColor: "#3b82f6" }} />
+                <div style={{ width: `${cPct}%`, backgroundColor: "#f59e0b" }} />
+                <div style={{ width: `${fPct}%`, backgroundColor: "#ef4444" }} />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      <div className="flex gap-4 justify-center text-xs text-gray-400 pt-1 border-t border-gray-50">
+        {[["#3b82f6","Protein"],["#f59e0b","Carbs"],["#ef4444","Fats"]].map(([color, name]) => (
+          <span key={name} className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: color }} />
+            {name}
+          </span>
+        ))}
+        <span className="text-gray-300">· bar width = relative kcal</span>
+      </div>
     </div>
   );
 }
@@ -547,7 +716,7 @@ export default function NutritionPage() {
   const [deleting,    setDeleting]    = useState<number | null>(null);
   const [showMealPlan, setShowMealPlan] = useState(false);
   const [activeGoal,  setActiveGoal]  = useState<CalorieGoal | null>(null);
-  const [macroView,   setMacroView]   = useState<"distribution" | "goals">("distribution");
+  const [macroView,   setMacroView]   = useState<"distribution" | "breakdown" | "by-meal" | "goals">("distribution");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -699,29 +868,35 @@ export default function NutritionPage() {
 
         {/* ── Macronutrients card ── */}
         <Card className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h3 className="font-semibold text-gray-900">Macronutrients</h3>
-            {/* View toggle — show "vs Goals" only when a goal exists */}
-            {hasGoal && (
-              <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 text-xs">
-                {(["distribution", "goals"] as const).map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setMacroView(v)}
-                    className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                      macroView === v ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    {v === "distribution" ? "🍩 Distribution" : "🎯 vs Goals"}
-                  </button>
-                ))}
-              </div>
-            )}
+
+            {/* View toggle — always visible; "vs Goals" only when a goal exists */}
+            <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5 text-xs">
+              {([
+                { key: "distribution", label: "🍩 Rings"      },
+                { key: "breakdown",    label: "📊 Breakdown"  },
+                { key: "by-meal",      label: "🍽️ By Meal"   },
+                ...(hasGoal ? [{ key: "goals", label: "🎯 vs Goals" }] : []),
+              ] as { key: typeof macroView; label: string }[]).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setMacroView(key)}
+                  className={`px-2.5 py-1 rounded-md font-medium transition-all whitespace-nowrap ${
+                    macroView === key
+                      ? "bg-white shadow-sm text-gray-900"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {totalMacroG > 0 ? (
             <>
-              {/* Distribution view — macro rings showing % of total */}
+              {/* 🍩 Distribution — macro rings showing % of total grams */}
               {macroView === "distribution" && (
                 <div className="flex items-center justify-around">
                   <MacroRing label="Protein" value={totals.protein} total={totalMacroG} color="#3b82f6" />
@@ -737,7 +912,21 @@ export default function NutritionPage() {
                 </div>
               )}
 
-              {/* Goals view — horizontal bars vs calorie goal targets */}
+              {/* 📊 Breakdown — stacked calorie bar + gram/kcal/% table */}
+              {macroView === "breakdown" && (
+                <MacroBreakdown
+                  protein={totals.protein}
+                  carbs={totals.carbs}
+                  fats={totals.fats}
+                />
+              )}
+
+              {/* 🍽️ By Meal — per-meal stacked bars */}
+              {macroView === "by-meal" && (
+                <MacroByMeal grouped={grouped} mealOrder={mealOrder} />
+              )}
+
+              {/* 🎯 vs Goals — progress bars against calorie goal targets */}
               {macroView === "goals" && hasGoal && (
                 <div className="space-y-4 pt-1">
                   <MacroGoalBar
@@ -769,7 +958,7 @@ export default function NutritionPage() {
               )}
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center py-6 gap-2">
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
               <p className="text-sm text-gray-400">Log food to see macro breakdown</p>
               <Button size="sm" onClick={() => setShowForm(true)}>Log First Meal</Button>
             </div>
