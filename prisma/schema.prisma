@@ -22,9 +22,11 @@ model User {
   sex           String? // "male" | "female"
   activityLevel String? // "sedentary" | "light" | "moderate" | "active" | "very_active"
   fitnessLevel  String?
-  goal          String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  goal              String?
+  profileComplete   Boolean  @default(false)
+  proteinMultiplier Float    @default(2.0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   goals          Goal[]
   workouts       Workout[]
@@ -217,6 +219,7 @@ model Conversation {
   message   String
   response  String?
   agentType String
+  metadata  String?  // JSON: { suggestedWorkout?, suggestedPlan?, suggestedMealPlan? }
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

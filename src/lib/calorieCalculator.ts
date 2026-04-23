@@ -13,6 +13,7 @@ export interface CalcInput {
   height?: number | null; // cm
   activityLevel?: string | null;
   sex?: string | null;    // male | female (defaults to male if unknown)
+  proteinMultiplier?: number | null; // g/kg bodyweight, default 1.8
 }
 
 export interface CalcResult {
@@ -101,8 +102,9 @@ export const calculateCalorieGoal = (input: CalcInput): CalcResult => {
   }
 
   // Macro split (priority: protein first)
-  // Protein: 2.0g per kg bodyweight (muscle preservation on cut, growth on bulk)
-  const proteinGrams = Math.round(currentWeight * 2.0);
+  // Protein: 2.0g/kg by default (configurable via proteinMultiplier)
+  const multiplier = input.proteinMultiplier ?? 2.0;
+  const proteinGrams = Math.round(currentWeight * multiplier);
   const proteinCals = proteinGrams * 4;
 
   // Fats: 25% of total calories (minimum for hormonal health)

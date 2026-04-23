@@ -3,7 +3,7 @@ import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
 import { chat, ChatMessage } from "../ai/agent.js";
-import { AgentType, extractWorkoutJson, extractNutritionJson } from "../ai/prompts.js";
+import { AgentType, extractWorkoutJson, extractNutritionJson, extractMealPlanJson } from "../ai/prompts.js";
 import { calculateCalorieGoal } from "../lib/calorieCalculator.js";
 import logger from "../lib/logger.js";
 
@@ -36,6 +36,7 @@ export const sendMessage = async (
         height: true,
         fitnessLevel: true,
         goal: true,
+        id: true,
       },
     });
 
@@ -67,6 +68,22 @@ export const sendMessage = async (
       history
     );
 
+    // Extract structured JSON blocks from the AI response so the frontend
+    // can render "Save as Template" / "Save as Goal" buttons without parsing raw text.
+    const suggestedWorkout  = extractWorkoutJson(aiResponse);
+    const suggestedPlan     = extractNutritionJson(aiResponse);
+    const suggestedMealPlan = extractMealPlanJson(aiResponse);
+
+    // Build metadata object to persist alongside the conversation so save
+    // buttons are still available when the user reloads chat history.
+    const metadataObj: Record<string, unknown> = {};
+    if (suggestedWorkout)  metadataObj.suggestedWorkout  = suggestedWorkout;
+    if (suggestedPlan)     metadataObj.suggestedPlan     = suggestedPlan;
+    if (suggestedMealPlan) metadataObj.suggestedMealPlan = suggestedMealPlan;
+    const metadataJson = Object.keys(metadataObj).length > 0
+      ? JSON.stringify(metadataObj)
+      : null;
+
     // Save conversation to DB
     const conversation = await prisma.conversation.create({
       data: {
@@ -75,23 +92,20 @@ export const sendMessage = async (
         message: message.trim(),
         response: aiResponse,
         agentType,
+        ...(metadataJson && { metadata: metadataJson }),
       },
     });
 
     logger.info(`Chat (${agentType}) — user ${req.user!.id} — ${tokensUsed} tokens`);
-
-    // Extract structured JSON blocks from the AI response so the frontend
-    // can render "Save as Template" / "Save as Goal" buttons without parsing raw text.
-    const suggestedWorkout  = extractWorkoutJson(aiResponse);
-    const suggestedPlan     = extractNutritionJson(aiResponse);
 
     res.json({
       message: aiResponse,
       agentType,
       conversationId: conversation.id,
       tokensUsed,
-      ...(suggestedWorkout && { suggestedWorkout }),
-      ...(suggestedPlan    && { suggestedPlan }),
+      ...(suggestedWorkout  && { suggestedWorkout }),
+      ...(suggestedPlan     && { suggestedPlan }),
+      ...(suggestedMealPlan && { suggestedMealPlan }),
     });
   } catch (error: any) {
     // Handle OpenAI API errors gracefully
@@ -131,8 +145,17 @@ export const getHistory = async (
       prisma.conversation.count({ where }),
     ]);
 
+    // Parse metadata JSON for each conversation so the frontend can hydrate
+    // save buttons from history without re-querying the AI.
+    const conversationsWithMeta = conversations.reverse().map((c) => ({
+      ...c,
+      metadata: c.metadata
+        ? (() => { try { return JSON.parse(c.metadata!); } catch { return null; } })()
+        : null,
+    }));
+
     res.json({
-      conversations: conversations.reverse(), // chronological order
+      conversations: conversationsWithMeta,
       total,
       page,
       pages: Math.ceil(total / limit),
@@ -229,7 +252,7 @@ export const saveCaloriePlanFromChat = async (
 
     const user = await prisma.user.findUnique({
       where: { id: req.user!.id },
-      select: { age: true, height: true, activityLevel: true },
+      select: { age: true, height: true, activityLevel: true, proteinMultiplier: true },
     });
 
     // If macros provided by AI use them, otherwise auto-calculate
@@ -242,6 +265,7 @@ export const saveCaloriePlanFromChat = async (
         age: user?.age,
         height: user?.height,
         activityLevel: user?.activityLevel,
+        proteinMultiplier: user?.proteinMultiplier,
       });
       macros = { dailyCalories: calc.dailyCalories, proteinGrams: calc.proteinGrams, carbsGrams: calc.carbsGrams, fatsGrams: calc.fatsGrams };
     }
@@ -272,6 +296,7 @@ export const saveCaloriePlanFromChat = async (
         carbsGrams: Number(macros.carbsGrams),
         fatsGrams: Number(macros.fatsGrams),
         weeklyChange,
+        tdee: Number(macros.dailyCalories), // AI-provided value used as TDEE estimate
         aiGenerated: true,
         notes: notes || null,
       },

@@ -68,6 +68,13 @@ export const EXERCISE_DB: ExerciseItem[] = [
   { id: "e065", name: "Tricep Dips",              primaryMuscle: "Triceps",  secondaryMuscles: ["Chest"],                equipment: "Bodyweight", difficulty: "intermediate", instructions: "Upright torso on parallel bars, lower and press using triceps." },
   { id: "e066", name: "Rope Pushdown",            primaryMuscle: "Triceps",  secondaryMuscles: [],                       equipment: "Cable",      difficulty: "beginner",     instructions: "Rope attachment, spread rope at bottom, squeeze triceps." },
 
+  // ── Forearms ─────────────────────────────────────────────────────────────
+  { id: "e067", name: "Barbell Wrist Curl",       primaryMuscle: "Forearms", secondaryMuscles: [],                       equipment: "Barbell",    difficulty: "beginner",     instructions: "Forearms on thighs, curl wrists upward, full range of motion." },
+  { id: "e068", name: "Reverse Wrist Curl",       primaryMuscle: "Forearms", secondaryMuscles: [],                       equipment: "Barbell",    difficulty: "beginner",     instructions: "Overhand grip, curl wrists upward, targets extensor muscles." },
+  { id: "e069a", name: "Farmer's Carry",          primaryMuscle: "Forearms", secondaryMuscles: ["Traps","Core"],          equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Hold heavy dumbbells at sides, walk with upright posture." },
+  { id: "e069b", name: "Plate Pinch",             primaryMuscle: "Forearms", secondaryMuscles: [],                       equipment: "Barbell",    difficulty: "beginner",     instructions: "Pinch weight plate between thumb and fingers, hold for time." },
+  { id: "e069c", name: "Dead Hang",               primaryMuscle: "Forearms", secondaryMuscles: ["Back","Shoulders"],      equipment: "Bodyweight", difficulty: "beginner",     instructions: "Hang from pull-up bar with straight arms, build grip endurance." },
+
   // ── Legs ──────────────────────────────────────────────────────────────────
   { id: "e070", name: "Barbell Squat",            primaryMuscle: "Quads",    secondaryMuscles: ["Glutes","Hamstrings"],  equipment: "Barbell",    difficulty: "advanced",     instructions: "Bar on upper back, squat to parallel or below, drive through heels." },
   { id: "e071", name: "Goblet Squat",             primaryMuscle: "Quads",    secondaryMuscles: ["Glutes","Core"],        equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Hold dumbbell at chest, squat deep, chest up." },
@@ -112,8 +119,8 @@ export const EXERCISE_DB: ExerciseItem[] = [
 
 // Unique muscle groups for filter UI
 export const MUSCLE_GROUPS = [
-  "Chest", "Back", "Shoulders", "Biceps", "Triceps",
-  "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Full Body", "Cardio",
+  "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms",
+  "Legs", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Full Body", "Cardio",
 ];
 
 export const EQUIPMENT_TYPES = [
@@ -127,11 +134,16 @@ export function searchExercises(
 ): ExerciseItem[] {
   const q = query.toLowerCase().trim();
 
+  // "Legs" is a broad filter that includes Quads, Hamstrings, Glutes, Calves
+  const LEG_MUSCLES = new Set(["Quads", "Hamstrings", "Glutes", "Calves"]);
+
   let results = EXERCISE_DB.filter((e) => {
     const matchesQuery = !q || e.name.toLowerCase().includes(q) ||
       e.primaryMuscle.toLowerCase().includes(q) ||
       e.secondaryMuscles.some((m) => m.toLowerCase().includes(q));
-    const matchesMuscle    = !options.muscle    || e.primaryMuscle === options.muscle;
+    const matchesMuscle = !options.muscle
+      || e.primaryMuscle === options.muscle
+      || (options.muscle === "Legs" && LEG_MUSCLES.has(e.primaryMuscle));
     const matchesEquipment = !options.equipment || e.equipment === options.equipment;
     const matchesDifficulty= !options.difficulty|| e.difficulty === options.difficulty;
     return matchesQuery && matchesMuscle && matchesEquipment && matchesDifficulty;

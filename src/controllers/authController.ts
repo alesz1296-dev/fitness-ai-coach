@@ -169,6 +169,7 @@ export const getMe = async (
         age: true, weight: true, height: true,
         sex: true, activityLevel: true,
         fitnessLevel: true, goal: true,
+        profileComplete: true, proteinMultiplier: true,
         createdAt: true,
       },
     });

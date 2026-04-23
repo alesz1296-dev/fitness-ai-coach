@@ -219,6 +219,60 @@ export const saveCaloriePlanFromChatSchema = z.object({
   notes: optionalString,
 });
 
+// ── Weekly Plan ───────────────────────────────────────────────────────────────
+
+export const upsertWeeklyPlanSchema = z.object({
+  week: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "week must be YYYY-MM-DD").optional(),
+  days: z.array(z.object({
+    dayIndex:       z.coerce.number().int().min(0).max(6),
+    label:          z.string().trim().min(1).max(100).optional(),
+    targetCalories: z.coerce.number().min(0).max(20000).nullable().optional(),
+    notes:          z.string().trim().max(500).optional(),
+  })).min(1, "At least one day is required").max(7),
+});
+
+export const toggleDaySchema = z.object({
+  actualCalories: z.coerce.number().min(0).max(20000).nullable().optional(),
+  workoutId:      z.coerce.number().int().positive().nullable().optional(),
+}).optional().default({});
+
+export const updateDaySchema = z.object({
+  label:          z.string().trim().min(1).max(100).optional(),
+  targetCalories: z.coerce.number().min(0).max(20000).nullable().optional(),
+  actualCalories: z.coerce.number().min(0).max(20000).nullable().optional(),
+  notes:          z.string().trim().max(500).optional(),
+  workoutId:      z.coerce.number().int().positive().nullable().optional(),
+});
+
+// ── Workouts — add exercise to existing workout ───────────────────────────────
+
+export const addExerciseToWorkoutSchema = z.object({
+  exerciseName: z.string().trim().min(1, "Exercise name is required").max(200),
+  sets:         z.coerce.number().int().min(1).max(100),
+  reps:         z.coerce.number().int().min(1).max(1000),
+  weight:       z.coerce.number().min(0).max(2000).nullable().optional(),
+  rpe:          z.coerce.number().int().min(1).max(10).nullable().optional(),
+  notes:        optionalString,
+});
+
+// ── Food Logs — bulk create ───────────────────────────────────────────────────
+
+const bulkFoodItemSchema = z.object({
+  foodName: z.string().trim().min(1).max(300),
+  calories: z.coerce.number().min(0).max(50000),
+  protein:  z.coerce.number().min(0).max(5000).optional(),
+  carbs:    z.coerce.number().min(0).max(5000).optional(),
+  fats:     z.coerce.number().min(0).max(5000).optional(),
+  quantity: positiveFloat,
+  unit:     z.string().trim().min(1).max(50),
+  meal:     z.enum(["breakfast", "lunch", "dinner", "snack"]).optional(),
+});
+
+export const bulkLogFoodsSchema = z.object({
+  foods: z.array(bulkFoodItemSchema).min(1, "At least one food item is required").max(50),
+  date:  dateString.optional(),
+});
+
 // ── Reports ───────────────────────────────────────────────────────────────────
 
 export const generateReportSchema = z.object({

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { chatApi } from "../../api";
+import { chatApi, foodApi } from "../../api";
 import type { Conversation } from "../../types";
 import { Button } from "../../components/ui/Button";
 
@@ -10,8 +10,9 @@ interface ChatMessage {
   role: string;
   content: string;
   id?: number;
-  suggestedWorkout?: Record<string, any>;
-  suggestedPlan?: Record<string, any>;
+  suggestedWorkout?:  Record<string, any>;
+  suggestedPlan?:     Record<string, any>;
+  suggestedMealPlan?: Record<string, any>;
 }
 
 const AGENTS: { id: AgentType; label: string; icon: string; desc: string }[] = [
@@ -57,18 +58,20 @@ function TypingDots() {
 }
 
 // ── Chat bubble ───────────────────────────────────────────────────────────────
-function ChatBubble({ msg, agentIcon, onSaveWorkout, onSavePlan }: {
-  msg:           ChatMessage;
-  agentIcon:     string;
-  onSaveWorkout: (workout: Record<string, any>) => void;
-  onSavePlan:    (plan: Record<string, any>) => void;
+function ChatBubble({ msg, agentIcon, onSaveWorkout, onSavePlan, onSaveMealPlan }: {
+  msg:             ChatMessage;
+  agentIcon:       string;
+  onSaveWorkout:   (workout: Record<string, any>) => void;
+  onSavePlan:      (plan: Record<string, any>) => void;
+  onSaveMealPlan:  (plan: Record<string, any>) => void;
 }) {
   const isUser = msg.role === "user";
 
-  // Strip the fenced JSON blocks from displayed text so users don't see raw JSON
+  // Strip all fenced JSON blocks from displayed text so users don't see raw JSON
   const displayText = msg.content
     .replace(/```workout-json[\s\S]*?```/g, "")
     .replace(/```nutrition-json[\s\S]*?```/g, "")
+    .replace(/```meal-plan-json[\s\S]*?```/g, "")
     .trim();
 
   // Simple markdown-ish rendering: bold (**text**), line breaks
@@ -109,7 +112,7 @@ function ChatBubble({ msg, agentIcon, onSaveWorkout, onSavePlan }: {
         </div>
 
         {/* Save buttons — only when structured data came back from the API */}
-        {(msg.suggestedWorkout || msg.suggestedPlan) && (
+        {(msg.suggestedWorkout || msg.suggestedPlan || msg.suggestedMealPlan) && (
           <div className="flex gap-2 mt-1 flex-wrap">
             {msg.suggestedWorkout && (
               <button
@@ -125,6 +128,14 @@ function ChatBubble({ msg, agentIcon, onSaveWorkout, onSavePlan }: {
                 className="text-xs text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-full transition-colors font-medium"
               >
                 🎯 Save as Goal
+              </button>
+            )}
+            {msg.suggestedMealPlan && (
+              <button
+                onClick={() => onSaveMealPlan(msg.suggestedMealPlan!)}
+                className="text-xs text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 px-3 py-1 rounded-full transition-colors font-medium"
+              >
+                🥗 Log Meal Plan
               </button>
             )}
           </div>
@@ -148,16 +159,26 @@ export default function ChatPage() {
   const bottomRef              = useRef<HTMLDivElement>(null);
   const inputRef               = useRef<HTMLTextAreaElement>(null);
 
-  // Load conversation history — history entries don't carry structured JSON
-  // (they're loaded from DB text), so save buttons won't appear on old messages.
+  // Load conversation history — metadata is parsed server-side and returned
+  // alongside each entry so save buttons can be re-hydrated on old messages.
   const loadHistory = useCallback(async (a: AgentType) => {
     setLoading(true);
     try {
       const res = await chatApi.getHistory(a, 1, 30);
       const convs: ChatMessage[] = [];
-      for (const c of [...res.data.conversations].reverse()) {
-        convs.push({ role: "user",      content: c.message,  id: c.id });
-        if (c.response) convs.push({ role: "assistant", content: c.response, id: c.id });
+      for (const c of res.data.conversations) {
+        convs.push({ role: "user", content: c.message, id: c.id });
+        if (c.response) {
+          const meta = c.metadata ?? {};
+          convs.push({
+            role:    "assistant",
+            content: c.response,
+            id:      c.id,
+            ...(meta.suggestedWorkout  && { suggestedWorkout:  meta.suggestedWorkout }),
+            ...(meta.suggestedPlan     && { suggestedPlan:     meta.suggestedPlan }),
+            ...(meta.suggestedMealPlan && { suggestedMealPlan: meta.suggestedMealPlan }),
+          });
+        }
       }
       setMessages(convs);
     } finally { setLoading(false); }
@@ -182,14 +203,15 @@ export default function ChatPage() {
 
     try {
       const res = await chatApi.send({ message: msg, agentType: agent });
-      const { message: aiText, suggestedWorkout, suggestedPlan } = res.data;
+      const { message: aiText, suggestedWorkout, suggestedPlan, suggestedMealPlan } = res.data;
       setMessages((prev) => [
         ...prev,
         {
-          role: "assistant",
+          role:    "assistant",
           content: aiText,
-          ...(suggestedWorkout && { suggestedWorkout }),
-          ...(suggestedPlan    && { suggestedPlan }),
+          ...(suggestedWorkout  && { suggestedWorkout }),
+          ...(suggestedPlan     && { suggestedPlan }),
+          ...(suggestedMealPlan && { suggestedMealPlan }),
         },
       ]);
     } catch {
@@ -223,6 +245,34 @@ export default function ChatPage() {
     } catch (err: any) {
       const detail = err?.response?.data?.error || "Unknown error";
       showToast(`❌ Couldn't save template: ${detail}`, false);
+    }
+  };
+
+  // Bulk-log a meal plan suggested by the nutritionist agent
+  const handleSaveMealPlan = async (mealPlan: Record<string, any>) => {
+    try {
+      const meals: Array<any> = mealPlan.meals ?? [];
+      const foods = meals.flatMap((meal: any) =>
+        (meal.items ?? []).map((item: any) => ({
+          foodName: item.foodName,
+          calories: item.calories ?? 0,
+          protein:  item.protein  ?? 0,
+          carbs:    item.carbs    ?? 0,
+          fats:     item.fats     ?? 0,
+          quantity: item.quantity ?? 1,
+          unit:     item.unit     ?? "serving",
+          meal:     meal.mealType as "breakfast" | "lunch" | "dinner" | "snack" | null,
+        }))
+      );
+      if (foods.length === 0) {
+        showToast("❌ No food items found in the meal plan", false);
+        return;
+      }
+      await foodApi.bulk(foods);
+      showToast(`✅ ${foods.length} items logged to today's nutrition!`);
+    } catch (err: any) {
+      const detail = err?.response?.data?.error || "Unknown error";
+      showToast(`❌ Couldn't log meal plan: ${detail}`, false);
     }
   };
 
@@ -317,6 +367,7 @@ export default function ChatPage() {
                 agentIcon={agentInfo.icon}
                 onSaveWorkout={handleSaveWorkout}
                 onSavePlan={handleSavePlan}
+                onSaveMealPlan={handleSaveMealPlan}
               />
             ))
           )}

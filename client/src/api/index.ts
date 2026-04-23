@@ -3,8 +3,36 @@ import type {
   AuthResponse, User, Workout, WorkoutStats, WorkoutTemplate,
   FoodLog, FoodTotals, WeightLog, WeightStats, Goal, CalorieGoal,
   Conversation, MonthlyReport, ExerciseProgression, DashboardData,
-  WeeklyPlan, WeeklyPlanDay,
+  WeeklyPlan, WeeklyPlanDay, WorkoutExercise,
 } from "../types";
+
+interface WorkoutExerciseCreateInput {
+  exerciseName: string;
+  sets: number;
+  reps: number;
+  order: number;
+  weight?: number;
+  rpe?: number;
+  notes?: string;
+}
+
+interface WorkoutCreateInput {
+  name: string;
+  date: string;
+  duration: number;
+  caloriesBurned?: number;
+  notes?: string;
+  templateId?: number;
+  exercises?: WorkoutExerciseCreateInput[];
+}
+
+interface WorkoutExerciseUpdateInput {
+  sets?: number;
+  reps?: number;
+  weight?: number | null;
+  rpe?: number | null;
+  notes?: string | null;
+}
 
 // ── Search ────────────────────────────────────────────────────────────────────
 export const searchApi = {
@@ -51,7 +79,7 @@ export const workoutsApi = {
     api.get<{ workouts: Workout[]; total: number; page: number; pages: number }>(`/workouts?page=${page}&limit=${limit}`),
   getOne: (id: number) => api.get<{ workout: Workout }>(`/workouts/${id}`),
   getStats: () => api.get<WorkoutStats>("/workouts/stats"),
-  create: (data: Partial<Workout> & { exercises?: any[]; templateId?: number }) =>
+  create: (data: WorkoutCreateInput) =>
     api.post<{ workout: Workout; newPRs?: Array<{ exerciseName: string; weight: number; reps: number; previousBest: number }> }>("/workouts", data),
   update: (id: number, data: Partial<Workout>) =>
     api.put<{ workout: Workout }>(`/workouts/${id}`, data),
@@ -62,10 +90,14 @@ export const workoutsApi = {
     api.get<{ exerciseName: string; progression: ExerciseProgression[]; allTimePR: ExerciseProgression | null; totalSessions: number }>(
       `/workouts/exercises/${encodeURIComponent(name)}/progression?limit=${limit}`
     ),
-  updateExercise: (exerciseId: number, data: any) =>
+  updateExercise: (exerciseId: number, data: Partial<WorkoutExerciseUpdateInput>) =>
     api.put(`/workouts/exercises/${exerciseId}`, data),
   deleteExercise: (exerciseId: number) =>
     api.delete(`/workouts/exercises/${exerciseId}`),
+  addExercise: (workoutId: number, data: {
+    exerciseName: string; sets: number; reps: number;
+    weight?: number | null; rpe?: number | null; notes?: string;
+  }) => api.post<{ exercise: WorkoutExercise }>(`/workouts/${workoutId}/exercises`, data),
 };
 
 // ── Templates ─────────────────────────────────────────────────────────────────
@@ -93,6 +125,8 @@ export const foodApi = {
   getHistory: (days = 7) =>
     api.get<{ history: Record<string, FoodTotals>; days: number }>(`/foods/history?days=${days}`),
   log: (data: Partial<FoodLog>) => api.post<{ log: FoodLog }>("/foods", data),
+  bulk: (foods: Array<Partial<FoodLog>>, date?: string) =>
+    api.post<{ logs: FoodLog[]; message: string }>("/foods/bulk", { foods, date }),
   update: (id: number, data: Partial<FoodLog>) => api.put<{ log: FoodLog }>(`/foods/${id}`, data),
   delete: (id: number) => api.delete(`/foods/${id}`),
 };
@@ -135,6 +169,7 @@ export const chatApi = {
       tokensUsed?: number;
       suggestedWorkout?: Record<string, any>;
       suggestedPlan?: Record<string, any>;
+      suggestedMealPlan?: Record<string, any>;
     }>("/chat", data),
   getHistory: (agentType?: string, page = 1, limit = 20) =>
     api.get<{ conversations: Conversation[]; total: number }>(`/chat/history?page=${page}&limit=${limit}${agentType ? `&agentType=${agentType}` : ""}`),

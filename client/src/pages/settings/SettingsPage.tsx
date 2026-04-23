@@ -132,6 +132,111 @@ function ProfileForm() {
   );
 }
 
+// ── Nutrition preferences ─────────────────────────────────────────────────────
+function NutritionPreferencesForm() {
+  const { user, updateUser } = useAuthStore();
+  const [multiplier, setMultiplier] = useState(user?.proteinMultiplier ?? 2.0);
+  const [saving,  setSaving]  = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error,   setError]   = useState("");
+
+  // Keep in sync if user object updates from parent
+  useEffect(() => {
+    if (user?.proteinMultiplier != null) setMultiplier(user.proteinMultiplier);
+  }, [user?.proteinMultiplier]);
+
+  const save = async () => {
+    setSaving(true); setError(""); setSuccess("");
+    try {
+      const res = await usersApi.updateProfile({ proteinMultiplier: multiplier } as any);
+      updateUser(res.data.user);
+      setSuccess("Preferences saved!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Failed to save");
+    } finally { setSaving(false); }
+  };
+
+  const pct  = ((multiplier - 0.8) / (2.2 - 0.8)) * 100;
+  const exKg = user?.weight ? Math.round(user.weight * multiplier) : null;
+
+  return (
+    <Card>
+      <CardHeader title="Nutrition Preferences" subtitle="Applied to all new calorie goal calculations" />
+
+      {error   && <p className="text-sm text-red-600   bg-red-50   rounded-xl px-3 py-2 mb-4">{error}</p>}
+      {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
+
+      <div className="space-y-5">
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-gray-700">
+              Protein target
+            </label>
+            <span className="text-lg font-bold text-brand-600">{multiplier.toFixed(1)} g/kg</span>
+          </div>
+
+          {/* Slider */}
+          <div className="relative">
+            <input
+              type="range"
+              min={0.8} max={2.2} step={0.1}
+              value={multiplier}
+              onChange={(e) => setMultiplier(Number(e.target.value))}
+              className="w-full h-2 rounded-full appearance-none cursor-pointer"
+              style={{
+                background: `linear-gradient(to right, var(--color-brand-500, #6366f1) 0%, var(--color-brand-500, #6366f1) ${pct}%, #e5e7eb ${pct}%, #e5e7eb 100%)`,
+              }}
+            />
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <span>0.8</span>
+              <span>1.0</span>
+              <span>1.2</span>
+              <span>1.4</span>
+              <span>1.6</span>
+              <span>1.8</span>
+              <span>2.0</span>
+              <span>2.2</span>
+            </div>
+          </div>
+
+          {/* Live preview */}
+          {exKg != null && (
+            <p className="text-sm text-gray-500 mt-2">
+              At your current weight ({user!.weight} kg) → <span className="font-semibold text-gray-700">{exKg} g protein / day</span>
+            </p>
+          )}
+
+          {/* Warning */}
+          {multiplier > 2.2 - 0.05 && (
+            <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mt-2">
+              ⚠️ Values above 2.2 g/kg are above the range recommended for most athletes. More protein won't translate into extra gains and may crowd out carbs and fats.
+            </p>
+          )}
+        </div>
+
+        {/* Reference table */}
+        <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600 space-y-1">
+          <p className="font-semibold text-gray-700 mb-2">Common ranges</p>
+          {[
+            { range: "0.8 – 1.0", label: "Sedentary / general health (RDA minimum)" },
+            { range: "1.2 – 1.6", label: "Recreational fitness, moderate training" },
+            { range: "1.6 – 2.0", label: "Strength / hypertrophy training (recommended)" },
+            { range: "2.0 – 2.2", label: "Cutting phase — high-protein to preserve muscle" },
+          ].map((row) => (
+            <div key={row.range} className="flex gap-3">
+              <span className="font-mono text-xs text-gray-500 w-24 shrink-0">{row.range}</span>
+              <span>{row.label}</span>
+            </div>
+          ))}
+        </div>
+
+        <Button loading={saving} onClick={save} className="w-full">Save Preferences</Button>
+      </div>
+    </Card>
+  );
+}
+
 // ── Change password form ──────────────────────────────────────────────────────
 function PasswordForm() {
   const [current, setCurrent] = useState("");
@@ -217,6 +322,7 @@ export default function SettingsPage() {
 
       <AccountInfo />
       <ProfileForm />
+      <NutritionPreferencesForm />
       <PasswordForm />
     </div>
   );

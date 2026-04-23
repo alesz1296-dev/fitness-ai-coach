@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
-import { foodApi, searchApi } from "../../api";
+import { useNavigate } from "react-router-dom";
+import { foodApi, chatApi, searchApi } from "../../api";
 import type { FoodLog, FoodTotals } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -9,15 +10,36 @@ import { Modal } from "../../components/ui/Modal";
 import { Select } from "../../components/ui/Select";
 
 const MEAL_OPTIONS = [
-  { value: "breakfast", label: "Breakfast" },
-  { value: "lunch",     label: "Lunch" },
-  { value: "dinner",    label: "Dinner" },
-  { value: "snack",     label: "Snack" },
+  { value: "breakfast", label: "🌅 Breakfast" },
+  { value: "lunch",     label: "☀️  Lunch" },
+  { value: "dinner",    label: "🌙 Dinner" },
+  { value: "snack",     label: "🍎 Snack" },
 ];
 
 const MEAL_ICONS: Record<string, string> = {
   breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎",
 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Calculate scaled macros from food DB values.
+ * The DB stores all nutrition per 100g.
+ * - For gram / ml units: scale linearly against 100.
+ * - For count-based units (slices, large, medium, cups…): treat the DB value
+ *   as the nutrition for `defaultQty` units and scale against that.
+ */
+function calcMacro(
+  valuePer100g: number,
+  qty: number,
+  unit: string,
+  defaultQty: number,
+): number {
+  const isWeightUnit = /^(g|ml|kg|oz|lb)$/i.test(unit.trim());
+  return isWeightUnit
+    ? Math.round(valuePer100g * qty / 100)
+    : Math.round(valuePer100g * qty / defaultQty);
+}
 
 // ── Food search combobox ──────────────────────────────────────────────────────
 function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
@@ -28,7 +50,10 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
   useEffect(() => {
     if (!query.trim()) { setResults([]); return; }
     const t = setTimeout(() => {
-      searchApi.foods(query).then((r) => { setResults(r.data.results); setOpen(true); });
+      searchApi.foods(query).then((r) => {
+        setResults(r.data.results);
+        setOpen(true);
+      }).catch(() => {});
     }, 200);
     return () => clearTimeout(t);
   }, [query]);
@@ -38,24 +63,38 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
       <Input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => query && setOpen(true)}
+        onFocus={() => query && results.length > 0 && setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder="Search food (e.g. chicken breast, oats)…"
-        label="Search Food"
+        label="Search Food Database"
       />
       {open && results.length > 0 && (
-        <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-y-auto">
-          {results.map((f) => (
-            <li
-              key={f.id}
-              onMouseDown={() => { onSelect(f); setQuery(""); setOpen(false); }}
-              className="px-4 py-2.5 hover:bg-brand-50 cursor-pointer"
-            >
-              <p className="text-sm font-medium text-gray-800">{f.name}</p>
-              <p className="text-xs text-gray-400">{Math.round(f.calories * f.defaultQty / 100)} kcal · {f.defaultQty}{f.defaultUnit} | P:{Math.round(f.protein * f.defaultQty / 100)}g C:{Math.round(f.carbs * f.defaultQty / 100)}g F:{Math.round(f.fats * f.defaultQty / 100)}g</p>
-            </li>
-          ))}
+        <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+          {results.map((f) => {
+            const displayCal = calcMacro(f.calories, f.defaultQty, f.defaultUnit, f.defaultQty);
+            const displayP   = calcMacro(f.protein,  f.defaultQty, f.defaultUnit, f.defaultQty);
+            const displayC   = calcMacro(f.carbs,    f.defaultQty, f.defaultUnit, f.defaultQty);
+            const displayF   = calcMacro(f.fats,     f.defaultQty, f.defaultUnit, f.defaultQty);
+            return (
+              <li
+                key={f.id}
+                onMouseDown={() => { onSelect(f); setQuery(""); setOpen(false); }}
+                className="px-4 py-2.5 hover:bg-brand-50 cursor-pointer border-b border-gray-50 last:border-0"
+              >
+                <p className="text-sm font-medium text-gray-800">{f.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {displayCal} kcal · {f.defaultQty} {f.defaultUnit} &nbsp;|&nbsp;
+                  P: {displayP}g &nbsp;C: {displayC}g &nbsp;F: {displayF}g
+                </p>
+              </li>
+            );
+          })}
         </ul>
+      )}
+      {open && results.length === 0 && query.trim().length > 1 && (
+        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-400">
+          No results — enter details manually below
+        </div>
       )}
     </div>
   );
@@ -75,84 +114,148 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   const [fats,     setFats]     = useState(String(editItem?.fats     ?? ""));
   const [quantity, setQuantity] = useState(String(editItem?.quantity ?? "100"));
   const [unit,     setUnit]     = useState(editItem?.unit ?? "g");
-  const [meal,     setMeal]     = useState<string>(editItem?.meal ?? "");
+  const [meal,     setMeal]     = useState<"breakfast" | "lunch" | "dinner" | "snack" | "">(
+    (editItem?.meal as "breakfast" | "lunch" | "dinner" | "snack" | undefined) ?? ""
+  );
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
 
+  // Store the selected food item's base nutrition (per 100g from DB)
+  // so we can recalculate macros live when the user changes quantity.
+  const [baseFood, setBaseFood] = useState<{
+    calories: number; protein: number; carbs: number; fats: number;
+    defaultQty: number; defaultUnit: string;
+  } | null>(null);
+
+  // When user selects a food from search, auto-fill all fields
   const fillFromSearch = (item: any) => {
-    const qty = item.defaultQty;
+    setBaseFood(item);
     setFoodName(item.name);
-    setQuantity(String(qty));
     setUnit(item.defaultUnit);
-    setCalories(String(Math.round(item.calories * qty / 100)));
-    setProtein(String(Math.round(item.protein  * qty / 100)));
-    setCarbs(String(Math.round(item.carbs    * qty / 100)));
-    setFats(String(Math.round(item.fats     * qty / 100)));
+    const qty = item.defaultQty;
+    setQuantity(String(qty));
+    setCalories(String(calcMacro(item.calories, qty, item.defaultUnit, item.defaultQty)));
+    setProtein(String(calcMacro(item.protein,   qty, item.defaultUnit, item.defaultQty)));
+    setCarbs(String(calcMacro(item.carbs,       qty, item.defaultUnit, item.defaultQty)));
+    setFats(String(calcMacro(item.fats,         qty, item.defaultUnit, item.defaultQty)));
+  };
+
+  // Live recalculation when quantity changes (only if a DB food is selected)
+  const handleQuantityChange = (val: string) => {
+    setQuantity(val);
+    if (!baseFood || !val || isNaN(Number(val))) return;
+    const qty = Number(val);
+    setCalories(String(calcMacro(baseFood.calories, qty, unit, baseFood.defaultQty)));
+    setProtein(String(calcMacro(baseFood.protein,   qty, unit, baseFood.defaultQty)));
+    setCarbs(String(calcMacro(baseFood.carbs,       qty, unit, baseFood.defaultQty)));
+    setFats(String(calcMacro(baseFood.fats,         qty, unit, baseFood.defaultQty)));
   };
 
   const submit = async () => {
-    if (!foodName.trim() || !calories || !quantity || !unit) {
-      setError("Food name, calories, quantity, and unit are required"); return;
-    }
+    if (!foodName.trim()) { setError("Food name is required"); return; }
+    if (!calories || isNaN(Number(calories))) { setError("Calories are required"); return; }
+    if (!quantity || isNaN(Number(quantity)) || Number(quantity) <= 0) { setError("Quantity must be a positive number"); return; }
+    if (!unit.trim()) { setError("Unit is required"); return; }
+
     setLoading(true); setError("");
     try {
       const payload = {
         foodName: foodName.trim(),
         calories: Number(calories),
-        protein:  protein  ? Number(protein)  : undefined,
-        carbs:    carbs    ? Number(carbs)    : undefined,
-        fats:     fats     ? Number(fats)     : undefined,
+        protein:  protein ? Number(protein) : undefined,
+        carbs:    carbs   ? Number(carbs)   : undefined,
+        fats:     fats    ? Number(fats)    : undefined,
         quantity: Number(quantity),
-        unit,
+        unit:     unit.trim(),
         meal:     meal || undefined,
         date:     selectedDate,
       };
-      if (editItem) { await foodApi.update(editItem.id, payload); }
-      else          { await foodApi.log(payload); }
+      if (editItem) {
+        await foodApi.update(editItem.id, payload);
+      } else {
+        await foodApi.log(payload);
+      }
       onSave();
     } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to save");
+      const details = e.response?.data?.details;
+      if (Array.isArray(details) && details.length > 0) {
+        setError(details.map((d: any) => d.message).join(" · "));
+      } else {
+        setError(e.response?.data?.error || "Failed to save. Check all fields and try again.");
+      }
     } finally { setLoading(false); }
   };
 
   return (
     <div className="space-y-4">
+      {/* Search — only shown when adding new, not when editing */}
       {!editItem && <FoodSearch onSelect={fillFromSearch} />}
-      {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
 
-      <Input label="Food Name" value={foodName} onChange={(e) => setFoodName(e.target.value)} placeholder="e.g. Chicken Breast" />
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>
+      )}
+
+      <Input
+        label="Food Name"
+        value={foodName}
+        onChange={(e) => setFoodName(e.target.value)}
+        placeholder="e.g. Chicken Breast"
+      />
 
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-        <Input label="Unit" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="g, ml, cups…" />
+        <Input
+          label="Quantity"
+          type="number"
+          min="0"
+          step="any"
+          value={quantity}
+          onChange={(e) => handleQuantityChange(e.target.value)}
+        />
+        <Input
+          label="Unit"
+          value={unit}
+          onChange={(e) => setUnit(e.target.value)}
+          placeholder="g, ml, cups, slices…"
+        />
       </div>
 
+      {/* Macro fields — auto-filled from search, editable */}
       <div className="grid grid-cols-4 gap-2">
-        <Input label="Calories" type="number" value={calories} onChange={(e) => setCalories(e.target.value)} />
-        <Input label="Protein (g)" type="number" value={protein} onChange={(e) => setProtein(e.target.value)} />
-        <Input label="Carbs (g)" type="number" value={carbs} onChange={(e) => setCarbs(e.target.value)} />
-        <Input label="Fats (g)" type="number" value={fats} onChange={(e) => setFats(e.target.value)} />
+        <Input label="Calories" type="number" min="0" value={calories} onChange={(e) => setCalories(e.target.value)} />
+        <Input label="Protein (g)" type="number" min="0" step="0.1" value={protein} onChange={(e) => setProtein(e.target.value)} />
+        <Input label="Carbs (g)"   type="number" min="0" step="0.1" value={carbs}   onChange={(e) => setCarbs(e.target.value)} />
+        <Input label="Fats (g)"    type="number" min="0" step="0.1" value={fats}    onChange={(e) => setFats(e.target.value)} />
       </div>
+
+      {baseFood && (
+        <p className="text-xs text-brand-600 bg-brand-50 rounded-lg px-3 py-2">
+          ✓ Macros update automatically as you change quantity
+        </p>
+      )}
 
       <Select
         label="Meal"
         value={meal}
-        onChange={(e) => setMeal(e.target.value)}
+        onChange={(e) => setMeal(e.target.value as "breakfast" | "lunch" | "dinner" | "snack" | "")}
         options={MEAL_OPTIONS}
         placeholder="Select meal (optional)"
       />
 
       <div className="flex gap-2 pt-2 border-t border-gray-100">
         <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
-        <Button className="flex-1" loading={loading} onClick={submit}>{editItem ? "Save Changes" : "Log Food"}</Button>
+        <Button className="flex-1" loading={loading} onClick={submit}>
+          {editItem ? "Save Changes" : "Log Food"}
+        </Button>
       </div>
     </div>
   );
 }
 
 // ── Macro ring ────────────────────────────────────────────────────────────────
-function MacroRing({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
-  const pct = total > 0 ? (value / total) * 100 : 0;
+function MacroRing({ label, value, goal, total, color }: {
+  label: string; value: number; goal?: number; total: number; color: string;
+}) {
+  const pct = total > 0 ? Math.min((value / total) * 100, 100) : 0;
   return (
     <div className="text-center">
       <div className="relative w-16 h-16 mx-auto">
@@ -167,18 +270,206 @@ function MacroRing({ label, value, total, color }: { label: string; value: numbe
       </div>
       <p className="text-xs text-gray-500 mt-1">{label}</p>
       <p className="text-sm font-semibold text-gray-800">{Math.round(value)}g</p>
+      {goal != null && (
+        <p className="text-xs text-gray-400">/ {goal}g</p>
+      )}
     </div>
+  );
+}
+
+// ── Calorie goal progress bar ─────────────────────────────────────────────────
+function CalorieProgress({ consumed, target }: { consumed: number; target: number }) {
+  const pct = Math.min((consumed / target) * 100, 100);
+  const remaining = target - consumed;
+  const over = consumed > target;
+  return (
+    <div className="mt-3">
+      <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${over ? "bg-red-400" : "bg-brand-500"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="flex justify-between mt-1.5 text-xs text-gray-400">
+        <span>{Math.round(consumed)} kcal consumed</span>
+        <span className={over ? "text-red-500 font-medium" : ""}>
+          {over ? `${Math.round(-remaining)} kcal over` : `${Math.round(remaining)} kcal left`}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── AI meal plan suggestion modal ─────────────────────────────────────────────
+interface MealPlanItem {
+  foodName: string; calories: number;
+  protein?: number; carbs?: number; fats?: number;
+  quantity: number; unit: string;
+}
+interface MealPlanMeal { meal: "breakfast" | "lunch" | "dinner" | "snack"; items: MealPlanItem[] }
+interface MealPlanData {
+  meals: MealPlanMeal[];
+  totalCalories: number; totalProtein: number; totalCarbs: number; totalFats: number;
+}
+
+function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
+  open: boolean; onClose: () => void; selectedDate: string; onLogged: () => void;
+}) {
+  const [status, setStatus]     = useState<"idle" | "fetching" | "preview" | "logging" | "done">("idle");
+  const [plan,   setPlan]       = useState<MealPlanData | null>(null);
+  const [aiText, setAiText]     = useState("");
+  const [error,  setError]      = useState("");
+
+  useEffect(() => {
+    if (!open) { setStatus("idle"); setPlan(null); setError(""); }
+    else { fetchPlan(); }
+  }, [open]);
+
+  const fetchPlan = async () => {
+    setStatus("fetching"); setError("");
+    try {
+      const today = format(parseISO(selectedDate), "EEEE, MMMM d");
+      const res = await chatApi.send({
+        message: `Please suggest a complete daily meal plan for me for ${today}. Include breakfast, lunch, dinner and one snack, with specific foods and realistic portion sizes that fit my goals.`,
+        agentType: "nutritionist",
+      });
+      setAiText(res.data.message);
+      if (res.data.suggestedMealPlan) {
+        setPlan(res.data.suggestedMealPlan as MealPlanData);
+        setStatus("preview");
+      } else {
+        setError("The nutritionist didn't return a structured meal plan. Try again or ask directly in the chat.");
+        setStatus("idle");
+      }
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Failed to get meal plan suggestion.");
+      setStatus("idle");
+    }
+  };
+
+  const logAll = async () => {
+    if (!plan) return;
+    setStatus("logging");
+    try {
+      const foods = plan.meals.flatMap((m) =>
+        m.items.map((item) => ({ ...item, meal: m.meal }))
+      );
+      await foodApi.bulk(foods, selectedDate);
+      setStatus("done");
+      setTimeout(() => { onLogged(); onClose(); }, 1000);
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Failed to log meals.");
+      setStatus("preview");
+    }
+  };
+
+  const MEAL_ICONS: Record<string, string> = { breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎" };
+
+  return (
+    <Modal open={open} onClose={onClose} title="✨ Suggested Meal Plan" size="lg">
+      {status === "fetching" && (
+        <div className="flex flex-col items-center gap-4 py-12">
+          <div className="animate-spin w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full" />
+          <p className="text-sm text-gray-500">Nutritionist is building your plan…</p>
+        </div>
+      )}
+
+      {status === "done" && (
+        <div className="flex flex-col items-center gap-4 py-10">
+          <div className="text-5xl">✅</div>
+          <p className="font-semibold text-gray-800">Meals logged successfully!</p>
+        </div>
+      )}
+
+      {(status === "preview" || status === "logging") && plan && (
+        <div className="space-y-4">
+          {/* Summary bar */}
+          <div className="flex gap-4 bg-brand-50 rounded-xl px-4 py-3 text-sm">
+            <span className="font-semibold text-brand-700">{plan.totalCalories} kcal</span>
+            <span className="text-gray-500">P: {plan.totalProtein}g</span>
+            <span className="text-gray-500">C: {plan.totalCarbs}g</span>
+            <span className="text-gray-500">F: {plan.totalFats}g</span>
+          </div>
+
+          {/* Meals */}
+          <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+            {plan.meals.map((m) => (
+              <div key={m.meal} className="border border-gray-100 rounded-xl p-3">
+                <p className="text-sm font-semibold text-gray-800 mb-2 capitalize">
+                  {MEAL_ICONS[m.meal]} {m.meal}
+                </p>
+                {m.items.length === 0 ? (
+                  <p className="text-xs text-gray-400">No items</p>
+                ) : (
+                  <table className="w-full text-xs text-gray-600">
+                    <thead>
+                      <tr className="border-b border-gray-100 text-gray-400">
+                        <th className="text-left pb-1">Food</th>
+                        <th className="text-right pb-1">Qty</th>
+                        <th className="text-right pb-1">Kcal</th>
+                        <th className="text-right pb-1">P</th>
+                        <th className="text-right pb-1">C</th>
+                        <th className="text-right pb-1">F</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {m.items.map((item, i) => (
+                        <tr key={i} className="border-b border-gray-50">
+                          <td className="py-1 font-medium">{item.foodName}</td>
+                          <td className="py-1 text-right">{item.quantity}{item.unit}</td>
+                          <td className="py-1 text-right">{item.calories}</td>
+                          <td className="py-1 text-right">{item.protein ?? "—"}</td>
+                          <td className="py-1 text-right">{item.carbs ?? "—"}</td>
+                          <td className="py-1 text-right">{item.fats ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+
+          <div className="flex gap-2 pt-2 border-t border-gray-100">
+            <Button variant="secondary" className="flex-1" onClick={fetchPlan} disabled={status === "logging"}>
+              🔄 Regenerate
+            </Button>
+            <Button variant="secondary" className="flex-1" onClick={onClose} disabled={status === "logging"}>
+              Cancel
+            </Button>
+            <Button className="flex-1" loading={status === "logging"} onClick={logAll}>
+              Log All Meals
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {status === "idle" && error && (
+        <div className="space-y-4 py-4">
+          <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-3">{error}</p>
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+            <Button className="flex-1" onClick={fetchPlan}>Try Again</Button>
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }
 
 // ── Main Nutrition page ───────────────────────────────────────────────────────
 export default function NutritionPage() {
+  const navigate = useNavigate();
   const [date,     setDate]     = useState(new Date().toISOString().split("T")[0]);
   const [logs,     setLogs]     = useState<FoodLog[]>([]);
   const [totals,   setTotals]   = useState<FoodTotals>({ calories: 0, protein: 0, carbs: 0, fats: 0 });
   const [loading,  setLoading]  = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editItem, setEditItem] = useState<FoodLog | null>(null);
+  const [showForm,    setShowForm]    = useState(false);
+  const [editItem,    setEditItem]    = useState<FoodLog | null>(null);
+  const [deleting,    setDeleting]    = useState<number | null>(null);
+  const [showMealPlan, setShowMealPlan] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -186,6 +477,8 @@ export default function NutritionPage() {
       const res = await foodApi.getToday(date);
       setLogs(res.data.logs);
       setTotals(res.data.totals);
+    } catch {
+      setLogs([]); setTotals({ calories: 0, protein: 0, carbs: 0, fats: 0 });
     } finally { setLoading(false); }
   }, [date]);
 
@@ -193,8 +486,21 @@ export default function NutritionPage() {
 
   const deleteLog = async (id: number) => {
     if (!confirm("Remove this entry?")) return;
-    await foodApi.delete(id);
-    load();
+    setDeleting(id);
+    try {
+      await foodApi.delete(id);
+      setLogs((prev) => prev.filter((l) => l.id !== id));
+      setTotals((prev) => {
+        const removed = logs.find((l) => l.id === id);
+        if (!removed) return prev;
+        return {
+          calories: prev.calories - removed.calories,
+          protein:  prev.protein  - (removed.protein ?? 0),
+          carbs:    prev.carbs    - (removed.carbs   ?? 0),
+          fats:     prev.fats     - (removed.fats    ?? 0),
+        };
+      });
+    } finally { setDeleting(null); }
   };
 
   const totalMacroG = totals.protein + totals.carbs + totals.fats;
@@ -207,23 +513,46 @@ export default function NutritionPage() {
     grouped[key].push(log);
   }
   const mealOrder = ["breakfast", "lunch", "dinner", "snack", "other"];
+  const isToday   = date === new Date().toISOString().split("T")[0];
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
-      {/* Header + Date nav */}
-      <div className="flex items-center justify-between">
+      {/* Header + date nav */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Nutrition</h1>
           <p className="text-gray-500 text-sm mt-1">{format(parseISO(date), "EEEE, MMMM d")}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={() => setDate(subDays(parseISO(date), 1).toISOString().split("T")[0])}>←</Button>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-            className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
+        <div className="flex items-center gap-2 flex-wrap">
           <Button variant="secondary" size="sm"
-            disabled={date >= new Date().toISOString().split("T")[0]}
+            onClick={() => setDate(subDays(parseISO(date), 1).toISOString().split("T")[0])}>←</Button>
+          <input
+            type="date"
+            value={date}
+            max={new Date().toISOString().split("T")[0]}
+            onChange={(e) => setDate(e.target.value)}
+            className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          <Button variant="secondary" size="sm"
+            disabled={isToday}
             onClick={() => setDate(addDays(parseISO(date), 1).toISOString().split("T")[0])}>→</Button>
-          <Button onClick={() => setShowForm(true)}>+ Log Food</Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowMealPlan(true)}
+            title="Get an AI-generated meal plan for today"
+          >
+            ✨ Suggest Plan
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/chat?agent=nutritionist")}
+            title="Chat with your AI nutritionist"
+          >
+            🥗 Ask Nutritionist
+          </Button>
+          <Button onClick={() => { setEditItem(null); setShowForm(true); }}>+ Log Food</Button>
         </div>
       </div>
 
@@ -236,16 +565,14 @@ export default function NutritionPage() {
             <p className="text-4xl font-bold text-gray-900">{Math.round(totals.calories)}</p>
             <p className="text-sm text-gray-400 mt-1">kcal consumed</p>
           </div>
-          <div className="flex justify-around pt-4 border-t border-gray-100">
-            <div className="text-center">
+          <div className="flex justify-around pt-4 border-t border-gray-100 text-center">
+            <div>
               <p className="text-xs text-gray-400">Entries</p>
               <p className="font-bold text-gray-800">{logs.length}</p>
             </div>
-            <div className="text-center">
-              <p className="text-xs text-gray-400">Per meal</p>
-              <p className="font-bold text-gray-800">
-                {logs.length > 0 ? Math.round(totals.calories / Object.keys(grouped).length) : "—"}
-              </p>
+            <div>
+              <p className="text-xs text-gray-400">Meals</p>
+              <p className="font-bold text-gray-800">{Object.keys(grouped).length}</p>
             </div>
           </div>
         </Card>
@@ -259,76 +586,122 @@ export default function NutritionPage() {
               <MacroRing label="Carbs"   value={totals.carbs}   total={totalMacroG} color="#f59e0b" />
               <MacroRing label="Fats"    value={totals.fats}    total={totalMacroG} color="#ef4444" />
               <div className="text-center">
-                <p className="text-xs text-gray-400">Calories from macros</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
+                <p className="text-xs text-gray-400 mb-1">Calories from macros</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {Math.round(totals.protein * 4 + totals.carbs * 4 + totals.fats * 9)}
                 </p>
                 <p className="text-xs text-gray-400">kcal</p>
               </div>
             </div>
           ) : (
-            <div className="text-center py-6 text-gray-400 text-sm">Log food to see macro breakdown</div>
+            <div className="flex flex-col items-center justify-center py-6 gap-2">
+              <p className="text-sm text-gray-400">Log food to see macro breakdown</p>
+              <Button size="sm" onClick={() => setShowForm(true)}>Log First Meal</Button>
+            </div>
           )}
         </Card>
       </div>
 
       {/* Food log by meal */}
       {loading ? (
-        <div className="flex justify-center py-12"><div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" /></div>
+        <div className="flex justify-center py-12">
+          <div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" />
+        </div>
       ) : logs.length === 0 ? (
         <Card className="text-center py-14">
           <div className="text-5xl mb-3">🥗</div>
           <h3 className="font-semibold text-gray-800 mb-2">Nothing logged yet</h3>
-          <p className="text-sm text-gray-400 mb-4">Log your first meal to track your nutrition</p>
-          <Button onClick={() => setShowForm(true)}>Log First Meal</Button>
+          <p className="text-sm text-gray-400 mb-4">
+            {isToday
+              ? "Log your first meal to start tracking today's nutrition."
+              : `Nothing was logged on ${format(parseISO(date), "MMM d")}.`}
+          </p>
+          <div className="flex gap-2 justify-center">
+            <Button onClick={() => setShowForm(true)}>Log Food</Button>
+            <Button variant="secondary" onClick={() => navigate("/chat?agent=nutritionist")}>
+              Ask Nutritionist
+            </Button>
+          </div>
         </Card>
       ) : (
         <div className="space-y-4">
           {mealOrder
             .filter((m) => grouped[m])
-            .map((meal) => (
-              <Card key={meal}>
-                <CardHeader
-                  title={`${MEAL_ICONS[meal] ?? "🍽️"} ${meal === "other" ? "Other" : meal.charAt(0).toUpperCase() + meal.slice(1)}`}
-                  subtitle={`${Math.round(grouped[meal].reduce((s, l) => s + l.calories, 0))} kcal`}
-                />
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left py-2 text-xs text-gray-400 font-medium">Food</th>
-                        <th className="text-right py-2 text-xs text-gray-400 font-medium">Qty</th>
-                        <th className="text-right py-2 text-xs text-gray-400 font-medium">Kcal</th>
-                        <th className="text-right py-2 text-xs text-gray-400 font-medium">P</th>
-                        <th className="text-right py-2 text-xs text-gray-400 font-medium">C</th>
-                        <th className="text-right py-2 text-xs text-gray-400 font-medium">F</th>
-                        <th className="text-right py-2 text-xs text-gray-400 font-medium w-16"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {grouped[meal].map((log) => (
-                        <tr key={log.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                          <td className="py-2.5 font-medium text-gray-800">{log.foodName}</td>
-                          <td className="py-2.5 text-right text-gray-500">{log.quantity}{log.unit}</td>
-                          <td className="py-2.5 text-right font-semibold text-gray-800">{Math.round(log.calories)}</td>
-                          <td className="py-2.5 text-right text-blue-600">{log.protein != null ? Math.round(log.protein) : "—"}</td>
-                          <td className="py-2.5 text-right text-yellow-600">{log.carbs  != null ? Math.round(log.carbs)   : "—"}</td>
-                          <td className="py-2.5 text-right text-red-600">{log.fats    != null ? Math.round(log.fats)    : "—"}</td>
-                          <td className="py-2.5 text-right">
-                            <div className="flex gap-1 justify-end">
-                              <button onClick={() => { setEditItem(log); setShowForm(true); }}
-                                className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors">✏️</button>
-                              <button onClick={() => deleteLog(log.id)}
-                                className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-colors">✕</button>
-                            </div>
-                          </td>
+            .map((meal) => {
+              const mealLogs = grouped[meal];
+              const mealCal  = mealLogs.reduce((s, l) => s + l.calories, 0);
+              const mealP    = mealLogs.reduce((s, l) => s + (l.protein ?? 0), 0);
+              const mealC    = mealLogs.reduce((s, l) => s + (l.carbs   ?? 0), 0);
+              const mealF    = mealLogs.reduce((s, l) => s + (l.fats    ?? 0), 0);
+              return (
+                <Card key={meal}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {MEAL_ICONS[meal] ?? "🍽️"}{" "}
+                        {meal === "other" ? "Other" : meal.charAt(0).toUpperCase() + meal.slice(1)}
+                      </h3>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {Math.round(mealCal)} kcal &nbsp;·&nbsp;
+                        P: {Math.round(mealP)}g &nbsp;
+                        C: {Math.round(mealC)}g &nbsp;
+                        F: {Math.round(mealF)}g
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => { setEditItem(null); setShowForm(true); }}
+                      className="text-xs text-brand-600 hover:text-brand-700 font-medium"
+                    >
+                      + Add
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left py-2 text-xs text-gray-400 font-medium">Food</th>
+                          <th className="text-right py-2 text-xs text-gray-400 font-medium">Qty</th>
+                          <th className="text-right py-2 text-xs text-gray-400 font-medium">Kcal</th>
+                          <th className="text-right py-2 text-xs text-gray-400 font-medium">P</th>
+                          <th className="text-right py-2 text-xs text-gray-400 font-medium">C</th>
+                          <th className="text-right py-2 text-xs text-gray-400 font-medium">F</th>
+                          <th className="w-16" />
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            ))}
+                      </thead>
+                      <tbody>
+                        {mealLogs.map((log) => (
+                          <tr key={log.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                            <td className="py-2.5 font-medium text-gray-800">{log.foodName}</td>
+                            <td className="py-2.5 text-right text-gray-500">{log.quantity}{log.unit}</td>
+                            <td className="py-2.5 text-right font-semibold text-gray-800">{Math.round(log.calories)}</td>
+                            <td className="py-2.5 text-right text-blue-600">{log.protein != null ? Math.round(log.protein) : "—"}</td>
+                            <td className="py-2.5 text-right text-yellow-600">{log.carbs  != null ? Math.round(log.carbs)   : "—"}</td>
+                            <td className="py-2.5 text-right text-red-500">{log.fats    != null ? Math.round(log.fats)    : "—"}</td>
+                            <td className="py-2.5">
+                              <div className="flex gap-1 justify-end">
+                                <button
+                                  onClick={() => { setEditItem(log); setShowForm(true); }}
+                                  className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+                                  title="Edit"
+                                >✏️</button>
+                                <button
+                                  onClick={() => deleteLog(log.id)}
+                                  disabled={deleting === log.id}
+                                  className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-colors disabled:opacity-50"
+                                  title="Delete"
+                                >
+                                  {deleting === log.id ? "…" : "✕"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              );
+            })}
         </div>
       )}
 
@@ -346,6 +719,14 @@ export default function NutritionPage() {
           onClose={() => { setShowForm(false); setEditItem(null); }}
         />
       </Modal>
+
+      {/* AI meal plan suggestion modal */}
+      <SuggestMealPlanModal
+        open={showMealPlan}
+        onClose={() => setShowMealPlan(false)}
+        selectedDate={date}
+        onLogged={() => load()}
+      />
     </div>
   );
 }

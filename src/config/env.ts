@@ -15,7 +15,7 @@ const missingEnvVars = requiredEnvVars.filter(
 
 if (missingEnvVars.length > 0) {
   throw new Error(
-    Missing required environment variables: \$\{missingEnvVars.join(', ')\}
+    `Missing required environment variables: ${missingEnvVars.join(', ')}`
   );
 }
 

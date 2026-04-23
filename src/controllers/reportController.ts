@@ -136,8 +136,8 @@ Be honest, highlight wins and one area to improve. Use second-person.`;
     // Upsert with correct column names matching prisma/schema.prisma
     const report = await prisma.monthlyReport.upsert({
       where:  { userId_year_month: { userId, year, month } },
-      create: { userId, month, year, totalWorkouts, totalVolume: Math.round(totalVolume), avgCalories, avgProtein, weightStart, weightEnd, weightDelta, prsHit, goalProgress, aiSummary },
-      update: {                      totalWorkouts, totalVolume: Math.round(totalVolume), avgCalories, avgProtein, weightStart, weightEnd, weightDelta, prsHit, goalProgress, aiSummary },
+      create: { userId, month, year, totalWorkouts, totalVolume: Math.round(totalVolume), avgCalories: avgCalories ?? 0, avgProtein: avgProtein ?? 0, weightStart, weightEnd, weightDelta, prsHit, goalProgress, aiSummary },
+      update: {                      totalWorkouts, totalVolume: Math.round(totalVolume), avgCalories: avgCalories ?? 0, avgProtein: avgProtein ?? 0, weightStart, weightEnd, weightDelta, prsHit, goalProgress, aiSummary },
     });
 
     logger.info(`Report ${month}/${year} for user ${userId}: ${totalWorkouts} workouts, ${prsHit} PRs`);

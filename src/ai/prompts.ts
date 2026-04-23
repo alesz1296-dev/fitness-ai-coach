@@ -73,6 +73,50 @@ Rules:
 - Keep the block at the very end of your response
 `;
 
+const MEAL_PLAN_JSON_INSTRUCTIONS = `
+IMPORTANT — When you suggest a complete daily meal plan (all meals for the day), you MUST embed a machine-readable JSON block at the END of your response using exactly this format:
+
+\`\`\`meal-plan-json
+{
+  "meals": [
+    {
+      "meal": "breakfast",
+      "items": [
+        { "foodName": "Oatmeal", "calories": 300, "protein": 10, "carbs": 54, "fats": 5, "quantity": 100, "unit": "g" },
+        { "foodName": "Banana", "calories": 90, "protein": 1, "carbs": 23, "fats": 0, "quantity": 1, "unit": "medium" }
+      ]
+    },
+    {
+      "meal": "lunch",
+      "items": [
+        { "foodName": "Grilled Chicken Breast", "calories": 165, "protein": 31, "carbs": 0, "fats": 4, "quantity": 150, "unit": "g" }
+      ]
+    },
+    {
+      "meal": "dinner",
+      "items": []
+    },
+    {
+      "meal": "snack",
+      "items": []
+    }
+  ],
+  "totalCalories": 1800,
+  "totalProtein": 150,
+  "totalCarbs": 180,
+  "totalFats": 60
+}
+\`\`\`
+
+Rules:
+- Only include this block when the user specifically asks for a full day meal plan
+- "meal" must be one of: breakfast, lunch, dinner, snack
+- All numeric fields must be numbers, not strings
+- Include realistic portion sizes; quantities should match the unit
+- "protein", "carbs", "fats" are optional per item but highly encouraged
+- Keep it at the very end of your response
+`;
+
 // ── System prompt builder ─────────────────────────────────────────────────────
 
 export const buildSystemPrompt = (agentType: AgentType, user: UserContext): string => {
@@ -110,7 +154,8 @@ You are acting as the NUTRITIONIST persona. Your expertise:
 - Eating for performance vs. aesthetics
 
 When giving nutrition advice, calculate specific calorie and macro targets. Recommend whole foods first. Use TDEE principles.
-${NUTRITION_JSON_INSTRUCTIONS}`;
+${NUTRITION_JSON_INSTRUCTIONS}
+${MEAL_PLAN_JSON_INSTRUCTIONS}`;
   }
 
   // General — can trigger either JSON block depending on context
@@ -125,8 +170,9 @@ ${NUTRITION_JSON_INSTRUCTIONS}`;
 // ── JSON extraction helpers (used by the frontend via the API response) ────────
 // These regexes are also replicated in the frontend ChatPage for client-side parsing.
 
-export const WORKOUT_JSON_REGEX  = /```workout-json\s*([\s\S]*?)```/;
+export const WORKOUT_JSON_REGEX   = /```workout-json\s*([\s\S]*?)```/;
 export const NUTRITION_JSON_REGEX = /```nutrition-json\s*([\s\S]*?)```/;
+export const MEAL_PLAN_JSON_REGEX = /```meal-plan-json\s*([\s\S]*?)```/;
 
 export function extractWorkoutJson(text: string): Record<string, any> | null {
   const match = text.match(WORKOUT_JSON_REGEX);
@@ -136,6 +182,12 @@ export function extractWorkoutJson(text: string): Record<string, any> | null {
 
 export function extractNutritionJson(text: string): Record<string, any> | null {
   const match = text.match(NUTRITION_JSON_REGEX);
+  if (!match) return null;
+  try { return JSON.parse(match[1]); } catch { return null; }
+}
+
+export function extractMealPlanJson(text: string): Record<string, any> | null {
+  const match = text.match(MEAL_PLAN_JSON_REGEX);
   if (!match) return null;
   try { return JSON.parse(match[1]); } catch { return null; }
 }

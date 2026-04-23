@@ -12,7 +12,6 @@ import WorkoutsPage from "./pages/workouts/WorkoutsPage";
 import NutritionPage from "./pages/nutrition/NutritionPage";
 import ProgressPage from "./pages/progress/ProgressPage";
 import GoalsPage    from "./pages/goals/GoalsPage";
-import TemplatesPage from "./pages/templates/TemplatesPage";
 import ChatPage     from "./pages/chat/ChatPage";
 import ReportsPage  from "./pages/reports/ReportsPage";
 import SettingsPage from "./pages/settings/SettingsPage";
@@ -30,7 +29,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/workouts"  element={<WorkoutsPage />} />
-            <Route path="/templates" element={<TemplatesPage />} />
+            <Route path="/templates" element={<Navigate to="/workouts" replace />} />
             <Route path="/nutrition" element={<NutritionPage />} />
             <Route path="/progress"  element={<ProgressPage />} />
             <Route path="/goals"     element={<GoalsPage />} />

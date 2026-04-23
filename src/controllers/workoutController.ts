@@ -399,6 +399,55 @@ export const deleteExerciseEntry = async (
   }
 };
 
+// ── POST /api/workouts/:id/exercises ─────────────────────────────────────────
+// Add a single exercise to an already-logged workout.
+
+export const addExerciseToWorkout = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const workoutId = Number(req.params.id);
+
+    // Verify workout ownership and get current exercise count for ordering
+    const workout = await prisma.workout.findFirst({
+      where: { id: workoutId, userId: req.user!.id },
+      include: { exercises: { orderBy: { order: "desc" }, take: 1 } },
+    });
+
+    if (!workout) {
+      return next(createError("Workout not found", 404));
+    }
+
+    const { exerciseName, sets, reps, weight, rpe, notes } = req.body;
+
+    if (!exerciseName || sets === undefined || reps === undefined) {
+      return next(createError("exerciseName, sets, and reps are required", 400));
+    }
+
+    const nextOrder = (workout.exercises[0]?.order ?? -1) + 1;
+
+    const exercise = await prisma.workoutExercise.create({
+      data: {
+        workoutId,
+        exerciseName: normalizeExerciseName(exerciseName),
+        sets:  Number(sets),
+        reps:  Number(reps),
+        order: nextOrder,
+        ...(weight !== undefined && weight !== null && { weight: Number(weight) }),
+        ...(rpe    !== undefined && rpe    !== null && { rpe:    Number(rpe) }),
+        ...(notes  && { notes }),
+      },
+    });
+
+    logger.info(`Exercise added to workout ${workoutId} for user ${req.user!.id}: ${exerciseName}`);
+    res.status(201).json({ message: "Exercise added", exercise });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ── POST /api/workouts/start-from-template/:templateId ────────────────────────
 // Creates a new (empty/pre-filled) workout session from a template.
 // The frontend can edit it before formally saving; this is just the starter object.

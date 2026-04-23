@@ -12,6 +12,8 @@ export interface User {
   fitnessLevel?: string | null;
   activityLevel?: "sedentary" | "light" | "moderate" | "active" | "very_active" | null;
   goal?: string | null;
+  profileComplete?: boolean | null;
+  proteinMultiplier?: number | null;
   createdAt?: string;
 }
 
@@ -204,6 +206,11 @@ export interface Conversation {
   message: string;
   response?: string | null;
   agentType: "coach" | "nutritionist" | "general";
+  metadata?: {
+    suggestedWorkout?:  Record<string, any>;
+    suggestedPlan?:     Record<string, any>;
+    suggestedMealPlan?: Record<string, any>;
+  } | null;
   createdAt: string;
 }
 

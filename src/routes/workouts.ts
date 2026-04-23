@@ -5,6 +5,7 @@ import {
   createWorkoutSchema,
   updateWorkoutSchema,
   updateExerciseEntrySchema,
+  addExerciseToWorkoutSchema,
 } from "../middleware/schemas.js";
 import {
   getWorkouts,
@@ -16,6 +17,7 @@ import {
   getExerciseProgression,
   updateExerciseEntry,
   deleteExerciseEntry,
+  addExerciseToWorkout,
   startFromTemplate,
 } from "../controllers/workoutController.js";
 
@@ -62,5 +64,8 @@ router.put("/:id", validateIdParam(), validate(updateWorkoutSchema), updateWorko
 
 // DELETE /api/workouts/:id
 router.delete("/:id", validateIdParam(), deleteWorkout);
+
+// POST /api/workouts/:id/exercises  (add exercise to existing workout)
+router.post("/:id/exercises", validateIdParam(), validate(addExerciseToWorkoutSchema), addExerciseToWorkout);
 
 export default router;

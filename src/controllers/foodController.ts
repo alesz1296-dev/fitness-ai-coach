@@ -12,13 +12,20 @@ export const getFoodLogs = async (
 ): Promise<void> => {
   try {
     const dateStr = req.query.date as string;
-    const targetDate = dateStr ? new Date(dateStr) : new Date();
 
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Always work in UTC to avoid timezone drift between client and server.
+    // The client sends a plain YYYY-MM-DD string; we treat it as UTC day boundaries.
+    let startOfDay: Date;
+    let endOfDay: Date;
+    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      startOfDay = new Date(`${dateStr}T00:00:00.000Z`);
+      endOfDay   = new Date(`${dateStr}T23:59:59.999Z`);
+    } else {
+      const now = new Date();
+      const todayStr = now.toISOString().split("T")[0];
+      startOfDay = new Date(`${todayStr}T00:00:00.000Z`);
+      endOfDay   = new Date(`${todayStr}T23:59:59.999Z`);
+    }
 
     const logs = await prisma.foodLog.findMany({
       where: {
@@ -39,7 +46,7 @@ export const getFoodLogs = async (
       { calories: 0, protein: 0, carbs: 0, fats: 0 }
     );
 
-    res.json({ logs, totals, date: targetDate.toISOString().split("T")[0] });
+    res.json({ logs, totals, date: startOfDay.toISOString().split("T")[0] });
   } catch (error) {
     next(error);
   }
@@ -69,7 +76,8 @@ export const logFood = async (
         quantity: Number(quantity),
         unit,
         ...(meal && { meal }),
-        ...(date && { date: new Date(date) }),
+        // Store as UTC midnight so date queries are timezone-consistent
+        ...(date && { date: new Date(/^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date}T12:00:00.000Z` : date) }),
       },
     });
 
@@ -138,6 +146,52 @@ export const deleteFoodLog = async (
 
     await prisma.foodLog.delete({ where: { id: logId } });
     res.json({ message: "Food log entry deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/foods/bulk — log multiple food items in one request (e.g. from AI meal plan)
+export const bulkLogFoods = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { foods, date } = req.body as {
+      foods: Array<{
+        foodName: string; calories: number;
+        protein?: number; carbs?: number; fats?: number;
+        quantity: number; unit: string;
+        meal?: "breakfast" | "lunch" | "dinner" | "snack";
+      }>;
+      date?: string;
+    };
+
+    const dateStr   = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toISOString().split("T")[0];
+    const storedDate = new Date(`${dateStr}T12:00:00.000Z`);
+
+    const logs = await prisma.$transaction(
+      foods.map((f) =>
+        prisma.foodLog.create({
+          data: {
+            userId:    req.user!.id,
+            foodName:  f.foodName,
+            calories:  Number(f.calories),
+            ...(f.protein !== undefined && { protein: Number(f.protein) }),
+            ...(f.carbs   !== undefined && { carbs:   Number(f.carbs) }),
+            ...(f.fats    !== undefined && { fats:    Number(f.fats) }),
+            quantity:  Number(f.quantity),
+            unit:      f.unit,
+            ...(f.meal && { meal: f.meal }),
+            date:      storedDate,
+          },
+        })
+      )
+    );
+
+    logger.info(`Bulk food log: ${logs.length} items for user ${req.user!.id}`);
+    res.status(201).json({ message: `${logs.length} food items logged`, logs });
   } catch (error) {
     next(error);
   }

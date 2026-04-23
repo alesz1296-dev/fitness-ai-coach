@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
 import { validate, validateIdParam } from "../middleware/validate.js";
-import { logFoodSchema } from "../middleware/schemas.js";
+import { logFoodSchema, bulkLogFoodsSchema } from "../middleware/schemas.js";
 import {
   getFoodLogs,
   logFood,
+  bulkLogFoods,
   updateFoodLog,
   deleteFoodLog,
   getFoodHistory,
@@ -22,6 +23,9 @@ router.get("/", getFoodLogs);
 
 // POST   /api/foods
 router.post("/", validate(logFoodSchema), logFood);
+
+// POST   /api/foods/bulk  (log multiple foods — e.g. from AI meal plan)
+router.post("/bulk", validate(bulkLogFoodsSchema), bulkLogFoods);
 
 // PUT    /api/foods/:id  ← edit a logged entry
 router.put("/:id", validateIdParam(), validate(logFoodSchema.partial()), updateFoodLog);
