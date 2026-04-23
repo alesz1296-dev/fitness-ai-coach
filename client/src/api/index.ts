@@ -204,3 +204,8 @@ export const reportsApi = {
   generate: (data?: { year?: number; month?: number; aiSummary?: boolean }) =>
     api.post<{ report: MonthlyReport }>("/reports/generate", data),
 };
+
+// ── Predictions ───────────────────────────────────────────────────────────────
+export const predictionsApi = {
+  get: () => api.get<any>("/predictions"),
+};

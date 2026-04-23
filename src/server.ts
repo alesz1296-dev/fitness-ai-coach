@@ -24,7 +24,8 @@ import calorieGoalRoutes from "./routes/calorieGoals.js";
 import reportRoutes    from "./routes/reports.js";
 import dashboardRoutes  from "./routes/dashboard.js";
 import searchRoutes     from "./routes/search.js";
-import weeklyPlanRoutes from "./routes/weeklyPlan.js";
+import weeklyPlanRoutes  from "./routes/weeklyPlan.js";
+import predictionRoutes  from "./routes/predictions.js";
 import { runMigrations } from "./lib/runMigrations.js";
 
 const app: Express = express();
@@ -75,6 +76,7 @@ app.use("/api/reports",    reportRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/search",      searchRoutes);
 app.use("/api/weekly-plan", weeklyPlanRoutes);
+app.use("/api/predictions", predictionRoutes);
 
 // ── 404 & Error Handlers ─────────────────────────────────────────────────────
 app.use(notFound);
