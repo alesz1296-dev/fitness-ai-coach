@@ -25,6 +25,7 @@ import reportRoutes    from "./routes/reports.js";
 import dashboardRoutes  from "./routes/dashboard.js";
 import searchRoutes     from "./routes/search.js";
 import weeklyPlanRoutes from "./routes/weeklyPlan.js";
+import { runMigrations } from "./lib/runMigrations.js";
 
 const app: Express = express();
 const PORT = process.env.PORT || 3000;
@@ -84,8 +85,9 @@ const server = app.listen(PORT, async () => {
   try {
     await prisma.$connect();
     logger.info(`✅ Database connected`);
+    await runMigrations();
   } catch (err) {
-    logger.error("❌ Database connection failed", err);
+    logger.error("❌ Startup error", err);
   }
   logger.info(`🚀 ${process.env.APP_NAME || "FitAI Coach"} running on port ${PORT}`);
   logger.info(`📍 Health: http://localhost:${PORT}/api/health`);
