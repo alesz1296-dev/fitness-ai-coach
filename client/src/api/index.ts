@@ -36,8 +36,11 @@ interface WorkoutExerciseUpdateInput {
 
 // ── Search ────────────────────────────────────────────────────────────────────
 export const searchApi = {
-  foods: (q: string, limit = 20) =>
-    api.get<{ results: any[]; total: number }>(`/search/foods?q=${encodeURIComponent(q)}&limit=${limit}`),
+  foods: (q: string, limit = 20, tag?: string) => {
+    const params = new URLSearchParams({ q, limit: String(limit) });
+    if (tag) params.set("tag", tag);
+    return api.get<{ results: any[]; total: number }>(`/search/foods?${params.toString()}`);
+  },
   exercises: (q: string, opts: { muscle?: string; equipment?: string; difficulty?: string } = {}, limit = 25) => {
     const params = new URLSearchParams({ q, limit: String(limit) });
     if (opts.muscle)     params.set("muscle",     opts.muscle);

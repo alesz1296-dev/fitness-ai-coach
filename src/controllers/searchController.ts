@@ -2,12 +2,13 @@ import { Request, Response, NextFunction } from "express";
 import { searchFoods, FOOD_DB }         from "../data/foods.js";
 import { searchExercises, EXERCISE_DB, MUSCLE_GROUPS, EQUIPMENT_TYPES } from "../data/exercises.js";
 
-// GET /api/search/foods?q=chicken&limit=20
+// GET /api/search/foods?q=chicken&limit=20&tag=keto
 export const foodSearch = (req: Request, res: Response, next: NextFunction): void => {
   try {
     const q     = String(req.query.q || "");
     const limit = Math.min(Number(req.query.limit) || 20, 50);
-    res.json({ results: searchFoods(q, limit), total: FOOD_DB.length });
+    const tag   = req.query.tag ? String(req.query.tag) : undefined;
+    res.json({ results: searchFoods(q, limit, tag), total: FOOD_DB.length });
   } catch (e) { next(e); }
 };
 

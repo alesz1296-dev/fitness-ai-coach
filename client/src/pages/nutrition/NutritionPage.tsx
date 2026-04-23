@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { foodApi, chatApi, searchApi, calorieGoalsApi } from "../../api";
@@ -51,61 +51,127 @@ function calcMacro(
     : Math.round(valuePer100g * qty / defaultQty);
 }
 
+// ── Food tag filter chips ─────────────────────────────────────────────────────
+const TAG_FILTERS = [
+  { tag: "",             label: "All",          emoji: "🍽️" },
+  { tag: "keto",         label: "Keto",         emoji: "🥑" },
+  { tag: "fit",          label: "Fit",          emoji: "💪" },
+  { tag: "high-protein", label: "High-Protein", emoji: "🍗" },
+  { tag: "vegan",        label: "Vegan",        emoji: "🌱" },
+  { tag: "vegetarian",   label: "Vegetarian",   emoji: "🥦" },
+  { tag: "integral",     label: "Whole Grain",  emoji: "🌾" },
+];
+
+const TAG_COLORS: Record<string, string> = {
+  keto:           "bg-yellow-100 text-yellow-700",
+  fit:            "bg-blue-100 text-blue-700",
+  "high-protein": "bg-red-100 text-red-700",
+  vegan:          "bg-green-100 text-green-700",
+  vegetarian:     "bg-emerald-100 text-emerald-700",
+  integral:       "bg-amber-100 text-amber-700",
+  fruit:          "bg-pink-100 text-pink-600",
+  vegetable:      "bg-lime-100 text-lime-700",
+  legume:         "bg-orange-100 text-orange-700",
+  dairy:          "bg-sky-100 text-sky-700",
+  "low-carb":     "bg-violet-100 text-violet-700",
+};
+
 // ── Food search combobox ──────────────────────────────────────────────────────
 function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
-  const [query,   setQuery]   = useState("");
-  const [results, setResults] = useState<any[]>([]);
-  const [open,    setOpen]    = useState(false);
+  const [query,     setQuery]     = useState("");
+  const [activeTag, setActiveTag] = useState("");
+  const [results,   setResults]   = useState<any[]>([]);
+  const [open,      setOpen]      = useState(false);
 
+  // Fetch whenever query or tag changes; if no query but tag active, show top tag foods
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
+    const q = query.trim();
+    if (!q && !activeTag) { setResults([]); setOpen(false); return; }
     const t = setTimeout(() => {
-      searchApi.foods(query).then((r) => {
+      searchApi.foods(q, 20, activeTag || undefined).then((r) => {
         setResults(r.data.results);
         setOpen(true);
       }).catch(() => {});
-    }, 200);
+    }, q ? 200 : 0);
     return () => clearTimeout(t);
-  }, [query]);
+  }, [query, activeTag]);
+
+  const handleTagClick = (tag: string) => {
+    setActiveTag(tag);
+    if (!query.trim()) setOpen(true);
+  };
 
   return (
-    <div className="relative">
-      <Input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => query && results.length > 0 && setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        placeholder="Search food (e.g. chicken breast, oats)…"
-        label="Search Food Database"
-      />
-      {open && results.length > 0 && (
-        <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
-          {results.map((f) => {
-            const displayCal = calcMacro(f.calories, f.defaultQty, f.defaultUnit, f.defaultQty);
-            const displayP   = calcMacro(f.protein,  f.defaultQty, f.defaultUnit, f.defaultQty);
-            const displayC   = calcMacro(f.carbs,    f.defaultQty, f.defaultUnit, f.defaultQty);
-            const displayF   = calcMacro(f.fats,     f.defaultQty, f.defaultUnit, f.defaultQty);
-            return (
-              <li
-                key={f.id}
-                onMouseDown={() => { onSelect(f); setQuery(""); setOpen(false); }}
-                className="px-4 py-2.5 hover:bg-brand-50 cursor-pointer border-b border-gray-50 last:border-0"
-              >
-                <p className="text-sm font-medium text-gray-800">{f.name}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {displayCal} kcal · {f.defaultQty} {f.defaultUnit} &nbsp;|&nbsp;
-                  P: {displayP}g &nbsp;C: {displayC}g &nbsp;F: {displayF}g
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      {open && results.length === 0 && query.trim().length > 1 && (
-        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-400">
-          No results — enter details manually below
-        </div>
-      )}
+    <div className="space-y-2">
+      {/* Tag filter chips */}
+      <div className="flex flex-wrap gap-1.5">
+        {TAG_FILTERS.map(({ tag, label, emoji }) => (
+          <button
+            key={tag}
+            type="button"
+            onClick={() => handleTagClick(tag)}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+              activeTag === tag
+                ? "bg-brand-600 text-white border-brand-600"
+                : "bg-white text-gray-600 border-gray-200 hover:border-brand-400 hover:text-brand-600"
+            }`}
+          >
+            {emoji} {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search input */}
+      <div className="relative">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => (query || activeTag) && results.length > 0 && setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder="Search food (e.g. chicken breast, oats)…"
+          label="Search Food Database"
+        />
+        {open && results.length > 0 && (
+          <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+            {results.map((f) => {
+              const displayCal = calcMacro(f.calories, f.defaultQty, f.defaultUnit, f.defaultQty);
+              const displayP   = calcMacro(f.protein,  f.defaultQty, f.defaultUnit, f.defaultQty);
+              const displayC   = calcMacro(f.carbs,    f.defaultQty, f.defaultUnit, f.defaultQty);
+              const displayF   = calcMacro(f.fats,     f.defaultQty, f.defaultUnit, f.defaultQty);
+              const visibleTags = (f.tags ?? []).slice(0, 3);
+              return (
+                <li
+                  key={f.id}
+                  onMouseDown={() => { onSelect(f); setQuery(""); setOpen(false); }}
+                  className="px-4 py-2.5 hover:bg-brand-50 cursor-pointer border-b border-gray-50 last:border-0"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium text-gray-800">{f.name}</p>
+                    {visibleTags.length > 0 && (
+                      <div className="flex gap-1 flex-shrink-0 flex-wrap justify-end">
+                        {visibleTags.map((tag: string) => (
+                          <span key={tag} className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${TAG_COLORS[tag] ?? "bg-gray-100 text-gray-500"}`}>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {displayCal} kcal · {f.defaultQty} {f.defaultUnit} &nbsp;|&nbsp;
+                    P: {displayP}g &nbsp;C: {displayC}g &nbsp;F: {displayF}g
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {open && results.length === 0 && (query.trim().length > 1 || activeTag) && (
+          <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-400">
+            No results — enter details manually below
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -704,6 +770,14 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
   );
 }
 
+// ── Fasting timer helpers ─────────────────────────────────────────────────────
+function formatFastingDuration(ms: number): string {
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${h}h ${String(m).padStart(2, "0")}m`;
+}
+
 // ── Main Nutrition page ───────────────────────────────────────────────────────
 export default function NutritionPage() {
   const navigate = useNavigate();
@@ -717,6 +791,36 @@ export default function NutritionPage() {
   const [showMealPlan, setShowMealPlan] = useState(false);
   const [activeGoal,  setActiveGoal]  = useState<CalorieGoal | null>(null);
   const [macroView,   setMacroView]   = useState<"distribution" | "breakdown" | "by-meal" | "goals">("distribution");
+
+  // ── Fasting mode ────────────────────────────────────────────────────────────
+  const [fastingActive, setFastingActive] = useState(false);
+  const [fastingStart,  setFastingStart]  = useState<Date | null>(null);
+  const [fastingElapsed, setFastingElapsed] = useState(0); // ms
+  const fastingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (fastingActive && fastingStart) {
+      fastingRef.current = setInterval(() => {
+        setFastingElapsed(Date.now() - fastingStart.getTime());
+      }, 10000); // update every 10s
+      setFastingElapsed(Date.now() - fastingStart.getTime()); // immediate
+    } else {
+      if (fastingRef.current) clearInterval(fastingRef.current);
+    }
+    return () => { if (fastingRef.current) clearInterval(fastingRef.current); };
+  }, [fastingActive, fastingStart]);
+
+  const toggleFasting = () => {
+    if (fastingActive) {
+      setFastingActive(false);
+      setFastingStart(null);
+      setFastingElapsed(0);
+    } else {
+      setFastingActive(true);
+      setFastingStart(new Date());
+      setFastingElapsed(0);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -804,9 +908,51 @@ export default function NutritionPage() {
           >
             🥗 Ask Nutritionist
           </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={toggleFasting}
+            className={fastingActive ? "border-violet-400 text-violet-700 bg-violet-50" : ""}
+            title={fastingActive ? "End fasting window" : "Start fasting timer"}
+          >
+            {fastingActive ? "⏸ End Fast" : "⏱ Start Fast"}
+          </Button>
           <Button onClick={() => { setEditItem(null); setShowForm(true); }}>+ Log Food</Button>
         </div>
       </div>
+
+      {/* Fasting mode banner */}
+      {fastingActive && fastingStart && (
+        <div className="rounded-2xl border border-violet-200 bg-violet-50 px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🕐</span>
+            <div>
+              <p className="font-semibold text-violet-800 text-sm">Fasting window active</p>
+              <p className="text-xs text-violet-500 mt-0.5">
+                Started at {fastingStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </p>
+            </div>
+          </div>
+          <div className="text-center">
+            <p className="text-3xl font-bold text-violet-700 tabular-nums">{formatFastingDuration(fastingElapsed)}</p>
+            <p className="text-xs text-violet-400 mt-0.5">elapsed</p>
+          </div>
+          <div className="text-right text-xs text-violet-500 space-y-0.5">
+            {fastingElapsed < 12 * 3600000 && (
+              <p>⏳ {formatFastingDuration(12 * 3600000 - fastingElapsed)} until 12-hour fast</p>
+            )}
+            {fastingElapsed >= 12 * 3600000 && fastingElapsed < 16 * 3600000 && (
+              <p>⏳ {formatFastingDuration(16 * 3600000 - fastingElapsed)} until 16:8 window</p>
+            )}
+            {fastingElapsed >= 16 * 3600000 && fastingElapsed < 24 * 3600000 && (
+              <p>✅ 16:8 window complete! {formatFastingDuration(24 * 3600000 - fastingElapsed)} until 24h</p>
+            )}
+            {fastingElapsed >= 24 * 3600000 && (
+              <p>🏆 Full 24-hour fast complete!</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Daily summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
