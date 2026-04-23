@@ -4,6 +4,37 @@ Most recent session first.
 
 ---
 
+## 2026-04-23 — Session 11
+
+### Completed this session
+
+#### Nutrition page — macro goal bars + deficit/surplus banner
+- **`NutritionPage.tsx`**: Added `activeGoal: CalorieGoal | null` state, fetched in parallel with today's food log via `calorieGoalsApi.getActive()`.
+- **`MacroGoalBar` component**: progress bar per macro (protein/carbs/fat) showing consumed vs. target grams, percentage, over/under amount, and coloured bar fill. Only renders when an active goal exists.
+- **`DeficitSurplusBanner` component**: within ±80 kcal → green "Right on target"; surplus → orange with bulk-friendly message; deficit → blue with cut-friendly message.
+- **Calorie card updates**: shows goal kcal and `CalorieProgress` bar when a goal is set; shows "Set a calorie goal" nudge when not; TDEE displayed in footer stats.
+- **Macros card updates**: tab toggle "🍩 Distribution / 🎯 vs Goals" (toggle only shown when goal exists); Distribution = existing doughnut rings; vs Goals = three `MacroGoalBar`s.
+
+#### Goals page — preset goal templates
+- **`GoalsPage.tsx`**: Added `GOAL_PRESETS` array of 6 presets: Fat Loss (−8%/16wk), Aggressive Cut (−12%/12wk), Lean Bulk (+4%/16wk), Muscle Building (+7%/20wk), Maintenance (0%/12wk), Body Recomposition (0%/20wk).
+- **`applyPreset(preset)`**: computes target weight from `currentWeight × (1 + weightPct/100)`, calls `addWeeks(weeks)` for target date, sets all form fields, immediately calls `getPreview({ cw, tw, td })` via override params to bypass setState timing.
+- **`getPreview(overrides?)`**: refactored to accept optional `{ cw?, tw?, td? }` overrides so `applyPreset` can pass fresh computed values without waiting for React state update.
+- Preset cards rendered as a 2-column grid above the customise fields; active preset highlighted with its theme colour; profile-incompleteness warning shown when age/height/sex/activityLevel are missing.
+- Manual field changes reset `activePreset` and `preview`.
+
+#### Settings page — improved error messages + protein multiplier slider
+- **`SettingsPage.tsx`**: Added `parseApiError(e)` helper — surfaces field-level Zod details, API error string, or falls back to `e.message`.
+- **`NutritionPreferencesForm`**: range slider (0.8–2.2 g/kg, step 0.1), live "X g protein/day" preview using `user.weight`, reference table (sedentary → cutting), warning banner at ≥2.2 g/kg, saves via `usersApi.updateProfile({ proteinMultiplier })`.
+- All save handlers now use `parseApiError(e)` for consistent user-facing errors.
+
+#### Backend — schema + error improvements
+- **`src/middleware/schemas.ts`**: Added `proteinMultiplier: z.coerce.number().min(0.8).max(2.2).optional()` to `updateProfileSchema` (was being stripped by Zod, causing silent 500s).
+- **`src/middleware/errorHandler.ts`**: Type-aware error messages — Prisma P2002 → "A record with that value already exists.", P2025 → "Record not found.", P2xxx → "Database error — please try again.", JWT → "Session expired — please log in again.", SyntaxError → "Invalid request format.", otherwise → "Something went wrong. Please try again." Dev mode exposes `detail` + `stack`.
+
+### TypeScript check: ✅ zero errors (frontend)
+
+---
+
 ## 2026-04-23 — Session 10
 
 ### Completed this session

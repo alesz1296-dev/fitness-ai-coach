@@ -134,7 +134,7 @@ Notable field names (easy to get wrong):
 
 ### 🔴 Active bugs / gaps
 - *(All Phase 3 items resolved in Session 8 — see LOG.md)*
-- *(All Phase 4 feature polish items resolved in Sessions 9–10 — see LOG.md)*
+- *(All Phase 4 feature polish items resolved in Sessions 9–11 — see LOG.md)*
 
 > **Note for next deploy:** DB migrations were applied directly via sqlite3 in the sandbox. When pulling to a new machine, run `npx prisma generate` to regenerate Prisma client types, then `npx prisma migrate deploy` to apply:
 > - `20260423000000_add_conversation_metadata_and_profile_complete`
@@ -151,7 +151,7 @@ These should be done before any public deployment:
 - **OpenAI error handling** — Current code only handles 401 and 429. Add handling for: context length exceeded (400 with specific code), model not found, service unavailable (503), timeout.
 - **DB indexes** — Add `@@index` in schema for frequently queried fields: `FoodLog.userId + date`, `Workout.userId + date`, `WeightEntry.userId + date`.
 
-### 🟡 Phase 4 — Feature polish (UX improvements) — COMPLETED in Sessions 9–10
+### 🟡 Phase 4 — Feature polish (UX improvements) — COMPLETED in Sessions 9–11
 
 - ✅ Progress page — Body & Weight tab + Exercise Progression tab (BodyCompositionCard with Deurenberg equation)
 - ✅ Food database — Integral/Whole Grain, Fit/High-Protein, Keto/Low-Carb categories (257 items)
@@ -160,6 +160,10 @@ These should be done before any public deployment:
 - ✅ Workout plan UX — Toasts on add/delete, fork system templates to custom, rename custom plans
 - ✅ Muscle group expansion — Biceps/Triceps/Forearms/Hamstrings separate; Legs broad alias; full exercise checklist in AddExercisePanel
 - ✅ Smart plan suggestions — Injury warnings, missing muscle detection, gender/goal-aware tips
+- ✅ Nutrition page — Macro goal bars (vs Goals tab), DeficitSurplusBanner, calorie progress only when goal set
+- ✅ Goals page — 6 preset templates (Fat Loss, Aggressive Cut, Lean Bulk, Muscle Building, Maintenance, Recomp) with profile-calculated values
+- ✅ Settings page — protein multiplier slider + Zod-aware error messages
+- ✅ Error handler — type-aware messages (Prisma, JWT, SyntaxError)
 
 Remaining Phase 4 items (deferred):
 - **Progress projections on dashboard** — Ongoing actual-vs-projected weight chart. The `calorieGoalsApi.getProjection(id)` endpoint already returns both actual and projected arrays. Just needs a Recharts `ComposedChart` wired in on the Dashboard.
