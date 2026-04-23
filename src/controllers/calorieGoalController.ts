@@ -56,7 +56,7 @@ export const createCalorieGoal = async (
     // Load user profile for TDEE calculation
     const user = await prisma.user.findUnique({
       where: { id: req.user!.id },
-      select: { age: true, height: true, activityLevel: true, proteinMultiplier: true },
+      select: { age: true, height: true, sex: true, activityLevel: true, proteinMultiplier: true, trainingDaysPerWeek: true, trainingHoursPerDay: true },
     });
 
     const calc = calculateCalorieGoal({
@@ -65,8 +65,11 @@ export const createCalorieGoal = async (
       targetDate: new Date(targetDate),
       age: user?.age,
       height: user?.height,
+      sex: user?.sex,
       activityLevel: user?.activityLevel,
       proteinMultiplier: user?.proteinMultiplier,
+      trainingDaysPerWeek: user?.trainingDaysPerWeek,
+      trainingHoursPerDay: user?.trainingHoursPerDay,
     });
 
     // Deactivate current active goals
@@ -235,7 +238,7 @@ export const previewCalorieGoal = async (
 
     const user = await prisma.user.findUnique({
       where: { id: req.user!.id },
-      select: { age: true, height: true, activityLevel: true, proteinMultiplier: true },
+      select: { age: true, height: true, sex: true, activityLevel: true, proteinMultiplier: true, trainingDaysPerWeek: true, trainingHoursPerDay: true },
     });
 
     const calc = calculateCalorieGoal({
@@ -244,8 +247,11 @@ export const previewCalorieGoal = async (
       targetDate: new Date(targetDate),
       age: user?.age,
       height: user?.height,
+      sex: user?.sex,
       activityLevel: user?.activityLevel,
       proteinMultiplier: user?.proteinMultiplier,
+      trainingDaysPerWeek: user?.trainingDaysPerWeek,
+      trainingHoursPerDay: user?.trainingHoursPerDay,
     });
 
     const projection = generateProjection(Number(currentWeight), calc.weeklyChange, calc.weeksToGoal);

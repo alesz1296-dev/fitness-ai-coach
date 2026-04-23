@@ -22,10 +22,12 @@ model User {
   sex           String? // "male" | "female"
   activityLevel String? // "sedentary" | "light" | "moderate" | "active" | "very_active"
   fitnessLevel  String?
-  goal              String?
-  profileComplete   Boolean  @default(false)
-  proteinMultiplier Float    @default(2.0)
-  createdAt       DateTime @default(now())
+  goal                 String?
+  profileComplete      Boolean  @default(false)
+  proteinMultiplier    Float    @default(2.0)
+  trainingDaysPerWeek  Int?     // 1–7
+  trainingHoursPerDay  Float?   // hours per session, e.g. 1.0, 1.5
+  createdAt            DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   goals          Goal[]

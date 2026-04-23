@@ -29,6 +29,8 @@ export const getProfile = async (
         goal: true,
         profileComplete: true,
         proteinMultiplier: true,
+        trainingDaysPerWeek: true,
+        trainingHoursPerDay: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -62,6 +64,8 @@ export const updateProfile = async (
       fitnessLevel,
       goal,
       proteinMultiplier,
+      trainingDaysPerWeek,
+      trainingHoursPerDay,
     } = req.body;
 
     const updated = await prisma.user.update({
@@ -81,6 +85,12 @@ export const updateProfile = async (
         ...(proteinMultiplier !== undefined && {
           proteinMultiplier: Math.min(2.2, Math.max(0.8, Number(proteinMultiplier))),
         }),
+        ...(trainingDaysPerWeek !== undefined && {
+          trainingDaysPerWeek: trainingDaysPerWeek === null ? null : Math.min(7, Math.max(1, Number(trainingDaysPerWeek))),
+        }),
+        ...(trainingHoursPerDay !== undefined && {
+          trainingHoursPerDay: trainingHoursPerDay === null ? null : Math.min(4, Math.max(0.25, Number(trainingHoursPerDay))),
+        }),
       },
       select: {
         id: true,
@@ -97,6 +107,8 @@ export const updateProfile = async (
         goal: true,
         profileComplete: true,
         proteinMultiplier: true,
+        trainingDaysPerWeek: true,
+        trainingHoursPerDay: true,
         updatedAt: true,
       },
     });

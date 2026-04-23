@@ -14,6 +14,8 @@ export interface User {
   goal?: string | null;
   profileComplete?: boolean | null;
   proteinMultiplier?: number | null;
+  trainingDaysPerWeek?: number | null;
+  trainingHoursPerDay?: number | null;
   createdAt?: string;
 }
 

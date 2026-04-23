@@ -10,10 +10,12 @@ export interface CalcInput {
   targetWeight: number;   // kg
   targetDate: Date;
   age?: number | null;
-  height?: number | null; // cm
+  height?: number | null;          // cm
   activityLevel?: string | null;
-  sex?: string | null;    // male | female (defaults to male if unknown)
-  proteinMultiplier?: number | null; // g/kg bodyweight, default 1.8
+  sex?: string | null;             // "male" | "female" (defaults to male)
+  proteinMultiplier?: number | null; // g/kg bodyweight, default 2.0
+  trainingDaysPerWeek?: number | null; // 1–7
+  trainingHoursPerDay?: number | null; // hours per session
 }
 
 export interface CalcResult {
@@ -29,21 +31,38 @@ export interface CalcResult {
   warning?: string;
 }
 
-// TDEE activity multipliers
+// TDEE activity multipliers (used when training-specific data is unavailable)
 const ACTIVITY_MULTIPLIERS: Record<string, number> = {
-  sedentary:   1.2,  // desk job, no exercise
-  light:       1.375, // 1-3 days/week
-  moderate:    1.55,  // 3-5 days/week
-  active:      1.725, // 6-7 days/week
-  very_active: 1.9,   // physical job + training
+  sedentary:   1.2,   // desk job, no exercise
+  light:       1.375, // 1–2 days/week
+  moderate:    1.55,  // 3–5 days/week
+  active:      1.725, // 6–7 days/week
+  very_active: 1.9,   // physical job + training twice/day
 };
+
+// NEAT-only multipliers: baseline non-exercise activity thermogenesis.
+// Used when trainingDaysPerWeek + trainingHoursPerDay are provided so we can
+// add exercise calories separately via MET calculation.
+const NEAT_MULTIPLIERS: Record<string, number> = {
+  sedentary:   1.2,
+  light:       1.3,
+  moderate:    1.35,
+  active:      1.4,
+  very_active: 1.5,
+};
+
+// MET for a mixed moderate-intensity workout (strength + some cardio).
+// Literature range: 4–7; using 5.5 as a conservative midpoint.
+const WORKOUT_MET = 5.5;
 
 export const calculateTDEE = (
   weight: number,
   height: number | null | undefined,
   age: number | null | undefined,
   activityLevel: string | null | undefined,
-  sex = "male"
+  sex = "male",
+  trainingDaysPerWeek?: number | null,
+  trainingHoursPerDay?: number | null
 ): number => {
   // Mifflin-St Jeor BMR
   const h = height || 175;
@@ -52,14 +71,37 @@ export const calculateTDEE = (
     ? 10 * weight + 6.25 * h - 5 * a - 161
     : 10 * weight + 6.25 * h - 5 * a + 5;
 
-  const multiplier = ACTIVITY_MULTIPLIERS[activityLevel || "moderate"] || 1.55;
+  const level = activityLevel || "moderate";
+
+  // Precise path: when training schedule is explicitly provided, calculate
+  // exercise calories via MET and add them on top of NEAT-adjusted BMR.
+  if (trainingDaysPerWeek != null && trainingHoursPerDay != null &&
+      trainingDaysPerWeek > 0 && trainingHoursPerDay > 0) {
+    const neatMultiplier = NEAT_MULTIPLIERS[level] ?? 1.35;
+    const neat = bmr * neatMultiplier;
+    // Weekly exercise calories = MET × weight × totalHours
+    const weeklyExerciseCals = WORKOUT_MET * weight * (trainingDaysPerWeek * trainingHoursPerDay);
+    const dailyExerciseCals  = weeklyExerciseCals / 7;
+    return Math.round(neat + dailyExerciseCals);
+  }
+
+  // Fallback: classic single-multiplier approach
+  const multiplier = ACTIVITY_MULTIPLIERS[level] ?? 1.55;
   return Math.round(bmr * multiplier);
 };
 
 export const calculateCalorieGoal = (input: CalcInput): CalcResult => {
   const { currentWeight, targetWeight, targetDate, age, height, activityLevel } = input;
 
-  const tdee = calculateTDEE(currentWeight, height, age, activityLevel);
+  const tdee = calculateTDEE(
+    currentWeight,
+    height,
+    age,
+    activityLevel,
+    input.sex ?? "male",
+    input.trainingDaysPerWeek,
+    input.trainingHoursPerDay
+  );
   const weightDiff = targetWeight - currentWeight;
   const today = new Date();
   const msPerWeek = 7 * 24 * 60 * 60 * 1000;

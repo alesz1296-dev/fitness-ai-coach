@@ -27,15 +27,17 @@ function ProfileForm() {
   const { user, updateUser } = useAuthStore();
 
   const [form, setForm] = useState({
-    firstName:     user?.firstName    ?? "",
-    lastName:      user?.lastName     ?? "",
-    age:           String(user?.age   ?? ""),
-    weight:        String(user?.weight ?? ""),
-    height:        String(user?.height ?? ""),
-    sex:           user?.sex           ?? "",
-    activityLevel: user?.activityLevel ?? "",
-    fitnessLevel:  user?.fitnessLevel  ?? "",
-    goal:          user?.goal          ?? "",
+    firstName:           user?.firstName          ?? "",
+    lastName:            user?.lastName           ?? "",
+    age:                 String(user?.age         ?? ""),
+    weight:              String(user?.weight      ?? ""),
+    height:              String(user?.height      ?? ""),
+    sex:                 user?.sex                ?? "",
+    activityLevel:       user?.activityLevel      ?? "",
+    fitnessLevel:        user?.fitnessLevel       ?? "",
+    goal:                user?.goal               ?? "",
+    trainingDaysPerWeek: String(user?.trainingDaysPerWeek ?? ""),
+    trainingHoursPerDay: String(user?.trainingHoursPerDay ?? ""),
   });
 
   const [saving,  setSaving]  = useState(false);
@@ -49,15 +51,17 @@ function ProfileForm() {
     setSaving(true); setError(""); setSuccess("");
     try {
       const payload: Partial<User> & Record<string, any> = {
-        firstName:     form.firstName     || undefined,
-        lastName:      form.lastName      || undefined,
-        age:           form.age           ? Number(form.age)    : undefined,
-        weight:        form.weight        ? Number(form.weight) : undefined,
-        height:        form.height        ? Number(form.height) : undefined,
-        sex:           (form.sex as any)  || undefined,
-        activityLevel: (form.activityLevel as any) || undefined,
-        fitnessLevel:  form.fitnessLevel  || undefined,
-        goal:          form.goal          || undefined,
+        firstName:           form.firstName           || undefined,
+        lastName:            form.lastName            || undefined,
+        age:                 form.age                 ? Number(form.age)                 : undefined,
+        weight:              form.weight              ? Number(form.weight)              : undefined,
+        height:              form.height              ? Number(form.height)              : undefined,
+        sex:                 (form.sex as any)        || undefined,
+        activityLevel:       (form.activityLevel as any) || undefined,
+        fitnessLevel:        form.fitnessLevel        || undefined,
+        goal:                form.goal                || undefined,
+        trainingDaysPerWeek: form.trainingDaysPerWeek ? Number(form.trainingDaysPerWeek) : null,
+        trainingHoursPerDay: form.trainingHoursPerDay ? Number(form.trainingHoursPerDay) : null,
       };
       const res = await usersApi.updateProfile(payload);
       updateUser(res.data.user);
@@ -99,18 +103,64 @@ function ProfileForm() {
             ]}
           />
           <Select
-            label="Activity Level"
+            label="Activity Level (non-training)"
             value={form.activityLevel}
             onChange={set("activityLevel")}
             placeholder="Select activity level"
             options={[
-              { value: "sedentary",  label: "Sedentary (desk job, no exercise)" },
-              { value: "light",      label: "Light (1–2 days/week)" },
-              { value: "moderate",   label: "Moderate (3–5 days/week)" },
-              { value: "active",     label: "Active (6–7 days/week)" },
-              { value: "very_active",label: "Very Active (2× day or physical job)" },
+              { value: "sedentary",  label: "Sedentary (desk job)" },
+              { value: "light",      label: "Light (on feet most of the day)" },
+              { value: "moderate",   label: "Moderate (active job)" },
+              { value: "active",     label: "Active (manual labour)" },
+              { value: "very_active",label: "Very Active (physical job + sport)" },
             ]}
           />
+        </div>
+
+        {/* Training schedule — drives precise TDEE when both are filled */}
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-2">Training Schedule</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Days per week"
+              value={form.trainingDaysPerWeek}
+              onChange={set("trainingDaysPerWeek")}
+              placeholder="Select days"
+              options={[
+                { value: "1", label: "1 day / week" },
+                { value: "2", label: "2 days / week" },
+                { value: "3", label: "3 days / week" },
+                { value: "4", label: "4 days / week" },
+                { value: "5", label: "5 days / week" },
+                { value: "6", label: "6 days / week" },
+                { value: "7", label: "7 days / week" },
+              ]}
+            />
+            <Select
+              label="Hours per session"
+              value={form.trainingHoursPerDay}
+              onChange={set("trainingHoursPerDay")}
+              placeholder="Select duration"
+              options={[
+                { value: "0.5",  label: "~30 min" },
+                { value: "0.75", label: "~45 min" },
+                { value: "1",    label: "1 hour" },
+                { value: "1.25", label: "1 h 15 min" },
+                { value: "1.5",  label: "1 h 30 min" },
+                { value: "1.75", label: "1 h 45 min" },
+                { value: "2",    label: "2 hours" },
+                { value: "2.5",  label: "2 h 30 min" },
+                { value: "3",    label: "3 hours" },
+              ]}
+            />
+          </div>
+          {form.trainingDaysPerWeek && form.trainingHoursPerDay && (
+            <p className="text-xs text-brand-600 mt-2 font-medium">
+              ✓ {Number(form.trainingDaysPerWeek)} days × {Number(form.trainingHoursPerDay) < 1
+                ? `${Math.round(Number(form.trainingHoursPerDay) * 60)} min`
+                : `${Number(form.trainingHoursPerDay)} h`} — calorie goals will use precise MET-based TDEE
+            </p>
+          )}
         </div>
 
         <Select
@@ -138,7 +188,7 @@ function ProfileForm() {
 
         <div className="bg-blue-50 rounded-xl p-4 text-sm text-blue-700">
           <p className="font-semibold mb-1">Why this matters</p>
-          <p>Age, weight, height, sex, and activity level are used to calculate your TDEE (total daily energy expenditure) for accurate calorie goals. The AI coach uses your fitness level and goal to personalise advice.</p>
+          <p>Age, weight, height, and sex are used for Mifflin-St Jeor BMR. When you set your <strong>training days and session duration</strong>, calorie goals switch to a precise MET-based TDEE that accounts for actual exercise calories burned — more accurate than the activity multiplier alone. All goal calculations, nutrition targets, and progress projections depend on this.</p>
         </div>
 
         <Button loading={saving} onClick={save} className="w-full">Save Profile</Button>

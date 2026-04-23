@@ -37,6 +37,8 @@ export const updateProfileSchema = z.object({
   goal: z.string().trim().max(500).optional(),
   activityLevel: z.enum(["sedentary", "light", "moderate", "active", "very_active"]).optional(),
   proteinMultiplier: z.coerce.number().min(0.8, "Minimum is 0.8 g/kg").max(2.2, "Maximum is 2.2 g/kg").optional(),
+  trainingDaysPerWeek: z.coerce.number().int().min(1).max(7).nullable().optional(),
+  trainingHoursPerDay: z.coerce.number().min(0.25, "Minimum 15 min").max(4, "Maximum 4 hours").nullable().optional(),
 });
 
 export const changePasswordSchema = z.object({

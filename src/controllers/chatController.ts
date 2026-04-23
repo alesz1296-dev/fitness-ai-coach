@@ -252,7 +252,7 @@ export const saveCaloriePlanFromChat = async (
 
     const user = await prisma.user.findUnique({
       where: { id: req.user!.id },
-      select: { age: true, height: true, activityLevel: true, proteinMultiplier: true },
+      select: { age: true, height: true, sex: true, activityLevel: true, proteinMultiplier: true, trainingDaysPerWeek: true, trainingHoursPerDay: true },
     });
 
     // If macros provided by AI use them, otherwise auto-calculate
@@ -264,8 +264,11 @@ export const saveCaloriePlanFromChat = async (
         targetDate: new Date(targetDate),
         age: user?.age,
         height: user?.height,
+        sex: user?.sex,
         activityLevel: user?.activityLevel,
         proteinMultiplier: user?.proteinMultiplier,
+        trainingDaysPerWeek: user?.trainingDaysPerWeek,
+        trainingHoursPerDay: user?.trainingHoursPerDay,
       });
       macros = { dailyCalories: calc.dailyCalories, proteinGrams: calc.proteinGrams, carbsGrams: calc.carbsGrams, fatsGrams: calc.fatsGrams };
     }

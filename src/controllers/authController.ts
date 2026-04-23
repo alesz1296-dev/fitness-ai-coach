@@ -170,6 +170,7 @@ export const getMe = async (
         sex: true, activityLevel: true,
         fitnessLevel: true, goal: true,
         profileComplete: true, proteinMultiplier: true,
+        trainingDaysPerWeek: true, trainingHoursPerDay: true,
         createdAt: true,
       },
     });
