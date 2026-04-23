@@ -7,14 +7,19 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
 
-/** Extracts a user-readable message from an Axios error, including Zod field details. */
+/** Extracts a user-readable message from an Axios error, including Zod field details.
+ *  In development, also appends the raw server detail for easier debugging. */
 function parseApiError(e: any): string {
   const data = e?.response?.data;
   if (!data) return e?.message || "Request failed";
   if (data.details?.length) {
     return data.details.map((d: any) => `${d.field ? d.field + ": " : ""}${d.message}`).join(" · ");
   }
-  return data.error || "Something went wrong";
+  const base = data.error || "Something went wrong";
+  if ((import.meta as any).env?.DEV && data.detail && data.detail !== base) {
+    return `${base} — [dev: ${data.errorName ? data.errorName + ": " : ""}${data.detail}]`;
+  }
+  return base;
 }
 
 // ── Profile form ──────────────────────────────────────────────────────────────

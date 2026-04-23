@@ -13,13 +13,20 @@ export const errorHandler = (
   next: NextFunction
 ): void => {
   const statusCode = err.statusCode || 500;
+  const isDev = process.env.NODE_ENV !== "production";
 
-  // Always log the real error server-side
-  logger.error(`${statusCode} - ${err.message} - ${req.originalUrl} - ${req.method}`, err);
+  // Always log the full error server-side, including stack in dev
+  if (isDev) {
+    logger.error(
+      `[${err.name ?? "Error"}] ${statusCode} ${req.method} ${req.originalUrl} — ${err.message}`,
+      { code: (err as any).code, stack: err.stack }
+    );
+  } else {
+    logger.error(`${statusCode} - ${err.message} - ${req.originalUrl} - ${req.method}`);
+  }
 
   // For operational errors (createError) pass the message through as-is.
-  // For unexpected errors, expose a human-readable message based on the
-  // error type so the client can show something useful.
+  // For unexpected errors, map to a human-readable message by error type.
   let message: string;
   if (err.isOperational) {
     message = err.message;
@@ -30,8 +37,13 @@ export const errorHandler = (
     // Prisma record not found
     message = "Record not found.";
   } else if ((err as any).code?.startsWith?.("P2")) {
-    // Other Prisma errors
+    // Other Prisma known request errors
     message = "Database error — please try again.";
+  } else if (err.name === "PrismaClientValidationError") {
+    // Bad argument passed to Prisma (e.g. unknown field, wrong type)
+    message = "Invalid data — please check your input and try again.";
+  } else if (err.name === "PrismaClientInitializationError") {
+    message = "Database connection failed — please try again later.";
   } else if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
     message = "Session expired — please log in again.";
   } else if (err.name === "SyntaxError") {
@@ -42,9 +54,13 @@ export const errorHandler = (
 
   res.status(statusCode).json({
     error: message,
-    ...(process.env.NODE_ENV === "development" && {
+    // In development, always expose the real error detail so it shows up
+    // in browser devtools / Axios error response without needing server logs
+    ...(isDev && {
       detail: err.message,
-      stack: err.stack,
+      errorName: err.name,
+      ...(((err as any).code) && { prismaCode: (err as any).code }),
+      stack: err.stack?.split("\n").slice(0, 6).join("\n"),
     }),
   });
 };
