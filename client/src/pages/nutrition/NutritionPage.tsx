@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { foodApi, chatApi, searchApi } from "../../api";
-import type { FoodLog, FoodTotals } from "../../types";
+import { foodApi, chatApi, searchApi, calorieGoalsApi } from "../../api";
+import type { FoodLog, FoodTotals, CalorieGoal } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -251,9 +251,9 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   );
 }
 
-// ── Macro ring ────────────────────────────────────────────────────────────────
-function MacroRing({ label, value, goal, total, color }: {
-  label: string; value: number; goal?: number; total: number; color: string;
+// ── Macro ring (distribution view) ───────────────────────────────────────────
+function MacroRing({ label, value, total, color }: {
+  label: string; value: number; total: number; color: string;
 }) {
   const pct = total > 0 ? Math.min((value / total) * 100, 100) : 0;
   return (
@@ -270,18 +270,46 @@ function MacroRing({ label, value, goal, total, color }: {
       </div>
       <p className="text-xs text-gray-500 mt-1">{label}</p>
       <p className="text-sm font-semibold text-gray-800">{Math.round(value)}g</p>
-      {goal != null && (
-        <p className="text-xs text-gray-400">/ {goal}g</p>
-      )}
     </div>
   );
 }
 
-// ── Calorie goal progress bar ─────────────────────────────────────────────────
+// ── Macro goal bar (vs goal view) ─────────────────────────────────────────────
+function MacroGoalBar({ label, consumed, target, color, bgColor }: {
+  label: string; consumed: number; target: number; color: string; bgColor: string;
+}) {
+  const pct    = target > 0 ? Math.min((consumed / target) * 100, 100) : 0;
+  const over   = consumed > target;
+  const diff   = Math.abs(Math.round(target - consumed));
+
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs">
+        <span className="font-medium text-gray-700">{label}</span>
+        <span className={over ? "text-red-500 font-semibold" : "text-gray-500"}>
+          <span className="font-bold text-gray-800">{Math.round(consumed)}</span>
+          {" / "}{Math.round(target)}g
+          {over
+            ? <span className="ml-1 text-red-500">(+{diff}g)</span>
+            : <span className="ml-1 text-gray-400">({diff}g left)</span>
+          }
+        </span>
+      </div>
+      <div className={`h-2.5 rounded-full overflow-hidden ${bgColor}`}>
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, backgroundColor: color }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Calorie progress bar ──────────────────────────────────────────────────────
 function CalorieProgress({ consumed, target }: { consumed: number; target: number }) {
-  const pct = Math.min((consumed / target) * 100, 100);
+  const pct       = Math.min((consumed / target) * 100, 100);
   const remaining = target - consumed;
-  const over = consumed > target;
+  const over      = consumed > target;
   return (
     <div className="mt-3">
       <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -296,6 +324,54 @@ function CalorieProgress({ consumed, target }: { consumed: number; target: numbe
           {over ? `${Math.round(-remaining)} kcal over` : `${Math.round(remaining)} kcal left`}
         </span>
       </div>
+    </div>
+  );
+}
+
+// ── Deficit / surplus banner ──────────────────────────────────────────────────
+function DeficitSurplusBanner({ consumed, target, goalType }: {
+  consumed: number; target: number; goalType?: string;
+}) {
+  const diff = consumed - target;
+  const absDiff = Math.abs(Math.round(diff));
+
+  // Within ±80 kcal → on target
+  if (Math.abs(diff) <= 80) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 bg-green-50 border border-green-200 text-sm text-green-800 mt-3">
+        <span>🎯</span>
+        <p><span className="font-semibold">Right on target!</span> You're within 80 kcal of your daily goal.</p>
+      </div>
+    );
+  }
+
+  if (diff > 0) {
+    // Surplus
+    const isBuilding = goalType === "bulk";
+    return (
+      <div className="flex items-start gap-2 rounded-xl px-4 py-2.5 bg-orange-50 border border-orange-200 text-sm text-orange-800 mt-3">
+        <span className="mt-0.5">📈</span>
+        <p>
+          <span className="font-semibold">Calorie surplus of {absDiff} kcal.</span>{" "}
+          {isBuilding
+            ? "You're in a planned surplus — good for muscle building. Make sure protein is on track."
+            : "You've exceeded your daily target. This contributes to weight gain over time."}
+        </p>
+      </div>
+    );
+  }
+
+  // Deficit
+  const isCutting = goalType === "cut";
+  return (
+    <div className="flex items-start gap-2 rounded-xl px-4 py-2.5 bg-blue-50 border border-blue-200 text-sm text-blue-800 mt-3">
+      <span className="mt-0.5">📉</span>
+      <p>
+        <span className="font-semibold">Calorie deficit of {absDiff} kcal.</span>{" "}
+        {isCutting
+          ? "You're on track for fat loss. Ensure you're hitting your protein target to protect muscle."
+          : "You're under your daily target. Log more meals if this isn't intentional."}
+      </p>
     </div>
   );
 }
@@ -470,13 +546,19 @@ export default function NutritionPage() {
   const [editItem,    setEditItem]    = useState<FoodLog | null>(null);
   const [deleting,    setDeleting]    = useState<number | null>(null);
   const [showMealPlan, setShowMealPlan] = useState(false);
+  const [activeGoal,  setActiveGoal]  = useState<CalorieGoal | null>(null);
+  const [macroView,   setMacroView]   = useState<"distribution" | "goals">("distribution");
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await foodApi.getToday(date);
-      setLogs(res.data.logs);
-      setTotals(res.data.totals);
+      const [foodRes, goalRes] = await Promise.all([
+        foodApi.getToday(date),
+        calorieGoalsApi.getActive().catch(() => ({ data: { goal: null } })),
+      ]);
+      setLogs(foodRes.data.logs);
+      setTotals(foodRes.data.totals);
+      setActiveGoal(goalRes.data.goal);
     } catch {
       setLogs([]); setTotals({ calories: 0, protein: 0, carbs: 0, fats: 0 });
     } finally { setLoading(false); }
@@ -504,6 +586,7 @@ export default function NutritionPage() {
   };
 
   const totalMacroG = totals.protein + totals.carbs + totals.fats;
+  const hasGoal = activeGoal != null;
 
   // Group by meal
   const grouped: Record<string, FoodLog[]> = {};
@@ -558,14 +641,45 @@ export default function NutritionPage() {
 
       {/* Daily summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Calorie count */}
+
+        {/* ── Calories card ── */}
         <Card className="lg:col-span-1">
           <CardHeader title="Calories" />
           <div className="text-center py-2">
             <p className="text-4xl font-bold text-gray-900">{Math.round(totals.calories)}</p>
             <p className="text-sm text-gray-400 mt-1">kcal consumed</p>
+            {hasGoal && (
+              <p className="text-sm text-gray-500 mt-0.5">
+                Goal: <span className="font-semibold text-gray-700">{Math.round(activeGoal!.dailyCalories)} kcal</span>
+              </p>
+            )}
           </div>
-          <div className="flex justify-around pt-4 border-t border-gray-100 text-center">
+
+          {/* Progress bar — only shown when there's a goal */}
+          {hasGoal && totals.calories > 0 && (
+            <CalorieProgress consumed={totals.calories} target={activeGoal!.dailyCalories} />
+          )}
+
+          {/* Deficit/surplus banner — only shown when goal exists and food logged */}
+          {hasGoal && totals.calories > 0 && (
+            <DeficitSurplusBanner
+              consumed={totals.calories}
+              target={activeGoal!.dailyCalories}
+              goalType={activeGoal!.type}
+            />
+          )}
+
+          {/* No goal nudge */}
+          {!hasGoal && (
+            <p className="text-xs text-gray-400 text-center mt-2">
+              <button
+                onClick={() => navigate("/goals")}
+                className="text-brand-600 hover:underline"
+              >Set a calorie goal</button> to track limits & deficit/surplus
+            </p>
+          )}
+
+          <div className="flex justify-around pt-4 border-t border-gray-100 text-center mt-3">
             <div>
               <p className="text-xs text-gray-400">Entries</p>
               <p className="font-bold text-gray-800">{logs.length}</p>
@@ -574,25 +688,86 @@ export default function NutritionPage() {
               <p className="text-xs text-gray-400">Meals</p>
               <p className="font-bold text-gray-800">{Object.keys(grouped).length}</p>
             </div>
+            {hasGoal && (
+              <div>
+                <p className="text-xs text-gray-400">TDEE</p>
+                <p className="font-bold text-gray-800">{Math.round(activeGoal!.tdee ?? 0)}</p>
+              </div>
+            )}
           </div>
         </Card>
 
-        {/* Macro breakdown */}
+        {/* ── Macronutrients card ── */}
         <Card className="lg:col-span-2">
-          <CardHeader title="Macronutrients" />
-          {totalMacroG > 0 ? (
-            <div className="flex items-center justify-around">
-              <MacroRing label="Protein" value={totals.protein} total={totalMacroG} color="#3b82f6" />
-              <MacroRing label="Carbs"   value={totals.carbs}   total={totalMacroG} color="#f59e0b" />
-              <MacroRing label="Fats"    value={totals.fats}    total={totalMacroG} color="#ef4444" />
-              <div className="text-center">
-                <p className="text-xs text-gray-400 mb-1">Calories from macros</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {Math.round(totals.protein * 4 + totals.carbs * 4 + totals.fats * 9)}
-                </p>
-                <p className="text-xs text-gray-400">kcal</p>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-900">Macronutrients</h3>
+            {/* View toggle — show "vs Goals" only when a goal exists */}
+            {hasGoal && (
+              <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5 text-xs">
+                {(["distribution", "goals"] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setMacroView(v)}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                      macroView === v ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    {v === "distribution" ? "🍩 Distribution" : "🎯 vs Goals"}
+                  </button>
+                ))}
               </div>
-            </div>
+            )}
+          </div>
+
+          {totalMacroG > 0 ? (
+            <>
+              {/* Distribution view — macro rings showing % of total */}
+              {macroView === "distribution" && (
+                <div className="flex items-center justify-around">
+                  <MacroRing label="Protein" value={totals.protein} total={totalMacroG} color="#3b82f6" />
+                  <MacroRing label="Carbs"   value={totals.carbs}   total={totalMacroG} color="#f59e0b" />
+                  <MacroRing label="Fats"    value={totals.fats}    total={totalMacroG} color="#ef4444" />
+                  <div className="text-center">
+                    <p className="text-xs text-gray-400 mb-1">Calories from macros</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {Math.round(totals.protein * 4 + totals.carbs * 4 + totals.fats * 9)}
+                    </p>
+                    <p className="text-xs text-gray-400">kcal</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Goals view — horizontal bars vs calorie goal targets */}
+              {macroView === "goals" && hasGoal && (
+                <div className="space-y-4 pt-1">
+                  <MacroGoalBar
+                    label="🥩 Protein"
+                    consumed={totals.protein}
+                    target={activeGoal!.proteinGrams}
+                    color="#3b82f6"
+                    bgColor="bg-blue-100"
+                  />
+                  <MacroGoalBar
+                    label="🍞 Carbohydrates"
+                    consumed={totals.carbs}
+                    target={activeGoal!.carbsGrams}
+                    color="#f59e0b"
+                    bgColor="bg-amber-100"
+                  />
+                  <MacroGoalBar
+                    label="🥑 Fats"
+                    consumed={totals.fats}
+                    target={activeGoal!.fatsGrams}
+                    color="#ef4444"
+                    bgColor="bg-red-100"
+                  />
+                  <div className="text-xs text-gray-400 text-right pt-1">
+                    From goal: {activeGoal!.name ?? activeGoal!.type}
+                    {" · "}{Math.round(activeGoal!.dailyCalories)} kcal / day
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center py-6 gap-2">
               <p className="text-sm text-gray-400">Log food to see macro breakdown</p>

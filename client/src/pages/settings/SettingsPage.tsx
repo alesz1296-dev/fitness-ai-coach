@@ -7,6 +7,16 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
 
+/** Extracts a user-readable message from an Axios error, including Zod field details. */
+function parseApiError(e: any): string {
+  const data = e?.response?.data;
+  if (!data) return e?.message || "Request failed";
+  if (data.details?.length) {
+    return data.details.map((d: any) => `${d.field ? d.field + ": " : ""}${d.message}`).join(" · ");
+  }
+  return data.error || "Something went wrong";
+}
+
 // ── Profile form ──────────────────────────────────────────────────────────────
 function ProfileForm() {
   const { user, updateUser } = useAuthStore();
@@ -49,7 +59,7 @@ function ProfileForm() {
       setSuccess("Profile saved!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to save profile");
+      setError(parseApiError(e));
     } finally { setSaving(false); }
   };
 
@@ -153,7 +163,7 @@ function NutritionPreferencesForm() {
       setSuccess("Preferences saved!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to save");
+      setError(parseApiError(e));
     } finally { setSaving(false); }
   };
 
@@ -256,7 +266,7 @@ function PasswordForm() {
       setCurrent(""); setNext(""); setConfirm("");
       setTimeout(() => setSuccess(""), 3000);
     } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to change password");
+      setError(parseApiError(e));
     } finally { setSaving(false); }
   };
 

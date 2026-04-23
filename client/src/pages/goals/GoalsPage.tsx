@@ -9,36 +9,105 @@ import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { useAuthStore } from "../../store/authStore";
 
+// ── Preset templates ──────────────────────────────────────────────────────────
+interface GoalPreset {
+  key:        string;
+  icon:       string;
+  label:      string;
+  desc:       string;
+  color:      string;      // Tailwind border+bg+text classes
+  weightPct:  number;      // target = currentWeight * (1 + weightPct/100)
+  weeks:      number;
+  goalName:   string;
+}
+
+const GOAL_PRESETS: GoalPreset[] = [
+  {
+    key: "cut_moderate", icon: "🔥", label: "Fat Loss",
+    desc: "−8% body weight · 16 weeks · ~500 kcal deficit",
+    color: "border-orange-300 bg-orange-50 text-orange-800",
+    weightPct: -8, weeks: 16, goalName: "Fat Loss Plan",
+  },
+  {
+    key: "cut_aggressive", icon: "⚡", label: "Aggressive Cut",
+    desc: "−12% body weight · 12 weeks · ~750 kcal deficit",
+    color: "border-red-300 bg-red-50 text-red-800",
+    weightPct: -12, weeks: 12, goalName: "Aggressive Cut",
+  },
+  {
+    key: "lean_bulk", icon: "💪", label: "Lean Bulk",
+    desc: "+4% body weight · 16 weeks · ~300 kcal surplus",
+    color: "border-blue-300 bg-blue-50 text-blue-800",
+    weightPct: 4, weeks: 16, goalName: "Lean Bulk",
+  },
+  {
+    key: "muscle_build", icon: "🏋️", label: "Muscle Building",
+    desc: "+7% body weight · 20 weeks · ~500 kcal surplus",
+    color: "border-purple-300 bg-purple-50 text-purple-800",
+    weightPct: 7, weeks: 20, goalName: "Muscle Building",
+  },
+  {
+    key: "maintain", icon: "⚖️", label: "Maintenance",
+    desc: "Eat at TDEE · stay at current weight",
+    color: "border-green-300 bg-green-50 text-green-800",
+    weightPct: 0, weeks: 12, goalName: "Maintenance",
+  },
+  {
+    key: "recomp", icon: "🔄", label: "Body Recomposition",
+    desc: "TDEE calories · gain muscle, hold weight · 20 weeks",
+    color: "border-cyan-300 bg-cyan-50 text-cyan-800",
+    weightPct: 0, weeks: 20, goalName: "Body Recomposition",
+  },
+];
+
+function addWeeks(weeks: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + weeks * 7);
+  return d.toISOString().split("T")[0];
+}
+
 // ── Goal Creator Form ─────────────────────────────────────────────────────────
 function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void }) {
   const { user } = useAuthStore();
   const [currentWeight, setCurrentWeight] = useState(String(user?.weight ?? ""));
   const [targetWeight,  setTargetWeight]  = useState("");
-  const [targetDate,    setTargetDate]    = useState(() => {
-    const d = new Date(); d.setMonth(d.getMonth() + 3);
-    return d.toISOString().split("T")[0];
-  });
-  const [name,     setName]    = useState("");
-  const [preview,  setPreview] = useState<any>(null);
-  const [loading,  setLoading] = useState(false);
-  const [saving,   setSaving]  = useState(false);
-  const [error,    setError]   = useState("");
+  const [targetDate,    setTargetDate]    = useState(() => addWeeks(12));
+  const [name,          setName]          = useState("");
+  const [preview,       setPreview]       = useState<any>(null);
+  const [loading,       setLoading]       = useState(false);
+  const [saving,        setSaving]        = useState(false);
+  const [error,         setError]         = useState("");
+  const [activePreset,  setActivePreset]  = useState<string | null>(null);
 
-  const getPreview = async () => {
-    if (!currentWeight || !targetWeight || !targetDate) {
-      setError("Fill in all fields to preview"); return;
-    }
-    setLoading(true); setError("");
+  // Accept optional overrides so presets can call preview without waiting for setState
+  const getPreview = async (overrides?: { cw?: string; tw?: string; td?: string }) => {
+    const cw = overrides?.cw ?? currentWeight;
+    const tw = overrides?.tw ?? targetWeight;
+    const td = overrides?.td ?? targetDate;
+    if (!cw || !tw || !td) { setError("Fill in all fields to preview"); return; }
+    setLoading(true); setError(""); setPreview(null);
     try {
       const res = await calorieGoalsApi.preview({
-        currentWeight: Number(currentWeight),
-        targetWeight:  Number(targetWeight),
-        targetDate,
+        currentWeight: Number(cw),
+        targetWeight:  Number(tw),
+        targetDate:    td,
       });
       setPreview(res.data);
     } catch (e: any) {
       setError(e.response?.data?.error || "Preview failed. Check your profile has age, height and activity level set.");
     } finally { setLoading(false); }
+  };
+
+  const applyPreset = (preset: GoalPreset) => {
+    const cw = Number(currentWeight) || Number(user?.weight) || 75;
+    const tw = Math.round(cw * (1 + preset.weightPct / 100) * 10) / 10;
+    const td = addWeeks(preset.weeks);
+    setCurrentWeight(String(cw));
+    setTargetWeight(String(tw));
+    setTargetDate(td);
+    setName(preset.goalName);
+    setActivePreset(preset.key);
+    getPreview({ cw: String(cw), tw: String(tw), td });
   };
 
   const save = async () => {
@@ -56,18 +125,71 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
     } finally { setSaving(false); }
   };
 
+  const hasProfile = !!(user?.age && user?.height && user?.activityLevel && user?.sex);
+
   return (
-    <div className="space-y-4">
-      {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
-      <Input label="Goal Name (optional)" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Summer cut" />
-      <div className="grid grid-cols-2 gap-3">
-        <Input label="Current Weight (kg)" type="number" step="0.1" value={currentWeight} onChange={(e) => setCurrentWeight(e.target.value)} placeholder="75" />
-        <Input label="Target Weight (kg)"  type="number" step="0.1" value={targetWeight}  onChange={(e) => setTargetWeight(e.target.value)}  placeholder="70" />
+    <div className="space-y-5">
+
+      {/* ── Preset tags ── */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          Quick-start templates
+          {!hasProfile && (
+            <span className="ml-2 font-normal normal-case text-amber-600">
+              ⚠️ Complete your profile (age, height, sex, activity) for accurate calculations
+            </span>
+          )}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {GOAL_PRESETS.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => applyPreset(p)}
+              className={`text-left rounded-xl border-2 px-3 py-2.5 transition-all hover:shadow-md ${
+                activePreset === p.key
+                  ? p.color + " border-2 shadow-sm"
+                  : "border-gray-200 bg-white hover:border-gray-300"
+              }`}
+            >
+              <p className="font-semibold text-sm">{p.icon} {p.label}</p>
+              <p className="text-xs opacity-70 mt-0.5 leading-snug">{p.desc}</p>
+            </button>
+          ))}
+        </div>
       </div>
-      <Input label="Target Date" type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} min={new Date().toISOString().split("T")[0]} />
+
+      <div className="border-t border-gray-100 pt-4 space-y-4">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide -mb-1">Customise</p>
+
+        {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+
+        <Input label="Goal Name (optional)" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Summer cut" />
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Current Weight (kg)" type="number" step="0.1"
+            value={currentWeight}
+            onChange={(e) => { setCurrentWeight(e.target.value); setPreview(null); setActivePreset(null); }}
+            placeholder="75"
+          />
+          <Input
+            label="Target Weight (kg)"  type="number" step="0.1"
+            value={targetWeight}
+            onChange={(e) => { setTargetWeight(e.target.value); setPreview(null); setActivePreset(null); }}
+            placeholder="70"
+          />
+        </div>
+        <Input
+          label="Target Date" type="date"
+          value={targetDate}
+          onChange={(e) => { setTargetDate(e.target.value); setPreview(null); setActivePreset(null); }}
+          min={new Date().toISOString().split("T")[0]}
+        />
+      </div>
 
       {!preview ? (
-        <Button className="w-full" variant="secondary" loading={loading} onClick={getPreview}>Preview Plan</Button>
+        <Button className="w-full" variant="secondary" loading={loading} onClick={() => getPreview()}>
+          {loading ? "Calculating…" : "Preview Plan"}
+        </Button>
       ) : (
         <div className="space-y-4">
           {/* Calculation summary */}
