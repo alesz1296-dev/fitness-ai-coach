@@ -4,7 +4,7 @@ Most recent session first.
 
 ---
 
-## 2026-04-23 — Session 11
+## 2026-04-23
 
 ### Completed this session
 
