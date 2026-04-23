@@ -11,6 +11,7 @@ AI fitness coach with workout planning, nutrition tracking, progress analytics, 
 FitAI Coach is a full-stack fitness coaching web app that combines workout logging, nutrition tracking, body progress insights, and AI-guided recommendations in one place.
 
 The app includes:
+
 - Personalized workout tracking and templates
 - Nutrition logging with calorie and macro goals
 - Weight and progress analytics
@@ -77,6 +78,7 @@ cp .env.example .env
 ```
 
 Set the required values in `.env`, especially:
+
 - `OPENAI_API_KEY`
 - `JWT_SECRET`
 - `DATABASE_URL`
@@ -152,6 +154,7 @@ npm run lint
 All backend routes are under `/api`.
 
 Main route groups:
+
 - `/api/auth`
 - `/api/users`
 - `/api/workouts`
@@ -169,6 +172,7 @@ Main route groups:
 ## AI Layer
 
 FitAI Coach includes three AI agent modes:
+
 - Coach
 - Nutritionist
 - General assistant
@@ -178,6 +182,7 @@ The AI layer supports tool calling and returns structured workout, nutrition, an
 ## Production Notes
 
 Before deploying publicly, the current architecture should be hardened with:
+
 - PostgreSQL instead of SQLite
 - Redis for token revocation and rate limiting
 - Docker setup
