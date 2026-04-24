@@ -54,6 +54,85 @@ const UNIT_REFERENCE: { unit: string; approxG: number; note: string }[] = [
   { unit: "1 can (tuna/beans)", approxG: 240, note: "drained net weight ≈ 150–170g" },
 ];
 
+// Sweetener presets — for coffee, tea, oatmeal, yogurt, etc.
+const SWEETENER_OPTIONS: Record<string, { label: string; kcal: number; carbs: number }> = {
+  none:          { label: "No sweetener",           kcal: 0,  carbs: 0   },
+  sugar_tsp:     { label: "White sugar – 1 tsp",    kcal: 16, carbs: 4   },
+  sugar_tbsp:    { label: "White sugar – 1 tbsp",   kcal: 48, carbs: 12  },
+  brown_tsp:     { label: "Brown sugar – 1 tsp",    kcal: 17, carbs: 4.5 },
+  honey_tsp:     { label: "Honey – 1 tsp",          kcal: 21, carbs: 5.7 },
+  honey_tbsp:    { label: "Honey – 1 tbsp",         kcal: 64, carbs: 17  },
+  agave_tsp:     { label: "Agave syrup – 1 tsp",    kcal: 20, carbs: 5   },
+  maple_tsp:     { label: "Maple syrup – 1 tsp",    kcal: 18, carbs: 4.5 },
+  stevia:        { label: "Stevia / sweetener (0)", kcal: 0,  carbs: 0   },
+  condensed_tbsp:{ label: "Condensed milk – 1 tbsp",kcal: 62, carbs: 10.5},
+};
+
+// ── Food-type detection helpers ───────────────────────────────────────────────
+// These decide which "cooking extras" make sense for the selected food.
+
+type FoodSnap = { name: string; tags?: string[] } | null;
+
+const BREADABLE_KEYWORDS = [
+  "chicken", "fish", "salmon", "cod", "tilapia", "shrimp", "prawn",
+  "calamari", "squid", "pork", "veal", "beef", "steak", "schnitzel",
+  "fillet", "nugget", "wing", "tender", "cutlet", "onion ring",
+];
+const COOKABLE_KEYWORDS = [
+  ...BREADABLE_KEYWORDS,
+  "egg", "omelette", "pasta", "noodle", "rice", "potato", "tofu",
+  "tempeh", "bacon", "sausage", "lamb", "turkey", "duck", "prosciutto",
+  "stir fry", "vegetable", "zucchini", "pepper", "mushroom", "broccoli",
+  "cauliflower", "eggplant", "aubergine", "spinach", "asparagus",
+];
+const SWEETABLE_KEYWORDS = [
+  "coffee", "espresso", "cappuccino", "latte", "americano", "macchiato",
+  "tea", "matcha", "chai", "oatmeal", "oat", "porridge", "cereal",
+  "muesli", "granola", "yogurt", "yoghurt", "milk", "smoothie",
+  "pancake", "waffle", "crepe", "french toast",
+];
+
+function matchesKeywords(name: string, keywords: string[]): boolean {
+  const lower = name.toLowerCase();
+  return keywords.some((kw) => lower.includes(kw));
+}
+
+/** Should the cooking-oil selector be shown for this food? */
+function showsOil(food: FoodSnap): boolean {
+  if (!food) return false; // no food selected → hide all extras
+  const tags = food.tags ?? [];
+  if (tags.some((t) => ["fast-food", "dessert", "high-sugar", "fruit"].includes(t))) return false;
+  return (
+    tags.includes("high-protein") ||
+    tags.includes("vegetable") ||
+    tags.includes("vegan") ||
+    tags.includes("fit") ||
+    matchesKeywords(food.name, COOKABLE_KEYWORDS)
+  );
+}
+
+/** Should the breading selector be shown for this food? */
+function showsBreading(food: FoodSnap): boolean {
+  if (!food) return false;
+  const tags = food.tags ?? [];
+  // Never for beverages, fruits, desserts, dairy-sweet, packaged fast food
+  if (tags.some((t) => ["fast-food", "dessert", "high-sugar", "fruit", "legume"].includes(t))) return false;
+  return (
+    tags.includes("high-protein") ||
+    matchesKeywords(food.name, BREADABLE_KEYWORDS)
+  );
+}
+
+/** Should the sweetener selector be shown for this food? */
+function showsSweetener(food: FoodSnap): boolean {
+  if (!food) return false;
+  const tags = food.tags ?? [];
+  return (
+    tags.some((t) => ["mix", "integral"].includes(t)) ||
+    matchesKeywords(food.name, SWEETABLE_KEYWORDS)
+  );
+}
+
 const MEAL_ICONS: Record<string, string> = {
   breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎",
 };
@@ -230,6 +309,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   );
   const [cookingOil,  setCookingOil]  = useState<keyof typeof COOKING_OILS>("none");
   const [breading,    setBreading]    = useState<keyof typeof BREADING_OPTIONS>("none");
+  const [sweetener,   setSweetener]   = useState<keyof typeof SWEETENER_OPTIONS>("none");
   const [showUnitRef, setShowUnitRef] = useState(false);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
@@ -239,11 +319,16 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   const [baseFood, setBaseFood] = useState<{
     calories: number; protein: number; carbs: number; fats: number;
     defaultQty: number; defaultUnit: string;
+    name: string; tags?: string[];
   } | null>(null);
 
   // When user selects a food from search, auto-fill all fields
   const fillFromSearch = (item: any) => {
-    setBaseFood(item);
+    setBaseFood({ ...item, name: item.name, tags: item.tags ?? [] });
+    // Reset extras that don't apply to the new food
+    if (!showsOil(item))       setCookingOil("none");
+    if (!showsBreading(item))  setBreading("none");
+    if (!showsSweetener(item)) setSweetener("none");
     setFoodName(item.name);
     setUnit(item.defaultUnit);
     const qty = item.defaultQty;
@@ -275,8 +360,9 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
     try {
       const oil   = COOKING_OILS[cookingOil];
       const bread = BREADING_OPTIONS[breading];
-      const extraKcal  = oil.kcal  + bread.kcal;
-      const extraCarbs = bread.carbs;
+      const sweet = SWEETENER_OPTIONS[sweetener];
+      const extraKcal  = oil.kcal  + bread.kcal  + sweet.kcal;
+      const extraCarbs = bread.carbs + sweet.carbs;
       const extraFat   = oil.fat   + bread.fat;
       const payload = {
         foodName: foodName.trim(),
@@ -385,31 +471,59 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
         </p>
       )}
 
-      {/* Cooking additions row */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Select
-            label="Cooking oil"
-            value={cookingOil}
-            onChange={(e) => setCookingOil(e.target.value as keyof typeof COOKING_OILS)}
-            options={Object.entries(COOKING_OILS).map(([v, o]) => ({ value: v, label: o.label }))}
-          />
+      {/* Cooking / topping additions — shown only when relevant to the selected food */}
+      {(showsOil(baseFood) || showsBreading(baseFood) || showsSweetener(baseFood)) && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Cooking extras</p>
+          <div className={`grid gap-3 ${
+            [showsOil(baseFood), showsBreading(baseFood), showsSweetener(baseFood)].filter(Boolean).length === 1
+              ? "grid-cols-1"
+              : [showsOil(baseFood), showsBreading(baseFood), showsSweetener(baseFood)].filter(Boolean).length === 2
+                ? "grid-cols-2"
+                : "grid-cols-3"
+          }`}>
+            {showsOil(baseFood) && (
+              <Select
+                label="Cooking oil"
+                value={cookingOil}
+                onChange={(e) => setCookingOil(e.target.value as keyof typeof COOKING_OILS)}
+                options={Object.entries(COOKING_OILS).map(([v, o]) => ({ value: v, label: o.label }))}
+              />
+            )}
+            {showsBreading(baseFood) && (
+              <Select
+                label="Breading / coating"
+                value={breading}
+                onChange={(e) => setBreading(e.target.value as keyof typeof BREADING_OPTIONS)}
+                options={Object.entries(BREADING_OPTIONS).map(([v, o]) => ({ value: v, label: o.label }))}
+              />
+            )}
+            {showsSweetener(baseFood) && (
+              <Select
+                label="Sweetener / sugar"
+                value={sweetener}
+                onChange={(e) => setSweetener(e.target.value as keyof typeof SWEETENER_OPTIONS)}
+                options={Object.entries(SWEETENER_OPTIONS).map(([v, o]) => ({ value: v, label: o.label }))}
+              />
+            )}
+          </div>
+          {(cookingOil !== "none" || breading !== "none" || sweetener !== "none") && (() => {
+            const oil   = COOKING_OILS[cookingOil];
+            const bread = BREADING_OPTIONS[breading];
+            const sweet = SWEETENER_OPTIONS[sweetener];
+            const totalKcal  = oil.kcal + bread.kcal + sweet.kcal;
+            const totalCarbs = bread.carbs + sweet.carbs;
+            const totalFat   = oil.fat + bread.fat;
+            return (
+              <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                Extras: +{totalKcal} kcal
+                {totalCarbs > 0 && <> · +{totalCarbs}g carbs</>}
+                {totalFat > 0   && <> · +{totalFat.toFixed(1)}g fat</>}
+                {" "}— added at save
+              </p>
+            );
+          })()}
         </div>
-        <div>
-          <Select
-            label="Breading / coating"
-            value={breading}
-            onChange={(e) => setBreading(e.target.value as keyof typeof BREADING_OPTIONS)}
-            options={Object.entries(BREADING_OPTIONS).map(([v, o]) => ({ value: v, label: o.label }))}
-          />
-        </div>
-      </div>
-      {(cookingOil !== "none" || breading !== "none") && (
-        <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-          Cooking additions: +{COOKING_OILS[cookingOil].kcal + BREADING_OPTIONS[breading].kcal} kcal
-          {" · "}+{BREADING_OPTIONS[breading].carbs}g carbs
-          {" · "}+{(COOKING_OILS[cookingOil].fat + BREADING_OPTIONS[breading].fat).toFixed(1)}g fat — added at save
-        </p>
       )}
 
       <Select
