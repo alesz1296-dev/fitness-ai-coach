@@ -191,6 +191,8 @@ const FOOD_TYPE_TAGS = [
   { tag: "sausage",   label: "Sausages",   emoji: "🌭" },
   { tag: "vegetable", label: "Vegetables", emoji: "🫛" },
   { tag: "fruit",     label: "Fruits",     emoji: "🍎" },
+  { tag: "smoothie",  label: "Smoothies",  emoji: "🥤" },
+  { tag: "salad",     label: "Salads",     emoji: "🥗" },
   { tag: "pasta",     label: "Pasta",      emoji: "🍜" },
   { tag: "dairy",     label: "Dairy",      emoji: "🥛" },
 ];
@@ -224,6 +226,13 @@ const TAG_COLORS: Record<string, string> = {
   soup:             "bg-orange-50 text-orange-700",
   cheese:           "bg-yellow-100 text-yellow-800",
   sausage:          "bg-red-100 text-red-700",
+  japanese:         "bg-red-50 text-red-700",
+  italian:          "bg-green-100 text-green-700",
+  mexican:          "bg-orange-100 text-orange-700",
+  korean:           "bg-pink-100 text-pink-700",
+  pasta:            "bg-yellow-50 text-yellow-700",
+  smoothie:         "bg-teal-100 text-teal-700",
+  salad:            "bg-lime-100 text-lime-700",
 };
 
 // ── Food search combobox ──────────────────────────────────────────────────────
