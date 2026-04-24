@@ -4,6 +4,8 @@
  *
  * Tags available: keto | fit | high-protein | vegan | vegetarian | integral
  *                 low-carb | fruit | vegetable | dairy | legume | mix
+ *                 meat | seafood | cheese | soup | sausage | pasta
+ *                 japanese | italian | mexican | middle-eastern | korean
  */
 
 export interface FoodItem {
@@ -52,15 +54,15 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f030", name: "White Rice (cooked)",       calories: 130, protein: 2.7, carbs: 28, fats: 0.3, defaultQty: 200, defaultUnit: "g",      tags: ["vegan","vegetarian"] },
   { id: "f031", name: "Brown Rice (cooked)",       calories: 112, protein: 2.6, carbs: 23, fats: 0.9, defaultQty: 200, defaultUnit: "g",      tags: ["integral","vegan","vegetarian"] },
   { id: "f032", name: "Oats (dry)",                calories: 389, protein: 17,  carbs: 66, fats: 7,   defaultQty: 80,  defaultUnit: "g",      tags: ["integral","vegan","vegetarian"] },
-  { id: "f033", name: "Pasta (cooked)",            calories: 131, protein: 5,   carbs: 25, fats: 1.1, defaultQty: 200, defaultUnit: "g",      tags: ["vegan","vegetarian"] },
+  { id: "f033", name: "Pasta (cooked)",            calories: 131, protein: 5,   carbs: 25, fats: 1.1, defaultQty: 200, defaultUnit: "g",      tags: ["vegan","vegetarian","pasta"] },
   { id: "f034", name: "White Bread",               calories: 265, protein: 9,   carbs: 49, fats: 3.2, defaultQty: 2,   defaultUnit: "slices", tags: ["vegetarian"] },
   { id: "f035", name: "Whole Wheat Bread",         calories: 247, protein: 13,  carbs: 41, fats: 4,   defaultQty: 2,   defaultUnit: "slices", tags: ["integral","vegan","vegetarian"] },
   { id: "f036", name: "Sweet Potato (cooked)",     calories: 86,  protein: 1.6, carbs: 20, fats: 0.1, defaultQty: 150, defaultUnit: "g",      tags: ["vegan","vegetarian","fit"] },
   { id: "f037", name: "White Potato (baked)",      calories: 93,  protein: 2.5, carbs: 21, fats: 0.1, defaultQty: 150, defaultUnit: "g",      tags: ["vegan","vegetarian"] },
   { id: "f038", name: "Quinoa (cooked)",           calories: 120, protein: 4.4, carbs: 21, fats: 1.9, defaultQty: 180, defaultUnit: "g",      tags: ["integral","vegan","vegetarian","high-protein"] },
   { id: "f039", name: "Bagel (plain)",             calories: 257, protein: 10,  carbs: 50, fats: 1.6, defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian"] },
-  { id: "f040", name: "Tortilla (flour)",          calories: 297, protein: 8,   carbs: 50, fats: 7,   defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian"] },
-  { id: "f041", name: "Corn Tortilla",             calories: 218, protein: 5.7, carbs: 46, fats: 2.5, defaultQty: 2,   defaultUnit: "medium", tags: ["vegan","vegetarian"] },
+  { id: "f040", name: "Tortilla (flour)",          calories: 297, protein: 8,   carbs: 50, fats: 7,   defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian","mexican"] },
+  { id: "f041", name: "Corn Tortilla",             calories: 218, protein: 5.7, carbs: 46, fats: 2.5, defaultQty: 2,   defaultUnit: "medium", tags: ["vegan","vegetarian","mexican"] },
   { id: "f042", name: "Granola",                   calories: 471, protein: 10,  carbs: 64, fats: 20,  defaultQty: 50,  defaultUnit: "g",      tags: ["vegetarian","integral"] },
   { id: "f043", name: "Cereal (corn flakes)",      calories: 357, protein: 7.5, carbs: 84, fats: 0.4, defaultQty: 40,  defaultUnit: "g",      tags: ["vegetarian"] },
 
@@ -113,7 +115,7 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f100", name: "Burger (beef, plain)",      calories: 295, protein: 17,  carbs: 24, fats: 14,  defaultQty: 1,   defaultUnit: "medium", tags: [] },
   { id: "f101", name: "Pizza (cheese, 1 slice)",   calories: 272, protein: 12,  carbs: 33, fats: 10,  defaultQty: 1,   defaultUnit: "slice",  tags: ["vegetarian"] },
   { id: "f102", name: "French Fries (medium)",     calories: 312, protein: 3.4, carbs: 41, fats: 15,  defaultQty: 1,   defaultUnit: "medium", tags: ["vegan","vegetarian"] },
-  { id: "f103", name: "Burrito (chicken)",         calories: 206, protein: 14,  carbs: 22, fats: 7,   defaultQty: 1,   defaultUnit: "medium", tags: [] },
+  { id: "f103", name: "Burrito (chicken)",         calories: 206, protein: 14,  carbs: 22, fats: 7,   defaultQty: 1,   defaultUnit: "medium", tags: ["mexican"] },
   { id: "f104", name: "Sushi Roll (8pc)",          calories: 255, protein: 9,   carbs: 38, fats: 7,   defaultQty: 1,   defaultUnit: "roll",   tags: [] },
 
   // ── Beverages ─────────────────────────────────────────────────────────────
@@ -139,8 +141,8 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f131", name: "Multigrain Bread",              calories: 265, protein: 12,  carbs: 44, fats: 4.5, defaultQty: 2,   defaultUnit: "slices", tags: ["integral","vegan","vegetarian"] },
   { id: "f132", name: "Rye Bread (dark)",              calories: 259, protein: 9,   carbs: 48, fats: 3.3, defaultQty: 2,   defaultUnit: "slices", tags: ["integral","vegan","vegetarian"] },
   { id: "f133", name: "Sprouted Grain Bread (Ezekiel)",calories: 247, protein: 15,  carbs: 36, fats: 1.5, defaultQty: 2,   defaultUnit: "slices", tags: ["integral","vegan","vegetarian","high-protein"] },
-  { id: "f134", name: "Whole Wheat Pasta (cooked)",    calories: 124, protein: 5.4, carbs: 24, fats: 0.8, defaultQty: 200, defaultUnit: "g",      tags: ["integral","vegan","vegetarian"] },
-  { id: "f135", name: "Whole Wheat Penne (cooked)",    calories: 126, protein: 5.5, carbs: 25, fats: 0.9, defaultQty: 200, defaultUnit: "g",      tags: ["integral","vegan","vegetarian"] },
+  { id: "f134", name: "Whole Wheat Pasta (cooked)",    calories: 124, protein: 5.4, carbs: 24, fats: 0.8, defaultQty: 200, defaultUnit: "g",      tags: ["integral","vegan","vegetarian","pasta"] },
+  { id: "f135", name: "Whole Wheat Penne (cooked)",    calories: 126, protein: 5.5, carbs: 25, fats: 0.9, defaultQty: 200, defaultUnit: "g",      tags: ["integral","vegan","vegetarian","pasta"] },
   { id: "f136", name: "Whole Grain Rice (cooked)",     calories: 111, protein: 2.6, carbs: 23, fats: 0.9, defaultQty: 200, defaultUnit: "g",      tags: ["integral","vegan","vegetarian"] },
   { id: "f137", name: "Wild Rice (cooked)",            calories: 101, protein: 4,   carbs: 21, fats: 0.3, defaultQty: 200, defaultUnit: "g",      tags: ["integral","vegan","vegetarian"] },
   { id: "f138", name: "Rolled Oats (whole grain, dry)",calories: 379, protein: 13,  carbs: 68, fats: 7,   defaultQty: 80,  defaultUnit: "g",      tags: ["integral","vegan","vegetarian"] },
@@ -255,24 +257,24 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f249", name: "Fried Chicken Piece",           calories: 260, protein: 23,  carbs: 10, fats: 15,  defaultQty: 1,   defaultUnit: "piece",  tags: ["fast-food","high-fat"] },
   { id: "f250", name: "Hot Wings (6 pcs)",             calories: 310, protein: 25,  carbs: 8,  fats: 20,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food","high-fat"] },
   { id: "f251", name: "Onion Rings (small)",           calories: 276, protein: 4,   carbs: 31, fats: 16,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food","high-fat","vegan","vegetarian"] },
-  { id: "f252", name: "Nachos with Cheese",            calories: 346, protein: 9,   carbs: 36, fats: 19,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food","high-fat","vegetarian"] },
-  { id: "f253", name: "Burrito (beef & bean)",         calories: 490, protein: 22,  carbs: 56, fats: 18,  defaultQty: 1,   defaultUnit: "large",  tags: ["fast-food","high-fat"] },
-  { id: "f254", name: "Quesadilla (cheese)",           calories: 370, protein: 16,  carbs: 32, fats: 20,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food","high-fat","vegetarian"] },
-  { id: "f255", name: "Taco (ground beef)",            calories: 170, protein: 10,  carbs: 14, fats: 8,   defaultQty: 1,   defaultUnit: "taco",   tags: ["fast-food"] },
+  { id: "f252", name: "Nachos with Cheese",            calories: 346, protein: 9,   carbs: 36, fats: 19,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food","high-fat","vegetarian","mexican"] },
+  { id: "f253", name: "Burrito (beef & bean)",         calories: 490, protein: 22,  carbs: 56, fats: 18,  defaultQty: 1,   defaultUnit: "large",  tags: ["fast-food","high-fat","mexican"] },
+  { id: "f254", name: "Quesadilla (cheese)",           calories: 370, protein: 16,  carbs: 32, fats: 20,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food","high-fat","vegetarian","mexican"] },
+  { id: "f255", name: "Taco (ground beef)",            calories: 170, protein: 10,  carbs: 14, fats: 8,   defaultQty: 1,   defaultUnit: "taco",   tags: ["fast-food","mexican"] },
   { id: "f256", name: "Milkshake (chocolate)",         calories: 430, protein: 10,  carbs: 68, fats: 14,  defaultQty: 1,   defaultUnit: "large",  tags: ["fast-food","high-sugar","dairy"] },
   { id: "f257", name: "Milkshake (vanilla)",           calories: 390, protein: 10,  carbs: 61, fats: 13,  defaultQty: 1,   defaultUnit: "large",  tags: ["fast-food","high-sugar","dairy"] },
   { id: "f258", name: "Corn Dog",                      calories: 250, protein: 10,  carbs: 28, fats: 12,  defaultQty: 1,   defaultUnit: "piece",  tags: ["fast-food"] },
   { id: "f259", name: "Gyro / Doner Kebab",            calories: 490, protein: 26,  carbs: 44, fats: 22,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food"] },
 
   // ── Pizza Varieties ───────────────────────────────────────────────────────
-  { id: "f260", name: "Margherita Pizza (slice)",      calories: 272, protein: 13,  carbs: 34, fats: 10,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","vegetarian"] },
-  { id: "f261", name: "Pepperoni Pizza (slice)",       calories: 298, protein: 14,  carbs: 34, fats: 13,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","high-fat"] },
-  { id: "f262", name: "Four Cheese Pizza (slice)",     calories: 322, protein: 16,  carbs: 34, fats: 14,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","high-fat","vegetarian"] },
-  { id: "f263", name: "Veggie Supreme Pizza (slice)",  calories: 248, protein: 11,  carbs: 35, fats: 8,   defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","vegetarian"] },
-  { id: "f264", name: "BBQ Chicken Pizza (slice)",     calories: 290, protein: 16,  carbs: 36, fats: 10,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food"] },
-  { id: "f265", name: "Hawaiian Pizza (slice)",        calories: 255, protein: 12,  carbs: 35, fats: 9,   defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food"] },
-  { id: "f266", name: "Meat Lovers Pizza (slice)",     calories: 370, protein: 18,  carbs: 33, fats: 18,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","high-fat"] },
-  { id: "f267", name: "Calzone (cheese & ham)",        calories: 680, protein: 32,  carbs: 72, fats: 28,  defaultQty: 1,   defaultUnit: "medium", tags: ["fast-food","high-fat"] },
+  { id: "f260", name: "Margherita Pizza (slice)",      calories: 272, protein: 13,  carbs: 34, fats: 10,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","vegetarian","italian"] },
+  { id: "f261", name: "Pepperoni Pizza (slice)",       calories: 298, protein: 14,  carbs: 34, fats: 13,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","high-fat","italian"] },
+  { id: "f262", name: "Four Cheese Pizza (slice)",     calories: 322, protein: 16,  carbs: 34, fats: 14,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","high-fat","vegetarian","italian"] },
+  { id: "f263", name: "Veggie Supreme Pizza (slice)",  calories: 248, protein: 11,  carbs: 35, fats: 8,   defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","vegetarian","italian"] },
+  { id: "f264", name: "BBQ Chicken Pizza (slice)",     calories: 290, protein: 16,  carbs: 36, fats: 10,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","italian"] },
+  { id: "f265", name: "Hawaiian Pizza (slice)",        calories: 255, protein: 12,  carbs: 35, fats: 9,   defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","italian"] },
+  { id: "f266", name: "Meat Lovers Pizza (slice)",     calories: 370, protein: 18,  carbs: 33, fats: 18,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","high-fat","italian"] },
+  { id: "f267", name: "Calzone (cheese & ham)",        calories: 680, protein: 32,  carbs: 72, fats: 28,  defaultQty: 1,   defaultUnit: "medium", tags: ["fast-food","high-fat","italian"] },
 
   // ── Greek Yogurts ─────────────────────────────────────────────────────────
   { id: "f270", name: "Greek Yogurt (full fat, plain)",calories: 97,  protein: 9,   carbs: 4,  fats: 5,   defaultQty: 150, defaultUnit: "g",      tags: ["vegetarian","dairy","fit"] },
@@ -297,7 +299,7 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f290", name: "Cheesecake (slice)",            calories: 320, protein: 6,   carbs: 32, fats: 20,  defaultQty: 1,   defaultUnit: "slice",  tags: ["vegetarian","dairy","high-fat","high-sugar","dessert"] },
   { id: "f291", name: "Chocolate Cake (slice)",        calories: 370, protein: 5,   carbs: 54, fats: 16,  defaultQty: 1,   defaultUnit: "slice",  tags: ["vegetarian","dairy","high-sugar","dessert"] },
   { id: "f292", name: "Carrot Cake (slice)",           calories: 340, protein: 4,   carbs: 49, fats: 16,  defaultQty: 1,   defaultUnit: "slice",  tags: ["vegetarian","high-sugar","dessert"] },
-  { id: "f293", name: "Tiramisu",                      calories: 283, protein: 6,   carbs: 30, fats: 16,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-fat","high-sugar","dessert"] },
+  { id: "f293", name: "Tiramisu",                      calories: 283, protein: 6,   carbs: 30, fats: 16,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-fat","high-sugar","dessert","italian"] },
   { id: "f294", name: "Brownie (chocolate)",           calories: 410, protein: 5,   carbs: 57, fats: 20,  defaultQty: 1,   defaultUnit: "piece",  tags: ["vegetarian","high-sugar","high-fat","dessert"] },
   { id: "f295", name: "Chocolate Chip Cookie",         calories: 148, protein: 2,   carbs: 20, fats: 7,   defaultQty: 2,   defaultUnit: "cookies",tags: ["vegetarian","high-sugar","dessert"] },
   { id: "f296", name: "Muffin (blueberry)",            calories: 430, protein: 5,   carbs: 65, fats: 18,  defaultQty: 1,   defaultUnit: "large",  tags: ["vegetarian","high-sugar","dessert"] },
@@ -307,7 +309,7 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f300", name: "Crêpe (plain, no filling)",     calories: 112, protein: 4,   carbs: 12, fats: 5,   defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian","dessert"] },
   { id: "f301", name: "Apple Pie (slice)",             calories: 296, protein: 3,   carbs: 43, fats: 14,  defaultQty: 1,   defaultUnit: "slice",  tags: ["vegetarian","high-sugar","dessert"] },
   { id: "f302", name: "Chocolate Mousse",              calories: 245, protein: 5,   carbs: 22, fats: 16,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-fat","dessert"] },
-  { id: "f303", name: "Panna Cotta",                   calories: 218, protein: 4,   carbs: 22, fats: 13,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","dessert"] },
+  { id: "f303", name: "Panna Cotta",                   calories: 218, protein: 4,   carbs: 22, fats: 13,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","dessert","italian"] },
   { id: "f304", name: "Croissant (plain, butter)",     calories: 406, protein: 9,   carbs: 46, fats: 21,  defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian","high-fat","dessert"] },
   { id: "f305", name: "Cinnamon Roll",                 calories: 420, protein: 7,   carbs: 59, fats: 18,  defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian","high-sugar","high-fat","dessert"] },
   { id: "f306", name: "Éclair (chocolate)",            calories: 262, protein: 6,   carbs: 29, fats: 14,  defaultQty: 1,   defaultUnit: "piece",  tags: ["vegetarian","dairy","high-sugar","dessert"] },
@@ -319,16 +321,16 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f311", name: "Cereal with Milk (bowl)",       calories: 260, protein: 9,   carbs: 44, fats: 5,   defaultQty: 1,   defaultUnit: "bowl",   tags: ["vegetarian","dairy"] },
 
   // ── Sushi & Japanese ─────────────────────────────────────────────────────
-  { id: "f320", name: "Salmon Nigiri (2 pieces)",      calories: 120, protein: 9,   carbs: 14, fats: 2.5, defaultQty: 2,   defaultUnit: "pieces", tags: ["high-protein","seafood","sushi","fit"] },
-  { id: "f321", name: "Tuna Nigiri (2 pieces)",        calories: 110, protein: 10,  carbs: 13, fats: 1.5, defaultQty: 2,   defaultUnit: "pieces", tags: ["high-protein","seafood","sushi","fit","keto"] },
-  { id: "f322", name: "California Roll (6 pieces)",    calories: 255, protein: 8,   carbs: 38, fats: 7,   defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","sushi"] },
-  { id: "f323", name: "Philadelphia Roll (6 pieces)",  calories: 320, protein: 12,  carbs: 32, fats: 14,  defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","sushi","dairy"] },
-  { id: "f324", name: "Dragon Roll (6 pieces)",        calories: 350, protein: 14,  carbs: 42, fats: 11,  defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","sushi"] },
-  { id: "f325", name: "Salmon Sashimi (3 pieces)",     calories: 120, protein: 18,  carbs: 0,  fats: 5,   defaultQty: 3,   defaultUnit: "pieces", tags: ["high-protein","seafood","sushi","keto","fit"] },
-  { id: "f326", name: "Tuna Sashimi (3 pieces)",       calories: 90,  protein: 20,  carbs: 0,  fats: 1,   defaultQty: 3,   defaultUnit: "pieces", tags: ["high-protein","seafood","sushi","keto","fit"] },
-  { id: "f327", name: "Vegetable Maki (6 pieces)",     calories: 170, protein: 4,   carbs: 36, fats: 1.5, defaultQty: 6,   defaultUnit: "pieces", tags: ["vegan","vegetarian","sushi"] },
-  { id: "f328", name: "Shrimp Tempura Roll (6 pieces)",calories: 380, protein: 12,  carbs: 50, fats: 14,  defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","sushi","high-fat"] },
-  { id: "f329", name: "Edamame (steamed, salted)",     calories: 122, protein: 11,  carbs: 10, fats: 5,   defaultQty: 100, defaultUnit: "g",      tags: ["vegan","vegetarian","high-protein","sushi","fit"] },
+  { id: "f320", name: "Salmon Nigiri (2 pieces)",      calories: 120, protein: 9,   carbs: 14, fats: 2.5, defaultQty: 2,   defaultUnit: "pieces", tags: ["high-protein","seafood","sushi","fit","japanese"] },
+  { id: "f321", name: "Tuna Nigiri (2 pieces)",        calories: 110, protein: 10,  carbs: 13, fats: 1.5, defaultQty: 2,   defaultUnit: "pieces", tags: ["high-protein","seafood","sushi","fit","keto","japanese"] },
+  { id: "f322", name: "California Roll (6 pieces)",    calories: 255, protein: 8,   carbs: 38, fats: 7,   defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","sushi","japanese"] },
+  { id: "f323", name: "Philadelphia Roll (6 pieces)",  calories: 320, protein: 12,  carbs: 32, fats: 14,  defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","sushi","dairy","japanese"] },
+  { id: "f324", name: "Dragon Roll (6 pieces)",        calories: 350, protein: 14,  carbs: 42, fats: 11,  defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","sushi","japanese"] },
+  { id: "f325", name: "Salmon Sashimi (3 pieces)",     calories: 120, protein: 18,  carbs: 0,  fats: 5,   defaultQty: 3,   defaultUnit: "pieces", tags: ["high-protein","seafood","sushi","keto","fit","japanese"] },
+  { id: "f326", name: "Tuna Sashimi (3 pieces)",       calories: 90,  protein: 20,  carbs: 0,  fats: 1,   defaultQty: 3,   defaultUnit: "pieces", tags: ["high-protein","seafood","sushi","keto","fit","japanese"] },
+  { id: "f327", name: "Vegetable Maki (6 pieces)",     calories: 170, protein: 4,   carbs: 36, fats: 1.5, defaultQty: 6,   defaultUnit: "pieces", tags: ["vegan","vegetarian","sushi","japanese"] },
+  { id: "f328", name: "Shrimp Tempura Roll (6 pieces)",calories: 380, protein: 12,  carbs: 50, fats: 14,  defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","sushi","high-fat","japanese"] },
+  { id: "f329", name: "Edamame (steamed, salted)",     calories: 122, protein: 11,  carbs: 10, fats: 5,   defaultQty: 100, defaultUnit: "g",      tags: ["vegan","vegetarian","high-protein","sushi","fit","japanese"] },
 
   // ── Kebab & Middle Eastern ────────────────────────────────────────────────
   { id: "f330", name: "Döner Kebab (wrap)",            calories: 480, protein: 28,  carbs: 42, fats: 20,  defaultQty: 1,   defaultUnit: "wrap",   tags: ["high-protein","middle-eastern"] },
@@ -371,8 +373,8 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f362", name: "Minestrone",                    calories: 95,  protein: 5,   carbs: 16, fats: 2,   defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","soup","legume"] },
   { id: "f363", name: "Lentil Soup",                   calories: 130, protein: 9,   carbs: 22, fats: 1.5, defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","soup","legume","fit"] },
   { id: "f364", name: "French Onion Soup (bowl)",      calories: 180, protein: 10,  carbs: 22, fats: 5,   defaultQty: 1,   defaultUnit: "bowl",   tags: ["vegetarian","soup"] },
-  { id: "f365", name: "Miso Soup",                     calories: 40,  protein: 3,   carbs: 5,  fats: 1,   defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","soup","fit","keto"] },
-  { id: "f366", name: "Ramen (bowl)",                  calories: 430, protein: 22,  carbs: 55, fats: 12,  defaultQty: 1,   defaultUnit: "bowl",   tags: ["soup"] },
+  { id: "f365", name: "Miso Soup",                     calories: 40,  protein: 3,   carbs: 5,  fats: 1,   defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","soup","fit","keto","japanese"] },
+  { id: "f366", name: "Ramen (bowl)",                  calories: 430, protein: 22,  carbs: 55, fats: 12,  defaultQty: 1,   defaultUnit: "bowl",   tags: ["soup","japanese"] },
   { id: "f367", name: "Gazpacho (cold tomato soup)",   calories: 70,  protein: 2,   carbs: 12, fats: 2,   defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","soup","fit"] },
   { id: "f368", name: "Pho (beef noodle soup)",        calories: 350, protein: 24,  carbs: 45, fats: 7,   defaultQty: 1,   defaultUnit: "bowl",   tags: ["soup","high-protein"] },
   { id: "f369", name: "Cream of Mushroom Soup",        calories: 130, protein: 4,   carbs: 11, fats: 8,   defaultQty: 250, defaultUnit: "ml",     tags: ["vegetarian","soup","dairy"] },
@@ -398,9 +400,21 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f385", name: "Pepperoni",                     calories: 149, protein: 6,   carbs: 0.9,fats: 13,  defaultQty: 30,  defaultUnit: "g",      tags: ["meat","high-fat","sausage","fast-food","keto"] },
   { id: "f386", name: "Mortadella",                    calories: 150, protein: 8,   carbs: 1.5,fats: 13,  defaultQty: 50,  defaultUnit: "g",      tags: ["meat","high-fat","sausage"] },
   { id: "f387", name: "Kielbasa (Polish sausage)",     calories: 301, protein: 13,  carbs: 3,  fats: 27,  defaultQty: 100, defaultUnit: "g",      tags: ["meat","high-fat","sausage"] },
-  { id: "f388", name: "Italian Sausage",               calories: 344, protein: 14,  carbs: 3,  fats: 31,  defaultQty: 100, defaultUnit: "g",      tags: ["meat","high-fat","sausage"] },
+  { id: "f388", name: "Italian Sausage",               calories: 344, protein: 14,  carbs: 3,  fats: 31,  defaultQty: 100, defaultUnit: "g",      tags: ["meat","high-fat","sausage","italian"] },
   { id: "f389", name: "Blood Sausage / Morcilla",      calories: 379, protein: 14,  carbs: 2,  fats: 34,  defaultQty: 100, defaultUnit: "g",      tags: ["meat","high-fat","sausage"] },
   { id: "f390", name: "Frankfurter / Hot Dog Sausage", calories: 173, protein: 7,   carbs: 2,  fats: 15,  defaultQty: 1,   defaultUnit: "piece",  tags: ["meat","high-fat","sausage","fast-food"] },
+  // ── Korean Cuisine ───────────────────────────────────────────────────────────
+  { id: "f400", name: "Bibimbap (rice bowl)",           calories: 490, protein: 22,  carbs: 70, fats: 12,  defaultQty: 1,   defaultUnit: "bowl",   tags: ["korean","high-protein","mix"] },
+  { id: "f401", name: "Bulgogi (Korean BBQ beef)",      calories: 215, protein: 26,  carbs: 8,  fats: 10,  defaultQty: 150, defaultUnit: "g",      tags: ["korean","high-protein","meat"] },
+  { id: "f402", name: "Tteokbokki (spicy rice cakes)", calories: 285, protein: 6,   carbs: 57, fats: 4,   defaultQty: 1,   defaultUnit: "serving",tags: ["korean","vegan","vegetarian"] },
+  { id: "f403", name: "Kimchi",                         calories: 15,  protein: 1,   carbs: 2.4,fats: 0.5, defaultQty: 100, defaultUnit: "g",      tags: ["korean","vegan","vegetarian","low-carb","keto","fit"] },
+  { id: "f404", name: "Korean Fried Chicken",           calories: 310, protein: 24,  carbs: 14, fats: 18,  defaultQty: 200, defaultUnit: "g",      tags: ["korean","high-protein","high-fat"] },
+  { id: "f405", name: "Japchae (glass noodles)",        calories: 290, protein: 8,   carbs: 50, fats: 6,   defaultQty: 1,   defaultUnit: "serving",tags: ["korean","vegan","vegetarian"] },
+  { id: "f406", name: "Samgyeopsal (pork belly)",       calories: 518, protein: 17,  carbs: 0,  fats: 50,  defaultQty: 150, defaultUnit: "g",      tags: ["korean","keto","high-fat","meat"] },
+  { id: "f407", name: "Doenjang Jjigae (soybean soup)", calories: 130, protein: 9,   carbs: 10, fats: 5,   defaultQty: 1,   defaultUnit: "bowl",   tags: ["korean","vegan","vegetarian","soup"] },
+  { id: "f408", name: "Sundubu Jjigae (soft tofu stew)",calories: 180, protein: 12,  carbs: 8,  fats: 9,   defaultQty: 1,   defaultUnit: "bowl",   tags: ["korean","vegetarian","soup","high-protein"] },
+  { id: "f409", name: "Kimbap (seaweed rice roll)",     calories: 320, protein: 12,  carbs: 55, fats: 7,   defaultQty: 1,   defaultUnit: "roll",   tags: ["korean","mix"] },
+
 ];
 
 /**

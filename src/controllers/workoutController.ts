@@ -477,8 +477,8 @@ export const startFromTemplate = async (
     }
 
     // Build default workout name  (e.g. "Push Day — Apr 20")
-    const today       = new Date();
-    const dateLabel   = today.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const targetDate  = req.body.date ? new Date(req.body.date) : new Date();
+    const dateLabel   = targetDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     const workoutName = req.body.name ?? `${template.dayLabel} — ${dateLabel}`;
 
     // Create the workout pre-filled with the template's exercises.
@@ -487,6 +487,7 @@ export const startFromTemplate = async (
       data: {
         userId:     req.user!.id,
         name:       workoutName,
+        date:       targetDate,
         duration:   0, // user fills this in after the session
         templateId: template.id,
         exercises: {

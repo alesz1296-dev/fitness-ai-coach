@@ -182,6 +182,7 @@ export interface CalorieGoal {
   warning?: string | null;
   aiGenerated: boolean;
   notes?: string | null;
+  trainingDaysPerWeek?: number | null;
   // Macro cycling
   macrosCycling?: boolean;
   trainDayCalories?: number | null;

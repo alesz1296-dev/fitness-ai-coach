@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths } from "date-fns";
-import { workoutsApi, templatesApi, searchApi, foodApi } from "../../api";
+import { workoutsApi, templatesApi, searchApi, foodApi, calorieGoalsApi } from "../../api";
 import type { Workout, WorkoutExercise, PRResult, WorkoutTemplate } from "../../types";
 import { useAuthStore } from "../../store/authStore";
 import { Card } from "../../components/ui/Card";
@@ -1533,7 +1533,7 @@ function RecommendedBanner({ goal }: { goal?: string | null }) {
   );
 }
 
-function TemplatesTab() {
+function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: () => void; trainingDays: number }) {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [subTab, setSubTab] = useState<"recommended" | "mine">("recommended");
@@ -1543,6 +1543,7 @@ function TemplatesTab() {
   const [starting, setStarting] = useState<number | null>(null);
   const [detail, setDetail] = useState<WorkoutTemplate | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [scheduling, setScheduling] = useState<WorkoutTemplate | null>(null);
   const toast = useToast();
 
   const load = useCallback(async () => {
@@ -1575,10 +1576,45 @@ function TemplatesTab() {
     setStarting(template.id);
     try {
       await workoutsApi.startFromTemplate(template.id);
-      toast.show("Workout started! Check your history.");
-      navigate("/workouts");
+      onWorkoutStarted();
     } catch { alert("Failed to start workout"); }
     finally { setStarting(null); }
+  };
+
+  // Schedule workouts for this week — one per training day, evenly spaced
+  const DAY_PATTERNS: Record<number, number[]> = {
+    1: [1],
+    2: [1, 4],
+    3: [1, 3, 5],
+    4: [1, 2, 4, 5],
+    5: [1, 2, 3, 5, 6],
+    6: [1, 2, 3, 4, 5, 6],
+    7: [0, 1, 2, 3, 4, 5, 6],
+  };
+
+  const scheduleWeek = async (template: WorkoutTemplate) => {
+    setScheduling(template);
+    const capped = Math.max(1, Math.min(7, trainingDays));
+    const pattern = DAY_PATTERNS[capped] ?? DAY_PATTERNS[4];
+    // Get Monday of current week (ISO: Mon=0)
+    const today = new Date();
+    const dow = (today.getDay() + 6) % 7; // Mon=0 … Sun=6
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - dow);
+    monday.setHours(0, 0, 0, 0);
+
+    try {
+      for (const dayOffset of pattern) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + dayOffset);
+        const dateStr = d.toISOString().split("T")[0];
+        await workoutsApi.startFromTemplate(template.id, dateStr);
+      }
+      onWorkoutStarted();
+      toast.show(`Scheduled ${pattern.length} workouts this week!`);
+    } catch {
+      alert("Failed to schedule workouts");
+    } finally { setScheduling(null); }
   };
 
   const seedTemplates = async () => {
@@ -1698,13 +1734,26 @@ function TemplatesTab() {
       {/* Template detail modal */}
       <Modal open={!!detail} onClose={() => setDetail(null)} title={detail?.name} size="md">
         {detail && (
-          <TemplateDetail
-            template={detail}
-            onStart={() => { setDetail(null); startFromTemplate(detail); }}
-            onClose={() => setDetail(null)}
-            onFork={detail.isSystem ? () => forkTemplate(detail) : undefined}
-            onRename={!detail.isSystem ? (name) => renameTemplate(detail.id, name) : undefined}
-          />
+          <>
+            <TemplateDetail
+              template={detail}
+              onStart={() => { setDetail(null); startFromTemplate(detail); }}
+              onClose={() => setDetail(null)}
+              onFork={detail.isSystem ? () => forkTemplate(detail) : undefined}
+              onRename={!detail.isSystem ? (name) => renameTemplate(detail.id, name) : undefined}
+            />
+            <div className="px-4 pb-4 mt-2 border-t border-gray-100 pt-3">
+              <Button
+                variant="secondary"
+                className="w-full"
+                loading={scheduling?.id === detail.id}
+                onClick={() => { setDetail(null); scheduleWeek(detail); }}
+              >
+                📅 Schedule for This Week ({trainingDays} days)
+              </Button>
+              <p className="text-xs text-gray-400 text-center mt-1">Creates {trainingDays} workouts spread across this week</p>
+            </div>
+          </>
         )}
       </Modal>
 
@@ -1716,17 +1765,23 @@ function TemplatesTab() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Calendar view
 // ─────────────────────────────────────────────────────────────────────────────
-function CalendarTab({ allWorkouts }: { allWorkouts: Workout[] }) {
+function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; trainingDays: number }) {
   const [month, setMonth] = useState(new Date());
   const [cheatDays, setCheatDays] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
 
-  // Load cheat meals for this month
+  // Rest day pattern for the week based on trainingDays (Mon=0 … Sun=6)
+  const DAY_PATTERNS: Record<number, number[]> = {
+    1: [1], 2: [1, 4], 3: [1, 3, 5], 4: [1, 2, 4, 5],
+    5: [1, 2, 3, 5, 6], 6: [1, 2, 3, 4, 5, 6], 7: [0, 1, 2, 3, 4, 5, 6],
+  };
+  const capped = Math.max(1, Math.min(7, trainingDays));
+  const trainingWeekDays = new Set(DAY_PATTERNS[capped] ?? DAY_PATTERNS[4]); // Mon-based, 0=Mon
+
+  // Load cheat meal dates (last 90 days)
   useEffect(() => {
-    const start = startOfMonth(month).toISOString().split("T")[0];
-    const end   = endOfMonth(month).toISOString().split("T")[0];
-    foodApi.getHistory(60).then((res) => {
-      // We don't have per-day cheat meal data from history endpoint, so just mark from workouts
+    foodApi.getCheatDates(90).then((res) => {
+      setCheatDays(new Set(res.data.dates));
     }).catch(() => {});
   }, [month]);
 
@@ -1792,10 +1847,15 @@ function CalendarTab({ allWorkouts }: { allWorkouts: Workout[] }) {
         ))}
         {days.map((day) => {
           const str = format(day, "yyyy-MM-dd");
-          const hasWorkout = !!workoutDayMap[str]?.length;
-          const isToday    = str === todayStr;
-          const isSelected = str === selected;
+          const hasWorkout  = !!workoutDayMap[str]?.length;
+          const isToday     = str === todayStr;
+          const isSelected  = str === selected;
+          const isCheat     = cheatDays.has(str);
           const workoutCount = workoutDayMap[str]?.length ?? 0;
+          // Determine if this is a scheduled rest day (past dates only)
+          const dayOfWeek = (day.getDay() + 6) % 7; // Mon=0 … Sun=6
+          const isPast    = day <= new Date(todayStr + "T23:59:59");
+          const isRestDay = isPast && !hasWorkout && !trainingWeekDays.has(dayOfWeek);
 
           return (
             <button
@@ -1806,25 +1866,29 @@ function CalendarTab({ allWorkouts }: { allWorkouts: Workout[] }) {
                 ${isToday ? "border-2 border-brand-400" : ""}
                 ${hasWorkout
                   ? "bg-brand-100 text-brand-800 font-semibold hover:bg-brand-200"
-                  : "bg-gray-50 text-gray-500 hover:bg-gray-100"}
+                  : isRestDay
+                    ? "bg-green-50 text-green-600 hover:bg-green-100"
+                    : "bg-gray-50 text-gray-500 hover:bg-gray-100"}
               `}
             >
               <span>{format(day, "d")}</span>
-              {workoutCount > 0 && (
-                <div className="flex gap-0.5 mt-0.5">
-                  {Array.from({ length: Math.min(workoutCount, 3) }).map((_, i) => (
-                    <div key={i} className="w-1.5 h-1.5 rounded-full bg-brand-500" />
-                  ))}
-                </div>
-              )}
+              <div className="flex gap-0.5 mt-0.5 items-center">
+                {Array.from({ length: Math.min(workoutCount, 3) }).map((_, i) => (
+                  <div key={i} className="w-1.5 h-1.5 rounded-full bg-brand-500" />
+                ))}
+                {isCheat && <span className="text-[8px] leading-none">🍕</span>}
+                {isRestDay && !isCheat && <span className="text-[8px] leading-none">😴</span>}
+              </div>
             </button>
           );
         })}
       </div>
 
       {/* Legend */}
-      <div className="flex gap-4 text-xs text-gray-500 mt-2">
-        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-brand-100 inline-block" /> Workout logged</span>
+      <div className="flex flex-wrap gap-4 text-xs text-gray-500 mt-2">
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-brand-100 inline-block" /> Workout</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-50 inline-block" /> 😴 Rest day</span>
+        <span className="flex items-center gap-1.5">🍕 Cheat meal</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-brand-400 inline-block" /> Today</span>
       </div>
 
@@ -1875,6 +1939,12 @@ export default function WorkoutsPage() {
   const [editing, setEditing] = useState<Workout | null>(null);
   const toast = useToast();
 
+  // Training days per week — loaded from active goal, editable
+  const [trainingDays, setTrainingDays]   = useState<number>(user?.trainingDaysPerWeek ?? 4);
+  const [activeGoalId, setActiveGoalId]   = useState<number | null>(null);
+  const [editingDays,  setEditingDays]    = useState(false);
+  const [daysInput,    setDaysInput]      = useState(String(trainingDays));
+
   const load = useCallback(async (p = 1) => {
     setLoading(true);
     try {
@@ -1894,12 +1964,44 @@ export default function WorkoutsPage() {
     } catch { /* silent */ }
   }, []);
 
+  // Load training days from active goal
+  useEffect(() => {
+    calorieGoalsApi.getActive().then((res) => {
+      const goal = res.data.goal;
+      if (goal) {
+        setActiveGoalId(goal.id);
+        const days = goal.trainingDaysPerWeek ?? 4;
+        setTrainingDays(days);
+        setDaysInput(String(days));
+      }
+    }).catch(() => {});
+  }, []);
+
+  const saveTrainingDays = async () => {
+    const n = Math.max(1, Math.min(7, Number(daysInput) || trainingDays));
+    setTrainingDays(n);
+    setDaysInput(String(n));
+    setEditingDays(false);
+    if (activeGoalId) {
+      try { await calorieGoalsApi.update(activeGoalId, { trainingDaysPerWeek: n }); }
+      catch { /* silent */ }
+    }
+  };
+
+  // Callback for TemplatesTab — called after a workout is started from a template
+  const onWorkoutStarted = useCallback(() => {
+    load(1);
+    loadAll();
+    setTab("history");
+    toast.show("Workout logged from template!");
+  }, [load, loadAll]);
+
   useEffect(() => { load(1); loadAll(); }, [load, loadAll]);
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Workouts</h1>
           <p className="text-gray-500 text-sm mt-1">
@@ -1908,9 +2010,37 @@ export default function WorkoutsPage() {
             :                      "Pre-built and custom workout splits"}
           </p>
         </div>
-        {tab === "history" && (
-          <Button onClick={() => setShowForm(true)}>+ Log Workout</Button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* Training days per week pill */}
+          <div className="flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-xl px-3 py-1.5">
+            <span className="text-sm text-brand-700 font-medium">🗓️ Training days/week:</span>
+            {editingDays ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="number" min={1} max={7}
+                  value={daysInput}
+                  onChange={(e) => setDaysInput(e.target.value)}
+                  onBlur={saveTrainingDays}
+                  onKeyDown={(e) => e.key === "Enter" && saveTrainingDays()}
+                  className="w-10 text-center text-sm font-bold border border-brand-300 rounded-lg px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  autoFocus
+                />
+                <button onClick={saveTrainingDays} className="text-xs text-brand-600 font-semibold hover:underline">Save</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setEditingDays(true)}
+                className="text-sm font-bold text-brand-800 hover:text-brand-600 underline-offset-2 hover:underline"
+              >
+                {trainingDays}
+              </button>
+            )}
+            <span className="text-xs text-brand-500">({7 - trainingDays} rest)</span>
+          </div>
+          {tab === "history" && (
+            <Button onClick={() => setShowForm(true)}>+ Log Workout</Button>
+          )}
+        </div>
       </div>
 
       {/* Main tabs */}
@@ -1933,7 +2063,7 @@ export default function WorkoutsPage() {
       {/* Calendar tab */}
       {tab === "calendar" && (
         <Card className="p-4">
-          <CalendarTab allWorkouts={allWorkouts} />
+          <CalendarTab allWorkouts={allWorkouts} trainingDays={trainingDays} />
         </Card>
       )}
 
@@ -2002,7 +2132,7 @@ export default function WorkoutsPage() {
       )}
 
       {/* Templates tab */}
-      {tab === "templates" && <TemplatesTab />}
+      {tab === "templates" && <TemplatesTab onWorkoutStarted={onWorkoutStarted} trainingDays={trainingDays} />}
 
       {/* Create modal */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Log Workout" size="lg">

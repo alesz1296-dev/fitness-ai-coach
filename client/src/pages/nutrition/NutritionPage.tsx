@@ -161,25 +161,44 @@ function calcMacro(
     : Math.round(valuePer100g * qty / defaultQty);
 }
 
-// ── Food tag filter chips ─────────────────────────────────────────────────────
-const TAG_FILTERS = [
-  { tag: "",               label: "All",            emoji: "🍽️" },
-  { tag: "keto",           label: "Keto",           emoji: "🥑" },
-  { tag: "fit",            label: "Fit",            emoji: "💪" },
-  { tag: "high-protein",   label: "High-Protein",   emoji: "🍗" },
-  { tag: "vegan",          label: "Vegan",          emoji: "🌱" },
-  { tag: "vegetarian",     label: "Vegetarian",     emoji: "🥦" },
-  { tag: "seafood",        label: "Seafood",        emoji: "🦐" },
-  { tag: "meat",           label: "Meats",          emoji: "🥩" },
-  { tag: "sushi",          label: "Sushi",          emoji: "🍣" },
+// ── Food tag filter chips — grouped into 3 categories ────────────────────────
+const CUISINE_TAGS = [
+  { tag: "japanese",       label: "Japanese",       emoji: "🍱" },
+  { tag: "italian",        label: "Italian",        emoji: "🍝" },
+  { tag: "mexican",        label: "Mexican",        emoji: "🌮" },
   { tag: "middle-eastern", label: "Middle Eastern", emoji: "🧆" },
-  { tag: "soup",           label: "Soups",          emoji: "🍲" },
-  { tag: "cheese",         label: "Cheese",         emoji: "🧀" },
-  { tag: "sausage",        label: "Sausages",       emoji: "🌭" },
-  { tag: "integral",       label: "Whole Grain",    emoji: "🌾" },
-  { tag: "fast-food",      label: "Fast Food",      emoji: "🍔" },
-  { tag: "dessert",        label: "Desserts",       emoji: "🍰" },
-  { tag: "high-sugar",     label: "High-Sugar",     emoji: "🍬" },
+  { tag: "korean",         label: "Korean",         emoji: "🥢" },
+];
+
+const DIETARY_TAGS = [
+  { tag: "fit",          label: "Fit",          emoji: "💪" },
+  { tag: "keto",         label: "Keto",         emoji: "🥑" },
+  { tag: "high-protein", label: "High-Protein", emoji: "🍗" },
+  { tag: "vegan",        label: "Vegan",        emoji: "🌱" },
+  { tag: "vegetarian",   label: "Vegetarian",   emoji: "🥦" },
+  { tag: "fast-food",    label: "Fast Food",    emoji: "🍔" },
+  { tag: "dessert",      label: "Desserts",     emoji: "🍰" },
+  { tag: "integral",     label: "Whole Grain",  emoji: "🌾" },
+  { tag: "low-carb",     label: "Low-Carb",     emoji: "🥗" },
+  { tag: "high-sugar",   label: "High-Sugar",   emoji: "🍬" },
+];
+
+const FOOD_TYPE_TAGS = [
+  { tag: "meat",      label: "Meats",      emoji: "🥩" },
+  { tag: "seafood",   label: "Seafood",    emoji: "🦐" },
+  { tag: "cheese",    label: "Cheese",     emoji: "🧀" },
+  { tag: "soup",      label: "Soups",      emoji: "🍲" },
+  { tag: "sausage",   label: "Sausages",   emoji: "🌭" },
+  { tag: "vegetable", label: "Vegetables", emoji: "🫛" },
+  { tag: "fruit",     label: "Fruits",     emoji: "🍎" },
+  { tag: "pasta",     label: "Pasta",      emoji: "🍜" },
+  { tag: "dairy",     label: "Dairy",      emoji: "🥛" },
+];
+
+// Flat list for backward-compat tag display in food rows (TAG_COLORS still used)
+const TAG_FILTERS = [
+  { tag: "", label: "All", emoji: "🍽️" },
+  ...CUISINE_TAGS, ...DIETARY_TAGS, ...FOOD_TYPE_TAGS,
 ];
 
 const TAG_COLORS: Record<string, string> = {
@@ -234,22 +253,56 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
 
   return (
     <div className="space-y-2">
-      {/* Tag filter chips */}
-      <div className="flex flex-wrap gap-1.5">
-        {TAG_FILTERS.map(({ tag, label, emoji }) => (
-          <button
-            key={tag}
-            type="button"
-            onClick={() => handleTagClick(tag)}
-            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-              activeTag === tag
-                ? "bg-brand-600 text-white border-brand-600"
-                : "bg-white text-gray-600 border-gray-200 hover:border-brand-400 hover:text-brand-600"
-            }`}
-          >
-            {emoji} {label}
-          </button>
-        ))}
+      {/* Tag filter chips — grouped */}
+      <div className="space-y-1.5">
+        {/* All button */}
+        <button
+          type="button"
+          onClick={() => handleTagClick("")}
+          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+            activeTag === ""
+              ? "bg-brand-600 text-white border-brand-600"
+              : "bg-white text-gray-600 border-gray-200 hover:border-brand-400 hover:text-brand-600"
+          }`}
+        >
+          🍽️ All
+        </button>
+        {/* Cuisine */}
+        <div>
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Cuisine</p>
+          <div className="flex flex-wrap gap-1.5">
+            {CUISINE_TAGS.map(({ tag, label, emoji }) => (
+              <button key={tag} type="button" onClick={() => handleTagClick(tag)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-600 border-gray-200 hover:border-brand-400 hover:text-brand-600"}`}>
+                {emoji} {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Dietary Category */}
+        <div>
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Dietary Category</p>
+          <div className="flex flex-wrap gap-1.5">
+            {DIETARY_TAGS.map(({ tag, label, emoji }) => (
+              <button key={tag} type="button" onClick={() => handleTagClick(tag)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-600 border-gray-200 hover:border-brand-400 hover:text-brand-600"}`}>
+                {emoji} {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Food Type */}
+        <div>
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Food Type</p>
+          <div className="flex flex-wrap gap-1.5">
+            {FOOD_TYPE_TAGS.map(({ tag, label, emoji }) => (
+              <button key={tag} type="button" onClick={() => handleTagClick(tag)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-600 border-gray-200 hover:border-brand-400 hover:text-brand-600"}`}>
+                {emoji} {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Search input */}
@@ -1330,6 +1383,56 @@ export default function NutritionPage() {
   const [activeGoal,  setActiveGoal]  = useState<CalorieGoal | null>(null);
   const [macroView,   setMacroView]   = useState<"distribution" | "breakdown" | "by-meal" | "goals">("distribution");
 
+  // ── Supplements ──────────────────────────────────────────────────────────────
+  const SUPPLEMENT_DEFS = {
+    creatine:     { name: "Creatine Monohydrate", emoji: "💊", unit: "g",     defaultQty: 5,  cal: 0,   p: 0,  c: 0,  f: 0   },
+    omega3:       { name: "Omega-3 Fish Oil",      emoji: "🐟", unit: "caps",  defaultQty: 3,  cal: 9,   p: 0,  c: 0,  f: 1   },
+    whey:         { name: "Whey Protein Shake",    emoji: "🥤", unit: "scoop", defaultQty: 1,  cal: 120, p: 25, c: 5,  f: 2   },
+    casein:       { name: "Casein Protein Shake",  emoji: "🌙", unit: "scoop", defaultQty: 1,  cal: 120, p: 24, c: 6,  f: 1.5 },
+    plant:        { name: "Plant Protein Shake",   emoji: "🌿", unit: "scoop", defaultQty: 1,  cal: 110, p: 20, c: 8,  f: 3   },
+    mass_gainer:  { name: "Mass Gainer Shake",     emoji: "💪", unit: "scoop", defaultQty: 1,  cal: 380, p: 25, c: 65, f: 5   },
+  };
+  type SuppId = keyof typeof SUPPLEMENT_DEFS;
+
+  interface SuppState { enabled: boolean; qty: number; }
+  const initSupplements = (): Record<SuppId, SuppState> => {
+    try {
+      const s = localStorage.getItem("supplement_prefs_v2");
+      if (s) return JSON.parse(s);
+    } catch { /* ignore */ }
+    return {
+      creatine: { enabled: false, qty: 5 },
+      omega3:   { enabled: false, qty: 3 },
+      whey:     { enabled: false, qty: 1 },
+      casein:   { enabled: false, qty: 0 },
+      plant:    { enabled: false, qty: 0 },
+      mass_gainer: { enabled: false, qty: 0 },
+    };
+  };
+  const [supplements, setSupplements] = useState<Record<SuppId, SuppState>>(initSupplements);
+
+  const updateSupp = (id: SuppId, patch: Partial<SuppState>) => {
+    setSupplements((prev) => {
+      const next = { ...prev, [id]: { ...prev[id], ...patch } };
+      try { localStorage.setItem("supplement_prefs_v2", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
+  // Compute supplement macros to add to totals
+  const suppMacros = (Object.entries(supplements) as [SuppId, SuppState][])
+    .filter(([, s]) => s.enabled && s.qty > 0)
+    .reduce((acc, [id, s]) => {
+      const def = SUPPLEMENT_DEFS[id];
+      const mult = s.qty / def.defaultQty;
+      return {
+        calories: acc.calories + def.cal * mult,
+        protein:  acc.protein  + def.p   * mult,
+        carbs:    acc.carbs    + def.c   * mult,
+        fats:     acc.fats     + def.f   * mult,
+      };
+    }, { calories: 0, protein: 0, carbs: 0, fats: 0 });
+
   // ── Water tracking ───────────────────────────────────────────────────────────
   const [waterLogs,   setWaterLogs]   = useState<WaterLog[]>([]);
   const [waterTotal,  setWaterTotal]  = useState(0);
@@ -1427,7 +1530,15 @@ export default function NutritionPage() {
     } finally { setDeleting(null); }
   };
 
-  const totalMacroG = totals.protein + totals.carbs + totals.fats;
+  // Merge food log totals with active supplement macros
+  const effectiveTotals = {
+    calories: totals.calories + suppMacros.calories,
+    protein:  totals.protein  + suppMacros.protein,
+    carbs:    totals.carbs    + suppMacros.carbs,
+    fats:     totals.fats     + suppMacros.fats,
+  };
+
+  const totalMacroG = effectiveTotals.protein + effectiveTotals.carbs + effectiveTotals.fats;
   const hasGoal = activeGoal != null;
 
   // Group by meal
@@ -1594,6 +1705,63 @@ export default function NutritionPage() {
         )}
       </Card>
 
+      {/* Supplements widget */}
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-gray-900">💊 Supplements</h3>
+          {suppMacros.calories > 0 && (
+            <span className="text-xs text-purple-600 font-medium bg-purple-50 px-2 py-0.5 rounded-full">
+              +{Math.round(suppMacros.calories)} kcal · +{Math.round(suppMacros.protein)}g protein added
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {(Object.entries(SUPPLEMENT_DEFS) as [SuppId, typeof SUPPLEMENT_DEFS[SuppId]][]).map(([id, def]) => {
+            const s = supplements[id];
+            const macroLine = [
+              def.cal > 0 ? `${Math.round(def.cal * (s.qty / def.defaultQty))} kcal` : null,
+              def.p  > 0 ? `${Math.round(def.p  * (s.qty / def.defaultQty))}g P` : null,
+            ].filter(Boolean).join(" · ");
+            return (
+              <div
+                key={id}
+                onClick={() => updateSupp(id as SuppId, { enabled: !s.enabled })}
+                className={`relative cursor-pointer rounded-xl border p-2.5 text-center transition-all select-none ${
+                  s.enabled
+                    ? "border-purple-400 bg-purple-50 shadow-sm"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <div className="text-2xl mb-1">{def.emoji}</div>
+                <p className={`text-xs font-semibold leading-tight ${s.enabled ? "text-purple-800" : "text-gray-700"}`}>{def.name}</p>
+                {/* Qty editor */}
+                <div className="flex items-center justify-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => updateSupp(id as SuppId, { qty: Math.max(0, s.qty - 1) })}
+                    className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200"
+                  >−</button>
+                  <span className="text-xs font-semibold text-gray-800 w-6 text-center">{s.qty}</span>
+                  <button
+                    onClick={() => updateSupp(id as SuppId, { qty: s.qty + 1 })}
+                    className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200"
+                  >+</button>
+                  <span className="text-[10px] text-gray-400">{def.unit}</span>
+                </div>
+                {s.enabled && macroLine && (
+                  <p className="text-[10px] text-purple-600 mt-1 font-medium">{macroLine}</p>
+                )}
+                {s.enabled && (
+                  <div className="absolute top-1.5 right-1.5 w-3 h-3 rounded-full bg-purple-500 flex items-center justify-center">
+                    <span className="text-[8px] text-white font-bold">✓</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[10px] text-gray-400 mt-2">Click to toggle · macros added to daily totals · preferences saved automatically</p>
+      </Card>
+
       {/* Daily summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
@@ -1601,8 +1769,8 @@ export default function NutritionPage() {
         <Card className="lg:col-span-1">
           <CardHeader title="Calories" />
           <div className="text-center py-2">
-            <p className="text-4xl font-bold text-gray-900">{Math.round(totals.calories)}</p>
-            <p className="text-sm text-gray-400 mt-1">kcal consumed</p>
+            <p className="text-4xl font-bold text-gray-900">{Math.round(effectiveTotals.calories)}</p>
+            <p className="text-sm text-gray-400 mt-1">kcal consumed{suppMacros.calories > 0 ? <span className="text-purple-600"> (incl. supps)</span> : ""}</p>
             {hasGoal && (
               <p className="text-sm text-gray-500 mt-0.5">
                 Goal: <span className="font-semibold text-gray-700">{Math.round(activeGoal!.dailyCalories)} kcal</span>
@@ -1611,14 +1779,14 @@ export default function NutritionPage() {
           </div>
 
           {/* Progress bar — only shown when there's a goal */}
-          {hasGoal && totals.calories > 0 && (
-            <CalorieProgress consumed={totals.calories} target={activeGoal!.dailyCalories} />
+          {hasGoal && effectiveTotals.calories > 0 && (
+            <CalorieProgress consumed={effectiveTotals.calories} target={activeGoal!.dailyCalories} />
           )}
 
           {/* Deficit/surplus banner — only shown when goal exists and food logged */}
-          {hasGoal && totals.calories > 0 && (
+          {hasGoal && effectiveTotals.calories > 0 && (
             <DeficitSurplusBanner
-              consumed={totals.calories}
+              consumed={effectiveTotals.calories}
               target={activeGoal!.dailyCalories}
               goalType={activeGoal!.type}
             />
@@ -1685,13 +1853,13 @@ export default function NutritionPage() {
               {/* 🍩 Distribution — macro rings showing % of total grams */}
               {macroView === "distribution" && (
                 <div className="flex items-center justify-around">
-                  <MacroRing label="Protein" value={totals.protein} total={totalMacroG} color="#3b82f6" />
-                  <MacroRing label="Carbs"   value={totals.carbs}   total={totalMacroG} color="#f59e0b" />
-                  <MacroRing label="Fats"    value={totals.fats}    total={totalMacroG} color="#ef4444" />
+                  <MacroRing label="Protein" value={effectiveTotals.protein} total={totalMacroG} color="#3b82f6" />
+                  <MacroRing label="Carbs"   value={effectiveTotals.carbs}   total={totalMacroG} color="#f59e0b" />
+                  <MacroRing label="Fats"    value={effectiveTotals.fats}    total={totalMacroG} color="#ef4444" />
                   <div className="text-center">
                     <p className="text-xs text-gray-400 mb-1">Calories from macros</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {Math.round(totals.protein * 4 + totals.carbs * 4 + totals.fats * 9)}
+                      {Math.round(effectiveTotals.protein * 4 + effectiveTotals.carbs * 4 + effectiveTotals.fats * 9)}
                     </p>
                     <p className="text-xs text-gray-400">kcal</p>
                   </div>
@@ -1701,9 +1869,9 @@ export default function NutritionPage() {
               {/* 📊 Breakdown — stacked calorie bar + gram/kcal/% table */}
               {macroView === "breakdown" && (
                 <MacroBreakdown
-                  protein={totals.protein}
-                  carbs={totals.carbs}
-                  fats={totals.fats}
+                  protein={effectiveTotals.protein}
+                  carbs={effectiveTotals.carbs}
+                  fats={effectiveTotals.fats}
                 />
               )}
 
@@ -1717,21 +1885,21 @@ export default function NutritionPage() {
                 <div className="space-y-4 pt-1">
                   <MacroGoalBar
                     label="🥩 Protein"
-                    consumed={totals.protein}
+                    consumed={effectiveTotals.protein}
                     target={activeGoal!.proteinGrams}
                     color="#3b82f6"
                     bgColor="bg-blue-100"
                   />
                   <MacroGoalBar
                     label="🍞 Carbohydrates"
-                    consumed={totals.carbs}
+                    consumed={effectiveTotals.carbs}
                     target={activeGoal!.carbsGrams}
                     color="#f59e0b"
                     bgColor="bg-amber-100"
                   />
                   <MacroGoalBar
                     label="🥑 Fats"
-                    consumed={totals.fats}
+                    consumed={effectiveTotals.fats}
                     target={activeGoal!.fatsGrams}
                     color="#ef4444"
                     bgColor="bg-red-100"

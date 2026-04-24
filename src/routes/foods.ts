@@ -9,6 +9,7 @@ import {
   updateFoodLog,
   deleteFoodLog,
   getFoodHistory,
+  getCheatDates,
 } from "../controllers/foodController.js";
 
 const router = Router();
@@ -17,6 +18,8 @@ router.use(authenticate);
 
 // GET    /api/foods/history  ← must come before /:id
 router.get("/history", getFoodHistory);
+// GET    /api/foods/cheat-dates?days=90
+router.get("/cheat-dates", getCheatDates);
 
 // GET    /api/foods  (optional ?date=YYYY-MM-DD)
 router.get("/", getFoodLogs);

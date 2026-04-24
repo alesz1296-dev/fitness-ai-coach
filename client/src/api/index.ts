@@ -88,8 +88,8 @@ export const workoutsApi = {
   update: (id: number, data: Partial<Workout>) =>
     api.put<{ workout: Workout }>(`/workouts/${id}`, data),
   delete: (id: number) => api.delete(`/workouts/${id}`),
-  startFromTemplate: (templateId: number, name?: string) =>
-    api.post<{ workout: Workout; template: Partial<WorkoutTemplate> }>(`/workouts/start-from-template/${templateId}`, { name }),
+  startFromTemplate: (templateId: number, date?: string, name?: string) =>
+    api.post<{ workout: Workout; template: Partial<WorkoutTemplate> }>(`/workouts/start-from-template/${templateId}`, { name, date }),
   getExerciseProgression: (name: string, limit = 30) =>
     api.get<{ exerciseName: string; progression: ExerciseProgression[]; allTimePR: ExerciseProgression | null; totalSessions: number }>(
       `/workouts/exercises/${encodeURIComponent(name)}/progression?limit=${limit}`
@@ -128,6 +128,8 @@ export const foodApi = {
     api.get<{ logs: FoodLog[]; totals: FoodTotals; date: string }>(`/foods${date ? `?date=${date}` : ""}`),
   getHistory: (days = 7) =>
     api.get<{ history: Record<string, FoodTotals>; days: number }>(`/foods/history?days=${days}`),
+  getCheatDates: (days = 90) =>
+    api.get<{ dates: string[] }>(`/foods/cheat-dates?days=${days}`),
   log: (data: Partial<FoodLog>) => api.post<{ log: FoodLog }>("/foods", data),
   bulk: (foods: Array<Partial<FoodLog>>, date?: string) =>
     api.post<{ logs: FoodLog[]; message: string }>("/foods/bulk", { foods, date }),

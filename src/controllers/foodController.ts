@@ -230,3 +230,28 @@ export const getFoodHistory = async (
     next(error);
   }
 };
+
+// GET /api/foods/cheat-dates?days=90 — returns array of date strings with cheat meals
+export const getCheatDates = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const days = Number(req.query.days) || 90;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    startDate.setHours(0, 0, 0, 0);
+
+    const logs = await (prisma.foodLog as any).findMany({
+      where: { userId: req.user!.id, date: { gte: startDate }, isCheatMeal: true },
+      select: { date: true },
+      orderBy: { date: "asc" },
+    });
+
+    const dates = [...new Set(logs.map((l: any) => l.date.toISOString().split("T")[0]))] as string[];
+    res.json({ dates });
+  } catch (error) {
+    next(error);
+  }
+};
