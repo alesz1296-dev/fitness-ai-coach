@@ -80,7 +80,45 @@ export const createCalorieGoal = async (
 
     const goalName = name || `${calc.type === "cut" ? "Cut" : calc.type === "bulk" ? "Bulk" : "Maintain"} — ${new Date(targetDate).toLocaleDateString()}`;
 
-    const goal = await prisma.calorieGoal.create({
+    // ── Macro cycling: compute train/rest day splits ──────────────────────────
+    // On training days the user burns ~300–500 kcal extra via exercise.
+    // We add them to training days and subtract from rest days to keep the
+    // weekly average equal to dailyCalories.
+    const { macrosCycling, trainingDaysPerWeek: reqTDPW } = req.body;
+    const enableCycling = Boolean(macrosCycling);
+
+    // Training days per week — prefer request body override, else user profile
+    const tDaysPerWeek = Number(reqTDPW ?? user?.trainingDaysPerWeek ?? 3);
+    const restDaysPerWeek = 7 - tDaysPerWeek;
+
+    let trainDayCalories: number | null = null;
+    let trainDayProtein: number | null  = null;
+    let trainDayCarbs: number | null    = null;
+    let trainDayFats: number | null     = null;
+    let restDayCalories: number | null  = null;
+    let restDayProtein: number | null   = null;
+    let restDayCarbs: number | null     = null;
+    let restDayFats: number | null      = null;
+
+    if (enableCycling) {
+      // ~350 kcal exercise bonus on training days (spread from rest days)
+      const exerciseBonus = Math.round(350 * restDaysPerWeek / tDaysPerWeek);
+      trainDayCalories = Math.round(calc.dailyCalories + exerciseBonus);
+      restDayCalories  = Math.round(calc.dailyCalories - 350);
+
+      // Scale macros proportionally
+      const trainFactor = trainDayCalories / calc.dailyCalories;
+      const restFactor  = restDayCalories  / calc.dailyCalories;
+
+      trainDayProtein = Math.round(calc.proteinGrams * trainFactor);
+      trainDayCarbs   = Math.round(calc.carbsGrams   * trainFactor);
+      trainDayFats    = Math.round(calc.fatsGrams    * trainFactor);
+      restDayProtein  = Math.round(calc.proteinGrams * restFactor);
+      restDayCarbs    = Math.round(calc.carbsGrams   * restFactor);
+      restDayFats     = Math.round(calc.fatsGrams    * restFactor);
+    }
+
+    const goal = await (prisma.calorieGoal as any).create({
       data: {
         userId: req.user!.id,
         name: goalName,
@@ -96,6 +134,15 @@ export const createCalorieGoal = async (
         tdee: calc.tdee,
         aiGenerated: Boolean(aiGenerated),
         notes: notes || null,
+        macrosCycling: enableCycling,
+        trainDayCalories,
+        trainDayProtein,
+        trainDayCarbs,
+        trainDayFats,
+        restDayCalories,
+        restDayProtein,
+        restDayCarbs,
+        restDayFats,
       },
     });
 
@@ -186,7 +233,12 @@ export const updateCalorieGoal = async (
     });
     if (!existing) return next(createError("Calorie goal not found", 404));
 
-    const { name, notes, active } = req.body;
+    const {
+      name, notes, active,
+      macrosCycling,
+      trainDayCalories, trainDayProtein, trainDayCarbs, trainDayFats,
+      restDayCalories,  restDayProtein,  restDayCarbs,  restDayFats,
+    } = req.body;
 
     // If activating this goal, deactivate others
     if (active === true) {
@@ -196,12 +248,21 @@ export const updateCalorieGoal = async (
       });
     }
 
-    const updated = await prisma.calorieGoal.update({
+    const updated = await (prisma.calorieGoal as any).update({
       where: { id },
       data: {
-        ...(name && { name }),
+        ...(name !== undefined && { name }),
         ...(notes !== undefined && { notes }),
         ...(active !== undefined && { active: Boolean(active) }),
+        ...(macrosCycling !== undefined && { macrosCycling: Boolean(macrosCycling) }),
+        ...(trainDayCalories !== undefined && { trainDayCalories: trainDayCalories ? Number(trainDayCalories) : null }),
+        ...(trainDayProtein  !== undefined && { trainDayProtein:  trainDayProtein  ? Number(trainDayProtein)  : null }),
+        ...(trainDayCarbs    !== undefined && { trainDayCarbs:    trainDayCarbs    ? Number(trainDayCarbs)    : null }),
+        ...(trainDayFats     !== undefined && { trainDayFats:     trainDayFats     ? Number(trainDayFats)     : null }),
+        ...(restDayCalories  !== undefined && { restDayCalories:  restDayCalories  ? Number(restDayCalories)  : null }),
+        ...(restDayProtein   !== undefined && { restDayProtein:   restDayProtein   ? Number(restDayProtein)   : null }),
+        ...(restDayCarbs     !== undefined && { restDayCarbs:     restDayCarbs     ? Number(restDayCarbs)     : null }),
+        ...(restDayFats      !== undefined && { restDayFats:      restDayFats      ? Number(restDayFats)      : null }),
       },
     });
 
@@ -272,7 +333,20 @@ export const previewCalorieGoal = async (
 
     const projection = generateProjection(Number(currentWeight), calc.weeklyChange, calc.weeksToGoal);
 
-    res.json({ calculation: calc, projection });
+    // If macro cycling was requested in preview, compute split info
+    const { macrosCycling: previewCycling, trainingDaysPerWeek: previewTDPW } = req.body;
+    let cyclingSplit = null;
+    if (previewCycling) {
+      const tDays = Number(previewTDPW ?? user?.trainingDaysPerWeek ?? 3);
+      const rDays = 7 - tDays;
+      const bonus = Math.round(350 * rDays / tDays);
+      cyclingSplit = {
+        trainDayCalories: Math.round(calc.dailyCalories + bonus),
+        restDayCalories:  Math.round(calc.dailyCalories - 350),
+      };
+    }
+
+    res.json({ calculation: calc, projection, cyclingSplit });
   } catch (error) {
     next(error);
   }

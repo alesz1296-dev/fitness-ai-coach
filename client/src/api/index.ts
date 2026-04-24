@@ -4,6 +4,7 @@ import type {
   FoodLog, FoodTotals, WeightLog, WeightStats, Goal, CalorieGoal,
   Conversation, MonthlyReport, ExerciseProgression, DashboardData,
   WeeklyPlan, WeeklyPlanDay, WorkoutExercise,
+  WaterLog, MealPlan, MealPlanEntry,
 } from "../types";
 
 interface WorkoutExerciseCreateInput {
@@ -208,4 +209,35 @@ export const reportsApi = {
 // ── Predictions ───────────────────────────────────────────────────────────────
 export const predictionsApi = {
   get: () => api.get<any>("/predictions"),
+};
+
+// ── Water ─────────────────────────────────────────────────────────────────────
+export const waterApi = {
+  log: (amount: number, date?: string) =>
+    api.post<{ log: WaterLog }>("/water", { amount, date }),
+  getToday: (date?: string) =>
+    api.get<{ logs: WaterLog[]; totalMl: number; targetMl: number; date: string }>(
+      `/water/today${date ? `?date=${date}` : ""}`
+    ),
+  getHistory: (days = 7) =>
+    api.get<{ history: Record<string, number>; days: number }>(`/water/history?days=${days}`),
+  delete: (id: number) => api.delete(`/water/${id}`),
+  setTarget: (targetMl: number) => api.put("/water/target", { targetMl }),
+};
+
+// ── Meal Plans ────────────────────────────────────────────────────────────────
+export const mealPlansApi = {
+  getAll: () => api.get<{ plans: MealPlan[] }>("/meal-plans"),
+  getOne: (id: number) => api.get<{ plan: MealPlan }>(`/meal-plans/${id}`),
+  create: (data: { name: string; weekStart: string }) =>
+    api.post<{ plan: MealPlan }>("/meal-plans", data),
+  update: (id: number, data: { name?: string; weekStart?: string }) =>
+    api.put<{ plan: MealPlan }>(`/meal-plans/${id}`, data),
+  delete: (id: number) => api.delete(`/meal-plans/${id}`),
+  addEntry: (planId: number, dayId: number, data: Partial<MealPlanEntry>) =>
+    api.post<{ entry: MealPlanEntry }>(`/meal-plans/${planId}/days/${dayId}/entries`, data),
+  deleteEntry: (planId: number, entryId: number) =>
+    api.delete(`/meal-plans/${planId}/entries/${entryId}`),
+  updateDayNotes: (planId: number, dayId: number, notes: string) =>
+    api.put(`/meal-plans/${planId}/days/${dayId}/notes`, { notes }),
 };

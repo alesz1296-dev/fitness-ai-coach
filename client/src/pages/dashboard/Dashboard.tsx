@@ -71,13 +71,19 @@ export default function Dashboard() {
     );
   }
 
-  const { today, weightLogs, recentWorkouts, weeklyWorkoutCount, activeGoal } = data ?? {
-    today: { totals: { calories: 0, protein: 0, carbs: 0, fats: 0 }, logs: [], date: "" },
+  const {
+    today, weightLogs, recentWorkouts, weeklyWorkoutCount, activeGoal,
+    effectiveCalorieTarget, water, streaks,
+  } = data ?? {
+    today: { totals: { calories: 0, protein: 0, carbs: 0, fats: 0 }, logs: [], date: "", hasWorkout: false },
     weightLogs: [], recentWorkouts: [], weeklyWorkoutCount: 0, activeGoal: null,
+    effectiveCalorieTarget: null,
+    water: { totalMl: 0, targetMl: 2000, logs: [] },
+    streaks: { workout: 0, workoutBest: 0, nutrition: 0, restDays: null, cheatMealsThisWeek: 0 },
   };
 
   const calories      = today.totals.calories;
-  const calorieTarget = activeGoal?.dailyCalories ?? 2000;
+  const calorieTarget = effectiveCalorieTarget ?? activeGoal?.dailyCalories ?? 2000;
   const caloriePct    = Math.min(100, Math.round((calories / calorieTarget) * 100));
 
   const weightChartData = weightLogs.map((l) => ({
@@ -139,6 +145,60 @@ export default function Dashboard() {
           color="bg-gradient-to-br from-brand-500 to-brand-700"
           icon="🏋️"
         />
+      </div>
+
+      {/* Streak + Water row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Workout streak */}
+        <div className="rounded-2xl bg-white border border-gray-100 p-4 flex flex-col gap-1">
+          <div className="flex items-center gap-2 text-orange-500 font-bold text-lg">
+            🔥 {streaks?.workout ?? 0}
+            <span className="text-sm font-normal text-gray-500">day streak</span>
+          </div>
+          <p className="text-xs text-gray-400">Workout streak</p>
+          {(streaks?.workoutBest ?? 0) > 0 && (
+            <p className="text-xs text-gray-400">Best: {streaks!.workoutBest} days</p>
+          )}
+        </div>
+
+        {/* Nutrition streak */}
+        <div className="rounded-2xl bg-white border border-gray-100 p-4 flex flex-col gap-1">
+          <div className="flex items-center gap-2 text-green-600 font-bold text-lg">
+            🥗 {streaks?.nutrition ?? 0}
+            <span className="text-sm font-normal text-gray-500">day streak</span>
+          </div>
+          <p className="text-xs text-gray-400">On-target nutrition</p>
+          {(streaks?.cheatMealsThisWeek ?? 0) > 0 && (
+            <p className="text-xs text-gray-400">🍕 {streaks!.cheatMealsThisWeek} cheat meal{streaks!.cheatMealsThisWeek > 1 ? "s" : ""} this week</p>
+          )}
+        </div>
+
+        {/* Rest days */}
+        <div className="rounded-2xl bg-white border border-gray-100 p-4 flex flex-col gap-1">
+          <div className="flex items-center gap-2 text-purple-600 font-bold text-lg">
+            😴 {streaks?.restDays != null ? streaks!.restDays : "—"}
+            <span className="text-sm font-normal text-gray-500">day{streaks?.restDays !== 1 ? "s" : ""} rest</span>
+          </div>
+          <p className="text-xs text-gray-400">Since last workout</p>
+          {today.hasWorkout && <p className="text-xs text-green-600 font-medium">✅ Trained today</p>}
+        </div>
+
+        {/* Water intake */}
+        <div className="rounded-2xl bg-white border border-gray-100 p-4 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-blue-600 font-bold text-lg">
+              💧 {Math.round((water?.totalMl ?? 0) / 100) / 10}L
+            </span>
+            <span className="text-xs text-gray-400">/ {Math.round((water?.targetMl ?? 2000) / 100) / 10}L</span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full bg-blue-400 transition-all"
+              style={{ width: `${Math.min(100, ((water?.totalMl ?? 0) / (water?.targetMl ?? 2000)) * 100)}%` }}
+            />
+          </div>
+          <p className="text-xs text-gray-400">Water today</p>
+        </div>
       </div>
 
       {/* Middle row */}
@@ -305,9 +365,19 @@ export default function Dashboard() {
                     {activeGoal.type === "cut" ? "Cut" : activeGoal.type === "bulk" ? "Bulk" : "Maintain"}
                   </span>
                 </div>
+                {activeGoal.macrosCycling && (
+                  <div className="flex items-center gap-1.5 mb-2 text-xs">
+                    <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
+                      🔄 Macro Cycling
+                    </span>
+                    <span className="text-gray-400">
+                      {today.hasWorkout ? "🏋️ Train day" : "😴 Rest day"} active
+                    </span>
+                  </div>
+                )}
                 <div className="grid grid-cols-3 gap-2 text-center">
                   {[
-                    { label: "Calories", value: `${Math.round(activeGoal.dailyCalories)} kcal` },
+                    { label: "Calories", value: `${Math.round(effectiveCalorieTarget ?? activeGoal.dailyCalories)} kcal` },
                     { label: "Protein",  value: `${Math.round(activeGoal.proteinGrams)}g` },
                     { label: "Weekly",   value: `${activeGoal.weeklyChange > 0 ? "+" : ""}${activeGoal.weeklyChange}kg` },
                   ].map((item) => (

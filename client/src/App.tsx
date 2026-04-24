@@ -13,8 +13,9 @@ import NutritionPage from "./pages/nutrition/NutritionPage";
 import ProgressPage from "./pages/progress/ProgressPage";
 import GoalsPage    from "./pages/goals/GoalsPage";
 import ChatPage     from "./pages/chat/ChatPage";
-import ReportsPage  from "./pages/reports/ReportsPage";
-import SettingsPage from "./pages/settings/SettingsPage";
+import ReportsPage     from "./pages/reports/ReportsPage";
+import SettingsPage    from "./pages/settings/SettingsPage";
+import MealPlannerPage from "./pages/mealplanner/MealPlannerPage";
 
 export default function App() {
   return (
@@ -33,9 +34,10 @@ export default function App() {
             <Route path="/nutrition" element={<NutritionPage />} />
             <Route path="/progress"  element={<ProgressPage />} />
             <Route path="/goals"     element={<GoalsPage />} />
-            <Route path="/chat"      element={<ChatPage />} />
-            <Route path="/reports"   element={<ReportsPage />} />
-            <Route path="/settings"  element={<SettingsPage />} />
+            <Route path="/chat"         element={<ChatPage />} />
+            <Route path="/meal-planner" element={<MealPlannerPage />} />
+            <Route path="/reports"      element={<ReportsPage />} />
+            <Route path="/settings"     element={<SettingsPage />} />
           </Route>
         </Route>
 

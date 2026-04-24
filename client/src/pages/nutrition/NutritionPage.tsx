@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { foodApi, chatApi, searchApi, calorieGoalsApi } from "../../api";
+import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi } from "../../api";
 import { useAuthStore } from "../../store/authStore";
-import type { FoodLog, FoodTotals, CalorieGoal } from "../../types";
+import type { FoodLog, FoodTotals, CalorieGoal, WaterLog } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -324,9 +324,10 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   const [meal,     setMeal]     = useState<"breakfast" | "lunch" | "dinner" | "snack" | "">(
     (editItem?.meal as "breakfast" | "lunch" | "dinner" | "snack" | undefined) ?? ""
   );
-  const [cookingOil,  setCookingOil]  = useState<keyof typeof COOKING_OILS>("none");
-  const [breading,    setBreading]    = useState<keyof typeof BREADING_OPTIONS>("none");
-  const [sweetener,   setSweetener]   = useState<keyof typeof SWEETENER_OPTIONS>("none");
+  const [cookingOil,   setCookingOil]   = useState<keyof typeof COOKING_OILS>("none");
+  const [breading,     setBreading]     = useState<keyof typeof BREADING_OPTIONS>("none");
+  const [sweetener,    setSweetener]    = useState<keyof typeof SWEETENER_OPTIONS>("none");
+  const [isCheatMeal,  setIsCheatMeal]  = useState(editItem?.isCheatMeal ?? false);
   const [showUnitRef, setShowUnitRef] = useState(false);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
@@ -389,8 +390,9 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
         fats:     fats    ? Math.round((Number(fats) + extraFat) * 10) / 10 : extraFat > 0 ? extraFat : undefined,
         quantity: Number(quantity),
         unit:     unit.trim(),
-        meal:     meal || undefined,
-        date:     selectedDate,
+        meal:        meal || undefined,
+        date:        selectedDate,
+        isCheatMeal: isCheatMeal || undefined,
       };
       if (editItem) {
         await foodApi.update(editItem.id, payload);
@@ -550,6 +552,19 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
         options={MEAL_OPTIONS}
         placeholder="Select meal (optional)"
       />
+
+      {/* Cheat meal toggle */}
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <div
+          onClick={() => setIsCheatMeal((v) => !v)}
+          className={`w-10 h-5 rounded-full transition-colors relative ${isCheatMeal ? "bg-orange-500" : "bg-gray-200"}`}
+        >
+          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${isCheatMeal ? "translate-x-5" : "translate-x-0.5"}`} />
+        </div>
+        <span className="text-sm text-gray-600">
+          🍕 Mark as cheat meal
+        </span>
+      </label>
 
       <div className="flex gap-2 pt-2 border-t border-gray-100">
         <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
@@ -1315,6 +1330,37 @@ export default function NutritionPage() {
   const [activeGoal,  setActiveGoal]  = useState<CalorieGoal | null>(null);
   const [macroView,   setMacroView]   = useState<"distribution" | "breakdown" | "by-meal" | "goals">("distribution");
 
+  // ── Water tracking ───────────────────────────────────────────────────────────
+  const [waterLogs,   setWaterLogs]   = useState<WaterLog[]>([]);
+  const [waterTotal,  setWaterTotal]  = useState(0);
+  const [waterTarget, setWaterTarget] = useState(user?.waterTargetMl ?? 2000);
+  const [addingWater, setAddingWater] = useState(false);
+
+  const loadWater = useCallback(async () => {
+    try {
+      const res = await waterApi.getToday(date);
+      setWaterLogs(res.data.logs);
+      setWaterTotal(res.data.totalMl);
+      setWaterTarget(res.data.targetMl);
+    } catch { /* silent */ }
+  }, [date]);
+
+  useEffect(() => { loadWater(); }, [loadWater]);
+
+  const handleAddWater = async (ml: number) => {
+    if (addingWater) return;
+    setAddingWater(true);
+    try {
+      await waterApi.log(ml, date);
+      await loadWater();
+    } finally { setAddingWater(false); }
+  };
+
+  const handleDeleteWater = async (id: number) => {
+    await waterApi.delete(id);
+    await loadWater();
+  };
+
   // ── Fasting mode ────────────────────────────────────────────────────────────
   const [fastingActive, setFastingActive] = useState(false);
   const [fastingStart,  setFastingStart]  = useState<Date | null>(null);
@@ -1489,6 +1535,64 @@ export default function NutritionPage() {
           </div>
         </div>
       )}
+
+      {/* ── Water tracking widget ─────────────────────────────────────────── */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-gray-800">💧 Water Intake</h3>
+          <span className="text-sm text-gray-500">
+            <span className="font-bold text-blue-600">{Math.round(waterTotal / 100) / 10}L</span>
+            {" / "}
+            {Math.round(waterTarget / 100) / 10}L
+          </span>
+        </div>
+
+        {/* Progress bar */}
+        <div className="h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
+          <div
+            className="h-full rounded-full bg-blue-400 transition-all duration-500"
+            style={{ width: `${Math.min(100, (waterTotal / waterTarget) * 100)}%` }}
+          />
+        </div>
+
+        {/* Quick-add buttons */}
+        <div className="flex flex-wrap gap-2">
+          {[150, 200, 350, 500, 750, 1000].map((ml) => (
+            <button
+              key={ml}
+              onClick={() => handleAddWater(ml)}
+              disabled={addingWater}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition disabled:opacity-50"
+            >
+              +{ml < 1000 ? `${ml}ml` : "1L"}
+            </button>
+          ))}
+        </div>
+
+        {/* Recent logs today */}
+        {waterLogs.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {waterLogs.map((w) => (
+              <span
+                key={w.id}
+                className="flex items-center gap-1 text-xs bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 border border-blue-100"
+              >
+                💧{w.amount}ml
+                <button
+                  onClick={() => handleDeleteWater(w.id)}
+                  className="text-blue-300 hover:text-red-400 font-bold leading-none"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {waterTotal >= waterTarget && (
+          <p className="mt-2 text-xs text-green-600 font-medium">✅ Daily target reached! Great job staying hydrated.</p>
+        )}
+      </Card>
 
       {/* Daily summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -1717,7 +1821,10 @@ export default function NutritionPage() {
                       <tbody>
                         {mealLogs.map((log) => (
                           <tr key={log.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                            <td className="py-2.5 font-medium text-gray-800">{log.foodName}</td>
+                            <td className="py-2.5 font-medium text-gray-800">
+                              {log.foodName}
+                              {log.isCheatMeal && <span className="ml-1.5 text-xs">🍕</span>}
+                            </td>
                             <td className="py-2.5 text-right text-gray-500">{log.quantity}{log.unit}</td>
                             <td className="py-2.5 text-right font-semibold text-gray-800">{Math.round(log.calories)}</td>
                             <td className="py-2.5 text-right text-blue-600">{log.protein != null ? Math.round(log.protein) : "—"}</td>

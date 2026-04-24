@@ -73,11 +73,12 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
   const [targetWeight,  setTargetWeight]  = useState("");
   const [targetDate,    setTargetDate]    = useState(() => addWeeks(12));
   const [name,          setName]          = useState("");
-  const [preview,       setPreview]       = useState<any>(null);
-  const [loading,       setLoading]       = useState(false);
-  const [saving,        setSaving]        = useState(false);
-  const [error,         setError]         = useState("");
-  const [activePreset,  setActivePreset]  = useState<string | null>(null);
+  const [preview,          setPreview]          = useState<any>(null);
+  const [loading,          setLoading]          = useState(false);
+  const [saving,           setSaving]           = useState(false);
+  const [error,            setError]            = useState("");
+  const [activePreset,     setActivePreset]     = useState<string | null>(null);
+  const [macrosCycling,    setMacrosCycling]    = useState(false);
 
   // Accept optional overrides so presets can call preview without waiting for setState
   const getPreview = async (overrides?: { cw?: string; tw?: string; td?: string }) => {
@@ -88,9 +89,11 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
     setLoading(true); setError(""); setPreview(null);
     try {
       const res = await calorieGoalsApi.preview({
-        currentWeight: Number(cw),
-        targetWeight:  Number(tw),
-        targetDate:    td,
+        currentWeight:    Number(cw),
+        targetWeight:     Number(tw),
+        targetDate:       td,
+        macrosCycling:    macrosCycling,
+        trainingDaysPerWeek: user?.trainingDaysPerWeek,
       });
       setPreview(res.data);
     } catch (e: any) {
@@ -115,9 +118,11 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
     try {
       await calorieGoalsApi.create({
         name: name || undefined,
-        currentWeight: Number(currentWeight),
-        targetWeight:  Number(targetWeight),
+        currentWeight:    Number(currentWeight),
+        targetWeight:     Number(targetWeight),
         targetDate,
+        macrosCycling,
+        trainingDaysPerWeek: user?.trainingDaysPerWeek,
       });
       onSave();
     } catch (e: any) {
@@ -186,6 +191,28 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
         />
       </div>
 
+      {/* Macro cycling option */}
+      <div className="border border-gray-100 rounded-xl p-3 space-y-2 bg-gray-50">
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <div
+            onClick={() => { setMacrosCycling((v) => !v); setPreview(null); }}
+            className={`w-10 h-5 rounded-full transition-colors relative ${macrosCycling ? "bg-indigo-500" : "bg-gray-300"}`}
+          >
+            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${macrosCycling ? "translate-x-5" : "translate-x-0.5"}`} />
+          </div>
+          <span className="text-sm font-medium text-gray-700">🔄 Enable Macro Cycling</span>
+        </label>
+        {macrosCycling && (
+          <p className="text-xs text-indigo-600 leading-relaxed">
+            Eat more on training days (~+350 kcal) and less on rest days, keeping your weekly
+            average the same. Great for performance and body composition.
+            {user?.trainingDaysPerWeek
+              ? ` Based on your ${user.trainingDaysPerWeek} training days/week.`
+              : " Set training days/week in Settings for best accuracy."}
+          </p>
+        )}
+      </div>
+
       {!preview ? (
         <Button className="w-full" variant="secondary" loading={loading} onClick={() => getPreview()}>
           {loading ? "Calculating…" : "Preview Plan"}
@@ -214,6 +241,19 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
               <span>Fats: {Math.round(preview.calculation.fatsGrams)}g</span>
               <span>TDEE: {Math.round(preview.calculation.tdee)} kcal</span>
             </div>
+            {/* Macro cycling split preview */}
+            {macrosCycling && preview.cyclingSplit && (
+              <div className="mt-2 border-t border-indigo-100 pt-2 grid grid-cols-2 gap-2 text-center">
+                <div className="bg-indigo-50 rounded-xl p-2">
+                  <p className="text-xs text-indigo-400">🏋️ Train day</p>
+                  <p className="font-bold text-indigo-700">{Math.round(preview.cyclingSplit.trainDayCalories)} kcal</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-2">
+                  <p className="text-xs text-gray-400">😴 Rest day</p>
+                  <p className="font-bold text-gray-700">{Math.round(preview.cyclingSplit.restDayCalories)} kcal</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Projection mini-chart */}

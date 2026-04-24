@@ -30,6 +30,7 @@ model User {
   injuries             String?  // JSON array of injury area strings, e.g. '["Lower Back","Knee"]'
   periodStart          String?  // ISO date of most recent period start (females only)
   cycleLength          Int?     // menstrual cycle length in days (default 28)
+  waterTargetMl        Float    @default(2000) // daily water target in ml
   createdAt            DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -42,6 +43,8 @@ model User {
   reports        MonthlyReport[]
   templates      WorkoutTemplate[]
   weeklyPlans    WeeklyPlan[]
+  waterLogs      WaterLog[]
+  mealPlans      MealPlan[]
 
   @@index([email])
 }
@@ -149,19 +152,20 @@ model TemplateExercise {
 // ── Food & Nutrition ──────────────────────────────────────────────────────────
 
 model FoodLog {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  foodName  String
-  calories  Float
-  protein   Float?
-  carbs     Float?
-  fats      Float?
-  quantity  Float
-  unit      String
-  meal      String?  // "breakfast" | "lunch" | "dinner" | "snack"
-  date      DateTime @default(now())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  foodName    String
+  calories    Float
+  protein     Float?
+  carbs       Float?
+  fats        Float?
+  quantity    Float
+  unit        String
+  meal        String?  // "breakfast" | "lunch" | "dinner" | "snack"
+  isCheatMeal Boolean  @default(false)
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -188,26 +192,36 @@ model WeightLog {
 // ── Calorie Goals ─────────────────────────────────────────────────────────────
 
 model CalorieGoal {
-  id             Int      @id @default(autoincrement())
-  userId         Int
-  name           String?
-  type           String   // "cut" | "bulk" | "maintain"
-  currentWeight  Float
-  targetWeight   Float
-  targetDate     DateTime
-  dailyCalories  Float
-  proteinGrams   Float
-  carbsGrams     Float
-  fatsGrams      Float
-  weeklyChange   Float    // kg per week (negative = cut)
-  tdee           Float
-  active         Boolean  @default(true)
-  feasible       Boolean  @default(true)
-  warning        String?
-  aiGenerated    Boolean  @default(false)
-  notes          String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                  Int      @id @default(autoincrement())
+  userId              Int
+  name                String?
+  type                String   // "cut" | "bulk" | "maintain"
+  currentWeight       Float
+  targetWeight        Float
+  targetDate          DateTime
+  dailyCalories       Float
+  proteinGrams        Float
+  carbsGrams          Float
+  fatsGrams           Float
+  weeklyChange        Float    // kg per week (negative = cut)
+  tdee                Float
+  active              Boolean  @default(true)
+  feasible            Boolean  @default(true)
+  warning             String?
+  aiGenerated         Boolean  @default(false)
+  notes               String?
+  // Macro cycling — training day vs rest day targets
+  macrosCycling       Boolean  @default(false)
+  trainDayCalories    Float?
+  trainDayProtein     Float?
+  trainDayCarbs       Float?
+  trainDayFats        Float?
+  restDayCalories     Float?
+  restDayProtein      Float?
+  restDayCarbs        Float?
+  restDayFats         Float?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -293,4 +307,68 @@ model WeeklyPlanDay {
 
   @@unique([planId, dayIndex])
   @@index([planId])
+}
+
+// ── Water Logs ────────────────────────────────────────────────────────────────
+
+model WaterLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  amount    Float    // ml
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+}
+
+// ── Meal Planner ──────────────────────────────────────────────────────────────
+
+model MealPlan {
+  id        Int           @id @default(autoincrement())
+  userId    Int
+  name      String
+  weekStart String        // ISO date "YYYY-MM-DD" of the Monday for this plan
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days MealPlanDay[]
+
+  @@index([userId])
+}
+
+model MealPlanDay {
+  id        Int             @id @default(autoincrement())
+  planId    Int
+  dayIndex  Int             // 0 = Monday … 6 = Sunday
+  notes     String?
+  createdAt DateTime        @default(now())
+
+  plan    MealPlan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+  entries MealPlanEntry[]
+
+  @@unique([planId, dayIndex])
+  @@index([planId])
+}
+
+model MealPlanEntry {
+  id       Int    @id @default(autoincrement())
+  dayId    Int
+  meal     String // "breakfast" | "lunch" | "dinner" | "snack"
+  foodName String
+  calories Float
+  protein  Float  @default(0)
+  carbs    Float  @default(0)
+  fats     Float  @default(0)
+  quantity Float  @default(1)
+  unit     String @default("serving")
+  order    Int    @default(0)
+  createdAt DateTime @default(now())
+
+  day MealPlanDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  @@index([dayId])
 }

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, parseISO } from "date-fns";
-import { workoutsApi, templatesApi, searchApi } from "../../api";
+import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths } from "date-fns";
+import { workoutsApi, templatesApi, searchApi, foodApi } from "../../api";
 import type { Workout, WorkoutExercise, PRResult, WorkoutTemplate } from "../../types";
 import { useAuthStore } from "../../store/authStore";
 import { Card } from "../../components/ui/Card";
@@ -1714,12 +1714,158 @@ function TemplatesTab() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Calendar view
+// ─────────────────────────────────────────────────────────────────────────────
+function CalendarTab({ allWorkouts }: { allWorkouts: Workout[] }) {
+  const [month, setMonth] = useState(new Date());
+  const [cheatDays, setCheatDays] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<string | null>(null);
+
+  // Load cheat meals for this month
+  useEffect(() => {
+    const start = startOfMonth(month).toISOString().split("T")[0];
+    const end   = endOfMonth(month).toISOString().split("T")[0];
+    foodApi.getHistory(60).then((res) => {
+      // We don't have per-day cheat meal data from history endpoint, so just mark from workouts
+    }).catch(() => {});
+  }, [month]);
+
+  // Build workout day map for this month
+  const workoutDayMap = useMemo(() => {
+    const map: Record<string, Workout[]> = {};
+    for (const w of allWorkouts) {
+      const d = new Date(w.date).toISOString().split("T")[0];
+      if (!map[d]) map[d] = [];
+      map[d].push(w);
+    }
+    return map;
+  }, [allWorkouts]);
+
+  // Build calendar grid
+  const days = useMemo(() => {
+    const start = startOfMonth(month);
+    const end   = endOfMonth(month);
+    return eachDayOfInterval({ start, end });
+  }, [month]);
+
+  // First day of week offset (0=Sun … 6=Sat, but we want Mon=0)
+  const firstDayOffset = useMemo(() => {
+    const dow = getDay(startOfMonth(month)); // 0=Sun
+    return (dow + 6) % 7; // Mon=0
+  }, [month]);
+
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  const selectedWorkouts = selected ? (workoutDayMap[selected] ?? []) : [];
+
+  return (
+    <div className="space-y-4">
+      {/* Month navigator */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setMonth((m) => subMonths(m, 1))}
+          className="p-2 rounded-xl hover:bg-gray-100 text-gray-600 font-bold"
+        >
+          ‹
+        </button>
+        <h3 className="font-bold text-gray-900 text-lg">{format(month, "MMMM yyyy")}</h3>
+        <button
+          onClick={() => setMonth((m) => addMonths(m, 1))}
+          className="p-2 rounded-xl hover:bg-gray-100 text-gray-600 font-bold"
+        >
+          ›
+        </button>
+      </div>
+
+      {/* Day-of-week headers */}
+      <div className="grid grid-cols-7 gap-1">
+        {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d) => (
+          <div key={d} className="text-center text-xs font-semibold text-gray-400 py-1">{d}</div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 gap-1">
+        {/* Empty cells for offset */}
+        {Array.from({ length: firstDayOffset }).map((_, i) => (
+          <div key={`e${i}`} />
+        ))}
+        {days.map((day) => {
+          const str = format(day, "yyyy-MM-dd");
+          const hasWorkout = !!workoutDayMap[str]?.length;
+          const isToday    = str === todayStr;
+          const isSelected = str === selected;
+          const workoutCount = workoutDayMap[str]?.length ?? 0;
+
+          return (
+            <button
+              key={str}
+              onClick={() => setSelected(isSelected ? null : str)}
+              className={`aspect-square rounded-xl flex flex-col items-center justify-center text-sm transition
+                ${isSelected ? "ring-2 ring-brand-500" : ""}
+                ${isToday ? "border-2 border-brand-400" : ""}
+                ${hasWorkout
+                  ? "bg-brand-100 text-brand-800 font-semibold hover:bg-brand-200"
+                  : "bg-gray-50 text-gray-500 hover:bg-gray-100"}
+              `}
+            >
+              <span>{format(day, "d")}</span>
+              {workoutCount > 0 && (
+                <div className="flex gap-0.5 mt-0.5">
+                  {Array.from({ length: Math.min(workoutCount, 3) }).map((_, i) => (
+                    <div key={i} className="w-1.5 h-1.5 rounded-full bg-brand-500" />
+                  ))}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex gap-4 text-xs text-gray-500 mt-2">
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-brand-100 inline-block" /> Workout logged</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-brand-400 inline-block" /> Today</span>
+      </div>
+
+      {/* Selected day detail */}
+      {selected && (
+        <div className="border border-brand-200 rounded-2xl p-4 bg-brand-50 space-y-2">
+          <h4 className="font-bold text-brand-800">
+            {format(new Date(selected + "T12:00:00"), "EEEE, MMMM d")}
+          </h4>
+          {selectedWorkouts.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">Rest day — no workouts logged.</p>
+          ) : (
+            selectedWorkouts.map((w) => (
+              <div key={w.id} className="bg-white rounded-xl p-3 border border-brand-100">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-gray-800">{w.name}</span>
+                  <span className="text-xs text-gray-400">{w.duration} min {w.caloriesBurned ? `· 🔥${Math.round(w.caloriesBurned)} kcal` : ""}</span>
+                </div>
+                {w.exercises.length > 0 && (
+                  <p className="text-xs text-gray-500">
+                    {w.exercises.slice(0, 4).map((e) => e.exerciseName).join(" · ")}
+                    {w.exercises.length > 4 ? ` +${w.exercises.length - 4} more` : ""}
+                  </p>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function WorkoutsPage() {
   const { user } = useAuthStore();
-  const [tab, setTab] = useState<"history" | "templates">("history");
+  const [tab, setTab] = useState<"history" | "calendar" | "templates">("history");
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [allWorkouts, setAllWorkouts] = useState<Workout[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
@@ -1740,7 +1886,15 @@ export default function WorkoutsPage() {
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { load(1); }, [load]);
+  // Load all workouts for calendar (high limit)
+  const loadAll = useCallback(async () => {
+    try {
+      const res = await workoutsApi.getAll(1, 500);
+      setAllWorkouts(res.data.workouts);
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => { load(1); loadAll(); }, [load, loadAll]);
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
@@ -1749,9 +1903,9 @@ export default function WorkoutsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Workouts</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {tab === "history"
-              ? `${total} workout${total !== 1 ? "s" : ""} logged`
-              : "Pre-built and custom workout splits"}
+            {tab === "history"   ? `${total} workout${total !== 1 ? "s" : ""} logged`
+            : tab === "calendar" ? "Training calendar"
+            :                      "Pre-built and custom workout splits"}
           </p>
         </div>
         {tab === "history" && (
@@ -1763,6 +1917,7 @@ export default function WorkoutsPage() {
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
         {([
           { key: "history",   label: "🏋️ History" },
+          { key: "calendar",  label: "📅 Calendar" },
           { key: "templates", label: "📋 Templates" },
         ] as const).map(({ key, label }) => (
           <button
@@ -1774,6 +1929,13 @@ export default function WorkoutsPage() {
           </button>
         ))}
       </div>
+
+      {/* Calendar tab */}
+      {tab === "calendar" && (
+        <Card className="p-4">
+          <CalendarTab allWorkouts={allWorkouts} />
+        </Card>
+      )}
 
       {/* History tab */}
       {tab === "history" && (
@@ -1845,7 +2007,7 @@ export default function WorkoutsPage() {
       {/* Create modal */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Log Workout" size="lg">
         <WorkoutForm
-          onSave={() => { setShowForm(false); load(1); toast.show("Workout logged!"); }}
+          onSave={() => { setShowForm(false); load(1); loadAll(); toast.show("Workout logged!"); }}
           onClose={() => setShowForm(false)}
         />
       </Modal>

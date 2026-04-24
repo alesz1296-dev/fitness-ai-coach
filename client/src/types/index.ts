@@ -19,6 +19,7 @@ export interface User {
   injuries?: string[] | null;         // array of injury area names
   periodStart?: string | null;        // ISO date of last period (females)
   cycleLength?: number | null;        // cycle length in days
+  waterTargetMl?: number | null;      // daily water target in ml
   createdAt?: string;
 }
 
@@ -120,6 +121,7 @@ export interface FoodLog {
   quantity: number;
   unit: string;
   meal?: "breakfast" | "lunch" | "dinner" | "snack" | null;
+  isCheatMeal?: boolean;
   date: string;
 }
 
@@ -180,6 +182,16 @@ export interface CalorieGoal {
   warning?: string | null;
   aiGenerated: boolean;
   notes?: string | null;
+  // Macro cycling
+  macrosCycling?: boolean;
+  trainDayCalories?: number | null;
+  trainDayProtein?: number | null;
+  trainDayCarbs?: number | null;
+  trainDayFats?: number | null;
+  restDayCalories?: number | null;
+  restDayProtein?: number | null;
+  restDayCarbs?: number | null;
+  restDayFats?: number | null;
   createdAt: string;
 }
 
@@ -190,17 +202,73 @@ export interface ProjectionPoint {
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
+export interface WaterLog {
+  id: number;
+  userId: number;
+  amount: number;  // ml
+  date: string;
+  createdAt: string;
+}
+
+export interface MealPlanEntry {
+  id: number;
+  dayId: number;
+  meal: "breakfast" | "lunch" | "dinner" | "snack";
+  foodName: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  quantity: number;
+  unit: string;
+  order: number;
+  createdAt: string;
+}
+
+export interface MealPlanDay {
+  id: number;
+  planId: number;
+  dayIndex: number;  // 0=Mon … 6=Sun
+  notes?: string | null;
+  entries: MealPlanEntry[];
+  createdAt: string;
+}
+
+export interface MealPlan {
+  id: number;
+  userId: number;
+  name: string;
+  weekStart: string;  // ISO date "YYYY-MM-DD"
+  days: MealPlanDay[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DashboardData {
   user: User;
   today: {
     logs: FoodLog[];
     totals: FoodTotals;
     date: string;
+    hasWorkout: boolean;
   };
   weightLogs: WeightLog[];
   recentWorkouts: Workout[];
   weeklyWorkoutCount: number;
   activeGoal: CalorieGoal | null;
+  effectiveCalorieTarget: number | null;
+  water: {
+    totalMl: number;
+    targetMl: number;
+    logs: WaterLog[];
+  };
+  streaks: {
+    workout: number;
+    workoutBest: number;
+    nutrition: number;
+    restDays: number | null;
+    cheatMealsThisWeek: number;
+  };
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────────

@@ -3,14 +3,15 @@ import { useAuthStore } from "../../store/authStore";
 import { authApi } from "../../api";
 
 const navItems = [
-  { to: "/dashboard", icon: "⊞",  label: "Dashboard" },
-  { to: "/workouts",  icon: "🏋️", label: "Workouts" },
-  { to: "/nutrition", icon: "🥗", label: "Nutrition" },
-  { to: "/progress",  icon: "📈", label: "Progress" },
-  { to: "/goals",     icon: "🎯", label: "Goals" },
-  { to: "/chat",      icon: "🤖", label: "AI Coach" },
-  { to: "/reports",   icon: "📊", label: "Reports" },
-  { to: "/settings",  icon: "⚙️", label: "Settings" },
+  { to: "/dashboard",    icon: "⊞",  label: "Dashboard" },
+  { to: "/workouts",     icon: "🏋️", label: "Workouts" },
+  { to: "/nutrition",    icon: "🥗", label: "Nutrition" },
+  { to: "/meal-planner", icon: "📅", label: "Meal Planner" },
+  { to: "/progress",     icon: "📈", label: "Progress" },
+  { to: "/goals",        icon: "🎯", label: "Goals" },
+  { to: "/chat",         icon: "🤖", label: "AI Coach" },
+  { to: "/reports",      icon: "📊", label: "Reports" },
+  { to: "/settings",     icon: "⚙️", label: "Settings" },
 ];
 
 export function Sidebar() {
