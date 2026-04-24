@@ -139,18 +139,138 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
       },
     },
   },
+
+  // ── WRITE TOOLS ─────────────────────────────────────────────────────────────
+
+  {
+    type: "function",
+    function: {
+      name: "log_food",
+      description:
+        "Log a food item directly to the user's nutrition diary. " +
+        "Use this when the user says they just ate something (e.g. 'I just had 2 eggs'), " +
+        "explicitly asks you to log a food item, or confirms a food you suggested. " +
+        "Always acknowledge what you logged and mention their updated calorie total. " +
+        "If macros are unknown, estimate reasonable values based on typical nutritional data.",
+      parameters: {
+        type: "object",
+        properties: {
+          foodName: {
+            type: "string",
+            description: "Name of the food item (e.g. 'Grilled Chicken Breast', '2 Scrambled Eggs').",
+          },
+          calories: {
+            type: "number",
+            description: "Total calories in the logged quantity.",
+          },
+          protein: {
+            type: "number",
+            description: "Protein in grams (estimate if unknown).",
+          },
+          carbs: {
+            type: "number",
+            description: "Carbohydrates in grams (estimate if unknown).",
+          },
+          fats: {
+            type: "number",
+            description: "Fats in grams (estimate if unknown).",
+          },
+          quantity: {
+            type: "number",
+            description: "Quantity of the serving unit. Default 1.",
+          },
+          unit: {
+            type: "string",
+            description: "Measurement unit (e.g. 'serving', 'g', 'cup', 'piece', 'slice'). Default 'serving'.",
+          },
+          meal: {
+            type: "string",
+            enum: ["breakfast", "lunch", "dinner", "snack"],
+            description: "Meal category. Infer from context or the time of day if not specified.",
+          },
+          date: {
+            type: "string",
+            description: "ISO date (YYYY-MM-DD). Defaults to today if omitted.",
+          },
+        },
+        required: ["foodName", "calories"],
+      },
+    },
+  },
+
+  {
+    type: "function",
+    function: {
+      name: "save_workout_template",
+      description:
+        "Save a complete workout plan as a reusable template in the user's library. " +
+        "Use this when you have designed a full routine and the user asks to save it, " +
+        "or proactively offer to save it after providing a detailed workout plan. " +
+        "Do NOT use this to log a single training session — only for saving reusable programs.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "Short descriptive name (e.g. 'Push Day A', 'Full Body Strength').",
+          },
+          description: {
+            type: "string",
+            description: "Brief description of the template's purpose and target audience.",
+          },
+          splitType: {
+            type: "string",
+            description: "Training split (e.g. 'Push/Pull/Legs', 'Upper/Lower', 'Full Body', 'Custom').",
+          },
+          objective: {
+            type: "string",
+            enum: ["strength", "hypertrophy", "endurance", "weight_loss", "general", "custom"],
+            description: "Primary training objective.",
+          },
+          dayLabel: {
+            type: "string",
+            description: "Label in the split schedule (e.g. 'Day 1', 'Push Day'). Defaults to name.",
+          },
+          muscleGroups: {
+            type: "array",
+            items: { type: "string" },
+            description: "Primary muscle groups (e.g. ['chest', 'shoulders', 'triceps']).",
+          },
+          exercises: {
+            type: "array",
+            description: "Ordered list of exercises.",
+            items: {
+              type: "object",
+              properties: {
+                exerciseName: { type: "string" },
+                sets:         { type: "number" },
+                reps:         { type: "string", description: "Reps or range e.g. '8', '8-12'." },
+                restSeconds:  { type: "number", description: "Rest in seconds between sets." },
+                notes:        { type: "string", description: "Form cues or technique notes." },
+              },
+              required: ["exerciseName", "sets", "reps"],
+            },
+          },
+        },
+        required: ["name", "exercises"],
+      },
+    },
+  },
 ];
 
 // Each agent gets only the tools relevant to its role.
 // Giving the nutritionist access to PR data would just create noise.
 const AGENT_TOOLS: Record<AgentType, OpenAI.Chat.ChatCompletionTool[]> = {
   coach: TOOL_DEFINITIONS.filter((t) =>
-    ["get_recent_workouts", "get_workout_templates", "get_personal_records", "get_weight_trend"]
-      .includes(t.function.name)
+    [
+      "get_recent_workouts", "get_workout_templates", "get_personal_records",
+      "get_weight_trend", "save_workout_template", "log_food",
+    ].includes(t.function.name)
   ),
   nutritionist: TOOL_DEFINITIONS.filter((t) =>
-    ["get_nutrition_summary", "get_active_calorie_goal", "get_weight_trend"]
-      .includes(t.function.name)
+    [
+      "get_nutrition_summary", "get_active_calorie_goal", "get_weight_trend", "log_food",
+    ].includes(t.function.name)
   ),
   general: TOOL_DEFINITIONS, // general agent gets everything
 };
@@ -356,6 +476,116 @@ async function handleGetPersonalRecords(userId: number, args: any): Promise<stri
   return `Personal records (best weight lifted):\n${lines.join("\n")}`;
 }
 
+// ── WRITE TOOL HANDLERS ──────────────────────────────────────────────────────
+
+async function handleLogFood(userId: number, args: any): Promise<string> {
+  const {
+    foodName, calories, protein = 0, carbs = 0, fats = 0,
+    quantity = 1, unit = "serving", meal, date,
+  } = args;
+
+  if (!foodName || calories == null) {
+    return "Cannot log food: foodName and calories are required.";
+  }
+
+  // Determine the target date (today by default)
+  const targetDate = date ? new Date(date) : new Date();
+  // Normalize to midnight UTC to match how other food logs are stored
+  targetDate.setUTCHours(0, 0, 0, 0);
+
+  const log = await (prisma.foodLog as any).create({
+    data: {
+      userId,
+      foodName,
+      calories: Math.round(calories),
+      protein:  Math.round(protein  ?? 0),
+      carbs:    Math.round(carbs    ?? 0),
+      fats:     Math.round(fats     ?? 0),
+      quantity: quantity ?? 1,
+      unit:     unit ?? "serving",
+      meal:     meal ?? null,
+      date:     targetDate,
+    },
+  });
+
+  // Return a summary that includes the running daily total so the AI can
+  // mention it in the response without needing another tool call.
+  const startOfDay = new Date(targetDate);
+  startOfDay.setUTCHours(0, 0, 0, 0);
+  const endOfDay   = new Date(targetDate);
+  endOfDay.setUTCHours(23, 59, 59, 999);
+
+  const dayLogs = await (prisma.foodLog as any).findMany({
+    where: { userId, date: { gte: startOfDay, lte: endOfDay } },
+    select: { calories: true, protein: true, carbs: true, fats: true },
+  });
+
+  const totals = dayLogs.reduce(
+    (acc: any, l: any) => ({
+      calories: acc.calories + l.calories,
+      protein:  acc.protein  + (l.protein  ?? 0),
+      carbs:    acc.carbs    + (l.carbs    ?? 0),
+      fats:     acc.fats     + (l.fats     ?? 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fats: 0 }
+  );
+
+  logger.info(`AI logged food for user ${userId}: ${foodName} (${Math.round(calories)} kcal)`);
+
+  return (
+    `✅ Logged: "${foodName}" — ${Math.round(calories)} kcal | P: ${Math.round(protein)}g | C: ${Math.round(carbs)}g | F: ${Math.round(fats)}g\n` +
+    `Daily total so far: ${Math.round(totals.calories)} kcal | P: ${Math.round(totals.protein)}g | C: ${Math.round(totals.carbs)}g | F: ${Math.round(totals.fats)}g`
+  );
+}
+
+async function handleSaveWorkoutTemplate(userId: number, args: any): Promise<string> {
+  const {
+    name, description, splitType = "Custom", objective = "general",
+    dayLabel, muscleGroups = [], exercises,
+  } = args;
+
+  if (!name || !exercises || !Array.isArray(exercises) || exercises.length === 0) {
+    return "Cannot save template: name and at least one exercise are required.";
+  }
+
+  const template = await prisma.workoutTemplate.create({
+    data: {
+      userId,
+      name,
+      description: description || "Created by AI Coach",
+      splitType,
+      objective,
+      frequency: 3,
+      dayLabel:  dayLabel || name,
+      muscleGroups: JSON.stringify(Array.isArray(muscleGroups) ? muscleGroups : []),
+      aiGenerated: true,
+      exercises: {
+        create: exercises.map((ex: any, i: number) => ({
+          exerciseName: ex.exerciseName,
+          sets:         Number(ex.sets),
+          reps:         String(ex.reps),
+          restSeconds:  ex.restSeconds ? Number(ex.restSeconds) : null,
+          notes:        ex.notes ?? null,
+          order:        ex.order ?? i,
+        })),
+      },
+    },
+    include: { exercises: { orderBy: { order: "asc" } } },
+  });
+
+  const exerciseList = template.exercises
+    .map((ex) => `${ex.exerciseName} ${ex.sets}×${ex.reps}`)
+    .join(", ");
+
+  logger.info(`AI saved workout template for user ${userId}: ${name} (${template.exercises.length} exercises)`);
+
+  return (
+    `✅ Workout template "${name}" saved to your library with ${template.exercises.length} exercises:\n` +
+    exerciseList + "\n" +
+    `You can find it in the Workouts → Templates tab and start it any time.`
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // TOOL DISPATCHER
 //
@@ -377,6 +607,8 @@ async function dispatchTool(
     case "get_active_calorie_goal": return handleGetActiveCalorieGoal(userId);
     case "get_workout_templates":   return handleGetWorkoutTemplates(userId);
     case "get_personal_records":    return handleGetPersonalRecords(userId, args);
+    case "log_food":                return handleLogFood(userId, args);
+    case "save_workout_template":   return handleSaveWorkoutTemplate(userId, args);
     default:
       return `Unknown tool: ${name}`;
   }
