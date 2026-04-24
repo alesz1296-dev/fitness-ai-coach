@@ -46,6 +46,21 @@ const MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
     column: "trainingHoursPerDay",
     sql: `ALTER TABLE "User" ADD COLUMN "trainingHoursPerDay" REAL`,
   },
+  {
+    table: "User",
+    column: "injuries",
+    sql: `ALTER TABLE "User" ADD COLUMN "injuries" TEXT`,
+  },
+  {
+    table: "User",
+    column: "periodStart",
+    sql: `ALTER TABLE "User" ADD COLUMN "periodStart" TEXT`,
+  },
+  {
+    table: "User",
+    column: "cycleLength",
+    sql: `ALTER TABLE "User" ADD COLUMN "cycleLength" INTEGER`,
+  },
 ];
 
 export async function runMigrations(): Promise<void> {

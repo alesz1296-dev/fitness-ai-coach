@@ -327,6 +327,171 @@ function newRow(): ExRow {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Injury → exercises to avoid (partial name matches)
+// ─────────────────────────────────────────────────────────────────────────────
+const INJURY_RESTRICTIONS: Record<string, string[]> = {
+  lower_back:      ["Deadlift","Romanian Deadlift","Barbell Row","T-Bar Row","Hyperextension","Barbell Squat","Good Morning","Leg Press"],
+  upper_back:      ["Overhead Press","Arnold Press","Behind-Neck Press","Upright Row","Shrug","Pull-Up","Chin-Up","Lat Pulldown"],
+  knee_left:       ["Barbell Squat","Hack Squat","Bulgarian Split Squat","Leg Extension","Walking Lunge","Jump Squat","Box Jump","Leg Press","Sissy Squat"],
+  knee_right:      ["Barbell Squat","Hack Squat","Bulgarian Split Squat","Leg Extension","Walking Lunge","Jump Squat","Box Jump","Leg Press","Sissy Squat"],
+  shoulder_left:   ["Overhead Press","Dumbbell Shoulder Press","Arnold Press","Lateral Raise","Front Raise","Bench Press","Incline Bench Press","Dips","Upright Row","Behind-Neck Press"],
+  shoulder_right:  ["Overhead Press","Dumbbell Shoulder Press","Arnold Press","Lateral Raise","Front Raise","Bench Press","Incline Bench Press","Dips","Upright Row","Behind-Neck Press"],
+  hip:             ["Barbell Squat","Hip Thrust","Bulgarian Split Squat","Walking Lunge","Deadlift","Romanian Deadlift","Leg Press","Cable Kickback","Step-Up"],
+  elbow_left:      ["Dips","Close-Grip Bench Press","Skull Crusher","Barbell Curl","Preacher Curl","Cable Pushdown","Overhead Tricep Extension"],
+  elbow_right:     ["Dips","Close-Grip Bench Press","Skull Crusher","Barbell Curl","Preacher Curl","Cable Pushdown","Overhead Tricep Extension"],
+  wrist_left:      ["Barbell Curl","Wrist Curl","Overhead Press","Barbell Row","Bench Press","Push-Up","Front Raise"],
+  wrist_right:     ["Barbell Curl","Wrist Curl","Overhead Press","Barbell Row","Bench Press","Push-Up","Front Raise"],
+  ankle_left:      ["Jump Squat","Box Jump","Calf Raise","Walking Lunge","Bulgarian Split Squat"],
+  ankle_right:     ["Jump Squat","Box Jump","Calf Raise","Walking Lunge","Bulgarian Split Squat"],
+  rotator_cuff:    ["Overhead Press","Arnold Press","Lateral Raise","Upright Row","Behind-Neck Press","Dips","Bench Press","Push-Up"],
+  hamstring:       ["Romanian Deadlift","Leg Curl","Stiff-Leg Deadlift","Nordic Curl","Deadlift"],
+  it_band:         ["Running","Jump Squat","Walking Lunge","Box Jump","Barbell Squat"],
+  plantar_fascia:  ["Jump Squat","Box Jump","Walking Lunge","Running","Jump Rope","Calf Raise"],
+};
+
+/** Return true if exerciseName should be avoided given the user's injuries */
+function isContraindicated(exerciseName: string, injuries: string[]): boolean {
+  const lower = exerciseName.toLowerCase();
+  return injuries.some((inj) =>
+    (INJURY_RESTRICTIONS[inj] ?? []).some((ex) => lower.includes(ex.toLowerCase()))
+  );
+}
+
+/** Get label for an injury id */
+const INJURY_LABELS: Record<string, string> = {
+  lower_back: "Lower Back", upper_back: "Upper Back/Neck",
+  knee_left: "Knee (L)", knee_right: "Knee (R)",
+  shoulder_left: "Shoulder (L)", shoulder_right: "Shoulder (R)",
+  hip: "Hip", elbow_left: "Elbow (L)", elbow_right: "Elbow (R)",
+  wrist_left: "Wrist (L)", wrist_right: "Wrist (R)",
+  ankle_left: "Ankle (L)", ankle_right: "Ankle (R)",
+  rotator_cuff: "Rotator Cuff", hamstring: "Hamstring",
+  it_band: "IT Band", plantar_fascia: "Plantar Fascia",
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Exercise suggestion panel — shows alternatives for a muscle group,
+// filtered against user injuries, prioritising similar exercises first
+// ─────────────────────────────────────────────────────────────────────────────
+function ExerciseSuggestPanel({
+  currentExercise, muscle, injuries, onSelect, onClose,
+}: {
+  currentExercise?: string;
+  muscle?: string;
+  injuries: string[];
+  onSelect: (name: string, item: any) => void;
+  onClose: () => void;
+}) {
+  const [searchQ, setSearchQ] = useState(currentExercise ?? "");
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [filterMuscle, setFilterMuscle] = useState(muscle ?? "");
+
+  const MUSCLE_GROUPS = ["Chest","Back","Shoulders","Biceps","Triceps","Legs","Quads","Hamstrings","Glutes","Calves","Core","Full Body"];
+
+  const search = useCallback(async (q: string, m: string) => {
+    setLoading(true);
+    try {
+      const res = await searchApi.exercises(q, m ? { muscle: m } : {}, 20);
+      let hits = res.data.results;
+      // Sort: exercises similar to currentExercise first (shared muscle), then alpha
+      if (currentExercise) {
+        const cur = currentExercise.toLowerCase();
+        hits = [...hits].sort((a, b) => {
+          const aScore = a.name.toLowerCase().includes(cur.split(" ")[0]) ? -1 : 0;
+          const bScore = b.name.toLowerCase().includes(cur.split(" ")[0]) ? -1 : 0;
+          return aScore - bScore;
+        });
+      }
+      setResults(hits);
+    } finally { setLoading(false); }
+  }, [currentExercise]);
+
+  useEffect(() => { search(searchQ, filterMuscle); }, [filterMuscle]);
+
+  const handleSearch = (q: string) => {
+    setSearchQ(q);
+    const t = setTimeout(() => search(q, filterMuscle), 250);
+    return () => clearTimeout(t);
+  };
+
+  return (
+    <div className="rounded-xl border border-brand-200 bg-brand-50 p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-brand-700">💡 Exercise Suggestions</p>
+        <button type="button" onClick={onClose} className="text-xs text-gray-400 hover:text-gray-600">✕ close</button>
+      </div>
+
+      {injuries.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+            ⚠️ Avoiding: {injuries.map((i) => INJURY_LABELS[i] ?? i).join(", ")}
+          </span>
+        </div>
+      )}
+
+      {/* Muscle filter chips */}
+      <div className="flex flex-wrap gap-1">
+        {["", ...MUSCLE_GROUPS].map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setFilterMuscle(m)}
+            className={`text-xs px-2 py-0.5 rounded-full border transition-all ${
+              filterMuscle === m
+                ? "border-brand-400 bg-brand-500 text-white"
+                : "border-gray-200 bg-white text-gray-600 hover:border-brand-300"
+            }`}
+          >
+            {m || "All"}
+          </button>
+        ))}
+      </div>
+
+      {/* Search input */}
+      <input
+        value={searchQ}
+        onChange={(e) => handleSearch(e.target.value)}
+        placeholder="Search by name or muscle…"
+        className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+      />
+
+      {/* Results */}
+      <div className="max-h-56 overflow-y-auto space-y-1">
+        {loading && <p className="text-xs text-gray-400 text-center py-2">Searching…</p>}
+        {!loading && results.length === 0 && (
+          <p className="text-xs text-gray-400 text-center py-2">No results — try a different muscle or name</p>
+        )}
+        {results.map((ex) => {
+          const banned = isContraindicated(ex.name, injuries);
+          return (
+            <div
+              key={ex.id}
+              className={`flex items-start justify-between rounded-lg px-3 py-2 text-sm ${
+                banned ? "opacity-40 bg-red-50 border border-red-100" : "bg-white border border-gray-100 hover:border-brand-300 cursor-pointer"
+              }`}
+              onClick={() => !banned && onSelect(ex.name, ex)}
+            >
+              <div className="flex-1 min-w-0">
+                <p className={`font-medium text-sm truncate ${banned ? "line-through text-gray-400" : "text-gray-800"}`}>
+                  {ex.name}
+                </p>
+                <p className="text-xs text-gray-400">{ex.primaryMuscle} · {ex.equipment} · {ex.difficulty}</p>
+              </div>
+              {banned ? (
+                <span className="text-xs text-red-400 ml-2 shrink-0">⚠️ injury</span>
+              ) : (
+                <span className="text-xs text-brand-500 ml-2 shrink-0">Select →</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Exercise search combobox (supports optional muscle-group filter)
 // ─────────────────────────────────────────────────────────────────────────────
 function ExerciseSearch({
@@ -381,33 +546,70 @@ function ExerciseSearch({
 // ─────────────────────────────────────────────────────────────────────────────
 // Exercise rows (reused in create & edit forms)
 // ─────────────────────────────────────────────────────────────────────────────
-function ExerciseRows({ rows, setRows }: { rows: ExRow[]; setRows: Dispatch<SetStateAction<ExRow[]>> }) {
+function ExerciseRows({ rows, setRows, injuries = [] }: {
+  rows: ExRow[];
+  setRows: Dispatch<SetStateAction<ExRow[]>>;
+  injuries?: string[];
+}) {
+  const [suggestKey, setSuggestKey] = useState<string | null>(null);
+
   const updateRow = (key: string, field: keyof ExRow, val: string) =>
     setRows((prev) => prev.map((r) => r.key === key ? { ...r, [field]: val } : r));
   const removeRow = (key: string) => setRows((prev) => prev.filter((r) => r.key !== key));
 
   return (
-    <div>
+    <div className="space-y-1">
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm font-semibold text-gray-700">Exercises</p>
         <Button size="sm" variant="secondary" onClick={() => setRows((p) => [...p, newRow()])}>+ Add</Button>
       </div>
-      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-        {rows.map((r) => (
-          <div key={r.key} className="grid grid-cols-12 gap-1.5 items-start">
-            <div className="col-span-4"><ExerciseSearch value={r.exerciseName} onChange={(v) => updateRow(r.key, "exerciseName", v)} /></div>
-            <div className="col-span-2"><input value={r.sets} onChange={(e) => updateRow(r.key, "sets", e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm text-center" placeholder="Sets" /></div>
-            <div className="col-span-2"><input value={r.reps} onChange={(e) => updateRow(r.key, "reps", e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm text-center" placeholder="Reps" /></div>
-            <div className="col-span-2"><input value={r.weight} onChange={(e) => updateRow(r.key, "weight", e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm text-center" placeholder="kg" /></div>
-            <div className="col-span-1"><input value={r.rpe} onChange={(e) => updateRow(r.key, "rpe", e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm text-center" placeholder="RPE" /></div>
-            <div className="col-span-1 flex items-center justify-center pt-1.5">
-              <button onClick={() => removeRow(r.key)} className="text-gray-300 hover:text-red-400 transition-colors">✕</button>
+      <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+        {rows.map((r) => {
+          const banned = r.exerciseName ? isContraindicated(r.exerciseName, injuries) : false;
+          return (
+            <div key={r.key} className="space-y-1">
+              <div className="grid grid-cols-12 gap-1.5 items-start">
+                <div className="col-span-4">
+                  <ExerciseSearch
+                    value={r.exerciseName}
+                    onChange={(v) => updateRow(r.key, "exerciseName", v)}
+                  />
+                  {banned && (
+                    <p className="text-[10px] text-red-500 mt-0.5">⚠️ May stress injured area</p>
+                  )}
+                </div>
+                <div className="col-span-2"><input value={r.sets} onChange={(e) => updateRow(r.key, "sets", e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm text-center" placeholder="Sets" /></div>
+                <div className="col-span-2"><input value={r.reps} onChange={(e) => updateRow(r.key, "reps", e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm text-center" placeholder="Reps" /></div>
+                <div className="col-span-2"><input value={r.weight} onChange={(e) => updateRow(r.key, "weight", e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm text-center" placeholder="kg" /></div>
+                <div className="col-span-1"><input value={r.rpe} onChange={(e) => updateRow(r.key, "rpe", e.target.value)} className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm text-center" placeholder="RPE" /></div>
+                <div className="col-span-1 flex flex-col items-center gap-1 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setSuggestKey(suggestKey === r.key ? null : r.key)}
+                    className={`text-xs px-1 py-0.5 rounded transition-colors ${suggestKey === r.key ? "text-brand-600" : "text-gray-300 hover:text-brand-400"}`}
+                    title="Suggest exercises"
+                  >💡</button>
+                  <button type="button" onClick={() => removeRow(r.key)} className="text-gray-300 hover:text-red-400 transition-colors text-xs">✕</button>
+                </div>
+              </div>
+              {/* Suggestion panel for this row */}
+              {suggestKey === r.key && (
+                <ExerciseSuggestPanel
+                  currentExercise={r.exerciseName || undefined}
+                  injuries={injuries}
+                  onSelect={(name, _item) => {
+                    updateRow(r.key, "exerciseName", name);
+                    setSuggestKey(null);
+                  }}
+                  onClose={() => setSuggestKey(null)}
+                />
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div className="grid grid-cols-12 gap-1.5 mt-1">
-        <p className="col-span-4 text-xs text-gray-400 pl-2">Exercise</p>
+        <p className="col-span-4 text-xs text-gray-400 pl-2">Exercise (💡 = suggest)</p>
         <p className="col-span-2 text-xs text-gray-400 text-center">Sets</p>
         <p className="col-span-2 text-xs text-gray-400 text-center">Reps</p>
         <p className="col-span-2 text-xs text-gray-400 text-center">kg</p>
@@ -431,7 +633,8 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
   const [loading, setLoading] = useState(false);
   const [newPRs, setNewPRs] = useState<PRResult[]>([]);
   const [error, setError] = useState("");
-  const weightKg = user?.weight ?? 75;
+  const weightKg  = user?.weight ?? 75;
+  const injuries  = user?.injuries ?? [];
 
   const submit = async () => {
     if (!name.trim()) { setError("Workout name is required"); return; }
@@ -499,7 +702,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
         onApply={(kcal) => setCalories(String(kcal))}
       />
 
-      <ExerciseRows rows={rows} setRows={setRows} />
+      <ExerciseRows rows={rows} setRows={setRows} injuries={injuries} />
       <div className="flex gap-2 pt-2 border-t border-gray-100">
         <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
         <Button className="flex-1" loading={loading} onClick={submit}>Save Workout</Button>
@@ -1098,14 +1301,60 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
   );
 }
 
-function TemplateDetail({ template, onStart, onClose, onFork, onRename }: {
+function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdated }: {
   template: WorkoutTemplate; onStart: () => void; onClose: () => void;
   onFork?: () => void; onRename?: (name: string) => void;
+  onUpdated?: () => void;
 }) {
   const { user } = useAuthStore();
+  const injuries = user?.injuries ?? [];
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(template.name);
   const [forking, setForking] = useState(false);
+  // Per-exercise replace suggestion panel
+  const [suggestForId, setSuggestForId] = useState<number | null>(null);
+  // Per-exercise edit mode (sets/reps)
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editSets, setEditSets] = useState("");
+  const [editReps, setEditReps] = useState("");
+  const [savingId, setSavingId] = useState<number | null>(null);
+  // Local exercises state so UI updates without full reload
+  const [exercises, setExercises] = useState(template.exercises);
+
+  const saveExercise = async (ex: typeof exercises[0]) => {
+    setSavingId(ex.id);
+    try {
+      await templatesApi.updateExercise(template.id, ex.id, {
+        sets: Number(editSets) || ex.sets,
+        reps: editReps ? String(editReps) : ex.reps,
+      });
+      setExercises((prev) => prev.map((e) => e.id === ex.id
+        ? { ...e, sets: Number(editSets) || e.sets, reps: editReps ? String(editReps) : e.reps }
+        : e
+      ));
+      setEditingId(null);
+      onUpdated?.();
+    } finally { setSavingId(null); }
+  };
+
+  const replaceExercise = async (exId: number, newName: string) => {
+    setSavingId(exId);
+    try {
+      await templatesApi.updateExercise(template.id, exId, { exerciseName: newName });
+      setExercises((prev) => prev.map((e) => e.id === exId ? { ...e, exerciseName: newName } : e));
+      setSuggestForId(null);
+      onUpdated?.();
+    } finally { setSavingId(null); }
+  };
+
+  const removeExercise = async (exId: number) => {
+    if (!confirm("Remove this exercise from the template?")) return;
+    await templatesApi.removeExercise(template.id, exId);
+    setExercises((prev) => prev.filter((e) => e.id !== exId));
+    onUpdated?.();
+  };
+
+  const canEdit = !template.isSystem;
 
   return (
     <div className="space-y-4">
@@ -1161,19 +1410,84 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename }: {
       )}
 
       <div className="space-y-2">
-        {template.exercises.map((ex, i) => (
-          <div key={ex.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-            <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-600 text-xs font-bold flex items-center justify-center">{i + 1}</span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-800">{ex.exerciseName}</p>
-              <p className="text-xs text-gray-400">{ex.sets} sets × {ex.reps} reps{ex.restSeconds ? ` · ${ex.restSeconds}s rest` : ""}</p>
+        {exercises.map((ex, i) => {
+          const banned = isContraindicated(ex.exerciseName, injuries);
+          return (
+            <div key={ex.id} className="space-y-1">
+              <div className={`flex items-center gap-3 p-3 rounded-xl ${banned ? "bg-red-50 border border-red-200" : "bg-gray-50"}`}>
+                <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-600 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                <div className="flex-1 min-w-0">
+                  {editingId === ex.id ? (
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-semibold text-gray-800">{ex.exerciseName}</p>
+                      <div className="flex gap-2">
+                        <input
+                          value={editSets}
+                          onChange={(e) => setEditSets(e.target.value)}
+                          placeholder={`${ex.sets} sets`}
+                          className="w-20 border rounded-lg px-2 py-1 text-sm text-center"
+                        />
+                        <span className="self-center text-gray-400 text-xs">×</span>
+                        <input
+                          value={editReps}
+                          onChange={(e) => setEditReps(e.target.value)}
+                          placeholder={`${ex.reps} reps`}
+                          className="w-20 border rounded-lg px-2 py-1 text-sm text-center"
+                        />
+                        <Button size="sm" loading={savingId === ex.id} onClick={() => saveExercise(ex)}>Save</Button>
+                        <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>✕</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className={`text-sm font-semibold ${banned ? "text-red-700" : "text-gray-800"}`}>{ex.exerciseName}</p>
+                      <p className="text-xs text-gray-400">{ex.sets} sets × {ex.reps} reps{ex.restSeconds ? ` · ${ex.restSeconds}s rest` : ""}</p>
+                      {banned && <p className="text-[10px] text-red-500">⚠️ May stress injured area — consider replacing</p>}
+                    </>
+                  )}
+                </div>
+                {canEdit && editingId !== ex.id && (
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => { setEditSets(""); setEditReps(""); setEditingId(ex.id); setSuggestForId(null); }}
+                      className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-lg hover:border-brand-300 text-gray-600 transition-colors"
+                    >Edit</button>
+                    <button
+                      type="button"
+                      onClick={() => { setSuggestForId(suggestForId === ex.id ? null : ex.id); setEditingId(null); }}
+                      className={`px-2 py-1 text-xs rounded-lg border transition-colors ${
+                        suggestForId === ex.id
+                          ? "border-brand-400 bg-brand-50 text-brand-700"
+                          : banned
+                            ? "border-red-300 bg-red-50 text-red-700"
+                            : "border-gray-200 bg-white text-gray-600 hover:border-brand-300"
+                      }`}
+                    >{banned ? "⚠️ Replace" : "💡 Replace"}</button>
+                    <button
+                      type="button"
+                      onClick={() => removeExercise(ex.id)}
+                      className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-lg hover:border-red-300 hover:text-red-600 text-gray-400 transition-colors"
+                    >✕</button>
+                  </div>
+                )}
+              </div>
+              {/* Suggestion panel for replacement */}
+              {suggestForId === ex.id && (
+                <ExerciseSuggestPanel
+                  currentExercise={ex.exerciseName}
+                  injuries={injuries}
+                  onSelect={(name) => replaceExercise(ex.id, name)}
+                  onClose={() => setSuggestForId(null)}
+                />
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Smart suggestions panel */}
-      <SmartPlanSuggestions template={template} user={user ?? undefined} />
+      <SmartPlanSuggestions template={{ ...template, exercises }} user={user ?? undefined} />
 
       <div className="flex gap-2 pt-2 border-t border-gray-100">
         <Button variant="secondary" className="flex-1" onClick={onClose}>Close</Button>

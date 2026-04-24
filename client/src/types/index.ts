@@ -16,6 +16,9 @@ export interface User {
   proteinMultiplier?: number | null;
   trainingDaysPerWeek?: number | null;
   trainingHoursPerDay?: number | null;
+  injuries?: string[] | null;         // array of injury area names
+  periodStart?: string | null;        // ISO date of last period (females)
+  cycleLength?: number | null;        // cycle length in days
   createdAt?: string;
 }
 

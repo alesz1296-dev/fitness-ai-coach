@@ -12,7 +12,7 @@ export const getProfile = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const user = await prisma.user.findUnique({
+    const user = await (prisma.user.findUnique as any)({
       where: { id: req.user!.id },
       select: {
         id: true,
@@ -31,16 +31,25 @@ export const getProfile = async (
         proteinMultiplier: true,
         trainingDaysPerWeek: true,
         trainingHoursPerDay: true,
+        injuries: true,
+        periodStart: true,
+        cycleLength: true,
         createdAt: true,
         updatedAt: true,
       },
-    });
+    }) as any;
 
     if (!user) {
       return next(createError("User not found", 404));
     }
 
-    res.json({ user });
+    // Parse injuries JSON before sending
+    const userOut = {
+      ...user,
+      injuries: user.injuries ? JSON.parse(user.injuries as string) : [],
+    };
+
+    res.json({ user: userOut });
   } catch (error) {
     next(error);
   }
@@ -66,9 +75,12 @@ export const updateProfile = async (
       proteinMultiplier,
       trainingDaysPerWeek,
       trainingHoursPerDay,
+      injuries,
+      periodStart,
+      cycleLength,
     } = req.body;
 
-    const updated = await prisma.user.update({
+    const updated = await (prisma.user.update as any)({
       where: { id: req.user!.id },
       data: {
         ...(firstName         !== undefined && { firstName }),
@@ -91,6 +103,13 @@ export const updateProfile = async (
         ...(trainingHoursPerDay !== undefined && {
           trainingHoursPerDay: trainingHoursPerDay === null ? null : Math.min(4, Math.max(0.25, Number(trainingHoursPerDay))),
         }),
+        ...(injuries !== undefined && {
+          injuries: Array.isArray(injuries) ? JSON.stringify(injuries) : null,
+        }),
+        ...(periodStart !== undefined && { periodStart: periodStart || null }),
+        ...(cycleLength !== undefined && {
+          cycleLength: cycleLength === null ? null : Math.min(45, Math.max(20, Number(cycleLength))),
+        }),
       },
       select: {
         id: true,
@@ -109,12 +128,21 @@ export const updateProfile = async (
         proteinMultiplier: true,
         trainingDaysPerWeek: true,
         trainingHoursPerDay: true,
+        injuries: true,
+        periodStart: true,
+        cycleLength: true,
         updatedAt: true,
       },
-    });
+    }) as any;
+
+    // Parse injuries JSON before sending
+    const updatedOut = {
+      ...updated,
+      injuries: updated.injuries ? JSON.parse(updated.injuries as string) : [],
+    };
 
     logger.info(`Profile updated for user ${req.user!.id}`);
-    res.json({ message: "Profile updated", user: updated });
+    res.json({ message: "Profile updated", user: updatedOut });
   } catch (error) {
     next(error);
   }

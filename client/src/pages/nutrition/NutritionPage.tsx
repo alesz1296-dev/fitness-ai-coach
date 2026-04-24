@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { foodApi, chatApi, searchApi, calorieGoalsApi } from "../../api";
+import { useAuthStore } from "../../store/authStore";
 import type { FoodLog, FoodTotals, CalorieGoal } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -75,13 +76,15 @@ type FoodSnap = { name: string; tags?: string[] } | null;
 
 const BREADABLE_KEYWORDS = [
   "chicken", "fish", "salmon", "cod", "tilapia", "shrimp", "prawn",
-  "calamari", "squid", "pork", "veal", "beef", "steak", "schnitzel",
-  "fillet", "nugget", "wing", "tender", "cutlet", "onion ring",
+  "calamari", "squid", "octopus", "scallop", "mussel", "sea bass",
+  "pork", "veal", "beef", "steak", "schnitzel", "venison", "rabbit",
+  "fillet", "nugget", "wing", "tender", "cutlet", "onion ring", "kofta",
 ];
 const COOKABLE_KEYWORDS = [
   ...BREADABLE_KEYWORDS,
   "egg", "omelette", "pasta", "noodle", "rice", "potato", "tofu",
-  "tempeh", "bacon", "sausage", "lamb", "turkey", "duck", "prosciutto",
+  "tempeh", "bacon", "sausage", "bratwurst", "chorizo", "kielbasa",
+  "lamb", "turkey", "duck", "prosciutto", "mortadella",
   "stir fry", "vegetable", "zucchini", "pepper", "mushroom", "broccoli",
   "cauliflower", "eggplant", "aubergine", "spinach", "asparagus",
 ];
@@ -160,34 +163,48 @@ function calcMacro(
 
 // ── Food tag filter chips ─────────────────────────────────────────────────────
 const TAG_FILTERS = [
-  { tag: "",             label: "All",          emoji: "🍽️" },
-  { tag: "keto",         label: "Keto",         emoji: "🥑" },
-  { tag: "fit",          label: "Fit",          emoji: "💪" },
-  { tag: "high-protein", label: "High-Protein", emoji: "🍗" },
-  { tag: "vegan",        label: "Vegan",        emoji: "🌱" },
-  { tag: "vegetarian",   label: "Vegetarian",   emoji: "🥦" },
-  { tag: "integral",     label: "Whole Grain",  emoji: "🌾" },
-  { tag: "fast-food",    label: "Fast Food",    emoji: "🍔" },
-  { tag: "dessert",      label: "Desserts",     emoji: "🍰" },
-  { tag: "high-sugar",   label: "High-Sugar",   emoji: "🍬" },
+  { tag: "",               label: "All",            emoji: "🍽️" },
+  { tag: "keto",           label: "Keto",           emoji: "🥑" },
+  { tag: "fit",            label: "Fit",            emoji: "💪" },
+  { tag: "high-protein",   label: "High-Protein",   emoji: "🍗" },
+  { tag: "vegan",          label: "Vegan",          emoji: "🌱" },
+  { tag: "vegetarian",     label: "Vegetarian",     emoji: "🥦" },
+  { tag: "seafood",        label: "Seafood",        emoji: "🦐" },
+  { tag: "meat",           label: "Meats",          emoji: "🥩" },
+  { tag: "sushi",          label: "Sushi",          emoji: "🍣" },
+  { tag: "middle-eastern", label: "Middle Eastern", emoji: "🧆" },
+  { tag: "soup",           label: "Soups",          emoji: "🍲" },
+  { tag: "cheese",         label: "Cheese",         emoji: "🧀" },
+  { tag: "sausage",        label: "Sausages",       emoji: "🌭" },
+  { tag: "integral",       label: "Whole Grain",    emoji: "🌾" },
+  { tag: "fast-food",      label: "Fast Food",      emoji: "🍔" },
+  { tag: "dessert",        label: "Desserts",       emoji: "🍰" },
+  { tag: "high-sugar",     label: "High-Sugar",     emoji: "🍬" },
 ];
 
 const TAG_COLORS: Record<string, string> = {
-  keto:           "bg-yellow-100 text-yellow-700",
-  fit:            "bg-blue-100 text-blue-700",
-  "high-protein": "bg-red-100 text-red-700",
-  "fast-food":    "bg-orange-100 text-orange-700",
-  "high-fat":     "bg-rose-100 text-rose-700",
-  "high-sugar":   "bg-pink-100 text-pink-700",
-  dessert:        "bg-purple-100 text-purple-700",
-  vegan:          "bg-green-100 text-green-700",
-  vegetarian:     "bg-emerald-100 text-emerald-700",
-  integral:       "bg-amber-100 text-amber-700",
-  fruit:          "bg-pink-100 text-pink-600",
-  vegetable:      "bg-lime-100 text-lime-700",
-  legume:         "bg-orange-100 text-orange-700",
-  dairy:          "bg-sky-100 text-sky-700",
-  "low-carb":     "bg-violet-100 text-violet-700",
+  keto:             "bg-yellow-100 text-yellow-700",
+  fit:              "bg-blue-100 text-blue-700",
+  "high-protein":   "bg-red-100 text-red-700",
+  "fast-food":      "bg-orange-100 text-orange-700",
+  "high-fat":       "bg-rose-100 text-rose-700",
+  "high-sugar":     "bg-pink-100 text-pink-700",
+  dessert:          "bg-purple-100 text-purple-700",
+  vegan:            "bg-green-100 text-green-700",
+  vegetarian:       "bg-emerald-100 text-emerald-700",
+  integral:         "bg-amber-100 text-amber-700",
+  fruit:            "bg-pink-100 text-pink-600",
+  vegetable:        "bg-lime-100 text-lime-700",
+  legume:           "bg-orange-100 text-orange-700",
+  dairy:            "bg-sky-100 text-sky-700",
+  "low-carb":       "bg-violet-100 text-violet-700",
+  seafood:          "bg-cyan-100 text-cyan-700",
+  meat:             "bg-red-100 text-red-800",
+  sushi:            "bg-rose-100 text-rose-600",
+  "middle-eastern": "bg-amber-100 text-amber-800",
+  soup:             "bg-orange-50 text-orange-700",
+  cheese:           "bg-yellow-100 text-yellow-800",
+  sausage:          "bg-red-100 text-red-700",
 };
 
 // ── Food search combobox ──────────────────────────────────────────────────────
@@ -1194,6 +1211,87 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
 }
 
 // ── Fasting timer helpers ─────────────────────────────────────────────────────
+// ── Menstrual cycle phase helpers ─────────────────────────────────────────────
+type CyclePhase = {
+  name: "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
+  day: number;
+  emoji: string;
+  color: string;
+  nutritionTip: string;
+  workoutTip: string;
+};
+
+function getCyclePhase(periodStart: string, cycleLength = 28): CyclePhase | null {
+  const start = new Date(periodStart);
+  if (isNaN(start.getTime())) return null;
+  const today = new Date();
+  const daysSince = Math.floor((today.getTime() - start.getTime()) / 86400000);
+  if (daysSince < 0) return null;
+  const dayOfCycle = (daysSince % cycleLength) + 1;
+
+  if (dayOfCycle <= 5) return {
+    name: "Menstruation", day: dayOfCycle, emoji: "🔴",
+    color: "border-red-200 bg-red-50 text-red-800",
+    nutritionTip: "Boost iron (red meat, lentils, spinach) and anti-inflammatory foods (omega-3, berries, ginger). Avoid excess sodium to reduce bloating.",
+    workoutTip: "Gentle movement is ideal — yoga, walks, light cycling. Skip very heavy lifting if you feel fatigued.",
+  };
+  if (dayOfCycle <= 13) return {
+    name: "Follicular", day: dayOfCycle, emoji: "🟢",
+    color: "border-green-200 bg-green-50 text-green-800",
+    nutritionTip: "Rising oestrogen boosts insulin sensitivity. Slightly increase carbs to fuel higher-energy sessions.",
+    workoutTip: "Great time to push intensity — strength training, intervals, and new exercises respond well.",
+  };
+  if (dayOfCycle <= 16) return {
+    name: "Ovulation", day: dayOfCycle, emoji: "🟡",
+    color: "border-yellow-200 bg-yellow-50 text-yellow-800",
+    nutritionTip: "Peak performance window. Maintain protein and carbs. Zinc (pumpkin seeds, meat) supports hormonal balance.",
+    workoutTip: "Peak strength and energy. Ideal for PRs, HIIT, and high-volume sessions. Warm up well — laxity increases near ovulation.",
+  };
+  return {
+    name: "Luteal", day: dayOfCycle, emoji: "🟣",
+    color: "border-purple-200 bg-purple-50 text-purple-800",
+    nutritionTip: "Cravings and hunger increase — prioritise magnesium (dark chocolate, nuts, seeds) and fibre to manage them. You need ~100–300 kcal more.",
+    workoutTip: "Moderate your intensity as progesterone rises. Strength is maintained but recovery takes longer — prioritise sleep and rest days.",
+  };
+}
+
+function CyclePhaseBanner({ periodStart, cycleLength }: { periodStart: string; cycleLength?: number | null }) {
+  const [open, setOpen] = useState(false);
+  const phase = getCyclePhase(periodStart, cycleLength ?? 28);
+  if (!phase) return null;
+
+  return (
+    <div className={`rounded-2xl border px-4 py-3 ${phase.color}`}>
+      <button
+        type="button"
+        className="w-full flex items-center justify-between text-left"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{phase.emoji}</span>
+          <div>
+            <p className="font-semibold text-sm">{phase.name} phase — Day {phase.day}</p>
+            <p className="text-xs opacity-70">Tap to see phase-specific nutrition & workout tips</p>
+          </div>
+        </div>
+        <span className="text-sm opacity-60">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="mt-3 border-t border-current border-opacity-20 pt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <p className="text-xs font-semibold mb-1">🥗 Nutrition</p>
+            <p className="text-xs leading-relaxed opacity-90">{phase.nutritionTip}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold mb-1">🏋️ Training</p>
+            <p className="text-xs leading-relaxed opacity-90">{phase.workoutTip}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function formatFastingDuration(ms: number): string {
   const totalMin = Math.floor(ms / 60000);
   const h = Math.floor(totalMin / 60);
@@ -1204,6 +1302,7 @@ function formatFastingDuration(ms: number): string {
 // ── Main Nutrition page ───────────────────────────────────────────────────────
 export default function NutritionPage() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [date,     setDate]     = useState(new Date().toISOString().split("T")[0]);
   const [logs,     setLogs]     = useState<FoodLog[]>([]);
   const [totals,   setTotals]   = useState<FoodTotals>({ calories: 0, protein: 0, carbs: 0, fats: 0 });
@@ -1352,6 +1451,11 @@ export default function NutritionPage() {
           <Button onClick={() => { setEditItem(null); setShowForm(true); }}>+ Log Food</Button>
         </div>
       </div>
+
+      {/* Hormonal cycle phase banner — shown for female users with periodStart set */}
+      {user?.sex === "female" && user.periodStart && (
+        <CyclePhaseBanner periodStart={user.periodStart} cycleLength={user.cycleLength} />
+      )}
 
       {/* Fasting mode banner */}
       {fastingActive && fastingStart && (

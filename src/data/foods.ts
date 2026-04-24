@@ -317,6 +317,90 @@ export const FOOD_DB: FoodItem[] = [
   // ── Breakfast items ───────────────────────────────────────────────────────
   { id: "f310", name: "French Toast (2 slices)",       calories: 330, protein: 12,  carbs: 40, fats: 14,  defaultQty: 1,   defaultUnit: "serving",tags: ["vegetarian","dessert"] },
   { id: "f311", name: "Cereal with Milk (bowl)",       calories: 260, protein: 9,   carbs: 44, fats: 5,   defaultQty: 1,   defaultUnit: "bowl",   tags: ["vegetarian","dairy"] },
+
+  // ── Sushi & Japanese ─────────────────────────────────────────────────────
+  { id: "f320", name: "Salmon Nigiri (2 pieces)",      calories: 120, protein: 9,   carbs: 14, fats: 2.5, defaultQty: 2,   defaultUnit: "pieces", tags: ["high-protein","seafood","sushi","fit"] },
+  { id: "f321", name: "Tuna Nigiri (2 pieces)",        calories: 110, protein: 10,  carbs: 13, fats: 1.5, defaultQty: 2,   defaultUnit: "pieces", tags: ["high-protein","seafood","sushi","fit","keto"] },
+  { id: "f322", name: "California Roll (6 pieces)",    calories: 255, protein: 8,   carbs: 38, fats: 7,   defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","sushi"] },
+  { id: "f323", name: "Philadelphia Roll (6 pieces)",  calories: 320, protein: 12,  carbs: 32, fats: 14,  defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","sushi","dairy"] },
+  { id: "f324", name: "Dragon Roll (6 pieces)",        calories: 350, protein: 14,  carbs: 42, fats: 11,  defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","sushi"] },
+  { id: "f325", name: "Salmon Sashimi (3 pieces)",     calories: 120, protein: 18,  carbs: 0,  fats: 5,   defaultQty: 3,   defaultUnit: "pieces", tags: ["high-protein","seafood","sushi","keto","fit"] },
+  { id: "f326", name: "Tuna Sashimi (3 pieces)",       calories: 90,  protein: 20,  carbs: 0,  fats: 1,   defaultQty: 3,   defaultUnit: "pieces", tags: ["high-protein","seafood","sushi","keto","fit"] },
+  { id: "f327", name: "Vegetable Maki (6 pieces)",     calories: 170, protein: 4,   carbs: 36, fats: 1.5, defaultQty: 6,   defaultUnit: "pieces", tags: ["vegan","vegetarian","sushi"] },
+  { id: "f328", name: "Shrimp Tempura Roll (6 pieces)",calories: 380, protein: 12,  carbs: 50, fats: 14,  defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","sushi","high-fat"] },
+  { id: "f329", name: "Edamame (steamed, salted)",     calories: 122, protein: 11,  carbs: 10, fats: 5,   defaultQty: 100, defaultUnit: "g",      tags: ["vegan","vegetarian","high-protein","sushi","fit"] },
+
+  // ── Kebab & Middle Eastern ────────────────────────────────────────────────
+  { id: "f330", name: "Döner Kebab (wrap)",            calories: 480, protein: 28,  carbs: 42, fats: 20,  defaultQty: 1,   defaultUnit: "wrap",   tags: ["high-protein","middle-eastern"] },
+  { id: "f331", name: "Shish Kebab (skewer)",          calories: 180, protein: 22,  carbs: 3,  fats: 9,   defaultQty: 1,   defaultUnit: "skewer", tags: ["high-protein","keto","fit","middle-eastern"] },
+  { id: "f332", name: "Kofta (2 skewers)",             calories: 240, protein: 20,  carbs: 4,  fats: 16,  defaultQty: 2,   defaultUnit: "skewers",tags: ["high-protein","middle-eastern"] },
+  { id: "f333", name: "Chicken Shawarma (wrap)",       calories: 430, protein: 26,  carbs: 38, fats: 18,  defaultQty: 1,   defaultUnit: "wrap",   tags: ["high-protein","middle-eastern"] },
+  { id: "f334", name: "Gyros (wrap)",                  calories: 440, protein: 25,  carbs: 40, fats: 18,  defaultQty: 1,   defaultUnit: "wrap",   tags: ["high-protein","middle-eastern"] },
+  { id: "f335", name: "Falafel (4 pieces)",            calories: 260, protein: 10,  carbs: 28, fats: 14,  defaultQty: 4,   defaultUnit: "pieces", tags: ["vegan","vegetarian","middle-eastern","legume"] },
+  { id: "f336", name: "Falafel Wrap",                  calories: 450, protein: 16,  carbs: 54, fats: 18,  defaultQty: 1,   defaultUnit: "wrap",   tags: ["vegan","vegetarian","middle-eastern","legume"] },
+  { id: "f337", name: "Hummus (dip)",                  calories: 166, protein: 8,   carbs: 14, fats: 9.5, defaultQty: 100, defaultUnit: "g",      tags: ["vegan","vegetarian","middle-eastern","legume","fit"] },
+  { id: "f338", name: "Pita Bread",                    calories: 165, protein: 6,   carbs: 33, fats: 1.5, defaultQty: 1,   defaultUnit: "piece",  tags: ["vegan","vegetarian","middle-eastern"] },
+
+  // ── Seafood ───────────────────────────────────────────────────────────────
+  { id: "f340", name: "Shrimp / Prawns",               calories: 85,  protein: 18,  carbs: 0.9,fats: 0.9, defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","seafood","keto","fit"] },
+  { id: "f341", name: "Lobster",                       calories: 89,  protein: 19,  carbs: 0.5,fats: 0.9, defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","seafood","keto","fit"] },
+  { id: "f342", name: "Crab Meat",                     calories: 83,  protein: 18,  carbs: 0,  fats: 1,   defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","seafood","keto","fit"] },
+  { id: "f343", name: "Mussels (cooked)",              calories: 86,  protein: 12,  carbs: 3.7,fats: 2.2, defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","seafood","fit"] },
+  { id: "f344", name: "Clams (cooked)",                calories: 74,  protein: 13,  carbs: 2.6,fats: 1,   defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","seafood","fit"] },
+  { id: "f345", name: "Oysters (6 pieces)",            calories: 80,  protein: 9,   carbs: 5,  fats: 2,   defaultQty: 6,   defaultUnit: "pieces", tags: ["seafood","high-protein"] },
+  { id: "f346", name: "Scallops (seared)",             calories: 88,  protein: 17,  carbs: 3.2,fats: 0.8, defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","seafood","keto","fit"] },
+  { id: "f347", name: "Octopus (cooked)",              calories: 82,  protein: 15,  carbs: 2.2,fats: 1,   defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","seafood","keto","fit"] },
+  { id: "f348", name: "Squid / Calamari (raw)",        calories: 92,  protein: 15.6,carbs: 3.1,fats: 1.4, defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","seafood","fit"] },
+  { id: "f349", name: "Sea Bass (fillet)",             calories: 97,  protein: 18,  carbs: 0,  fats: 2,   defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","seafood","keto","fit"] },
+
+  // ── Meats (expanded) ─────────────────────────────────────────────────────
+  { id: "f350", name: "Veal Chop",                     calories: 172, protein: 26,  carbs: 0,  fats: 7,   defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","keto","fit","meat"] },
+  { id: "f351", name: "Lamb Chop",                     calories: 234, protein: 25,  carbs: 0,  fats: 15,  defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","keto","meat"] },
+  { id: "f352", name: "Duck Breast (skinless)",        calories: 201, protein: 19,  carbs: 0,  fats: 13.5,defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","keto","meat","high-fat"] },
+  { id: "f353", name: "Venison / Deer",                calories: 158, protein: 30,  carbs: 0,  fats: 3.2, defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","keto","fit","meat"] },
+  { id: "f354", name: "Rabbit",                        calories: 173, protein: 33,  carbs: 0,  fats: 3.5, defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","keto","fit","meat"] },
+  { id: "f355", name: "Bison / Buffalo",               calories: 146, protein: 28,  carbs: 0,  fats: 3,   defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","keto","fit","meat"] },
+  { id: "f356", name: "Turkey Breast (roasted)",       calories: 135, protein: 30,  carbs: 0,  fats: 1,   defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","keto","fit","meat"] },
+  { id: "f357", name: "Pork Loin (lean)",              calories: 182, protein: 25,  carbs: 0,  fats: 9,   defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","keto","meat"] },
+  { id: "f358", name: "Beef Liver",                    calories: 135, protein: 20,  carbs: 3.8,fats: 3.6, defaultQty: 100, defaultUnit: "g",      tags: ["high-protein","fit","meat"] },
+  { id: "f359", name: "Prosciutto (3 slices)",         calories: 85,  protein: 7,   carbs: 0.2,fats: 6,   defaultQty: 3,   defaultUnit: "slices", tags: ["high-protein","keto","meat","high-fat"] },
+
+  // ── Soups ─────────────────────────────────────────────────────────────────
+  { id: "f360", name: "Chicken Soup (bowl)",           calories: 75,  protein: 8,   carbs: 6,  fats: 2,   defaultQty: 1,   defaultUnit: "bowl",   tags: ["fit","soup","high-protein"] },
+  { id: "f361", name: "Tomato Soup",                   calories: 90,  protein: 2,   carbs: 14, fats: 3,   defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","soup"] },
+  { id: "f362", name: "Minestrone",                    calories: 95,  protein: 5,   carbs: 16, fats: 2,   defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","soup","legume"] },
+  { id: "f363", name: "Lentil Soup",                   calories: 130, protein: 9,   carbs: 22, fats: 1.5, defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","soup","legume","fit"] },
+  { id: "f364", name: "French Onion Soup (bowl)",      calories: 180, protein: 10,  carbs: 22, fats: 5,   defaultQty: 1,   defaultUnit: "bowl",   tags: ["vegetarian","soup"] },
+  { id: "f365", name: "Miso Soup",                     calories: 40,  protein: 3,   carbs: 5,  fats: 1,   defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","soup","fit","keto"] },
+  { id: "f366", name: "Ramen (bowl)",                  calories: 430, protein: 22,  carbs: 55, fats: 12,  defaultQty: 1,   defaultUnit: "bowl",   tags: ["soup"] },
+  { id: "f367", name: "Gazpacho (cold tomato soup)",   calories: 70,  protein: 2,   carbs: 12, fats: 2,   defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","soup","fit"] },
+  { id: "f368", name: "Pho (beef noodle soup)",        calories: 350, protein: 24,  carbs: 45, fats: 7,   defaultQty: 1,   defaultUnit: "bowl",   tags: ["soup","high-protein"] },
+  { id: "f369", name: "Cream of Mushroom Soup",        calories: 130, protein: 4,   carbs: 11, fats: 8,   defaultQty: 250, defaultUnit: "ml",     tags: ["vegetarian","soup","dairy"] },
+
+  // ── Cheeses ───────────────────────────────────────────────────────────────
+  { id: "f370", name: "Mozzarella (fresh)",            calories: 280, protein: 22,  carbs: 2.2,fats: 21,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-protein","cheese","keto"] },
+  { id: "f371", name: "Parmesan (grated)",             calories: 122, protein: 11,  carbs: 0.9,fats: 8,   defaultQty: 30,  defaultUnit: "g",      tags: ["vegetarian","dairy","high-protein","cheese","keto"] },
+  { id: "f372", name: "Cheddar (slice)",               calories: 120, protein: 7,   carbs: 0.4,fats: 10,  defaultQty: 30,  defaultUnit: "g",      tags: ["vegetarian","dairy","cheese","keto"] },
+  { id: "f373", name: "Brie",                          calories: 95,  protein: 5.9, carbs: 0.1,fats: 8,   defaultQty: 30,  defaultUnit: "g",      tags: ["vegetarian","dairy","cheese","keto"] },
+  { id: "f374", name: "Camembert",                     calories: 85,  protein: 5.5, carbs: 0.2,fats: 7,   defaultQty: 30,  defaultUnit: "g",      tags: ["vegetarian","dairy","cheese","keto"] },
+  { id: "f375", name: "Gouda",                         calories: 101, protein: 7,   carbs: 0.6,fats: 8,   defaultQty: 30,  defaultUnit: "g",      tags: ["vegetarian","dairy","cheese","keto"] },
+  { id: "f376", name: "Feta",                          calories: 264, protein: 14,  carbs: 4,  fats: 21,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-protein","cheese","keto"] },
+  { id: "f377", name: "Ricotta",                       calories: 174, protein: 11,  carbs: 3,  fats: 13,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","cheese"] },
+  { id: "f378", name: "Cottage Cheese",                calories: 98,  protein: 11,  carbs: 3.4,fats: 4.3, defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-protein","cheese","fit"] },
+  { id: "f379", name: "Cream Cheese",                  calories: 100, protein: 1.8, carbs: 1.2,fats: 10,  defaultQty: 30,  defaultUnit: "g",      tags: ["vegetarian","dairy","cheese","high-fat"] },
+  { id: "f380", name: "Swiss / Emmental",              calories: 117, protein: 8.5, carbs: 0.6,fats: 9,   defaultQty: 30,  defaultUnit: "g",      tags: ["vegetarian","dairy","cheese","keto"] },
+  { id: "f381", name: "Blue Cheese",                   calories: 100, protein: 6,   carbs: 0.7,fats: 8.5, defaultQty: 30,  defaultUnit: "g",      tags: ["vegetarian","dairy","cheese","keto"] },
+
+  // ── Sausages & Cured Meats ────────────────────────────────────────────────
+  { id: "f382", name: "Bratwurst",                     calories: 333, protein: 13,  carbs: 2,  fats: 30,  defaultQty: 100, defaultUnit: "g",      tags: ["meat","high-fat","sausage"] },
+  { id: "f383", name: "Chorizo (sliced)",              calories: 196, protein: 10,  carbs: 0.5,fats: 17,  defaultQty: 50,  defaultUnit: "g",      tags: ["meat","high-fat","sausage","keto"] },
+  { id: "f384", name: "Salami (4 slices)",             calories: 119, protein: 6.5, carbs: 0.6,fats: 10,  defaultQty: 30,  defaultUnit: "g",      tags: ["meat","high-fat","sausage","keto"] },
+  { id: "f385", name: "Pepperoni",                     calories: 149, protein: 6,   carbs: 0.9,fats: 13,  defaultQty: 30,  defaultUnit: "g",      tags: ["meat","high-fat","sausage","fast-food","keto"] },
+  { id: "f386", name: "Mortadella",                    calories: 150, protein: 8,   carbs: 1.5,fats: 13,  defaultQty: 50,  defaultUnit: "g",      tags: ["meat","high-fat","sausage"] },
+  { id: "f387", name: "Kielbasa (Polish sausage)",     calories: 301, protein: 13,  carbs: 3,  fats: 27,  defaultQty: 100, defaultUnit: "g",      tags: ["meat","high-fat","sausage"] },
+  { id: "f388", name: "Italian Sausage",               calories: 344, protein: 14,  carbs: 3,  fats: 31,  defaultQty: 100, defaultUnit: "g",      tags: ["meat","high-fat","sausage"] },
+  { id: "f389", name: "Blood Sausage / Morcilla",      calories: 379, protein: 14,  carbs: 2,  fats: 34,  defaultQty: 100, defaultUnit: "g",      tags: ["meat","high-fat","sausage"] },
+  { id: "f390", name: "Frankfurter / Hot Dog Sausage", calories: 173, protein: 7,   carbs: 2,  fats: 15,  defaultQty: 1,   defaultUnit: "piece",  tags: ["meat","high-fat","sausage","fast-food"] },
 ];
 
 /**

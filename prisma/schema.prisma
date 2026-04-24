@@ -27,6 +27,9 @@ model User {
   proteinMultiplier    Float    @default(2.0)
   trainingDaysPerWeek  Int?     // 1–7
   trainingHoursPerDay  Float?   // hours per session, e.g. 1.0, 1.5
+  injuries             String?  // JSON array of injury area strings, e.g. '["Lower Back","Knee"]'
+  periodStart          String?  // ISO date of most recent period start (females only)
+  cycleLength          Int?     // menstrual cycle length in days (default 28)
   createdAt            DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
