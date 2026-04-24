@@ -241,6 +241,82 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f228", name: "Protein Oatmeal",               calories: 380, protein: 32,  carbs: 52, fats: 8,   defaultQty: 1,   defaultUnit: "serving",tags: ["high-protein","fit","integral","vegetarian","mix"] },
   { id: "f229", name: "Chicken & Rice Bowl",           calories: 195, protein: 22,  carbs: 19, fats: 3,   defaultQty: 1,   defaultUnit: "bowl",   tags: ["fit","high-protein","mix"] },
   { id: "f230", name: "Veggie Stir-Fry (no sauce)",   calories: 65,  protein: 3,   carbs: 10, fats: 2,   defaultQty: 200, defaultUnit: "g",      tags: ["vegan","vegetarian","fit","low-carb","mix","vegetable"] },
+
+  // ── Fast Food & Burgers ───────────────────────────────────────────────────
+  { id: "f240", name: "Big Mac",                       calories: 550, protein: 25,  carbs: 45, fats: 30,  defaultQty: 1,   defaultUnit: "burger", tags: ["fast-food","high-fat"] },
+  { id: "f241", name: "Cheeseburger (basic)",          calories: 300, protein: 16,  carbs: 28, fats: 14,  defaultQty: 1,   defaultUnit: "burger", tags: ["fast-food","high-fat"] },
+  { id: "f242", name: "Double Cheeseburger",           calories: 440, protein: 25,  carbs: 35, fats: 23,  defaultQty: 1,   defaultUnit: "burger", tags: ["fast-food","high-fat"] },
+  { id: "f243", name: "Quarter Pounder w/ Cheese",    calories: 520, protein: 30,  carbs: 41, fats: 26,  defaultQty: 1,   defaultUnit: "burger", tags: ["fast-food","high-fat"] },
+  { id: "f244", name: "Chicken Burger (crispy)",       calories: 490, protein: 27,  carbs: 42, fats: 22,  defaultQty: 1,   defaultUnit: "burger", tags: ["fast-food","high-fat"] },
+  { id: "f245", name: "Fish Burger",                   calories: 380, protein: 16,  carbs: 38, fats: 18,  defaultQty: 1,   defaultUnit: "burger", tags: ["fast-food"] },
+  { id: "f246", name: "Veggie Burger",                 calories: 390, protein: 14,  carbs: 44, fats: 17,  defaultQty: 1,   defaultUnit: "burger", tags: ["fast-food","vegetarian"] },
+  { id: "f247", name: "Hot Dog (with bun)",            calories: 290, protein: 11,  carbs: 24, fats: 17,  defaultQty: 1,   defaultUnit: "hotdog", tags: ["fast-food","high-fat"] },
+  { id: "f248", name: "Chicken Nuggets (6 pcs)",       calories: 280, protein: 15,  carbs: 18, fats: 17,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food","high-fat"] },
+  { id: "f249", name: "Fried Chicken Piece",           calories: 260, protein: 23,  carbs: 10, fats: 15,  defaultQty: 1,   defaultUnit: "piece",  tags: ["fast-food","high-fat"] },
+  { id: "f250", name: "Hot Wings (6 pcs)",             calories: 310, protein: 25,  carbs: 8,  fats: 20,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food","high-fat"] },
+  { id: "f251", name: "Onion Rings (small)",           calories: 276, protein: 4,   carbs: 31, fats: 16,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food","high-fat","vegan","vegetarian"] },
+  { id: "f252", name: "Nachos with Cheese",            calories: 346, protein: 9,   carbs: 36, fats: 19,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food","high-fat","vegetarian"] },
+  { id: "f253", name: "Burrito (beef & bean)",         calories: 490, protein: 22,  carbs: 56, fats: 18,  defaultQty: 1,   defaultUnit: "large",  tags: ["fast-food","high-fat"] },
+  { id: "f254", name: "Quesadilla (cheese)",           calories: 370, protein: 16,  carbs: 32, fats: 20,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food","high-fat","vegetarian"] },
+  { id: "f255", name: "Taco (ground beef)",            calories: 170, protein: 10,  carbs: 14, fats: 8,   defaultQty: 1,   defaultUnit: "taco",   tags: ["fast-food"] },
+  { id: "f256", name: "Milkshake (chocolate)",         calories: 430, protein: 10,  carbs: 68, fats: 14,  defaultQty: 1,   defaultUnit: "large",  tags: ["fast-food","high-sugar","dairy"] },
+  { id: "f257", name: "Milkshake (vanilla)",           calories: 390, protein: 10,  carbs: 61, fats: 13,  defaultQty: 1,   defaultUnit: "large",  tags: ["fast-food","high-sugar","dairy"] },
+  { id: "f258", name: "Corn Dog",                      calories: 250, protein: 10,  carbs: 28, fats: 12,  defaultQty: 1,   defaultUnit: "piece",  tags: ["fast-food"] },
+  { id: "f259", name: "Gyro / Doner Kebab",            calories: 490, protein: 26,  carbs: 44, fats: 22,  defaultQty: 1,   defaultUnit: "serving",tags: ["fast-food"] },
+
+  // ── Pizza Varieties ───────────────────────────────────────────────────────
+  { id: "f260", name: "Margherita Pizza (slice)",      calories: 272, protein: 13,  carbs: 34, fats: 10,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","vegetarian"] },
+  { id: "f261", name: "Pepperoni Pizza (slice)",       calories: 298, protein: 14,  carbs: 34, fats: 13,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","high-fat"] },
+  { id: "f262", name: "Four Cheese Pizza (slice)",     calories: 322, protein: 16,  carbs: 34, fats: 14,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","high-fat","vegetarian"] },
+  { id: "f263", name: "Veggie Supreme Pizza (slice)",  calories: 248, protein: 11,  carbs: 35, fats: 8,   defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","vegetarian"] },
+  { id: "f264", name: "BBQ Chicken Pizza (slice)",     calories: 290, protein: 16,  carbs: 36, fats: 10,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food"] },
+  { id: "f265", name: "Hawaiian Pizza (slice)",        calories: 255, protein: 12,  carbs: 35, fats: 9,   defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food"] },
+  { id: "f266", name: "Meat Lovers Pizza (slice)",     calories: 370, protein: 18,  carbs: 33, fats: 18,  defaultQty: 1,   defaultUnit: "slice",  tags: ["fast-food","high-fat"] },
+  { id: "f267", name: "Calzone (cheese & ham)",        calories: 680, protein: 32,  carbs: 72, fats: 28,  defaultQty: 1,   defaultUnit: "medium", tags: ["fast-food","high-fat"] },
+
+  // ── Greek Yogurts ─────────────────────────────────────────────────────────
+  { id: "f270", name: "Greek Yogurt (full fat, plain)",calories: 97,  protein: 9,   carbs: 4,  fats: 5,   defaultQty: 150, defaultUnit: "g",      tags: ["vegetarian","dairy","fit"] },
+  { id: "f271", name: "Greek Yogurt (honey)",          calories: 120, protein: 8,   carbs: 18, fats: 2.5, defaultQty: 150, defaultUnit: "g",      tags: ["vegetarian","dairy"] },
+  { id: "f272", name: "Greek Yogurt (strawberry)",     calories: 100, protein: 7.5, carbs: 15, fats: 1.5, defaultQty: 150, defaultUnit: "g",      tags: ["vegetarian","dairy"] },
+  { id: "f273", name: "Greek Yogurt (vanilla)",        calories: 105, protein: 8,   carbs: 16, fats: 2,   defaultQty: 150, defaultUnit: "g",      tags: ["vegetarian","dairy"] },
+  { id: "f274", name: "Greek Yogurt (peach)",          calories: 98,  protein: 7.5, carbs: 14, fats: 1.5, defaultQty: 150, defaultUnit: "g",      tags: ["vegetarian","dairy"] },
+  { id: "f275", name: "Greek Yogurt (blueberry)",      calories: 102, protein: 7.5, carbs: 15, fats: 2,   defaultQty: 150, defaultUnit: "g",      tags: ["vegetarian","dairy"] },
+  { id: "f276", name: "Greek Yogurt (high protein, 0%)",calories: 59, protein: 10,  carbs: 4,  fats: 0.4, defaultQty: 200, defaultUnit: "g",      tags: ["fit","high-protein","vegetarian","dairy"] },
+
+  // ── Ice Cream & Frozen Desserts ───────────────────────────────────────────
+  { id: "f280", name: "Vanilla Ice Cream",             calories: 207, protein: 3.5, carbs: 23, fats: 11,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-sugar","dessert"] },
+  { id: "f281", name: "Chocolate Ice Cream",           calories: 216, protein: 3.8, carbs: 25, fats: 11,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-sugar","dessert"] },
+  { id: "f282", name: "Strawberry Ice Cream",          calories: 192, protein: 3.2, carbs: 24, fats: 9,   defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-sugar","dessert"] },
+  { id: "f283", name: "Gelato (vanilla/chocolate)",    calories: 175, protein: 4,   carbs: 27, fats: 6,   defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-sugar","dessert"] },
+  { id: "f284", name: "Frozen Yogurt (plain)",         calories: 127, protein: 4,   carbs: 22, fats: 3,   defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-sugar","dessert"] },
+  { id: "f285", name: "Ice Cream Bar (chocolate coat)",calories: 280, protein: 3.5, carbs: 26, fats: 18,  defaultQty: 1,   defaultUnit: "bar",    tags: ["vegetarian","dairy","high-sugar","high-fat","dessert"] },
+  { id: "f286", name: "Sorbet (fruit, mixed)",         calories: 130, protein: 0.5, carbs: 33, fats: 0.1, defaultQty: 100, defaultUnit: "g",      tags: ["vegan","vegetarian","high-sugar","dessert"] },
+  { id: "f287", name: "Popsicle / Ice Lolly",         calories: 45,  protein: 0.5, carbs: 11, fats: 0,   defaultQty: 1,   defaultUnit: "piece",  tags: ["vegan","vegetarian","dessert"] },
+
+  // ── Cakes, Pastries & Desserts ────────────────────────────────────────────
+  { id: "f290", name: "Cheesecake (slice)",            calories: 320, protein: 6,   carbs: 32, fats: 20,  defaultQty: 1,   defaultUnit: "slice",  tags: ["vegetarian","dairy","high-fat","high-sugar","dessert"] },
+  { id: "f291", name: "Chocolate Cake (slice)",        calories: 370, protein: 5,   carbs: 54, fats: 16,  defaultQty: 1,   defaultUnit: "slice",  tags: ["vegetarian","dairy","high-sugar","dessert"] },
+  { id: "f292", name: "Carrot Cake (slice)",           calories: 340, protein: 4,   carbs: 49, fats: 16,  defaultQty: 1,   defaultUnit: "slice",  tags: ["vegetarian","high-sugar","dessert"] },
+  { id: "f293", name: "Tiramisu",                      calories: 283, protein: 6,   carbs: 30, fats: 16,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-fat","high-sugar","dessert"] },
+  { id: "f294", name: "Brownie (chocolate)",           calories: 410, protein: 5,   carbs: 57, fats: 20,  defaultQty: 1,   defaultUnit: "piece",  tags: ["vegetarian","high-sugar","high-fat","dessert"] },
+  { id: "f295", name: "Chocolate Chip Cookie",         calories: 148, protein: 2,   carbs: 20, fats: 7,   defaultQty: 2,   defaultUnit: "cookies",tags: ["vegetarian","high-sugar","dessert"] },
+  { id: "f296", name: "Muffin (blueberry)",            calories: 430, protein: 5,   carbs: 65, fats: 18,  defaultQty: 1,   defaultUnit: "large",  tags: ["vegetarian","high-sugar","dessert"] },
+  { id: "f297", name: "Donut (glazed)",                calories: 452, protein: 5,   carbs: 57, fats: 25,  defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian","high-sugar","high-fat","dessert","fast-food"] },
+  { id: "f298", name: "Pancakes (stack of 3)",         calories: 350, protein: 9,   carbs: 52, fats: 12,  defaultQty: 1,   defaultUnit: "serving",tags: ["vegetarian","high-sugar","dessert"] },
+  { id: "f299", name: "Waffle (standard)",             calories: 310, protein: 7,   carbs: 43, fats: 13,  defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian","dessert"] },
+  { id: "f300", name: "Crêpe (plain, no filling)",     calories: 112, protein: 4,   carbs: 12, fats: 5,   defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian","dessert"] },
+  { id: "f301", name: "Apple Pie (slice)",             calories: 296, protein: 3,   carbs: 43, fats: 14,  defaultQty: 1,   defaultUnit: "slice",  tags: ["vegetarian","high-sugar","dessert"] },
+  { id: "f302", name: "Chocolate Mousse",              calories: 245, protein: 5,   carbs: 22, fats: 16,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-fat","dessert"] },
+  { id: "f303", name: "Panna Cotta",                   calories: 218, protein: 4,   carbs: 22, fats: 13,  defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","dessert"] },
+  { id: "f304", name: "Croissant (plain, butter)",     calories: 406, protein: 9,   carbs: 46, fats: 21,  defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian","high-fat","dessert"] },
+  { id: "f305", name: "Cinnamon Roll",                 calories: 420, protein: 7,   carbs: 59, fats: 18,  defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian","high-sugar","high-fat","dessert"] },
+  { id: "f306", name: "Éclair (chocolate)",            calories: 262, protein: 6,   carbs: 29, fats: 14,  defaultQty: 1,   defaultUnit: "piece",  tags: ["vegetarian","dairy","high-sugar","dessert"] },
+  { id: "f307", name: "Baklava (2 pieces)",            calories: 290, protein: 4,   carbs: 36, fats: 15,  defaultQty: 1,   defaultUnit: "serving",tags: ["vegetarian","high-sugar","dessert"] },
+  { id: "f308", name: "Pudding (chocolate, ready-made)",calories: 130, protein: 3,  carbs: 22, fats: 4,   defaultQty: 100, defaultUnit: "g",      tags: ["vegetarian","dairy","high-sugar","dessert"] },
+
+  // ── Breakfast items ───────────────────────────────────────────────────────
+  { id: "f310", name: "French Toast (2 slices)",       calories: 330, protein: 12,  carbs: 40, fats: 14,  defaultQty: 1,   defaultUnit: "serving",tags: ["vegetarian","dessert"] },
+  { id: "f311", name: "Cereal with Milk (bowl)",       calories: 260, protein: 9,   carbs: 44, fats: 5,   defaultQty: 1,   defaultUnit: "bowl",   tags: ["vegetarian","dairy"] },
 ];
 
 /**

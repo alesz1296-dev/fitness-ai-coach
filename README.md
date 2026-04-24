@@ -191,7 +191,4 @@ Before deploying publicly, the current architecture should be hardened with:
 
 ## Notes
 
-- The canonical Prisma schema is `prisma/schema.prisma`
-- After schema changes, run `npx prisma generate`
-- JWT revocation and rate limiting are currently in-memory
-- `CONTEXT.md` contains the most detailed project architecture reference
+- The canonical Prisma schema is `prisma

@@ -213,5 +213,4 @@ npx prisma generate && npx prisma migrate dev
 - `WeeklyPlanWidget` will crash if the `WeeklyPlan` migration hasn't been run — it has a try/catch that shows a migration reminder
 - Token blocklist is in-memory — cleared on server restart, so recently logged-out refresh tokens become temporarily valid again
 - `meal` field on `FoodLog`: typed as `"breakfast" | "lunch" | "dinner" | "snack" | null` — never pass a plain `string`
-- Food DB stores nutrition per 100g. Use `calcMacro(valuePer100g, qty, unit, defaultQty)` in `NutritionPage.tsx` — the unit-aware formula differs for weight vs count-based units
-- Onboarding wizard is suppressed by `localStorage.fitai_onboarded_${userId}`. Clear that key to re-trigger it during testing
+- Food DB stores nutrition per 100g. Use `calcMacro(valuePer100g, qty, unit, defaultQty)` i

@@ -264,7 +264,4 @@ Most recent session first.
 - **Meal field dropped** (backend): `meal` added to destructuring and Prisma `create`/`update` in `foodController.ts`.
 - **AI structured output broken**: System prompts updated to embed `workout-json` / `nutrition-json` fenced blocks. Backend extracts and returns them as `suggestedWorkout` / `suggestedPlan`.
 - **Report controller column drift**: Rewrote with correct Prisma field names. N+1 PR detection replaced with 2-query batched `groupBy`.
-- **Stale files deleted**: Root `schema.prisma` (conflicted with `prisma/schema.prisma`) and `tsconfig.ts` (CommonJS config, shadowed `tsconfig.json`).
-- **Auth error messages**: Register shows field-level Zod errors inline; login shows specific messages for 401, 429, and network errors.
-
----
+- **Stale files deleted**: R

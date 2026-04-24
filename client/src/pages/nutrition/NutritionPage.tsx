@@ -26,6 +26,34 @@ const COOKING_OILS: Record<string, { label: string; kcal: number; fat: number }>
   oil_tbsp:      { label: "Oil – 1 tbsp",       kcal: 106, fat: 12.0 },
 };
 
+// Breading presets — kcal and carbs added on top of the food's macros (per serving coated)
+const BREADING_OPTIONS: Record<string, { label: string; kcal: number; carbs: number; fat: number }> = {
+  none:          { label: "No breading",                  kcal: 0,  carbs: 0,  fat: 0   },
+  flour_light:   { label: "Flour coat (light dusting)",   kcal: 28, carbs: 6,  fat: 0.3 },
+  breadcrumbs:   { label: "Breadcrumbs (standard)",       kcal: 65, carbs: 13, fat: 1   },
+  panko:         { label: "Panko breadcrumbs",            kcal: 60, carbs: 12, fat: 0.8 },
+  beer_batter:   { label: "Beer batter",                  kcal: 90, carbs: 16, fat: 3   },
+  tempura:       { label: "Tempura batter",               kcal: 75, carbs: 14, fat: 2.5 },
+  cornmeal:      { label: "Cornmeal / polenta crust",     kcal: 55, carbs: 12, fat: 0.5 },
+};
+
+// Quantity reference — common household measures → approximate grams
+const UNIT_REFERENCE: { unit: string; approxG: number; note: string }[] = [
+  { unit: "1 teaspoon (tsp)",   approxG: 5,   note: "liquids / powders" },
+  { unit: "1 tablespoon (tbsp)",approxG: 15,  note: "liquids / powders" },
+  { unit: "1 cup",              approxG: 240, note: "liquids ≈ 240 ml; flour ≈ 120g; oats ≈ 90g" },
+  { unit: "1 bowl",             approxG: 300, note: "cereal/soup bowl — varies 250–400 g" },
+  { unit: "1 glass",            approxG: 250, note: "standard drinking glass ≈ 250 ml" },
+  { unit: "1 handful",          approxG: 35,  note: "nuts/seeds — small hand ~30g, large ~40g" },
+  { unit: "1 scoop (ice cream)",approxG: 90,  note: "standard ice-cream scoop" },
+  { unit: "1 scoop (protein)",  approxG: 30,  note: "typical protein powder scoop" },
+  { unit: "1 plate (main)",     approxG: 350, note: "full meal plate — varies widely" },
+  { unit: "1 slice (bread)",    approxG: 30,  note: "standard sandwich slice" },
+  { unit: "1 slice (cake/pie)", approxG: 100, note: "roughly 1/8 of a 9-inch cake" },
+  { unit: "1 egg (large)",      approxG: 60,  note: "whole egg with shell ≈ 60g; shelled ≈ 50g" },
+  { unit: "1 can (tuna/beans)", approxG: 240, note: "drained net weight ≈ 150–170g" },
+];
+
 const MEAL_ICONS: Record<string, string> = {
   breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎",
 };
@@ -60,12 +88,19 @@ const TAG_FILTERS = [
   { tag: "vegan",        label: "Vegan",        emoji: "🌱" },
   { tag: "vegetarian",   label: "Vegetarian",   emoji: "🥦" },
   { tag: "integral",     label: "Whole Grain",  emoji: "🌾" },
+  { tag: "fast-food",    label: "Fast Food",    emoji: "🍔" },
+  { tag: "dessert",      label: "Desserts",     emoji: "🍰" },
+  { tag: "high-sugar",   label: "High-Sugar",   emoji: "🍬" },
 ];
 
 const TAG_COLORS: Record<string, string> = {
   keto:           "bg-yellow-100 text-yellow-700",
   fit:            "bg-blue-100 text-blue-700",
   "high-protein": "bg-red-100 text-red-700",
+  "fast-food":    "bg-orange-100 text-orange-700",
+  "high-fat":     "bg-rose-100 text-rose-700",
+  "high-sugar":   "bg-pink-100 text-pink-700",
+  dessert:        "bg-purple-100 text-purple-700",
   vegan:          "bg-green-100 text-green-700",
   vegetarian:     "bg-emerald-100 text-emerald-700",
   integral:       "bg-amber-100 text-amber-700",
@@ -193,7 +228,9 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   const [meal,     setMeal]     = useState<"breakfast" | "lunch" | "dinner" | "snack" | "">(
     (editItem?.meal as "breakfast" | "lunch" | "dinner" | "snack" | undefined) ?? ""
   );
-  const [cookingOil, setCookingOil] = useState<keyof typeof COOKING_OILS>("none");
+  const [cookingOil,  setCookingOil]  = useState<keyof typeof COOKING_OILS>("none");
+  const [breading,    setBreading]    = useState<keyof typeof BREADING_OPTIONS>("none");
+  const [showUnitRef, setShowUnitRef] = useState(false);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
 
@@ -236,13 +273,17 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
 
     setLoading(true); setError("");
     try {
-      const oil = COOKING_OILS[cookingOil];
+      const oil   = COOKING_OILS[cookingOil];
+      const bread = BREADING_OPTIONS[breading];
+      const extraKcal  = oil.kcal  + bread.kcal;
+      const extraCarbs = bread.carbs;
+      const extraFat   = oil.fat   + bread.fat;
       const payload = {
         foodName: foodName.trim(),
-        calories: Math.round(Number(calories) + oil.kcal),
+        calories: Math.round(Number(calories) + extraKcal),
         protein:  protein ? Number(protein) : undefined,
-        carbs:    carbs   ? Number(carbs)   : undefined,
-        fats:     fats    ? Math.round((Number(fats) + oil.fat) * 10) / 10 : oil.fat > 0 ? oil.fat : undefined,
+        carbs:    carbs   ? Math.round((Number(carbs) + extraCarbs) * 10) / 10 : extraCarbs > 0 ? extraCarbs : undefined,
+        fats:     fats    ? Math.round((Number(fats) + extraFat) * 10) / 10 : extraFat > 0 ? extraFat : undefined,
         quantity: Number(quantity),
         unit:     unit.trim(),
         meal:     meal || undefined,
@@ -297,6 +338,39 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
         />
       </div>
 
+      {/* Quantity reference */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowUnitRef((v) => !v)}
+          className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
+        >
+          📏 {showUnitRef ? "Hide" : "Show"} unit reference (spoon, cup, bowl…)
+        </button>
+        {showUnitRef && (
+          <div className="mt-2 border border-gray-100 rounded-xl overflow-hidden text-xs">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 text-gray-400 text-left">
+                  <th className="px-3 py-1.5 font-medium">Unit</th>
+                  <th className="px-3 py-1.5 font-medium">≈ grams</th>
+                  <th className="px-3 py-1.5 font-medium hidden sm:table-cell">Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {UNIT_REFERENCE.map((r) => (
+                  <tr key={r.unit} className="border-t border-gray-50">
+                    <td className="px-3 py-1.5 text-gray-700 font-medium">{r.unit}</td>
+                    <td className="px-3 py-1.5 text-gray-500">~{r.approxG}g</td>
+                    <td className="px-3 py-1.5 text-gray-400 hidden sm:table-cell">{r.note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Macro fields — auto-filled from search, editable */}
       <div className="grid grid-cols-4 gap-2">
         <Input label="Calories" type="number" min="0" value={calories} onChange={(e) => setCalories(e.target.value)} />
@@ -311,16 +385,30 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
         </p>
       )}
 
-      {/* Cooking oil — adds its kcal/fat on top of food macros at save time */}
-      <Select
-        label="Cooking oil"
-        value={cookingOil}
-        onChange={(e) => setCookingOil(e.target.value as keyof typeof COOKING_OILS)}
-        options={Object.entries(COOKING_OILS).map(([v, o]) => ({ value: v, label: o.label }))}
-      />
-      {cookingOil !== "none" && (
+      {/* Cooking additions row */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Select
+            label="Cooking oil"
+            value={cookingOil}
+            onChange={(e) => setCookingOil(e.target.value as keyof typeof COOKING_OILS)}
+            options={Object.entries(COOKING_OILS).map(([v, o]) => ({ value: v, label: o.label }))}
+          />
+        </div>
+        <div>
+          <Select
+            label="Breading / coating"
+            value={breading}
+            onChange={(e) => setBreading(e.target.value as keyof typeof BREADING_OPTIONS)}
+            options={Object.entries(BREADING_OPTIONS).map(([v, o]) => ({ value: v, label: o.label }))}
+          />
+        </div>
+      </div>
+      {(cookingOil !== "none" || breading !== "none") && (
         <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-          +{COOKING_OILS[cookingOil].kcal} kcal · +{COOKING_OILS[cookingOil].fat}g fat will be added when saved
+          Cooking additions: +{COOKING_OILS[cookingOil].kcal + BREADING_OPTIONS[breading].kcal} kcal
+          {" · "}+{BREADING_OPTIONS[breading].carbs}g carbs
+          {" · "}+{(COOKING_OILS[cookingOil].fat + BREADING_OPTIONS[breading].fat).toFixed(1)}g fat — added at save
         </p>
       )}
 
@@ -770,6 +858,227 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
   );
 }
 
+// ── Bowl / Dish builder ───────────────────────────────────────────────────────
+interface DishIngredient {
+  food: any;
+  qty: number;
+  unit: string;
+  cal: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+}
+
+function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
+  open: boolean; onClose: () => void; selectedDate: string; onSaved: () => void;
+}) {
+  const [dishName,     setDishName]     = useState("");
+  const [ingredients,  setIngredients]  = useState<DishIngredient[]>([]);
+  const [meal,         setMeal]         = useState<string>("");
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState("");
+  const [logSeparate,  setLogSeparate]  = useState(false); // log each ingredient individually vs as one dish
+
+  // Temp ingredient being built
+  const [selFood,   setSelFood]   = useState<any | null>(null);
+  const [selQty,    setSelQty]    = useState("100");
+  const [selUnit,   setSelUnit]   = useState("g");
+
+  const totals = ingredients.reduce(
+    (acc, i) => ({ cal: acc.cal + i.cal, protein: acc.protein + i.protein, carbs: acc.carbs + i.carbs, fats: acc.fats + i.fats }),
+    { cal: 0, protein: 0, carbs: 0, fats: 0 }
+  );
+
+  const addIngredient = () => {
+    if (!selFood || !selQty || Number(selQty) <= 0) return;
+    const qty = Number(selQty);
+    const ing: DishIngredient = {
+      food:    selFood,
+      qty,
+      unit:    selUnit,
+      cal:     calcMacro(selFood.calories, qty, selUnit, selFood.defaultQty),
+      protein: calcMacro(selFood.protein,  qty, selUnit, selFood.defaultQty),
+      carbs:   calcMacro(selFood.carbs,    qty, selUnit, selFood.defaultQty),
+      fats:    calcMacro(selFood.fats,     qty, selUnit, selFood.defaultQty),
+    };
+    setIngredients((prev) => [...prev, ing]);
+    setSelFood(null); setSelQty("100"); setSelUnit("g");
+  };
+
+  const removeIngredient = (idx: number) => setIngredients((prev) => prev.filter((_, i) => i !== idx));
+
+  const saveDish = async () => {
+    if (ingredients.length === 0) { setError("Add at least one ingredient"); return; }
+    const name = dishName.trim() || "Custom Dish";
+    setLoading(true); setError("");
+    try {
+      type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+      const typedMeal = (meal || undefined) as MealType | undefined;
+      if (logSeparate) {
+        // Log each ingredient as a separate FoodLog
+        const items = ingredients.map((ing) => ({
+          foodName: ing.food.name,
+          calories: ing.cal,
+          protein:  ing.protein,
+          carbs:    ing.carbs,
+          fats:     ing.fats,
+          quantity: ing.qty,
+          unit:     ing.unit,
+          meal:     typedMeal,
+        }));
+        await foodApi.bulk(items, selectedDate);
+      } else {
+        // Log as a single combined entry
+        await foodApi.log({
+          foodName: name,
+          calories: Math.round(totals.cal),
+          protein:  Math.round(totals.protein * 10) / 10,
+          carbs:    Math.round(totals.carbs   * 10) / 10,
+          fats:     Math.round(totals.fats    * 10) / 10,
+          quantity: 1,
+          unit:     "serving",
+          meal:     typedMeal,
+          date:     selectedDate,
+        });
+      }
+      onSaved(); onClose();
+      setIngredients([]); setDishName(""); setMeal("");
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Failed to save dish");
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="🥣 Build a Dish / Bowl" size="lg">
+      <div className="space-y-4">
+        {/* Dish name */}
+        <Input
+          label="Dish name"
+          value={dishName}
+          onChange={(e) => setDishName(e.target.value)}
+          placeholder="e.g. My Protein Bowl, Chicken Salad…"
+        />
+
+        {/* Add ingredient */}
+        <div className="border border-gray-100 rounded-xl p-4 space-y-3 bg-gray-50">
+          <p className="text-sm font-medium text-gray-700">Add ingredient</p>
+          <FoodSearch onSelect={(f) => { setSelFood(f); setSelUnit(f.defaultUnit); setSelQty(String(f.defaultQty)); }} />
+          {selFood && (
+            <div className="flex items-end gap-2 flex-wrap">
+              <div className="flex-1 min-w-24">
+                <p className="text-xs text-gray-500 mb-1 font-medium">{selFood.name}</p>
+                <div className="flex gap-2">
+                  <Input
+                    label="Qty"
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={selQty}
+                    onChange={(e) => setSelQty(e.target.value)}
+                    className="w-24"
+                  />
+                  <Input
+                    label="Unit"
+                    value={selUnit}
+                    onChange={(e) => setSelUnit(e.target.value)}
+                    placeholder="g"
+                    className="w-20"
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  → {calcMacro(selFood.calories, Number(selQty)||0, selUnit, selFood.defaultQty)} kcal ·
+                  P:{calcMacro(selFood.protein, Number(selQty)||0, selUnit, selFood.defaultQty)}g ·
+                  C:{calcMacro(selFood.carbs,   Number(selQty)||0, selUnit, selFood.defaultQty)}g ·
+                  F:{calcMacro(selFood.fats,    Number(selQty)||0, selUnit, selFood.defaultQty)}g
+                </p>
+              </div>
+              <Button size="sm" onClick={addIngredient} className="mb-0.5">+ Add</Button>
+            </div>
+          )}
+        </div>
+
+        {/* Ingredients list */}
+        {ingredients.length > 0 && (
+          <div className="border border-gray-100 rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="text-left px-3 py-2 text-xs text-gray-400 font-medium">Ingredient</th>
+                  <th className="text-right px-2 py-2 text-xs text-gray-400 font-medium">Kcal</th>
+                  <th className="text-right px-2 py-2 text-xs text-gray-400 font-medium">P</th>
+                  <th className="text-right px-2 py-2 text-xs text-gray-400 font-medium">C</th>
+                  <th className="text-right px-2 py-2 text-xs text-gray-400 font-medium">F</th>
+                  <th className="w-8" />
+                </tr>
+              </thead>
+              <tbody>
+                {ingredients.map((ing, idx) => (
+                  <tr key={idx} className="border-b border-gray-50">
+                    <td className="px-3 py-2 text-gray-700 text-xs">
+                      {ing.food.name}
+                      <span className="text-gray-400 ml-1">({ing.qty} {ing.unit})</span>
+                    </td>
+                    <td className="px-2 py-2 text-right text-xs font-semibold">{ing.cal}</td>
+                    <td className="px-2 py-2 text-right text-xs text-blue-600">{ing.protein}g</td>
+                    <td className="px-2 py-2 text-right text-xs text-yellow-600">{ing.carbs}g</td>
+                    <td className="px-2 py-2 text-right text-xs text-red-500">{ing.fats}g</td>
+                    <td className="px-2 py-2 text-center">
+                      <button onClick={() => removeIngredient(idx)} className="text-gray-300 hover:text-red-400 text-xs">✕</button>
+                    </td>
+                  </tr>
+                ))}
+                {/* Totals row */}
+                <tr className="bg-brand-50 font-semibold text-sm border-t border-brand-100">
+                  <td className="px-3 py-2 text-brand-700">Total</td>
+                  <td className="px-2 py-2 text-right text-brand-800">{Math.round(totals.cal)}</td>
+                  <td className="px-2 py-2 text-right text-blue-700">{Math.round(totals.protein)}g</td>
+                  <td className="px-2 py-2 text-right text-yellow-700">{Math.round(totals.carbs)}g</td>
+                  <td className="px-2 py-2 text-right text-red-600">{Math.round(totals.fats)}g</td>
+                  <td />
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Meal selector + log mode */}
+        <div className="grid grid-cols-2 gap-3">
+          <Select
+            label="Meal"
+            value={meal}
+            onChange={(e) => setMeal(e.target.value)}
+            options={MEAL_OPTIONS}
+            placeholder="Select meal (optional)"
+          />
+          <div className="flex flex-col justify-end">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 mb-1.5">
+              <input
+                type="checkbox"
+                checked={logSeparate}
+                onChange={(e) => setLogSeparate(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              Log ingredients separately
+            </label>
+            <p className="text-xs text-gray-400">
+              {logSeparate ? "Each ingredient logged individually" : "Logged as one combined dish entry"}
+            </p>
+          </div>
+        </div>
+
+        {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+
+        <div className="flex gap-2 pt-2 border-t border-gray-100">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button className="flex-1" loading={loading} onClick={saveDish} disabled={ingredients.length === 0}>
+            Log {logSeparate ? `${ingredients.length} items` : "Dish"}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Fasting timer helpers ─────────────────────────────────────────────────────
 function formatFastingDuration(ms: number): string {
   const totalMin = Math.floor(ms / 60000);
@@ -789,6 +1098,7 @@ export default function NutritionPage() {
   const [editItem,    setEditItem]    = useState<FoodLog | null>(null);
   const [deleting,    setDeleting]    = useState<number | null>(null);
   const [showMealPlan, setShowMealPlan] = useState(false);
+  const [showDish,     setShowDish]     = useState(false);
   const [activeGoal,  setActiveGoal]  = useState<CalorieGoal | null>(null);
   const [macroView,   setMacroView]   = useState<"distribution" | "breakdown" | "by-meal" | "goals">("distribution");
 
@@ -916,6 +1226,14 @@ export default function NutritionPage() {
             title={fastingActive ? "End fasting window" : "Start fasting timer"}
           >
             {fastingActive ? "⏸ End Fast" : "⏱ Start Fast"}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowDish(true)}
+            title="Build a dish or bowl from multiple ingredients"
+          >
+            🥣 Build a Dish
           </Button>
           <Button onClick={() => { setEditItem(null); setShowForm(true); }}>+ Log Food</Button>
         </div>
@@ -1236,6 +1554,14 @@ export default function NutritionPage() {
         onClose={() => setShowMealPlan(false)}
         selectedDate={date}
         onLogged={() => load()}
+      />
+
+      {/* Bowl / dish builder modal */}
+      <BuildDishModal
+        open={showDish}
+        onClose={() => setShowDish(false)}
+        selectedDate={date}
+        onSaved={() => { setShowDish(false); load(); }}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
@@ -11,6 +11,278 @@ import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { Textarea } from "../../components/ui/Textarea";
 import { Badge } from "../../components/ui/Badge";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MET Activity data (Compendium of Physical Activities, Ainsworth et al.)
+// ─────────────────────────────────────────────────────────────────────────────
+interface METActivity {
+  id: string; name: string; category: "weights" | "cardio" | "sports" | "daily";
+  icon: string; met: number; intensity: string; notes?: string;
+}
+const MET_ACTIVITIES: METActivity[] = [
+  // Weights
+  { id: "weights_general",   name: "Weight training (general)",    category: "weights", icon: "🏋️",  met: 3.5,  intensity: "moderate" },
+  { id: "weights_vigorous",  name: "Weight training (vigorous)",   category: "weights", icon: "🏋️",  met: 6.0,  intensity: "vigorous" },
+  { id: "circuit_training",  name: "Circuit training",             category: "weights", icon: "🔄",  met: 8.0,  intensity: "high"     },
+  { id: "powerlifting",      name: "Powerlifting",                 category: "weights", icon: "💪",  met: 6.0,  intensity: "vigorous" },
+  { id: "crossfit",          name: "CrossFit / HIIT weights",      category: "weights", icon: "⚡",  met: 8.0,  intensity: "very high" },
+  { id: "bodyweight",        name: "Calisthenics / bodyweight",    category: "weights", icon: "🤸",  met: 3.8,  intensity: "moderate" },
+  // Running
+  { id: "jogging",           name: "Jogging (easy, ~6–7 km/h)",    category: "cardio", icon: "🏃",  met: 7.0,  intensity: "moderate" },
+  { id: "running_slow",      name: "Running (~8 km/h)",            category: "cardio", icon: "🏃",  met: 8.0,  intensity: "moderate", notes: "~8 km/h / 5 mph" },
+  { id: "running_moderate",  name: "Running (~10 km/h)",           category: "cardio", icon: "🏃",  met: 10.0, intensity: "vigorous", notes: "~10 km/h / 6 mph" },
+  { id: "running_fast",      name: "Running fast (~12 km/h)",      category: "cardio", icon: "🏃",  met: 11.5, intensity: "high",     notes: "~12 km/h / 7.5 mph" },
+  { id: "treadmill",         name: "Treadmill (incline walk)",      category: "cardio", icon: "🏃",  met: 5.0,  intensity: "moderate" },
+  // Walking / steps
+  { id: "walking_slow",      name: "Walking slow (~3 km/h)",       category: "cardio", icon: "🚶",  met: 2.8,  intensity: "light" },
+  { id: "walking_moderate",  name: "Walking brisk (~5 km/h)",      category: "cardio", icon: "🚶",  met: 3.5,  intensity: "moderate" },
+  { id: "walking_fast",      name: "Walking fast (~6.5 km/h)",     category: "cardio", icon: "🚶",  met: 4.3,  intensity: "moderate" },
+  { id: "walking_steps",     name: "Daily steps / commuting",      category: "daily",  icon: "👟",  met: 3.0,  intensity: "light",    notes: "everyday step count" },
+  { id: "hiking",            name: "Hiking (trail)",               category: "cardio", icon: "🥾",  met: 6.0,  intensity: "moderate" },
+  { id: "stair_climbing",    name: "Stair climbing",               category: "cardio", icon: "🪜",  met: 8.0,  intensity: "vigorous" },
+  // Cycling
+  { id: "cycling_leisure",   name: "Cycling leisure (<16 km/h)",   category: "cardio", icon: "🚴",  met: 4.0,  intensity: "light" },
+  { id: "cycling_moderate",  name: "Cycling moderate (19–22 km/h)",category: "cardio", icon: "🚴",  met: 8.0,  intensity: "moderate" },
+  { id: "cycling_vigorous",  name: "Cycling fast (>24 km/h)",      category: "cardio", icon: "🚴",  met: 10.0, intensity: "vigorous" },
+  { id: "stationary_bike",   name: "Stationary bike (moderate)",   category: "cardio", icon: "🚴",  met: 6.8,  intensity: "moderate" },
+  { id: "spinning",          name: "Indoor cycling / spinning",    category: "cardio", icon: "🚴",  met: 8.5,  intensity: "vigorous" },
+  // Swimming
+  { id: "swimming_leisure",  name: "Swimming leisurely",           category: "cardio", icon: "🏊",  met: 6.0,  intensity: "moderate" },
+  { id: "swimming_laps",     name: "Swimming laps (moderate)",     category: "cardio", icon: "🏊",  met: 7.0,  intensity: "moderate" },
+  { id: "swimming_vigorous", name: "Swimming vigorous",            category: "cardio", icon: "🏊",  met: 9.8,  intensity: "vigorous" },
+  // Other cardio
+  { id: "rowing_moderate",   name: "Rowing ergometer (moderate)",  category: "cardio", icon: "🚣",  met: 7.0,  intensity: "moderate" },
+  { id: "rowing_vigorous",   name: "Rowing ergometer (vigorous)",  category: "cardio", icon: "🚣",  met: 8.5,  intensity: "vigorous" },
+  { id: "jump_rope",         name: "Jump rope / skipping",         category: "cardio", icon: "⏭️",  met: 11.8, intensity: "vigorous" },
+  { id: "elliptical",        name: "Elliptical trainer",           category: "cardio", icon: "🔄",  met: 5.0,  intensity: "moderate" },
+  { id: "hiit",              name: "HIIT (general)",               category: "cardio", icon: "⚡",  met: 9.0,  intensity: "very high" },
+  { id: "boxing",            name: "Boxing / kickboxing",          category: "cardio", icon: "🥊",  met: 9.0,  intensity: "vigorous" },
+  // Sports
+  { id: "basketball",        name: "Basketball",                   category: "sports", icon: "🏀",  met: 6.5,  intensity: "moderate" },
+  { id: "soccer",            name: "Football / soccer",            category: "sports", icon: "⚽",  met: 7.0,  intensity: "moderate" },
+  { id: "tennis",            name: "Tennis (singles)",             category: "sports", icon: "🎾",  met: 7.3,  intensity: "moderate" },
+  { id: "yoga",              name: "Yoga / stretching",            category: "daily",  icon: "🧘",  met: 2.5,  intensity: "light" },
+  { id: "pilates",           name: "Pilates",                      category: "daily",  icon: "🧘",  met: 3.0,  intensity: "light" },
+  { id: "dancing",           name: "Dancing (aerobic)",            category: "cardio", icon: "💃",  met: 5.5,  intensity: "moderate" },
+  { id: "martial_arts",      name: "Martial arts / karate",        category: "sports", icon: "🥋",  met: 10.5, intensity: "vigorous" },
+];
+
+const MET_CATEGORY_LABELS: Record<string, string> = {
+  weights: "🏋️ Weights & Resistance",
+  cardio:  "🏃 Cardio",
+  sports:  "⚽ Sports",
+  daily:   "👟 Daily Activity",
+};
+
+/** kcal = MET × weight_kg × hours */
+function estimateKcal(activityId: string, durationMin: number, weightKg = 75): number {
+  const act = MET_ACTIVITIES.find((a) => a.id === activityId);
+  if (!act || durationMin <= 0) return 0;
+  return Math.round(act.met * weightKg * (durationMin / 60));
+}
+
+/** Steps → approx kcal (0.04 kcal/step × weight_kg/70) */
+function stepsToKcal(steps: number, weightKg = 75): number {
+  return Math.round(steps * 0.04 * (weightKg / 70));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MET Calorie Calculator sub-component (used inside WorkoutForm)
+// ─────────────────────────────────────────────────────────────────────────────
+function CalorieCalculator({
+  durationMin,
+  weightKg,
+  onApply,
+}: {
+  durationMin: number;
+  weightKg: number;
+  onApply: (kcal: number) => void;
+}) {
+  const [activityId, setActivityId] = useState("weights_general");
+  const [steps, setSteps]           = useState("");
+  const [open, setOpen]             = useState(false);
+
+  const activity = MET_ACTIVITIES.find((a) => a.id === activityId)!;
+  const isStepActivity = ["walking_steps", "walking_slow", "walking_moderate", "walking_fast"].includes(activityId);
+  const estimated = isStepActivity && steps
+    ? stepsToKcal(Number(steps), weightKg)
+    : estimateKcal(activityId, durationMin, weightKg);
+
+  // Group activities by category for the select
+  const grouped = useMemo(() => {
+    const map: Record<string, METActivity[]> = {};
+    for (const a of MET_ACTIVITIES) {
+      if (!map[a.category]) map[a.category] = [];
+      map[a.category].push(a);
+    }
+    return map;
+  }, []);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full text-left text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1.5 py-1"
+      >
+        <span>🔥</span>
+        <span>Calculate calories burned from activity type →</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-brand-100 bg-brand-50 p-3 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-brand-700 uppercase tracking-wide">🔥 Calorie Calculator</p>
+        <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-gray-600">✕ close</button>
+      </div>
+
+      {/* Activity selector */}
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Activity type</label>
+        <select
+          value={activityId}
+          onChange={(e) => setActivityId(e.target.value)}
+          className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+        >
+          {Object.entries(grouped).map(([cat, acts]) => (
+            <optgroup key={cat} label={MET_CATEGORY_LABELS[cat] ?? cat}>
+              {acts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.icon} {a.name} ({a.intensity})
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        {activity.notes && (
+          <p className="text-xs text-gray-400 mt-0.5">{activity.notes}</p>
+        )}
+      </div>
+
+      {/* Steps input for walking activities */}
+      {isStepActivity && (
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Steps (optional — overrides duration)</label>
+          <input
+            type="number"
+            value={steps}
+            onChange={(e) => setSteps(e.target.value)}
+            placeholder="e.g. 8000"
+            className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+          />
+          <p className="text-xs text-gray-400 mt-0.5">~0.04 kcal/step, adjusted for your weight</p>
+        </div>
+      )}
+
+      {/* Estimate row */}
+      <div className="flex items-center justify-between rounded-lg bg-white border border-brand-200 px-3 py-2">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">≈ {estimated} kcal</p>
+          <p className="text-xs text-gray-500">
+            {isStepActivity && steps
+              ? `${Number(steps).toLocaleString()} steps × 0.04 kcal (weight-adjusted)`
+              : `MET ${activity.met} × ${weightKg} kg × ${durationMin} min`}
+          </p>
+        </div>
+        <Button size="sm" onClick={() => { onApply(estimated); setOpen(false); }}>
+          Apply
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cardio + Weights Suggestion Panel (goal-aware)
+// ─────────────────────────────────────────────────────────────────────────────
+interface CardioCombo {
+  title: string; cardioId: string; cardioMin: number; weightsMin: number; rationale: string;
+}
+function getCardioSuggestions(goal?: string | null): CardioCombo[] {
+  const g = goal?.toLowerCase() ?? "";
+  if (g.includes("lose") || g.includes("fat")) return [
+    { title: "Compound lifts + Steady-State Cardio", cardioId: "jogging",       cardioMin: 30, weightsMin: 40,
+      rationale: "40 min compound lifts first depletes glycogen — the 30 min jog then burns fat more efficiently. 3–4×/week." },
+    { title: "Weights + HIIT Finisher",              cardioId: "hiit",          cardioMin: 15, weightsMin: 45,
+      rationale: "45 min weights + 15 min HIIT elevates calorie burn for hours after the session (EPOC effect). 2–3×/week." },
+    { title: "Weights + Daily Step Goal",            cardioId: "walking_steps", cardioMin: 45, weightsMin: 45,
+      rationale: "Aim for 8,000–10,000 steps/day through commuting or lunch walks. Add 3 lifting sessions/week. No extra cardio needed." },
+  ];
+  if (g.includes("muscle") || g.includes("recomp") || g.includes("strength") || g.includes("bulk")) return [
+    { title: "Heavy Lifting + Minimal Cardio",       cardioId: "cycling_leisure", cardioMin: 20, weightsMin: 60,
+      rationale: "Keep cardio ≤20 min at low intensity — aids recovery without interfering with muscle protein synthesis. Lift heavy 4–5×/week." },
+    { title: "Strength + Zone-2 Conditioning",       cardioId: "jogging",         cardioMin: 25, weightsMin: 55,
+      rationale: "Zone 2 (conversational pace) on non-lifting days improves heart health and insulin sensitivity without affecting muscle growth." },
+    { title: "Lifting + Swimming Recovery",          cardioId: "swimming_leisure", cardioMin: 30, weightsMin: 60,
+      rationale: "Swimming on rest days reduces soreness and keeps conditioning up with zero joint load." },
+  ];
+  if (g.includes("endurance") || g.includes("performance") || g.includes("run")) return [
+    { title: "Long Run + Auxiliary Strength",        cardioId: "running_slow",   cardioMin: 45, weightsMin: 30,
+      rationale: "Run 45 min for aerobic base; 30 min strength (lower body + core) to prevent overuse injury. 3 cardio + 2 strength/week." },
+    { title: "Interval Run + Mobility Work",         cardioId: "running_moderate",cardioMin: 30, weightsMin: 20,
+      rationale: "Interval sessions build speed; follow with 20 min mobility + light strength to recover properly." },
+  ];
+  // General / maintain
+  return [
+    { title: "Balanced 3+2 Split",                  cardioId: "jogging",         cardioMin: 30, weightsMin: 45,
+      rationale: "3 lifting sessions + 2 cardio sessions per week. Keeps you fit, strong, and metabolically healthy." },
+    { title: "Active Daily Lifestyle",               cardioId: "walking_steps",   cardioMin: 60, weightsMin: 45,
+      rationale: "Walking to work/school counts! 8,000 steps/day + 2–3 lifting sessions is enough for most health goals." },
+  ];
+}
+
+function CardioSuggestionsPanel({ goal }: { goal?: string | null }) {
+  const [open, setOpen] = useState(false);
+  const suggestions = getCardioSuggestions(goal);
+
+  const getActivity = (id: string) => MET_ACTIVITIES.find((a) => a.id === id);
+
+  return (
+    <div className="rounded-2xl border border-blue-100 bg-blue-50 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-lg">💡</span>
+          <div>
+            <p className="text-sm font-semibold text-blue-800">Weights + Cardio Combos</p>
+            <p className="text-xs text-blue-500">Personalised for your goal</p>
+          </div>
+        </div>
+        <span className="text-blue-400 text-lg">{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-3 border-t border-blue-100">
+          {suggestions.map((s, i) => {
+            const cardioAct = getActivity(s.cardioId);
+            return (
+              <div key={i} className="bg-white rounded-xl border border-blue-100 p-3 space-y-2">
+                <p className="text-sm font-semibold text-gray-800">{s.title}</p>
+                <div className="flex gap-3 text-xs">
+                  <span className="bg-orange-50 border border-orange-200 text-orange-700 rounded-lg px-2 py-1">
+                    🏋️ {s.weightsMin} min weights
+                  </span>
+                  <span className="bg-green-50 border border-green-200 text-green-700 rounded-lg px-2 py-1">
+                    {cardioAct?.icon ?? "🏃"} {s.cardioMin} min {cardioAct?.name ?? s.cardioId}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">{s.rationale}</p>
+              </div>
+            );
+          })}
+          <p className="text-xs text-blue-400 text-center pt-1">
+            Tip: Log cardio sessions as separate workouts to track calories burned accurately.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Toast notification
@@ -149,6 +421,7 @@ function ExerciseRows({ rows, setRows }: { rows: ExRow[]; setRows: Dispatch<SetS
 // Create workout form
 // ─────────────────────────────────────────────────────────────────────────────
 function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => void }) {
+  const { user } = useAuthStore();
   const [name, setName] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [duration, setDuration] = useState("60");
@@ -158,6 +431,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
   const [loading, setLoading] = useState(false);
   const [newPRs, setNewPRs] = useState<PRResult[]>([]);
   const [error, setError] = useState("");
+  const weightKg = user?.weight ?? 75;
 
   const submit = async () => {
     if (!name.trim()) { setError("Workout name is required"); return; }
@@ -214,9 +488,17 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
         <Input label="Workout Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Push Day" className="col-span-2" />
         <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <Input label="Duration (min)" type="number" value={duration} onChange={(e) => setDuration(e.target.value)} />
-        <Input label="Calories Burned" type="number" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="optional" className="col-span-2" />
+        <Input label="Calories Burned" type="number" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="optional — or use calculator ↓" className="col-span-2" />
         <Textarea label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="How did it go?" className="col-span-2" />
       </div>
+
+      {/* MET calorie calculator */}
+      <CalorieCalculator
+        durationMin={Number(duration) || 60}
+        weightKg={weightKg}
+        onApply={(kcal) => setCalories(String(kcal))}
+      />
+
       <ExerciseRows rows={rows} setRows={setRows} />
       <div className="flex gap-2 pt-2 border-t border-gray-100">
         <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
@@ -1121,6 +1403,7 @@ function TemplatesTab() {
 // Main page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function WorkoutsPage() {
+  const { user } = useAuthStore();
   const [tab, setTab] = useState<"history" | "templates">("history");
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [total, setTotal] = useState(0);
@@ -1196,6 +1479,9 @@ export default function WorkoutsPage() {
           </Card>
         ) : (
           <>
+            {/* Cardio + Weights combo suggestions */}
+            <CardioSuggestionsPanel goal={user?.goal} />
+
             <div className="space-y-3">
               {workouts.map((w) => (
                 <Card key={w.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelected(w)}>
