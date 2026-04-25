@@ -630,6 +630,54 @@ async function dispatchTool(
 
 const MAX_TOOL_ROUNDS = 5;
 
+// ── OpenAI error classifier ──────────────────────────────────────────────────
+// Returns a user-friendly message based on the OpenAI API error type/status.
+function classifyOpenAIError(error: unknown): string {
+  if (error instanceof OpenAI.APIConnectionTimeoutError) {
+    return "The request to the AI timed out. Please try again in a moment.";
+  }
+
+  if (error instanceof OpenAI.APIConnectionError) {
+    return "Unable to reach the AI service. Check your internet connection and try again.";
+  }
+
+  if (error instanceof OpenAI.APIError) {
+    const status = error.status;
+    const code   = (error as any).code as string | undefined;
+    const type   = (error as any).type as string | undefined;
+
+    if (status === 429) {
+      return "The AI service is temporarily rate-limited. Please wait a moment and try again.";
+    }
+
+    if (status === 503 || status === 529) {
+      return "OpenAI is temporarily overloaded. Please try again in a few seconds.";
+    }
+
+    if (status === 400 && (code === "context_length_exceeded" || type === "invalid_request_error")) {
+      return "This conversation is too long for the AI to process. Please start a new chat to continue.";
+    }
+
+    if (status === 400 && code === "model_not_found") {
+      return "The AI model is not available right now. Please contact support.";
+    }
+
+    if (status === 401) {
+      return "AI service authentication failed. Please contact support.";
+    }
+
+    if (status === 402) {
+      return "AI service quota exceeded. Please contact support.";
+    }
+
+    // Generic API error with status
+    return `The AI service returned an error (${status}). Please try again.`;
+  }
+
+  // Unknown error
+  return "An unexpected error occurred. Please try again.";
+}
+
 export const chat = async (
   userMessage: string,
   agentType: AgentType,
@@ -655,16 +703,27 @@ export const chat = async (
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     logger.debug(`AI agent (${agentType}) — round ${round + 1}, ${messages.length} messages`);
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages,
-      tools,
-      // "auto" means the AI decides whether to call a tool or reply directly.
-      // Alternatives: "none" (never call tools), "required" (always call one).
-      tool_choice: "auto",
-      max_tokens: 1000,
-      temperature: 0.7,
-    });
+    let completion: OpenAI.Chat.ChatCompletion;
+    try {
+      completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages,
+        tools,
+        // "auto" means the AI decides whether to call a tool or reply directly.
+        // Alternatives: "none" (never call tools), "required" (always call one).
+        tool_choice: "auto",
+        max_tokens: 1000,
+        temperature: 0.7,
+      });
+    } catch (error) {
+      const userFacingMsg = classifyOpenAIError(error);
+      logger.error(`OpenAI API error (${agentType}, round ${round + 1}):`, error);
+      // Throw a structured error the chatController can catch and return as HTTP 502
+      const apiError = new Error(userFacingMsg) as any;
+      apiError.statusCode = error instanceof OpenAI.APIError && error.status === 429 ? 429 : 502;
+      apiError.userFacing = true;
+      throw apiError;
+    }
 
     totalTokens += completion.usage?.total_tokens ?? 0;
     const responseMessage = completion.choices[0]?.message;

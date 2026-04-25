@@ -118,7 +118,7 @@ export const createWorkout = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { name, duration, caloriesBurned, notes, exercises, date, templateId } = req.body;
+    const { name, duration, caloriesBurned, notes, exercises, date, templateId, trainingType } = req.body;
 
     // Normalise exercise names
     const normalisedExercises = (exercises || []).map((ex: any, idx: number) => ({
@@ -136,9 +136,10 @@ export const createWorkout = async (
         name,
         duration: Number(duration),
         ...(caloriesBurned !== undefined && { caloriesBurned: Number(caloriesBurned) }),
-        ...(notes      && { notes }),
-        ...(date       && { date: new Date(date) }),
-        ...(templateId && { templateId: Number(templateId) }),
+        ...(notes        && { notes }),
+        ...(date         && { date: new Date(date) }),
+        ...(templateId   && { templateId: Number(templateId) }),
+        ...(trainingType && { trainingType }),
         exercises: {
           create: normalisedExercises.map((ex: any) => ({
             exerciseName: ex.exerciseName,
@@ -183,7 +184,7 @@ export const updateWorkout = async (
       return next(createError("Workout not found", 404));
     }
 
-    const { name, duration, caloriesBurned, notes, date } = req.body;
+    const { name, duration, caloriesBurned, notes, date, trainingType } = req.body;
 
     const updated = await prisma.workout.update({
       where: { id: workoutId },
@@ -193,6 +194,7 @@ export const updateWorkout = async (
         ...(caloriesBurned !== undefined && { caloriesBurned: Number(caloriesBurned) }),
         ...(notes          !== undefined && { notes }),
         ...(date           !== undefined && { date: new Date(date) }),
+        ...(trainingType   !== undefined && { trainingType: trainingType || null }),
       },
       include: { exercises: { orderBy: { order: "asc" } } },
     });

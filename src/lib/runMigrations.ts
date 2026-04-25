@@ -66,6 +66,23 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
     )`,
   },
   {
+    table: "WorkoutCalendarDay",
+    sql: `CREATE TABLE IF NOT EXISTS "WorkoutCalendarDay" (
+      "id"           INTEGER PRIMARY KEY AUTOINCREMENT,
+      "userId"       INTEGER NOT NULL,
+      "date"         TEXT    NOT NULL,
+      "workoutName"  TEXT,
+      "muscleGroups" TEXT,
+      "templateId"   INTEGER,
+      "isRestDay"    INTEGER NOT NULL DEFAULT 0,
+      "notes"        TEXT,
+      "createdAt"    TEXT    NOT NULL DEFAULT (datetime('now')),
+      "updatedAt"    TEXT    NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,
+      UNIQUE("userId", "date")
+    )`,
+  },
+  {
     table: "MealPlanEntry",
     sql: `CREATE TABLE IF NOT EXISTS "MealPlanEntry" (
       "id"        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -136,6 +153,12 @@ const MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
     column: "isCheatMeal",
     sql: `ALTER TABLE "FoodLog" ADD COLUMN "isCheatMeal" INTEGER NOT NULL DEFAULT 0`,
   },
+  // Training type on Workout
+  {
+    table: "Workout",
+    column: "trainingType",
+    sql: `ALTER TABLE "Workout" ADD COLUMN "trainingType" TEXT`,
+  },
   // Macro cycling columns on CalorieGoal
   {
     table: "CalorieGoal",
@@ -184,6 +207,41 @@ const MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
   },
 ];
 
+// Performance indexes for high-traffic query patterns
+const INDEX_MIGRATIONS: Array<{ name: string; sql: string }> = [
+  {
+    name: "idx_waterlog_userid_date",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_waterlog_userid_date" ON "WaterLog" ("userId", "date")`,
+  },
+  {
+    name: "idx_foodlog_userid_date",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_foodlog_userid_date" ON "FoodLog" ("userId", "date")`,
+  },
+  {
+    name: "idx_workout_userid_date",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_workout_userid_date" ON "Workout" ("userId", "date")`,
+  },
+  {
+    name: "idx_conversation_userid",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_conversation_userid" ON "Conversation" ("userId")`,
+  },
+  {
+    name: "idx_mealplan_userid_weekstart",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_mealplan_userid_weekstart" ON "MealPlan" ("userId", "weekStart")`,
+  },
+  {
+    name: "idx_workoutcalendar_userid",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_workoutcalendar_userid" ON "WorkoutCalendarDay" ("userId")`,
+  },
+];
+
+async function indexExists(indexName: string): Promise<boolean> {
+  const rows = await prisma.$queryRawUnsafe<TableRow[]>(
+    `SELECT name FROM sqlite_master WHERE type='index' AND name='${indexName}'`
+  );
+  return rows.length > 0;
+}
+
 export async function runMigrations(): Promise<void> {
   let applied = 0;
 
@@ -211,6 +269,21 @@ export async function runMigrations(): Promise<void> {
     cache[table].add(column);
     logger.info(`[migration] Added ${table}.${column}`);
     applied++;
+  }
+
+  // 3. Create performance indexes if they don't exist
+  for (const { name, sql } of INDEX_MIGRATIONS) {
+    const exists = await indexExists(name);
+    if (!exists) {
+      try {
+        await prisma.$executeRawUnsafe(sql);
+        logger.info(`[migration] Created index ${name}`);
+        applied++;
+      } catch (e) {
+        // Index on a table that doesn't exist yet is fine — skip silently
+        logger.warn(`[migration] Skipped index ${name} (table may not exist yet)`);
+      }
+    }
   }
 
   if (applied > 0) {

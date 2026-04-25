@@ -54,6 +54,7 @@ export interface Workout {
   duration: number;
   caloriesBurned?: number | null;
   notes?: string | null;
+  trainingType?: string | null;
   exercises: WorkoutExercise[];
   createdAt: string;
 }
@@ -241,6 +242,20 @@ export interface MealPlan {
   name: string;
   weekStart: string;  // ISO date "YYYY-MM-DD"
   days: MealPlanDay[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Workout Calendar ──────────────────────────────────────────────────────────
+export interface WorkoutCalendarDay {
+  id: number;
+  userId: number;
+  date: string;            // "YYYY-MM-DD"
+  workoutName?: string | null;
+  muscleGroups?: string[]; // parsed from JSON
+  templateId?: number | null;
+  isRestDay: boolean;
+  notes?: string | null;
   createdAt: string;
   updatedAt: string;
 }

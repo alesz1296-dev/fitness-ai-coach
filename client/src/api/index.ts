@@ -4,7 +4,7 @@ import type {
   FoodLog, FoodTotals, WeightLog, WeightStats, Goal, CalorieGoal,
   Conversation, MonthlyReport, ExerciseProgression, DashboardData,
   WeeklyPlan, WeeklyPlanDay, WorkoutExercise,
-  WaterLog, MealPlan, MealPlanEntry,
+  WaterLog, MealPlan, MealPlanEntry, WorkoutCalendarDay,
 } from "../types";
 
 interface WorkoutExerciseCreateInput {
@@ -24,6 +24,7 @@ interface WorkoutCreateInput {
   caloriesBurned?: number;
   notes?: string;
   templateId?: number;
+  trainingType?: string;
   exercises?: WorkoutExerciseCreateInput[];
 }
 
@@ -130,6 +131,8 @@ export const foodApi = {
     api.get<{ history: Record<string, FoodTotals>; days: number }>(`/foods/history?days=${days}`),
   getCheatDates: (days = 90) =>
     api.get<{ dates: string[] }>(`/foods/cheat-dates?days=${days}`),
+  frequent: (limit = 5) =>
+    api.get<{ frequent: Array<{ foodName: string; calories: number; protein: number | null; carbs: number | null; fats: number | null; quantity: number; unit: string; meal: string | null; timesLogged: number }> }>(`/foods/frequent?limit=${limit}`),
   log: (data: Partial<FoodLog>) => api.post<{ log: FoodLog }>("/foods", data),
   bulk: (foods: Array<Partial<FoodLog>>, date?: string) =>
     api.post<{ logs: FoodLog[]; message: string }>("/foods/bulk", { foods, date }),
@@ -242,4 +245,33 @@ export const mealPlansApi = {
     api.delete(`/meal-plans/${planId}/entries/${entryId}`),
   updateDayNotes: (planId: number, dayId: number, notes: string) =>
     api.put(`/meal-plans/${planId}/days/${dayId}/notes`, { notes }),
+};
+
+// ── Workout Calendar ──────────────────────────────────────────────────────────
+export const calendarApi = {
+  getMonth: (month: string) =>
+    api.get<{ days: WorkoutCalendarDay[]; month: string }>(`/calendar?month=${month}`),
+  populate: (data: {
+    month: string;
+    assignments: Array<{
+      dayOfWeek: number;          // 0=Mon … 6=Sun
+      workoutName: string;
+      muscleGroups?: string[];
+      templateId?: number;
+      isRestDay?: boolean;
+    }>;
+    overwrite?: boolean;
+  }) => api.post<{ message: string; count: number }>("/calendar/populate", data),
+  updateDay: (date: string, data: {
+    workoutName?: string | null;
+    muscleGroups?: string[] | null;
+    templateId?: number | null;
+    isRestDay?: boolean;
+    notes?: string | null;
+  }) => api.put<{ day: WorkoutCalendarDay }>(`/calendar/${date}`, data),
+  deleteDay: (date: string) => api.delete(`/calendar/${date}`),
+  swap: (date1: string, date2: string) =>
+    api.post<{ message: string }>("/calendar/swap", { date1, date2 }),
+  clearMonth: (month: string) =>
+    api.delete<{ message: string; count: number }>(`/calendar/clear?month=${month}`),
 };

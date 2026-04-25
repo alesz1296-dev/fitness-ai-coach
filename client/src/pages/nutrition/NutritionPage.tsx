@@ -539,7 +539,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
       </div>
 
       {/* Macro fields — auto-filled from search, editable */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Input label="Calories" type="number" min="0" value={calories} onChange={(e) => setCalories(e.target.value)} />
         <Input label="Protein (g)" type="number" min="0" step="0.1" value={protein} onChange={(e) => setProtein(e.target.value)} />
         <Input label="Carbs (g)"   type="number" min="0" step="0.1" value={carbs}   onChange={(e) => setCarbs(e.target.value)} />
@@ -1428,25 +1428,87 @@ export default function NutritionPage() {
     });
   };
 
+  // ── Supplement macro overrides ──────────────────────────────────────────────
+  interface SuppMacroOverride { cal: number; p: number; c: number; f: number; }
+  const initSuppMacroOverrides = (): Partial<Record<SuppId, SuppMacroOverride>> => {
+    try {
+      const s = localStorage.getItem("supplement_macros_v1");
+      if (s) return JSON.parse(s);
+    } catch { /* ignore */ }
+    return {};
+  };
+  const [suppMacroOverrides, setSuppMacroOverrides] = useState(initSuppMacroOverrides);
+  const [editingSupp,  setEditingSupp]  = useState<SuppId | null>(null);
+  const [suppEditDraft, setSuppEditDraft] = useState<SuppMacroOverride>({ cal: 0, p: 0, c: 0, f: 0 });
+
+  // Effective macros per unit: user override ▷ SUPPLEMENT_DEFS default
+  const getSuppMacros = (id: SuppId): SuppMacroOverride => {
+    const def = SUPPLEMENT_DEFS[id];
+    return suppMacroOverrides[id] ?? { cal: def.cal, p: def.p, c: def.c, f: def.f };
+  };
+
+  const openSuppEdit = (e: React.MouseEvent, id: SuppId) => {
+    e.stopPropagation();
+    setSuppEditDraft(getSuppMacros(id));
+    setEditingSupp(id);
+  };
+
+  const saveSuppEdit = () => {
+    if (!editingSupp) return;
+    setSuppMacroOverrides((prev) => {
+      const next = { ...prev, [editingSupp]: suppEditDraft };
+      try { localStorage.setItem("supplement_macros_v1", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+    setEditingSupp(null);
+  };
+
+  const resetSuppEdit = (id: SuppId) => {
+    setSuppMacroOverrides((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      try { localStorage.setItem("supplement_macros_v1", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+    setEditingSupp(null);
+  };
+
   // Compute supplement macros to add to totals
   const suppMacros = (Object.entries(supplements) as [SuppId, SuppState][])
     .filter(([, s]) => s.enabled && s.qty > 0)
     .reduce((acc, [id, s]) => {
       const def = SUPPLEMENT_DEFS[id];
       const mult = s.qty / def.defaultQty;
+      const m = getSuppMacros(id);
       return {
-        calories: acc.calories + def.cal * mult,
-        protein:  acc.protein  + def.p   * mult,
-        carbs:    acc.carbs    + def.c   * mult,
-        fats:     acc.fats     + def.f   * mult,
+        calories: acc.calories + m.cal * mult,
+        protein:  acc.protein  + m.p   * mult,
+        carbs:    acc.carbs    + m.c   * mult,
+        fats:     acc.fats     + m.f   * mult,
       };
     }, { calories: 0, protein: 0, carbs: 0, fats: 0 });
 
   // ── Water tracking ───────────────────────────────────────────────────────────
+  const getTrackWaterPref = () => {
+    try {
+      const s = localStorage.getItem("app_prefs_v1");
+      if (s) return JSON.parse(s).trackWater !== false;
+    } catch { /* ignore */ }
+    return true;
+  };
+  const [trackWater,  setTrackWater]  = useState(getTrackWaterPref);
   const [waterLogs,   setWaterLogs]   = useState<WaterLog[]>([]);
   const [waterTotal,  setWaterTotal]  = useState(0);
   const [waterTarget, setWaterTarget] = useState(user?.waterTargetMl ?? 2000);
   const [addingWater, setAddingWater] = useState(false);
+  const [waterError,  setWaterError]  = useState("");
+
+  // Re-sync trackWater if the user changes it in Settings (same session)
+  useEffect(() => {
+    const onStorage = () => setTrackWater(getTrackWaterPref());
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   const loadWater = useCallback(async () => {
     try {
@@ -1462,15 +1524,24 @@ export default function NutritionPage() {
   const handleAddWater = async (ml: number) => {
     if (addingWater) return;
     setAddingWater(true);
+    setWaterError("");
     try {
       await waterApi.log(ml, date);
       await loadWater();
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || "Failed to log water — try again";
+      setWaterError(msg);
     } finally { setAddingWater(false); }
   };
 
   const handleDeleteWater = async (id: number) => {
-    await waterApi.delete(id);
-    await loadWater();
+    setWaterError("");
+    try {
+      await waterApi.delete(id);
+      await loadWater();
+    } catch (e: any) {
+      setWaterError(e?.response?.data?.error || "Failed to remove entry");
+    }
   };
 
   // ── Fasting mode ────────────────────────────────────────────────────────────
@@ -1560,8 +1631,37 @@ export default function NutritionPage() {
   const mealOrder = ["breakfast", "lunch", "dinner", "snack", "other"];
   const isToday   = date === new Date().toISOString().split("T")[0];
 
+  // ── Quick re-log (frequent foods) ───────────────────────────────────────────
+  type FrequentFood = { foodName: string; calories: number; protein: number | null; carbs: number | null; fats: number | null; quantity: number; unit: string; meal: string | null; timesLogged: number };
+  const [frequentFoods, setFrequentFoods] = useState<FrequentFood[]>([]);
+  const [relogging,     setRelogging]     = useState<string | null>(null);
+
+  useEffect(() => {
+    foodApi.frequent(5).then((r) => setFrequentFoods(r.data.frequent)).catch(() => {});
+  }, []);
+
+  const handleQuickRelog = async (food: FrequentFood) => {
+    if (relogging) return;
+    setRelogging(food.foodName);
+    try {
+      await foodApi.log({
+        foodName: food.foodName,
+        calories: food.calories,
+        ...(food.protein != null && { protein: food.protein }),
+        ...(food.carbs   != null && { carbs:   food.carbs }),
+        ...(food.fats    != null && { fats:    food.fats }),
+        quantity: food.quantity,
+        unit:     food.unit,
+        ...(food.meal && { meal: food.meal as FoodLog["meal"] }),
+        date,
+      });
+      await load();
+    } catch { /* silent */ }
+    finally { setRelogging(null); }
+  };
+
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
       {/* Header + date nav */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -1656,8 +1756,32 @@ export default function NutritionPage() {
         </div>
       )}
 
+      {/* ── Quick Re-log ──────────────────────────────────────────────────── */}
+      {frequentFoods.length > 0 && (
+        <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3">
+          <p className="text-xs font-semibold text-amber-700 mb-2">⚡ Quick Re-log</p>
+          <div className="flex gap-2 flex-wrap">
+            {frequentFoods.map((food) => (
+              <button
+                key={food.foodName}
+                disabled={!!relogging}
+                onClick={() => handleQuickRelog(food)}
+                className="flex items-center gap-1.5 bg-white border border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={`${food.timesLogged}× logged · ${food.quantity} ${food.unit}`}
+              >
+                {relogging === food.foodName && (
+                  <span className="w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                )}
+                <span className="truncate max-w-[120px]">{food.foodName}</span>
+                <span className="text-amber-600 font-semibold flex-shrink-0">{food.calories} kcal</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Water tracking widget ─────────────────────────────────────────── */}
-      <Card className="p-4">
+      {trackWater && <Card className="p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-gray-800">💧 Water Intake</h3>
           <span className="text-sm text-gray-500">
@@ -1675,18 +1799,31 @@ export default function NutritionPage() {
           />
         </div>
 
+        {/* Error banner */}
+        {waterError && (
+          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 mb-2">
+            ⚠️ {waterError}
+          </p>
+        )}
+
         {/* Quick-add buttons */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           {[150, 200, 350, 500, 750, 1000].map((ml) => (
             <button
               key={ml}
               onClick={() => handleAddWater(ml)}
               disabled={addingWater}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition disabled:opacity-50"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
             >
               +{ml < 1000 ? `${ml}ml` : "1L"}
             </button>
           ))}
+          {addingWater && (
+            <span className="flex items-center gap-1.5 text-xs text-blue-500">
+              <span className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin inline-block" />
+              Adding…
+            </span>
+          )}
         </div>
 
         {/* Recent logs today */}
@@ -1712,7 +1849,7 @@ export default function NutritionPage() {
         {waterTotal >= waterTarget && (
           <p className="mt-2 text-xs text-green-600 font-medium">✅ Daily target reached! Great job staying hydrated.</p>
         )}
-      </Card>
+      </Card>}
 
       {/* Supplements widget */}
       <Card>
@@ -1727,48 +1864,93 @@ export default function NutritionPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {(Object.entries(SUPPLEMENT_DEFS) as [SuppId, typeof SUPPLEMENT_DEFS[SuppId]][]).map(([id, def]) => {
             const s = supplements[id];
+            const m = getSuppMacros(id as SuppId);
+            const hasOverride = !!suppMacroOverrides[id as SuppId];
             const macroLine = [
-              def.cal > 0 ? `${Math.round(def.cal * (s.qty / def.defaultQty))} kcal` : null,
-              def.p  > 0 ? `${Math.round(def.p  * (s.qty / def.defaultQty))}g P` : null,
+              m.cal > 0 ? `${Math.round(m.cal * (s.qty / def.defaultQty))} kcal` : null,
+              m.p  > 0 ? `${Math.round(m.p  * (s.qty / def.defaultQty))}g P` : null,
             ].filter(Boolean).join(" · ");
+            const isEditing = editingSupp === id;
             return (
-              <div
-                key={id}
-                onClick={() => updateSupp(id as SuppId, { enabled: !s.enabled })}
-                className={`relative cursor-pointer rounded-xl border p-2.5 text-center transition-all select-none ${
-                  s.enabled
-                    ? "border-purple-400 bg-purple-50 shadow-sm"
-                    : "border-gray-200 bg-white hover:border-gray-300"
-                }`}
-              >
-                <div className="text-2xl mb-1">{def.emoji}</div>
-                <p className={`text-xs font-semibold leading-tight ${s.enabled ? "text-purple-800" : "text-gray-700"}`}>{def.name}</p>
-                {/* Qty editor */}
-                <div className="flex items-center justify-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => updateSupp(id as SuppId, { qty: Math.max(0, s.qty - 1) })}
-                    className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200"
-                  >−</button>
-                  <span className="text-xs font-semibold text-gray-800 w-6 text-center">{s.qty}</span>
-                  <button
-                    onClick={() => updateSupp(id as SuppId, { qty: s.qty + 1 })}
-                    className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200"
-                  >+</button>
-                  <span className="text-[10px] text-gray-400">{def.unit}</span>
-                </div>
-                {s.enabled && macroLine && (
-                  <p className="text-[10px] text-purple-600 mt-1 font-medium">{macroLine}</p>
+              <div key={id} className="relative">
+                {/* Normal card */}
+                {!isEditing && (
+                  <div
+                    onClick={() => updateSupp(id as SuppId, { enabled: !s.enabled })}
+                    className={`relative cursor-pointer rounded-xl border p-2.5 text-center transition-all select-none ${
+                      s.enabled
+                        ? "border-purple-400 bg-purple-50 shadow-sm"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    {/* Edit macros button */}
+                    <button
+                      onClick={(e) => openSuppEdit(e, id as SuppId)}
+                      title="Edit macros per unit"
+                      className={`absolute top-1.5 left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-colors z-10 ${
+                        hasOverride
+                          ? "bg-amber-400 text-white"
+                          : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                      }`}
+                    >✏️</button>
+
+                    <div className="text-2xl mb-1">{def.emoji}</div>
+                    <p className={`text-xs font-semibold leading-tight ${s.enabled ? "text-purple-800" : "text-gray-700"}`}>{def.name}</p>
+                    {/* Qty editor */}
+                    <div className="flex items-center justify-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => updateSupp(id as SuppId, { qty: Math.max(0, s.qty - 1) })}
+                        className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200"
+                      >−</button>
+                      <span className="text-xs font-semibold text-gray-800 w-6 text-center">{s.qty}</span>
+                      <button
+                        onClick={() => updateSupp(id as SuppId, { qty: s.qty + 1 })}
+                        className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200"
+                      >+</button>
+                      <span className="text-[10px] text-gray-400">{def.unit}</span>
+                    </div>
+                    {s.enabled && macroLine && (
+                      <p className="text-[10px] text-purple-600 mt-1 font-medium">{macroLine}</p>
+                    )}
+                    {s.enabled && (
+                      <div className="absolute top-1.5 right-1.5 w-3 h-3 rounded-full bg-purple-500 flex items-center justify-center">
+                        <span className="text-[8px] text-white font-bold">✓</span>
+                      </div>
+                    )}
+                  </div>
                 )}
-                {s.enabled && (
-                  <div className="absolute top-1.5 right-1.5 w-3 h-3 rounded-full bg-purple-500 flex items-center justify-center">
-                    <span className="text-[8px] text-white font-bold">✓</span>
+
+                {/* Inline macro editor */}
+                {isEditing && (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 p-2.5 text-center">
+                    <p className="text-xs font-semibold text-amber-800 mb-2">{def.emoji} Macros / {def.defaultQty} {def.unit}</p>
+                    <div className="grid grid-cols-2 gap-1 mb-2">
+                      {(["cal", "p", "c", "f"] as const).map((key) => (
+                        <div key={key} className="text-left">
+                          <label className="text-[9px] text-gray-500 uppercase font-semibold">{key === "cal" ? "kcal" : key === "p" ? "prot" : key === "c" ? "carbs" : "fat"}</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={suppEditDraft[key]}
+                            onChange={(e) => setSuppEditDraft((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
+                            className="w-full rounded border border-gray-200 px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-1 justify-center">
+                      <button onClick={saveSuppEdit}    className="text-[10px] px-2 py-1 rounded-lg bg-amber-500 text-white font-semibold hover:bg-amber-600">Save</button>
+                      <button onClick={() => resetSuppEdit(id as SuppId)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">Reset</button>
+                      <button onClick={() => setEditingSupp(null)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">✕</button>
+                    </div>
                   </div>
                 )}
               </div>
             );
           })}
         </div>
-        <p className="text-[10px] text-gray-400 mt-2">Click to toggle · macros added to daily totals · preferences saved automatically</p>
+        <p className="text-[10px] text-gray-400 mt-2">Click to toggle · ✏️ edits macros per unit · preferences saved automatically</p>
       </Card>
 
       {/* Daily summary */}

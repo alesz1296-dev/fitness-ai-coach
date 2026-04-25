@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { applyDark, readDarkPref } from "../../hooks/useDarkMode";
 import { usersApi } from "../../api";
 import { useAuthStore } from "../../store/authStore";
 import type { User } from "../../types";
@@ -25,6 +27,7 @@ function parseApiError(e: any): string {
 // ── Profile form ──────────────────────────────────────────────────────────────
 function ProfileForm() {
   const { user, updateUser } = useAuthStore();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     firstName:           user?.firstName          ?? "",
@@ -47,9 +50,13 @@ function ProfileForm() {
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [k]: e.target.value }));
 
+  const [planNudge, setPlanNudge] = useState<number | null>(null);
+
   const save = async () => {
-    setSaving(true); setError(""); setSuccess("");
+    setSaving(true); setError(""); setSuccess(""); setPlanNudge(null);
     try {
+      const newDays = form.trainingDaysPerWeek ? Number(form.trainingDaysPerWeek) : null;
+      const oldDays = user?.trainingDaysPerWeek ?? null;
       const payload: Partial<User> & Record<string, any> = {
         firstName:           form.firstName           || undefined,
         lastName:            form.lastName            || undefined,
@@ -60,13 +67,21 @@ function ProfileForm() {
         activityLevel:       (form.activityLevel as any) || undefined,
         fitnessLevel:        form.fitnessLevel        || undefined,
         goal:                form.goal                || undefined,
-        trainingDaysPerWeek: form.trainingDaysPerWeek ? Number(form.trainingDaysPerWeek) : null,
+        trainingDaysPerWeek: newDays,
         trainingHoursPerDay: form.trainingHoursPerDay ? Number(form.trainingHoursPerDay) : null,
       };
       const res = await usersApi.updateProfile(payload);
       updateUser(res.data.user);
-      setSuccess("Profile saved!");
-      setTimeout(() => setSuccess(""), 3000);
+
+      // If training days changed, set a flag so the Dashboard can auto-open the plan modal
+      if (newDays && newDays !== oldDays) {
+        try { localStorage.setItem("fitai_plan_days_hint", String(newDays)); } catch { /* ignore */ }
+        setPlanNudge(newDays);
+        setTimeout(() => setPlanNudge(null), 8000);
+      } else {
+        setSuccess("Profile saved!");
+        setTimeout(() => setSuccess(""), 3000);
+      }
     } catch (e: any) {
       setError(parseApiError(e));
     } finally { setSaving(false); }
@@ -76,22 +91,35 @@ function ProfileForm() {
     <Card>
       <CardHeader title="Profile" subtitle="Used by the AI and calorie calculator" />
 
-      {error   && <p className="text-sm text-red-600   bg-red-50   rounded-xl px-3 py-2 mb-4">{error}</p>}
+      {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2 mb-4">{error}</p>}
       {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
+      {planNudge && (
+        <div className="flex items-center gap-3 bg-brand-50 border border-brand-200 rounded-xl px-3 py-2 mb-4">
+          <span className="text-sm text-brand-700 flex-1">
+            ✅ Profile saved — training days changed to <strong>{planNudge}</strong>. Update your weekly schedule to match.
+          </span>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="text-sm font-semibold text-brand-600 hover:text-brand-800 whitespace-nowrap"
+          >
+            Go to plan →
+          </button>
+        </div>
+      )}
 
       <div className="space-y-5">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input label="First Name" value={form.firstName} onChange={set("firstName")} placeholder="Alex" />
           <Input label="Last Name"  value={form.lastName}  onChange={set("lastName")}  placeholder="Smith" />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Input label="Age" type="number" value={form.age}    onChange={set("age")}    placeholder="25" min="13" max="120" />
           <Input label="Weight (kg)" type="number" step="0.1" value={form.weight} onChange={set("weight")} placeholder="75" />
           <Input label="Height (cm)" type="number" value={form.height} onChange={set("height")} placeholder="178" />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
             label="Sex"
             value={form.sex}
@@ -120,7 +148,7 @@ function ProfileForm() {
         {/* Training schedule — drives precise TDEE when both are filled */}
         <div>
           <p className="text-sm font-medium text-gray-700 mb-2">Training Schedule</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="Days per week"
               value={form.trainingDaysPerWeek}
@@ -176,7 +204,7 @@ function ProfileForm() {
         />
 
         <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
             Active Goal
             {form.goal && (
               <span className="ml-2 text-xs font-normal text-gray-400">(set from Goals tab — edit freely)</span>
@@ -187,11 +215,11 @@ function ProfileForm() {
             onChange={set("goal")}
             rows={2}
             placeholder="Set a goal in the Goals tab, or describe it here — e.g. Lose 10kg for summer…"
-            className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+            className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
           />
         </div>
 
-        <div className="bg-blue-50 rounded-xl p-4 text-sm text-blue-700">
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-sm text-blue-700 dark:text-blue-300">
           <p className="font-semibold mb-1">Why this matters</p>
           <p>Age, weight, height, and sex are used for Mifflin-St Jeor BMR. When you set your <strong>training days and session duration</strong>, calorie goals switch to a precise MET-based TDEE that accounts for actual exercise calories burned — more accurate than the activity multiplier alone. All goal calculations, nutrition targets, and progress projections depend on this.</p>
         </div>
@@ -227,7 +255,7 @@ function NutritionPreferencesForm() {
     } finally { setSaving(false); }
   };
 
-  const pct  = ((multiplier - 0.8) / (2.2 - 0.8)) * 100;
+  const pct  = ((multiplier - 0.8) / (3.0 - 0.8)) * 100;
   const exKg = user?.weight ? Math.round(user.weight * multiplier) : null;
 
   return (
@@ -240,7 +268,7 @@ function NutritionPreferencesForm() {
       <div className="space-y-5">
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Protein target
             </label>
             <span className="text-lg font-bold text-brand-600">{multiplier.toFixed(1)} g/kg</span>
@@ -250,7 +278,7 @@ function NutritionPreferencesForm() {
           <div className="relative">
             <input
               type="range"
-              min={0.8} max={2.2} step={0.1}
+              min={0.8} max={3.0} step={0.1}
               value={multiplier}
               onChange={(e) => setMultiplier(Number(e.target.value))}
               className="w-full h-2 rounded-full appearance-none cursor-pointer"
@@ -260,42 +288,43 @@ function NutritionPreferencesForm() {
             />
             <div className="flex justify-between text-xs text-gray-400 mt-1">
               <span>0.8</span>
-              <span>1.0</span>
-              <span>1.2</span>
+              <span>1.1</span>
               <span>1.4</span>
               <span>1.6</span>
               <span>1.8</span>
               <span>2.0</span>
-              <span>2.2</span>
+              <span>2.4</span>
+              <span>3.0</span>
             </div>
           </div>
 
           {/* Live preview */}
           {exKg != null && (
-            <p className="text-sm text-gray-500 mt-2">
-              At your current weight ({user!.weight} kg) → <span className="font-semibold text-gray-700">{exKg} g protein / day</span>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+              At your current weight ({user!.weight} kg) → <span className="font-semibold text-gray-700 dark:text-gray-200">{exKg} g protein / day</span>
             </p>
           )}
 
           {/* Warning */}
-          {multiplier > 2.2 - 0.05 && (
+          {multiplier > 2.5 && (
             <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mt-2">
-              ⚠️ Values above 2.2 g/kg are above the range recommended for most athletes. More protein won't translate into extra gains and may crowd out carbs and fats.
+              ⚠️ Values above 2.5 g/kg are at the high end — typically only relevant for advanced athletes in aggressive cuts. Make sure overall calories and fat intake aren't being compromised.
             </p>
           )}
         </div>
 
         {/* Reference table */}
-        <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-600 space-y-1">
-          <p className="font-semibold text-gray-700 mb-2">Common ranges</p>
+        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 text-sm text-gray-600 dark:text-gray-300 space-y-1">
+          <p className="font-semibold text-gray-700 dark:text-gray-200 mb-2">Common ranges</p>
           {[
             { range: "0.8 – 1.0", label: "Sedentary / general health (RDA minimum)" },
             { range: "1.2 – 1.6", label: "Recreational fitness, moderate training" },
             { range: "1.6 – 2.0", label: "Strength / hypertrophy training (recommended)" },
-            { range: "2.0 – 2.2", label: "Cutting phase — high-protein to preserve muscle" },
+            { range: "2.0 – 2.5", label: "Cutting phase — high-protein to preserve muscle" },
+            { range: "2.5 – 3.0", label: "Advanced athletes / aggressive cut (elite use)" },
           ].map((row) => (
             <div key={row.range} className="flex gap-3">
-              <span className="font-mono text-xs text-gray-500 w-24 shrink-0">{row.range}</span>
+              <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{row.range}</span>
               <span>{row.label}</span>
             </div>
           ))}
@@ -360,9 +389,9 @@ function InjuryForm() {
       {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
 
       <div className="space-y-4">
-        <p className="text-sm text-gray-500">Select any areas where you have pain, discomfort, or are recovering from injury:</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Select any areas where you have pain, discomfort, or are recovering from injury:</p>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {INJURY_AREAS.map(({ id, label }) => {
             const active = selected.includes(id);
             return (
@@ -372,11 +401,11 @@ function InjuryForm() {
                 onClick={() => toggle(id)}
                 className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm text-left transition-all ${
                   active
-                    ? "border-red-300 bg-red-50 text-red-700 font-medium"
-                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                    ? "border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-700 text-red-700 dark:text-red-400 font-medium"
+                    : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500"
                 }`}
               >
-                <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${active ? "border-red-400 bg-red-400" : "border-gray-300"}`}>
+                <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${active ? "border-red-400 bg-red-400" : "border-gray-300 dark:border-gray-500"}`}>
                   {active && <span className="text-white text-[10px] leading-none">✓</span>}
                 </span>
                 {label}
@@ -452,25 +481,25 @@ function CycleTrackingForm() {
       {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
 
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">First day of last period</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">First day of last period</label>
             <input
               type="date"
               value={periodStart}
               onChange={(e) => setPeriodStart(e.target.value)}
               max={new Date().toISOString().split("T")[0]}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">Cycle length (days)</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Cycle length (days)</label>
             <input
               type="number"
               min={20} max={45}
               value={cycleLength}
               onChange={(e) => setCycleLength(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
             <p className="text-xs text-gray-400 mt-1">Average is 28 days (range: 21–35)</p>
           </div>
@@ -490,12 +519,78 @@ function CycleTrackingForm() {
           </div>
         )}
 
-        <div className="bg-gray-50 rounded-xl p-3 text-xs text-gray-500 space-y-1">
-          <p className="font-medium text-gray-600">Why this matters</p>
+        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+          <p className="font-medium text-gray-600 dark:text-gray-300">Why this matters</p>
           <p>Hormonal fluctuations affect energy, strength, hunger, and recovery throughout the cycle. Tailoring nutrition and training intensity to each phase can reduce symptoms and improve performance.</p>
         </div>
 
         <Button loading={saving} onClick={save} className="w-full">Save Cycle Settings</Button>
+      </div>
+    </Card>
+  );
+}
+
+// ── App Preferences ───────────────────────────────────────────────────────────
+type AppPrefs = { trackWater: boolean; darkMode: boolean };
+
+function AppPreferencesForm() {
+  const initPrefs = (): AppPrefs => {
+    try {
+      const s = localStorage.getItem("app_prefs_v1");
+      if (s) return { trackWater: true, darkMode: readDarkPref(), ...JSON.parse(s) };
+    } catch { /* ignore */ }
+    return { trackWater: true, darkMode: readDarkPref() };
+  };
+  const [prefs, setPrefs] = useState<AppPrefs>(initPrefs);
+  const [saved, setSaved] = useState(false);
+
+  const toggle = (key: keyof AppPrefs) => {
+    setPrefs((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try { localStorage.setItem("app_prefs_v1", JSON.stringify(next)); } catch { /* ignore */ }
+      if (key === "darkMode") applyDark(next.darkMode);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      return next;
+    });
+  };
+
+  const Toggle = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+        on ? "bg-brand-500" : "bg-gray-300 dark:bg-gray-600"
+      }`}
+    >
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? "translate-x-6" : "translate-x-1"}`} />
+    </button>
+  );
+
+  return (
+    <Card>
+      <CardHeader title="App Preferences" subtitle="Controls appearance and tracking features" />
+      {saved && <p className="text-sm text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-xl px-3 py-2 mb-4">Preferences saved</p>}
+      <div className="space-y-1">
+
+        {/* Dark mode */}
+        <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
+          <div>
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🌙 Dark Mode</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Switch the app to a dark colour scheme</p>
+          </div>
+          <Toggle on={prefs.darkMode} onClick={() => toggle("darkMode")} />
+        </div>
+
+        {/* Water tracking */}
+        <div className="flex items-center justify-between py-3">
+          <div>
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">💧 Water Tracking</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Show the water intake widget on the Nutrition page</p>
+          </div>
+          <Toggle on={prefs.trackWater} onClick={() => toggle("trackWater")} />
+        </div>
+
       </div>
     </Card>
   );
@@ -548,17 +643,17 @@ function AccountInfo() {
       <CardHeader title="Account" />
       <div className="space-y-3">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Username</span>
-          <span className="font-medium text-gray-800">@{user.username}</span>
+          <span className="text-gray-500 dark:text-gray-400">Username</span>
+          <span className="font-medium text-gray-800 dark:text-gray-200">@{user.username}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Email</span>
-          <span className="font-medium text-gray-800">{user.email}</span>
+          <span className="text-gray-500 dark:text-gray-400">Email</span>
+          <span className="font-medium text-gray-800 dark:text-gray-200">{user.email}</span>
         </div>
         {user.createdAt && (
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Member since</span>
-            <span className="font-medium text-gray-800">
+            <span className="text-gray-500 dark:text-gray-400">Member since</span>
+            <span className="font-medium text-gray-800 dark:text-gray-200">
               {new Date(user.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
             </span>
           </div>
@@ -578,15 +673,16 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className="p-8 max-w-2xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-500 text-sm mt-1">Manage your profile and account</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Manage your profile and account</p>
       </div>
 
       <AccountInfo />
       <ProfileForm />
       <NutritionPreferencesForm />
+      <AppPreferencesForm />
       <InjuryForm />
       {user?.sex === "female" && <CycleTrackingForm />}
       <PasswordForm />

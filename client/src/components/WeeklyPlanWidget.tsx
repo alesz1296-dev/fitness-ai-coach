@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { startOfWeek, addDays, format, isToday, parseISO } from "date-fns";
-import { weeklyPlanApi } from "../api";
+import { weeklyPlanApi, usersApi } from "../api";
+import { useAuthStore } from "../store/authStore";
 import type { WeeklyPlan, WeeklyPlanDay } from "../types";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
@@ -311,16 +312,19 @@ function PlanCard({
 // ── Setup modal ───────────────────────────────────────────────────────────────
 function SetupModal({
   existingPlan,
+  initialDays,
   onSave,
   onClose,
 }: {
   existingPlan: WeeklyPlan | null;
+  initialDays?: number;
   onSave: () => void;
   onClose: () => void;
 }) {
   // step: "pick" = choose a template, "customize" = edit days manually
   const [step, setStep] = useState<"pick" | "customize">(existingPlan ? "customize" : "pick");
-  const [selectedDays, setSelectedDays] = useState(3);
+  // Seed selectedDays from the user's profile training schedule if available
+  const [selectedDays, setSelectedDays] = useState(initialDays ?? 3);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [days, setDays] = useState<DayConfig[]>(initDayConfigs(existingPlan));
   const [loading, setLoading] = useState(false);
@@ -381,6 +385,9 @@ function SetupModal({
           targetCalories: d.targetCalories ? Number(d.targetCalories) : null,
         })),
       });
+      // Sync trainingDaysPerWeek in the user profile so Settings stays in step.
+      // Fire-and-forget — don't block the modal close if profile update fails.
+      usersApi.updateProfile({ trainingDaysPerWeek: activeDays.length } as any).catch(() => {});
       onSave();
     } finally { setLoading(false); }
   };
@@ -413,8 +420,11 @@ function SetupModal({
 
         {/* Plan cards */}
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">Suggested plans for {selectedDays} days</p>
-          <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-gray-700">Suggested plans for {selectedDays} days</p>
+            <p className="text-xs text-gray-400">↕ scroll to see all</p>
+          </div>
+          <div className="space-y-3 max-h-72 overflow-y-auto pr-1 rounded-xl">
             {filteredPlans.map((plan) => (
               <PlanCard
                 key={plan.id}
@@ -485,7 +495,8 @@ function SetupModal({
 
       {/* Per-day config */}
       {activeDays.length > 0 && (
-        <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
+        <div className="relative">
+          <div className="space-y-3 max-h-56 overflow-y-auto pr-1 pb-1">
           {activeDays.map((d) => (
             <div key={d.dayIndex} className="flex gap-2 items-end">
               <div className="w-10 text-xs font-semibold text-brand-600 pt-6 text-center">
@@ -510,6 +521,11 @@ function SetupModal({
               </div>
             </div>
           ))}
+          </div>
+          {/* Fade + scroll hint — only visible when list overflows */}
+          {activeDays.length > 3 && (
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent rounded-b-xl" />
+          )}
         </div>
       )}
 
@@ -573,6 +589,7 @@ function LogCaloriesModal({
 
 // ── Main widget ───────────────────────────────────────────────────────────────
 export default function WeeklyPlanWidget() {
+  const { user, updateUser } = useAuthStore();
   const [plan, setPlan] = useState<WeeklyPlan | null>(null);
   const [weekStart, setWeekStart] = useState<string>(getThisMonday());
   const [loading, setLoading] = useState(true);
@@ -586,8 +603,22 @@ export default function WeeklyPlanWidget() {
     setApiError(false);
     try {
       const res = await weeklyPlanApi.get(weekStart);
-      setPlan(res.data.plan);
+      const fetchedPlan = res.data.plan;
+      setPlan(fetchedPlan);
       setWeekStart(res.data.weekStart.split("T")[0]);
+
+      // If Settings flagged a training-days change, auto-open the plan modal
+      // so the user can reconcile their schedule without hunting for the edit button.
+      try {
+        const hint = localStorage.getItem("fitai_plan_days_hint");
+        if (hint) {
+          localStorage.removeItem("fitai_plan_days_hint");
+          // Only auto-open if there's already an existing plan to update
+          if (fetchedPlan) {
+            setShowSetup(true);
+          }
+        }
+      } catch { /* ignore */ }
     } catch {
       setApiError(true);
     } finally { setLoading(false); }
@@ -657,11 +688,30 @@ export default function WeeklyPlanWidget() {
               {completed}/{total} days
             </span>
           )}
-          <Button size="sm" variant="secondary" onClick={() => setShowSetup(true)}>
-            {plan ? "Edit" : "Set Up"}
+          <Button
+            size="sm"
+            variant={plan ? "secondary" : "primary"}
+            onClick={() => setShowSetup(true)}
+          >
+            {plan ? "✏️ Edit Schedule" : "Set Up Plan"}
           </Button>
         </div>
       </div>
+
+      {/* ── Mismatch banner ─────────────────────────────────────────────────── */}
+      {plan && total > 0 && user?.trainingDaysPerWeek != null && user.trainingDaysPerWeek !== total && (
+        <div className="mb-3 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          <span className="text-xs text-amber-700 flex-1">
+            ⚠️ Your profile says <strong>{user.trainingDaysPerWeek} training day{user.trainingDaysPerWeek !== 1 ? "s" : ""}</strong>, but your plan has <strong>{total}</strong>.
+          </span>
+          <button
+            onClick={() => setShowSetup(true)}
+            className="text-xs font-semibold text-amber-700 hover:text-amber-900 whitespace-nowrap"
+          >
+            Adjust plan →
+          </button>
+        </div>
+      )}
 
       {!plan || total === 0 ? (
         <div className="text-center py-6">
@@ -744,7 +794,10 @@ export default function WeeklyPlanWidget() {
           </div>
 
           <p className="text-xs text-gray-400 mt-3 text-center">
-            Tap a day to mark it complete · Numbers show kcal
+            Tap a day to mark it complete · Numbers show kcal ·{" "}
+            <button onClick={() => setShowSetup(true)} className="text-brand-500 hover:underline font-medium">
+              Edit schedule
+            </button>
           </p>
         </>
       )}
@@ -752,7 +805,13 @@ export default function WeeklyPlanWidget() {
       <Modal open={showSetup} onClose={() => setShowSetup(false)} title="Plan Your Week" size="md">
         <SetupModal
           existingPlan={plan}
-          onSave={() => { setShowSetup(false); load(); }}
+          initialDays={user?.trainingDaysPerWeek ?? undefined}
+          onSave={() => {
+            setShowSetup(false);
+            load();
+            // Refresh auth store so Settings page reflects the updated trainingDaysPerWeek
+            usersApi.getProfile().then((r) => updateUser(r.data.user)).catch(() => {});
+          }}
           onClose={() => setShowSetup(false)}
         />
       </Modal>

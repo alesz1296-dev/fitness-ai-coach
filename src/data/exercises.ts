@@ -102,6 +102,37 @@ export const EXERCISE_DB: ExerciseItem[] = [
   { id: "e097", name: "Side Plank",               primaryMuscle: "Core",     secondaryMuscles: ["Obliques"],             equipment: "Bodyweight", difficulty: "beginner",     instructions: "Balance on one forearm and foot, body in straight line." },
   { id: "e098", name: "Hanging Leg Raise",        primaryMuscle: "Core",     secondaryMuscles: ["Hip Flexors","Lats"],   equipment: "Bodyweight", difficulty: "advanced",     instructions: "Dead hang from pull-up bar, raise legs to 90° or higher." },
 
+  // ── Glutes (additional) ───────────────────────────────────────────────────
+  { id: "e084", name: "Cable Kickback",          primaryMuscle: "Glutes",    secondaryMuscles: ["Hamstrings"],           equipment: "Cable",      difficulty: "beginner",     instructions: "Attach ankle cuff to low pulley, kick leg back squeezing glute at top." },
+  { id: "e085", name: "Donkey Kick",             primaryMuscle: "Glutes",    secondaryMuscles: [],                       equipment: "Bodyweight", difficulty: "beginner",     instructions: "On hands and knees, kick one leg up keeping knee bent, squeeze glute at top." },
+  { id: "e086", name: "Sumo Squat",              primaryMuscle: "Glutes",    secondaryMuscles: ["Quads","Hamstrings","Adductors"], equipment: "Dumbbell", difficulty: "beginner", instructions: "Wide stance, toes pointed 45° out, hold dumbbell at chest or between legs, squat deep." },
+  { id: "e087", name: "Frog Pump",               primaryMuscle: "Glutes",    secondaryMuscles: [],                       equipment: "Bodyweight", difficulty: "beginner",     instructions: "Lie on back, feet together, knees out like a frog, pump hips up and squeeze glutes." },
+  { id: "e088", name: "Single-Leg Hip Thrust",   primaryMuscle: "Glutes",    secondaryMuscles: ["Hamstrings","Core"],    equipment: "Bodyweight", difficulty: "intermediate", instructions: "Upper back on bench, one leg extended, drive single hip to lockout squeezing glute." },
+
+  // ── Traps ─────────────────────────────────────────────────────────────────
+  { id: "e115", name: "Barbell Shrug",           primaryMuscle: "Traps",     secondaryMuscles: ["Forearms"],             equipment: "Barbell",    difficulty: "beginner",     instructions: "Hold barbell at hip level, shrug shoulders straight up, brief pause at top." },
+  { id: "e116", name: "Dumbbell Shrug",          primaryMuscle: "Traps",     secondaryMuscles: ["Forearms"],             equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Hold dumbbells at sides, shrug shoulders toward ears, hold briefly at top." },
+  { id: "e117", name: "Rack Pull",               primaryMuscle: "Traps",     secondaryMuscles: ["Back","Glutes","Forearms"], equipment: "Barbell", difficulty: "intermediate", instructions: "Set bar at knee height on rack, pull to full hip extension — great for upper back and traps overload." },
+  { id: "e118", name: "Cable Shrug",             primaryMuscle: "Traps",     secondaryMuscles: [],                       equipment: "Cable",      difficulty: "beginner",     instructions: "Low pulley, arms straight, shrug shoulders up with constant cable tension." },
+
+  // ── Core — Weighted Abs ────────────────────────────────────────────────────
+  { id: "e099a", name: "Weighted Crunch",        primaryMuscle: "Core",      secondaryMuscles: [],                       equipment: "Plate",      difficulty: "intermediate", instructions: "Hold weight plate on chest, perform crunch with controlled tempo." },
+  { id: "e099b", name: "Dragon Flag",            primaryMuscle: "Core",      secondaryMuscles: ["Shoulders","Lats"],     equipment: "Bodyweight", difficulty: "advanced",     instructions: "Grip bench behind head, raise body to vertical then lower slowly keeping body rigid." },
+  { id: "e099c", name: "Pallof Press",           primaryMuscle: "Core",      secondaryMuscles: ["Obliques","Shoulders"], equipment: "Cable",      difficulty: "beginner",     instructions: "Stand perpendicular to cable, press handle away from chest and return — resists rotation." },
+  { id: "e099d", name: "Landmine Oblique Twist", primaryMuscle: "Core",      secondaryMuscles: ["Obliques","Shoulders"], equipment: "Barbell",    difficulty: "intermediate", instructions: "Hold bar end overhead, rotate to each side controlling the arc with your core." },
+  { id: "e099e", name: "Decline Sit-Up",         primaryMuscle: "Core",      secondaryMuscles: ["Hip Flexors"],          equipment: "Bodyweight", difficulty: "intermediate", instructions: "Feet secured on decline bench, perform full sit-up with hands behind head." },
+
+  // ── Stretching / Mobility ─────────────────────────────────────────────────
+  { id: "e120", name: "Hip Flexor Stretch",      primaryMuscle: "Stretching", secondaryMuscles: ["Quads"],               equipment: "Bodyweight", difficulty: "beginner",     instructions: "Kneel on one knee, shift hips forward until you feel a stretch in the front of the hip. Hold 30–60 s per side." },
+  { id: "e121", name: "Hamstring Stretch",       primaryMuscle: "Stretching", secondaryMuscles: [],                      equipment: "Bodyweight", difficulty: "beginner",     instructions: "Sit with legs straight, reach toward toes keeping back flat. Hold 30–60 s." },
+  { id: "e122", name: "Chest Stretch",           primaryMuscle: "Stretching", secondaryMuscles: ["Front Delts"],         equipment: "Bodyweight", difficulty: "beginner",     instructions: "Clasp hands behind back, gently raise arms and open chest. Hold 30 s." },
+  { id: "e123", name: "Cross-Body Shoulder Stretch", primaryMuscle: "Stretching", secondaryMuscles: ["Rear Delts"],      equipment: "Bodyweight", difficulty: "beginner",     instructions: "Pull one arm across chest with opposite hand. Hold 30 s per side." },
+  { id: "e124", name: "Pigeon Pose",             primaryMuscle: "Stretching", secondaryMuscles: ["Glutes","Hip Flexors"],equipment: "Bodyweight", difficulty: "intermediate", instructions: "From push-up position, bring one knee forward behind same-side wrist. Lower hips and hold 60 s." },
+  { id: "e125", name: "Cat-Cow Stretch",         primaryMuscle: "Stretching", secondaryMuscles: ["Core","Back"],         equipment: "Bodyweight", difficulty: "beginner",     instructions: "On hands and knees, alternate between arching and rounding your spine slowly for 10 reps." },
+  { id: "e126", name: "Thoracic Rotation",       primaryMuscle: "Stretching", secondaryMuscles: ["Back"],                equipment: "Bodyweight", difficulty: "beginner",     instructions: "Sit cross-legged or in a chair, rotate torso left and right with hands behind head. 10 reps each side." },
+  { id: "e127", name: "Standing Quad Stretch",   primaryMuscle: "Stretching", secondaryMuscles: ["Quads"],               equipment: "Bodyweight", difficulty: "beginner",     instructions: "Balance on one foot, pull opposite foot to glutes. Hold 30 s per side." },
+  { id: "e128", name: "World's Greatest Stretch",primaryMuscle: "Stretching", secondaryMuscles: ["Hip Flexors","Thoracic Spine","Glutes"], equipment: "Bodyweight", difficulty: "intermediate", instructions: "From lunge, place same-side hand inside foot, rotate upper arm to sky. 5 reps per side." },
+
   // ── Compound / Olympic ────────────────────────────────────────────────────
   { id: "e100", name: "Power Clean",              primaryMuscle: "Full Body", secondaryMuscles: ["Traps","Glutes","Quads"],equipment: "Barbell",   difficulty: "advanced",     instructions: "Explosive pull from floor, catch bar at shoulders in squat." },
   { id: "e101", name: "Clean and Press",          primaryMuscle: "Full Body", secondaryMuscles: [],                       equipment: "Barbell",   difficulty: "advanced",     instructions: "Power clean into overhead press." },
@@ -120,11 +151,12 @@ export const EXERCISE_DB: ExerciseItem[] = [
 // Unique muscle groups for filter UI
 export const MUSCLE_GROUPS = [
   "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms",
-  "Legs", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Full Body", "Cardio",
+  "Legs", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Traps",
+  "Full Body", "Cardio", "Stretching",
 ];
 
 export const EQUIPMENT_TYPES = [
-  "Barbell", "Dumbbell", "Cable", "Machine", "Bodyweight", "Kettlebell", "Ab Wheel",
+  "Barbell", "Dumbbell", "Cable", "Machine", "Bodyweight", "Kettlebell", "Ab Wheel", "Plate",
 ];
 
 export function searchExercises(
@@ -146,7 +178,12 @@ export function searchExercises(
       || (options.muscle === "Legs" && LEG_MUSCLES.has(e.primaryMuscle));
     const matchesEquipment = !options.equipment || e.equipment === options.equipment;
     const matchesDifficulty= !options.difficulty|| e.difficulty === options.difficulty;
-    return matchesQuery && matchesMuscle && matchesEquipment && matchesDifficulty;
+    // When no muscle filter is set, exclude Stretching from default results
+    // (they appear only when explicitly filtered)
+    const notHiddenStretching = options.muscle
+      ? true
+      : e.primaryMuscle !== "Stretching";
+    return matchesQuery && matchesMuscle && matchesEquipment && matchesDifficulty && notHiddenStretching;
   });
 
   // Rank: name prefix match > name contains > muscle match

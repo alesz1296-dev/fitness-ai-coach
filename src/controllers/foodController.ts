@@ -231,6 +231,53 @@ export const getFoodHistory = async (
   }
 };
 
+// GET /api/foods/frequent?limit=5 — most-frequently-logged foods for quick re-log
+export const getFrequentFoods = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const limit = Math.min(10, Number(req.query.limit) || 5);
+
+    // Scan recent entries, group by food name, rank by count
+    const logs = await prisma.foodLog.findMany({
+      where: { userId: req.user!.id },
+      orderBy: { date: "desc" },
+      take: 300,
+    });
+
+    const seen = new Map<string, { count: number; log: typeof logs[0] }>();
+    for (const log of logs) {
+      const key = log.foodName.toLowerCase().trim();
+      if (!seen.has(key)) {
+        seen.set(key, { count: 1, log });
+      } else {
+        seen.get(key)!.count++;
+      }
+    }
+
+    const frequent = [...seen.values()]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit)
+      .map(({ count, log }) => ({
+        foodName: log.foodName,
+        calories: log.calories,
+        protein:  log.protein,
+        carbs:    log.carbs,
+        fats:     log.fats,
+        quantity: log.quantity,
+        unit:     log.unit,
+        meal:     log.meal,
+        timesLogged: count,
+      }));
+
+    res.json({ frequent });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // GET /api/foods/cheat-dates?days=90 — returns array of date strings with cheat meals
 export const getCheatDates = async (
   req: AuthRequest,

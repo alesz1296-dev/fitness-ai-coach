@@ -7,6 +7,7 @@ const requiredEnvVars = [
   'PORT',
   'DATABASE_URL',
   'JWT_SECRET',
+  'OPENAI_API_KEY',
 ];
 
 const missingEnvVars = requiredEnvVars.filter(

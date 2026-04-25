@@ -95,7 +95,7 @@ export const updateProfile = async (
         // Mark profile as complete whenever a goal is explicitly set
         ...(goal != null && { profileComplete: true }),
         ...(proteinMultiplier !== undefined && {
-          proteinMultiplier: Math.min(2.2, Math.max(0.8, Number(proteinMultiplier))),
+          proteinMultiplier: Math.min(3.0, Math.max(0.8, Number(proteinMultiplier))),
         }),
         ...(trainingDaysPerWeek !== undefined && {
           trainingDaysPerWeek: trainingDaysPerWeek === null ? null : Math.min(7, Math.max(1, Number(trainingDaysPerWeek))),

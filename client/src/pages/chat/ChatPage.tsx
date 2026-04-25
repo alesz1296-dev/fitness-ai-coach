@@ -57,13 +57,86 @@ function TypingDots() {
   );
 }
 
+// ── Suggestion action card ────────────────────────────────────────────────────
+type CardState = "idle" | "saving" | "saved" | "dismissed";
+
+function SuggestionCard({
+  icon, title, question, confirmLabel, confirmStyle, onConfirm,
+}: {
+  icon:         string;
+  title:        string;
+  question:     string;
+  confirmLabel: string;
+  confirmStyle: string;  // tailwind classes for confirm button
+  onConfirm:    () => Promise<void>;
+}) {
+  const [state, setState] = useState<CardState>("idle");
+
+  if (state === "dismissed") return null;
+
+  const handleConfirm = async () => {
+    setState("saving");
+    try {
+      await onConfirm();
+      setState("saved");
+    } catch {
+      setState("idle"); // let the parent toast handle the error message
+    }
+  };
+
+  return (
+    <div className={`mt-2 rounded-2xl border px-4 py-3 text-sm w-full max-w-sm transition-all ${
+      state === "saved"
+        ? "bg-green-50 border-green-200"
+        : "bg-white border-gray-200 shadow-sm"
+    }`}>
+      {state === "saved" ? (
+        <div className="flex items-center gap-2 text-green-700 font-medium">
+          <span>✅</span>
+          <span>Saved! Check {title}.</span>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-start gap-2 mb-3">
+            <span className="text-xl shrink-0">{icon}</span>
+            <div>
+              <p className="font-semibold text-gray-800 text-sm leading-tight">{title}</p>
+              <p className="text-gray-500 text-xs mt-0.5">{question}</p>
+            </div>
+            <button
+              onClick={() => setState("dismissed")}
+              className="ml-auto text-gray-300 hover:text-gray-500 text-lg leading-none shrink-0"
+              title="Dismiss"
+            >×</button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleConfirm}
+              disabled={state === "saving"}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${confirmStyle} disabled:opacity-60`}
+            >
+              {state === "saving" ? "Saving…" : confirmLabel}
+            </button>
+            <button
+              onClick={() => setState("dismissed")}
+              className="px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            >
+              Not now
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Chat bubble ───────────────────────────────────────────────────────────────
 function ChatBubble({ msg, agentIcon, onSaveWorkout, onSavePlan, onSaveMealPlan }: {
   msg:             ChatMessage;
   agentIcon:       string;
-  onSaveWorkout:   (workout: Record<string, any>) => void;
-  onSavePlan:      (plan: Record<string, any>) => void;
-  onSaveMealPlan:  (plan: Record<string, any>) => void;
+  onSaveWorkout:   (workout: Record<string, any>) => Promise<void>;
+  onSavePlan:      (plan: Record<string, any>) => Promise<void>;
+  onSaveMealPlan:  (plan: Record<string, any>) => Promise<void>;
 }) {
   const isUser = msg.role === "user";
 
@@ -101,8 +174,8 @@ function ChatBubble({ msg, agentIcon, onSaveWorkout, onSavePlan, onSaveMealPlan 
         {isUser ? "Me" : agentIcon}
       </div>
 
-      {/* Bubble */}
-      <div className={`max-w-[75%] ${isUser ? "items-end" : "items-start"} flex flex-col gap-1`}>
+      {/* Bubble + action cards */}
+      <div className={`max-w-[80%] ${isUser ? "items-end" : "items-start"} flex flex-col gap-1`}>
         <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed space-y-1 ${
           isUser
             ? "bg-brand-600 text-white rounded-tr-sm"
@@ -111,34 +184,36 @@ function ChatBubble({ msg, agentIcon, onSaveWorkout, onSavePlan, onSaveMealPlan 
           {renderText(displayText)}
         </div>
 
-        {/* Save buttons — only when structured data came back from the API */}
-        {(msg.suggestedWorkout || msg.suggestedPlan || msg.suggestedMealPlan) && (
-          <div className="flex gap-2 mt-1 flex-wrap">
-            {msg.suggestedWorkout && (
-              <button
-                onClick={() => onSaveWorkout(msg.suggestedWorkout!)}
-                className="text-xs text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-3 py-1 rounded-full transition-colors font-medium"
-              >
-                💾 Save as Template
-              </button>
-            )}
-            {msg.suggestedPlan && (
-              <button
-                onClick={() => onSavePlan(msg.suggestedPlan!)}
-                className="text-xs text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-full transition-colors font-medium"
-              >
-                🎯 Save as Goal
-              </button>
-            )}
-            {msg.suggestedMealPlan && (
-              <button
-                onClick={() => onSaveMealPlan(msg.suggestedMealPlan!)}
-                className="text-xs text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 px-3 py-1 rounded-full transition-colors font-medium"
-              >
-                🥗 Log Meal Plan
-              </button>
-            )}
-          </div>
+        {/* Prominent action cards — one per suggestion type */}
+        {msg.suggestedWorkout && (
+          <SuggestionCard
+            icon="💪"
+            title="Your Workouts"
+            question="Want to save this workout plan to your templates?"
+            confirmLabel="Yes, add to Workouts"
+            confirmStyle="bg-brand-600 hover:bg-brand-700 text-white"
+            onConfirm={() => onSaveWorkout(msg.suggestedWorkout!)}
+          />
+        )}
+        {msg.suggestedMealPlan && (
+          <SuggestionCard
+            icon="🥗"
+            title="Meal Planner"
+            question="Want to log this meal plan to today's nutrition?"
+            confirmLabel="Yes, add to Meal Planner"
+            confirmStyle="bg-orange-500 hover:bg-orange-600 text-white"
+            onConfirm={() => onSaveMealPlan(msg.suggestedMealPlan!)}
+          />
+        )}
+        {msg.suggestedPlan && (
+          <SuggestionCard
+            icon="🎯"
+            title="Goals"
+            question="Want to save this calorie & macro plan to your goals?"
+            confirmLabel="Yes, save as Goal"
+            confirmStyle="bg-green-600 hover:bg-green-700 text-white"
+            onConfirm={() => onSavePlan(msg.suggestedPlan!)}
+          />
         )}
       </div>
     </div>
@@ -150,14 +225,16 @@ export default function ChatPage() {
   const [searchParams] = useSearchParams();
   const defaultAgent   = (searchParams.get("agent") as AgentType) || "general";
 
-  const [agent,    setAgent]    = useState<AgentType>(defaultAgent);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input,    setInput]    = useState("");
-  const [typing,   setTyping]   = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [saveMsg,  setSaveMsg]  = useState<{ text: string; ok: boolean } | null>(null);
-  const bottomRef              = useRef<HTMLDivElement>(null);
-  const inputRef               = useRef<HTMLTextAreaElement>(null);
+  const [agent,        setAgent]        = useState<AgentType>(defaultAgent);
+  const [messages,     setMessages]     = useState<ChatMessage[]>([]);
+  const [input,        setInput]        = useState("");
+  const [typing,       setTyping]       = useState(false);
+  const [loading,      setLoading]      = useState(false);
+  const [saveMsg,      setSaveMsg]      = useState<{ text: string; ok: boolean } | null>(null);
+  const [pendingAgent, setPendingAgent] = useState<AgentType | null>(null);
+  const [sidebarHistory, setSidebarHistory] = useState<Conversation[]>([]);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef  = useRef<HTMLTextAreaElement>(null);
 
   // Load conversation history — metadata is parsed server-side and returned
   // alongside each entry so save buttons can be re-hydrated on old messages.
@@ -187,7 +264,44 @@ export default function ChatPage() {
   useEffect(() => { loadHistory(agent); }, [agent, loadHistory]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, typing]);
 
+  // Sidebar: fetch recent messages across all agents
+  const loadSidebarHistory = useCallback(async () => {
+    try {
+      const res = await chatApi.getHistory(undefined, 1, 30);
+      setSidebarHistory(res.data.conversations);
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => { loadSidebarHistory(); }, [loadSidebarHistory, messages.length]);
+
   const agentInfo = AGENTS.find((a) => a.id === agent)!;
+
+  // Switch with confirmation if there's an active conversation
+  const requestSwitchAgent = (next: AgentType) => {
+    if (next === agent) return;
+    if (messages.length > 0) {
+      setPendingAgent(next);
+    } else {
+      setAgent(next);
+    }
+  };
+
+  const confirmSwitch = () => {
+    if (!pendingAgent) return;
+    setAgent(pendingAgent);
+    setPendingAgent(null);
+  };
+
+  // Sidebar helpers
+  const relativeDay = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const today = new Date();
+    const diff = Math.floor((today.getTime() - d.getTime()) / 86_400_000);
+    if (diff === 0) return "Today";
+    if (diff === 1) return "Yesterday";
+    if (diff < 7)  return `${diff} days ago`;
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  };
 
   const showToast = (text: string, ok = true) => {
     setSaveMsg({ text, ok });
@@ -229,81 +343,105 @@ export default function ChatPage() {
   };
 
   // Save workout template using the structured JSON the AI embedded
-  const handleSaveWorkout = async (workout: Record<string, any>) => {
-    try {
-      await chatApi.saveWorkout({
-        name:         workout.name        || `${agentInfo.label} Workout`,
-        description:  workout.description || "Suggested by AI Coach",
-        splitType:    workout.splitType   || "Custom",
-        objective:    workout.objective   || "general",
-        frequency:    workout.frequency   ?? 3,
-        dayLabel:     workout.dayLabel    || workout.name || "AI Workout",
-        muscleGroups: workout.muscleGroups ?? [],
-        exercises:    workout.exercises   ?? [],
-      });
-      showToast("✅ Template saved! Check your Templates page.");
-    } catch (err: any) {
-      const detail = err?.response?.data?.error || "Unknown error";
-      showToast(`❌ Couldn't save template: ${detail}`, false);
-    }
+  // Returns a resolved promise on success, throws on failure (so SuggestionCard can track state)
+  const handleSaveWorkout = async (workout: Record<string, any>): Promise<void> => {
+    await chatApi.saveWorkout({
+      name:         workout.name        || `${agentInfo.label} Workout`,
+      description:  workout.description || "Suggested by AI Coach",
+      splitType:    workout.splitType   || "Custom",
+      objective:    workout.objective   || "general",
+      frequency:    workout.frequency   ?? 3,
+      dayLabel:     workout.dayLabel    || workout.name || "AI Workout",
+      muscleGroups: workout.muscleGroups ?? [],
+      exercises:    workout.exercises   ?? [],
+    });
+    showToast("✅ Template saved! Check your Templates page.");
   };
 
   // Bulk-log a meal plan suggested by the nutritionist agent
-  const handleSaveMealPlan = async (mealPlan: Record<string, any>) => {
-    try {
-      const meals: Array<any> = mealPlan.meals ?? [];
-      const foods = meals.flatMap((meal: any) =>
-        (meal.items ?? []).map((item: any) => ({
-          foodName: item.foodName,
-          calories: item.calories ?? 0,
-          protein:  item.protein  ?? 0,
-          carbs:    item.carbs    ?? 0,
-          fats:     item.fats     ?? 0,
-          quantity: item.quantity ?? 1,
-          unit:     item.unit     ?? "serving",
-          meal:     meal.mealType as "breakfast" | "lunch" | "dinner" | "snack" | null,
-        }))
-      );
-      if (foods.length === 0) {
-        showToast("❌ No food items found in the meal plan", false);
-        return;
-      }
-      await foodApi.bulk(foods);
-      showToast(`✅ ${foods.length} items logged to today's nutrition!`);
-    } catch (err: any) {
-      const detail = err?.response?.data?.error || "Unknown error";
-      showToast(`❌ Couldn't log meal plan: ${detail}`, false);
+  const handleSaveMealPlan = async (mealPlan: Record<string, any>): Promise<void> => {
+    const meals: Array<any> = mealPlan.meals ?? [];
+    const foods = meals.flatMap((meal: any) =>
+      (meal.items ?? []).map((item: any) => ({
+        foodName: item.foodName,
+        calories: item.calories ?? 0,
+        protein:  item.protein  ?? 0,
+        carbs:    item.carbs    ?? 0,
+        fats:     item.fats     ?? 0,
+        quantity: item.quantity ?? 1,
+        unit:     item.unit     ?? "serving",
+        meal:     meal.mealType as "breakfast" | "lunch" | "dinner" | "snack" | null,
+      }))
+    );
+    if (foods.length === 0) {
+      showToast("❌ No food items found in the meal plan", false);
+      throw new Error("No food items");
     }
+    await foodApi.bulk(foods);
+    showToast(`✅ ${foods.length} items logged to today's nutrition!`);
   };
 
   // Save calorie / macro plan using the structured JSON the AI embedded
-  const handleSavePlan = async (plan: Record<string, any>) => {
-    try {
-      await chatApi.saveCaloriePlan({
-        name:          plan.name,
-        currentWeight: plan.currentWeight,
-        targetWeight:  plan.targetWeight,
-        targetDate:    plan.targetDate,
-        dailyCalories: plan.dailyCalories,
-        proteinGrams:  plan.proteinGrams,
-        carbsGrams:    plan.carbsGrams,
-        fatsGrams:     plan.fatsGrams,
-        notes:         plan.notes,
-      });
-      showToast("✅ Calorie goal saved! Check your Goals page.");
-    } catch (err: any) {
-      const detail = err?.response?.data?.error || "Unknown error";
-      showToast(`❌ Couldn't save plan: ${detail}`, false);
-    }
+  const handleSavePlan = async (plan: Record<string, any>): Promise<void> => {
+    await chatApi.saveCaloriePlan({
+      name:          plan.name,
+      currentWeight: plan.currentWeight,
+      targetWeight:  plan.targetWeight,
+      targetDate:    plan.targetDate,
+      dailyCalories: plan.dailyCalories,
+      proteinGrams:  plan.proteinGrams,
+      carbsGrams:    plan.carbsGrams,
+      fatsGrams:     plan.fatsGrams,
+      notes:         plan.notes,
+    });
+    showToast("✅ Calorie goal saved! Check your Goals page.");
   };
 
   return (
-    <div className="flex flex-col h-screen max-h-screen bg-gray-50">
+    <>
+    {/* pb-14 on mobile reserves space above the fixed bottom nav bar (h-14 = 56px) */}
+    <div className="flex h-screen max-h-screen bg-gray-50 pb-14 md:pb-0">
+
+      {/* ── History Sidebar ────────────────────────────────────────────────── */}
+      <aside className="w-56 shrink-0 bg-white border-r border-gray-100 flex-col hidden lg:flex">
+        <div className="px-4 py-3 border-b border-gray-100">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent chats</p>
+        </div>
+        <div className="flex-1 overflow-y-auto py-2">
+          {sidebarHistory.length === 0 ? (
+            <p className="text-xs text-gray-300 px-4 py-3">No history yet</p>
+          ) : (
+            sidebarHistory.map((c) => {
+              const agentDef = AGENTS.find((a) => a.id === c.agentType);
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => requestSwitchAgent(c.agentType as AgentType)}
+                  className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors group ${
+                    c.agentType === agent ? "bg-brand-50" : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-base">{agentDef?.icon ?? "🤖"}</span>
+                    <span className="text-xs font-medium text-gray-500">{agentDef?.label}</span>
+                    <span className="ml-auto text-[10px] text-gray-300 group-hover:text-gray-400">{relativeDay(c.createdAt)}</span>
+                  </div>
+                  <p className="text-xs text-gray-600 truncate pl-6">{c.message}</p>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </aside>
+
+      {/* ── Main chat column ───────────────────────────────────────────────── */}
+      <div className="flex flex-col flex-1 min-w-0">
+
       {/* Agent switcher + header */}
-      <div className="bg-white border-b border-gray-100 px-6 py-4 shrink-0">
+      <div className="bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 shrink-0">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-lg font-bold text-gray-900">AI Coach</h1>
+            <h1 className="text-base sm:text-lg font-bold text-gray-900">AI Coach</h1>
             {messages.length > 0 && (
               <button
                 onClick={clearHistory}
@@ -317,7 +455,7 @@ export default function ChatPage() {
             {AGENTS.map((a) => (
               <button
                 key={a.id}
-                onClick={() => setAgent(a.id)}
+                onClick={() => requestSwitchAgent(a.id)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
                   agent === a.id
                     ? "bg-gray-900 text-white shadow-sm"
@@ -427,6 +565,37 @@ export default function ChatPage() {
           </Button>
         </div>
       </div>
-    </div>
+
+      </div>{/* end main chat column */}
+    </div>{/* end flex outer */}
+
+    {/* ── Agent-switch confirmation modal (#15) ──────────────────────────── */}
+    {pendingAgent && (() => {
+      const next = AGENTS.find((a) => a.id === pendingAgent)!;
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4">
+            <div className="text-center mb-4">
+              <span className="text-4xl">{next.icon}</span>
+            </div>
+            <h3 className="font-bold text-gray-900 text-lg mb-1 text-center">
+              Switch to {next.label}?
+            </h3>
+            <p className="text-sm text-gray-500 mb-5 text-center">
+              Your current conversation is saved. You can switch back anytime.
+            </p>
+            <div className="flex gap-3">
+              <Button variant="secondary" className="flex-1" onClick={() => setPendingAgent(null)}>
+                Stay here
+              </Button>
+              <Button className="flex-1" onClick={confirmSwitch}>
+                Switch
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+    </>
   );
 }

@@ -45,6 +45,7 @@ model User {
   weeklyPlans    WeeklyPlan[]
   waterLogs      WaterLog[]
   mealPlans      MealPlan[]
+  calendarDays   WorkoutCalendarDay[]
 
   @@index([email])
 }
@@ -80,6 +81,7 @@ model Workout {
   caloriesBurned Float?
   notes          String?
   templateId     Int?
+  trainingType   String?  // "strength" | "hypertrophy" | "endurance" | "cardio" | "mobility"
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -352,6 +354,26 @@ model MealPlanDay {
 
   @@unique([planId, dayIndex])
   @@index([planId])
+}
+
+// ── Workout Calendar ──────────────────────────────────────────────────────────
+
+model WorkoutCalendarDay {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  date         String   // "YYYY-MM-DD"
+  workoutName  String?  // e.g. "Push Day", "Leg Day"
+  muscleGroups String?  // JSON array, e.g. '["Chest","Triceps"]'
+  templateId   Int?     // optional link to source template
+  isRestDay    Boolean  @default(false)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
 }
 
 model MealPlanEntry {

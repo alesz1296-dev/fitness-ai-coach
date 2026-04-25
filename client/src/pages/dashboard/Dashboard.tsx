@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import { format, parseISO, addWeeks } from "date-fns";
 import { useAuthStore } from "../../store/authStore";
-import { dashboardApi, calorieGoalsApi } from "../../api";
+import { dashboardApi, calorieGoalsApi, weightApi } from "../../api";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import WeeklyPlanWidget from "../../components/WeeklyPlanWidget";
@@ -57,6 +57,27 @@ export default function Dashboard() {
   const [data,       setData]       = useState<DashboardData | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [projection, setProjection] = useState<{ projected: any[]; actual: any[] } | null>(null);
+
+  // ── Weight FAB ───────────────────────────────────────────────────────────────
+  const [showWeightFab,  setShowWeightFab]  = useState(false);
+  const [weightVal,      setWeightVal]      = useState("");
+  const [savingWeight,   setSavingWeight]   = useState(false);
+  const [weightSaved,    setWeightSaved]    = useState(false);
+
+  const handleLogWeight = async () => {
+    const w = parseFloat(weightVal);
+    if (isNaN(w) || w <= 0) return;
+    setSavingWeight(true);
+    try {
+      await weightApi.log({ weight: w });
+      setWeightSaved(true);
+      setWeightVal("");
+      setTimeout(() => { setShowWeightFab(false); setWeightSaved(false); }, 800);
+      // Refresh dashboard data
+      dashboardApi.get().then((r) => setData(r.data)).catch(() => {});
+    } catch { /* silent */ }
+    finally { setSavingWeight(false); }
+  };
 
   useEffect(() => {
     dashboardApi.get()
@@ -158,25 +179,57 @@ export default function Dashboard() {
 
   const hasProjection = projection?.projected && projection.projected.length > 0;
 
+  // ── Projection status badge ────────────────────────────────────────────────
+  const projectionStatus = (() => {
+    if (!hasProjection || !activeGoal || weightLogs.length === 0) return null;
+    const currentWeight = weightLogs.at(-1)!.weight;
+
+    // Find projected weight point closest to today
+    const projectedPoints = projection!.projected;
+    let closest: any = null;
+    let closestDiff = Infinity;
+    for (const p of projectedPoints) {
+      const pDate = p.date
+        ? p.date.substring(0, 10)
+        : format(addWeeks(new Date(), p.week), "yyyy-MM-dd");
+      const diff = Math.abs(new Date(pDate).getTime() - new Date(todayStr).getTime());
+      if (diff < closestDiff) { closestDiff = diff; closest = p; }
+    }
+    if (!closest) return null;
+
+    const expectedWeight = closest.projectedWeight;
+    const delta = currentWeight - expectedWeight; // positive = heavier than expected
+
+    // "ahead" for cut means losing faster (actual < expected, delta < 0)
+    // "ahead" for bulk means gaining faster (actual > expected, delta > 0)
+    const threshold = 0.5;
+    const isAhead  = activeGoal.type === "cut"  ? delta < -threshold : delta > threshold;
+    const isBehind = activeGoal.type === "cut"  ? delta > threshold  : delta < -threshold;
+
+    if (isAhead)  return { label: "🚀 Ahead of Schedule", cls: "bg-green-100 text-green-700" };
+    if (isBehind) return { label: "⚠️ Slightly Behind",   cls: "bg-amber-100  text-amber-700" };
+    return           { label: "✅ On Track",               cls: "bg-blue-100   text-blue-700"  };
+  })();
+
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const displayName = user?.firstName || user?.username;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 lg:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
             {greeting}, {displayName} 👋
           </h1>
           <p className="text-gray-500 mt-1 text-sm">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="secondary" size="sm" onClick={() => navigate("/nutrition")}>
+        <div className="flex gap-2 sm:gap-3">
+          <Button variant="secondary" size="sm" onClick={() => navigate("/nutrition")} className="flex-1 sm:flex-none">
             + Log Food
           </Button>
-          <Button size="sm" onClick={() => navigate("/workouts")}>
+          <Button size="sm" onClick={() => navigate("/workouts")} className="flex-1 sm:flex-none">
             + Log Workout
           </Button>
         </div>
@@ -301,6 +354,20 @@ export default function Dashboard() {
                 : `${Math.round(Math.abs(calorieTarget - calories))} kcal over`}
             </p>
 
+            {/* No-goal CTA nudge */}
+            {!activeGoal && (
+              <button
+                onClick={() => navigate("/goals")}
+                className="mt-3 w-full bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-center justify-between hover:bg-amber-100 transition-colors text-left"
+              >
+                <div>
+                  <p className="text-xs font-semibold text-amber-700">No calorie goal set</p>
+                  <p className="text-xs text-amber-600 mt-0.5">Set a goal to track your progress</p>
+                </div>
+                <span className="text-amber-500 font-bold text-base ml-2">→</span>
+              </button>
+            )}
+
             {/* Burned calories row — only shown if today has workout calories */}
             {caloriesBurnedToday > 0 && (
               <div className="mt-3 w-full bg-orange-50 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
@@ -417,6 +484,14 @@ export default function Dashboard() {
                   )}
                 </div>
               )}
+              {/* On-track status badge */}
+              {projectionStatus && (
+                <div className="flex justify-center mt-3">
+                  <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${projectionStatus.cls}`}>
+                    {projectionStatus.label}
+                  </span>
+                </div>
+              )}
             </>
           ) : (
             <div className="h-52 flex flex-col items-center justify-center text-gray-400">
@@ -428,6 +503,51 @@ export default function Dashboard() {
             </div>
           )}
         </Card>
+      </div>
+
+      {/* ── Weight FAB ────────────────────────────────────────────────────── */}
+      <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3">
+        {showWeightFab && (
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
+            <p className="text-sm font-semibold text-gray-800">⚖️ Log Weight</p>
+            {weightSaved ? (
+              <p className="text-center text-green-600 font-medium text-sm py-1">✅ Saved!</p>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="20"
+                    max="400"
+                    placeholder="e.g. 80.5"
+                    value={weightVal}
+                    onChange={(e) => setWeightVal(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogWeight()}
+                    className="flex-1 border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    autoFocus
+                  />
+                  <span className="text-xs text-gray-400 font-medium">kg</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="secondary" className="flex-1" onClick={() => { setShowWeightFab(false); setWeightVal(""); }}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" className="flex-1" loading={savingWeight} onClick={handleLogWeight}>
+                    Save
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        <button
+          onClick={() => setShowWeightFab((v) => !v)}
+          className="w-14 h-14 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white rounded-full shadow-lg flex items-center justify-center text-2xl transition-colors"
+          title="Log today's weight"
+        >
+          ⚖️
+        </button>
       </div>
 
       {/* Bottom row */}

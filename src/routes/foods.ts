@@ -10,6 +10,7 @@ import {
   deleteFoodLog,
   getFoodHistory,
   getCheatDates,
+  getFrequentFoods,
 } from "../controllers/foodController.js";
 
 const router = Router();
@@ -20,6 +21,8 @@ router.use(authenticate);
 router.get("/history", getFoodHistory);
 // GET    /api/foods/cheat-dates?days=90
 router.get("/cheat-dates", getCheatDates);
+// GET    /api/foods/frequent?limit=5
+router.get("/frequent", getFrequentFoods);
 
 // GET    /api/foods  (optional ?date=YYYY-MM-DD)
 router.get("/", getFoodLogs);

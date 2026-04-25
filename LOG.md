@@ -4,6 +4,193 @@ Most recent session first.
 
 ---
 
+## 2026-04-24 — Session: Dashboard P3 #18 + #19
+
+### Task 24 (P3 #18) — Calorie goal CTA nudge on Dashboard
+- **`client/src/pages/dashboard/Dashboard.tsx`**:
+  - When `!activeGoal`, an amber banner button now appears inside the "Today's Calories" card below the remaining/over text.
+  - Styled as `bg-amber-50 border border-amber-200 rounded-xl` with "No calorie goal set / Set a goal to track your progress →" text; clicking navigates to `/goals`.
+  - Ring + kcal remaining still render (vs 2000 kcal fallback) so the card is never empty.
+
+### Task 25 (P3 #19) — Projection on-track status badge on Dashboard
+- **`client/src/pages/dashboard/Dashboard.tsx`**:
+  - Added `projectionStatus` IIFE computed variable (runs before `return`). Logic:
+    1. Returns `null` if no projection, no active goal, or no weight logs.
+    2. Iterates `projection.projected` to find the point closest to today (`todayStr`).
+    3. Computes `delta = currentWeight − expectedWeight`. Applies ±0.5 kg threshold, goal-type-aware direction (cut → losing faster = ahead; bulk → gaining faster = ahead).
+    4. Returns `{ label, cls }` for one of three states: "✅ On Track" (blue), "⚠️ Slightly Behind" (amber), "🚀 Ahead of Schedule" (green).
+  - Badge renders centred below the existing chart footer (`hasProjection && activeGoal` block) when `projectionStatus != null`.
+
+---
+
+## 2026-04-24 — Session: Mobile Responsive Pass (P3 #23)
+
+### M1 — Bottom navigation + sidebar hide on mobile
+- **`client/src/components/layout/BottomNav.tsx`** — new file. Fixed bottom tab bar (`flex md:hidden`, `z-40`, `bg-gray-900`). 4 primary tabs: Dashboard, Workouts, Nutrition, AI Coach. 5th "More ⋯" button opens a slide-up sheet with: Meal Planner, Progress, Goals, Reports, Settings + Logout. Sheet has a drag handle, `rounded-t-2xl`, backdrop overlay, `env(safe-area-inset-bottom)` padding for iPhone home-bar clearance.
+- **`client/src/components/layout/Sidebar.tsx`** — Changed `<aside className="w-60 min-h-screen bg-gray-900 flex flex-col">` → `hidden md:flex md:flex-col w-60 min-h-screen bg-gray-900 shrink-0`. Sidebar now only visible at `md+` breakpoint.
+- **`client/src/components/layout/Layout.tsx`** — Added `BottomNav` import + render. Added `pb-16 md:pb-0` to `<main>` (reserves space above fixed bottom bar). Added `min-w-0` to main to prevent flex children overflowing.
+
+### M2 — Responsive page container padding
+All pages changed from hard-coded `p-8` to `p-4 sm:p-6 lg:p-8`:
+- Dashboard, NutritionPage, GoalsPage, WorkoutsPage, ReportsPage (both states), SettingsPage, ProgressPage (was `p-6 lg:p-8` → `p-4 sm:p-6 lg:p-8`)
+- MealPlannerPage already had `p-4 md:p-6`
+
+Settings form grids made responsive:
+- `grid-cols-2` → `grid-cols-1 sm:grid-cols-2` (first name/last name, sex/activity, training schedule, injury areas, cycle)
+- `grid-cols-3` → `grid-cols-1 sm:grid-cols-3` (age/weight/height)
+
+Macro input grids:
+- NutritionPage food-log form: `grid-cols-4` → `grid-cols-2 sm:grid-cols-4`
+- WorkoutsPage set/rep fields (both instances): `grid-cols-4` → `grid-cols-2 sm:grid-cols-4`
+- MealPlannerPage daily totals bar: `grid-cols-4` → `grid-cols-2 sm:grid-cols-4`
+
+### M3 — Dashboard + key page responsive pass
+- **Dashboard header**: `flex items-center justify-between` → `flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3`. Heading font size `text-2xl` → `text-xl sm:text-2xl`. Action buttons get `flex-1 sm:flex-none` so they stretch on mobile.
+- Dashboard stat grids already used `grid-cols-2 lg:grid-cols-4` — no changes needed.
+- NutritionPage main layout: `grid-cols-1 lg:grid-cols-3` already responsive.
+- ProgressPage: already had responsive header (`sm:flex-row`) and `grid-cols-2 sm:grid-cols-4` stats grid.
+
+### M4 — Workouts + Chat mobile polish
+- **WorkoutsPage header**: `flex items-center justify-between flex-wrap` → `flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3`. Training days badge label hidden on mobile (`hidden sm:inline`) to save space; emoji stays. Heading `text-xl sm:text-2xl`.
+- **WorkoutsPage tabs**: `w-fit` → `w-full sm:w-fit`. Each tab: `flex-1 sm:flex-none px-3 sm:px-4` — fills width on mobile.
+- **ChatPage**: Added `pb-14 md:pb-0` to outer `h-screen` container — reserves 56px above fixed bottom nav so input bar is never hidden. Header padding `px-6 py-4` → `px-4 sm:px-6 py-3 sm:py-4`. Header `h1` `text-lg` → `text-base sm:text-lg`.
+- **ReportsPage detail view**: `p-8` → `p-4 sm:p-6 lg:p-8`.
+
+---
+
+## 2026-04-24 — Session: UX Polish + Mobile Start
+
+### Task 13 (final piece) — "Apply to all same-weekday days" in EditCalendarDayModal
+- **`client/src/pages/workouts/WorkoutsPage.tsx`**:
+  - `EditCalendarDayModal` now accepts a `month: string` ("YYYY-MM") prop.
+  - Added `bulkWorking` state + `handleApplyAll()` — calls `calendarApi.populate` with `overwrite: true` for just the matching weekday of the edited date across the whole month.
+  - Weekday derived from `getDay()` with Mon-based offset. Label shown as "Mon"–"Sun" in button.
+  - New button section at bottom of modal: "🔁 Apply to all [Mon/Tue/…]s in [Month]" with a sub-hint line.
+  - Primary "Save" button renamed "Save this day" for clarity.
+  - `CalendarTab` passes `month={monthKey}` to the modal.
+  - `handleApplyAll` returns the count from `res.data.count` in the success message.
+
+### Task 14 — Training days/week UX
+- **`client/src/pages/workouts/WorkoutsPage.tsx`**:
+  - The training days selector was a subtle underline-only number. Replaced with a labelled badge: `🗓️ Training days/week [N] ✏️` with brand-coloured background, border, hover state, and group-hover animations. Edit mode shows Save + ✕ cancel buttons instead of relying on onBlur.
+
+### Task 15 — More templates (endurance + strength/powerlifting)
+- **`src/lib/seedSplits.ts`**: 13 new templates appended:
+  - **Powerlifting / 5-3-1**: Press Day, Deadlift Day, Bench Day, Squat Day
+  - **Powerlifting Peak**: SBD Day A, SBD Day B
+  - **Running / Endurance**: Base Easy Run, Interval Day, Tempo Run, Long Run
+  - **Cross-training**: HIIT Circuit Full Body, Triathlon Prep, Cardio Conditioning (Rowing)
+  - All use `splitType: "Custom"`, `objective: "endurance"` or `"strength"` as appropriate. Endurance exercises use time-based reps (e.g. "20 min easy").
+
+### Task 16 — Water intake DB error fix
+- **`src/controllers/waterController.ts`**: Full rewrite from `(prisma as any).waterLog.*` → raw SQL via `$queryRawUnsafe` / `$executeRawUnsafe`. All 5 endpoints rewritten:
+  - `logWater`: INSERT + SELECT last row
+  - `getToday`: UTC date range query + `waterTargetMl` lookup
+  - `getHistory`: date-range scan + group-by-date in JS
+  - `deleteLog`: ownership check + DELETE
+  - `updateWaterTarget`: raw UPDATE on User
+
+### Task 17 — Create Plan button on Meal Planner fix
+- **`src/controllers/mealPlanController.ts`**: Full rewrite from `(prisma as any).mealPlan.*` → raw SQL (same pattern as waterController). All 7 functions rewritten with `$queryRawUnsafe` / `$executeRawUnsafe`. Cascade delete handled manually (entries → days → plan).
+- **`client/src/pages/mealplanner/MealPlannerPage.tsx`**: `CreatePlanModal.onSave` typed as `Promise<void>` (was `void`). Added `saving` + `error` state inside the modal, `handleSubmit` async wrapper with try/catch, loading spinner on Button. `handleCreate` in page typed as `async (...): Promise<void>`.
+
+### Task 18 — Prominent AI suggestion cards in Chat
+- **`client/src/pages/chat/ChatPage.tsx`**:
+  - New `SuggestionCard` component: icon + title + question text + "Yes, …" confirm button (full-width, colour-coded) + "Not now" dismiss + × close. Transitions to a ✅ "Saved! Check [Title]." in-place on success.
+  - `CardState` type: `"idle" | "saving" | "saved" | "dismissed"`.
+  - `ChatBubble` now renders one `SuggestionCard` per suggestion type below the message bubble (💪 workout = brand blue, 🥗 meal plan = orange, 🎯 goal = green).
+  - All three save handlers (`handleSaveWorkout`, `handleSaveMealPlan`, `handleSavePlan`) refactored to `async (): Promise<void>` — throw on error, show toast on success. `SuggestionCard` manages its own saving/saved/idle state independently.
+  - Old small `.rounded-full` link-style buttons removed.
+
+---
+
+## 2026-04-24 — Session: Workout Calendar (P3 #21)
+
+### Feature: Monthly workout calendar with template population + editing
+
+**Goal**: Clicking the "Calendar" tab on the Workouts page now shows a fully-featured monthly planner. Applying a template populates every matching weekday across the whole month. Days are editable, swappable, and removable.
+
+**Backend — new files**
+
+- `prisma/schema.prisma` — added `WorkoutCalendarDay` model:
+  - Fields: `id`, `userId`, `date` (String "YYYY-MM-DD"), `workoutName?`, `muscleGroups?` (JSON string), `templateId?`, `isRestDay` (Boolean), `notes?`, `createdAt`, `updatedAt`
+  - `@@unique([userId, date])` → composite key `userId_date`
+  - User relation added to `User` model as `calendarDays WorkoutCalendarDay[]`
+
+- `src/lib/runMigrations.ts` — added `WorkoutCalendarDay` to `TABLE_MIGRATIONS` (creates table if not exists) and `idx_workoutcalendar_userid` index to `INDEX_MIGRATIONS`. No Prisma migration file needed — table is created at server startup.
+
+- `src/controllers/calendarController.ts` — new file with 6 exported functions:
+  - `getCalendarMonth` — GET `/api/calendar?month=YYYY-MM`, returns all days in range
+  - `populateCalendar` — POST `/api/calendar/populate`, accepts `{ month, assignments[], overwrite? }` where each assignment has `{ dayOfWeek: 0-6, workoutName, muscleGroups?, templateId?, isRestDay? }`. Upserts one row per matching day in the month.
+  - `updateCalendarDay` — PUT `/api/calendar/:date`, upserts a single day
+  - `deleteCalendarDay` — DELETE `/api/calendar/:date`, removes a single day
+  - `swapCalendarDays` — POST `/api/calendar/swap`, swaps plan fields between two dates
+  - `clearCalendarMonth` — DELETE `/api/calendar/clear?month=YYYY-MM`, deletes all days in month
+
+- `src/routes/calendar.ts` — router wiring all 6 endpoints, all behind `authenticate`
+
+- `src/server.ts` — added `import calendarRoutes` and `app.use("/api/calendar", calendarRoutes)`
+
+**Frontend — client/src/types/index.ts**
+
+Added `WorkoutCalendarDay` interface (matching the model, with `muscleGroups` as `string[]`).
+
+**Frontend — client/src/api/index.ts**
+
+Added `calendarApi` with methods: `getMonth`, `populate`, `updateDay`, `deleteDay`, `swap`, `clearMonth`. Added `WorkoutCalendarDay` to the import.
+
+**Frontend — client/src/pages/workouts/WorkoutsPage.tsx**
+
+- Added `calendarApi` and `WorkoutCalendarDay` to imports
+- Replaced the old minimal `CalendarTab` with a full implementation:
+  - Loads `calendarDays` from `GET /api/calendar?month=` on mount and on month change
+  - Loads all available `templates` for the Apply Template modal
+  - Calendar grid overlays planned days (indigo) on top of logged workouts (brand-blue) and rest days (green)
+  - Each cell shows: day number + short workout label + colour-coded dot
+  - **Swap mode**: toggle button → click first day to select → click second day to execute swap; amber ring on selected day; banner shows current state
+  - **Selected day detail panel**: shows planned info (with edit/remove links) and any logged workouts; if nothing planned, shows "+ Add Plan" and "😴 Mark Rest" buttons
+  - **"Apply Template" modal** (`ApplyTemplateModal`): up to N rows, each row has template select dropdown + weekday checkboxes (Mon–Sun pill buttons); overwrite toggle; validates no duplicate weekdays; calls `calendarApi.populate`
+  - **"Edit Day" modal** (`EditCalendarDayModal`): rest day toggle; template link dropdown (auto-fills label); label override input; notes textarea; calls `calendarApi.updateDay`
+  - **"Clear Month"** button (shown only when month has planned days): confirms then calls `calendarApi.clearMonth`
+  - Toast messages bubbled through callbacks to `CalendarTab`'s own `useToastInCal` so they survive modal unmount
+
+**Action required on next server start**: Run `npx prisma generate` to regenerate the Prisma client with the new `WorkoutCalendarDay` accessor.
+
+---
+
+## 2026-04-24 — Session: P3 items #11–17
+
+### P3 #11 — Quick re-log on Nutrition page
+- **`src/controllers/foodController.ts`**: Added `getFrequentFoods` — scans last 300 entries per user, groups by `foodName.toLowerCase()`, ranks by count, returns top N with last-used macros/quantity/unit/meal.
+- **`src/routes/foods.ts`**: Registered `GET /frequent` before `/:id` param route to avoid routing conflict.
+- **`client/src/api/index.ts`**: Added `foodApi.frequent(limit?)`.
+- **`client/src/pages/nutrition/NutritionPage.tsx`**: `frequentFoods` state loaded on mount; amber "⚡ Quick Re-log" strip renders when ≥1 entry exists; each food pill shows name + kcal; one-tap re-logs to the current date and refreshes totals; spinner + disabled state during save.
+
+### P3 #12 — Dashboard weight entry FAB
+- **`client/src/pages/dashboard/Dashboard.tsx`**: Added `weightApi` import; `showWeightFab` / `weightVal` / `savingWeight` state; fixed bottom-right `⚖️` button; popup card with kg number input (Enter key support); on save calls `weightApi.log`, flashes "✅ Saved!" for 800 ms, then re-fetches dashboard to update chart + stat cards.
+
+### P3 #13 — Inline rest timer in WorkoutDetail
+- **`client/src/pages/workouts/WorkoutsPage.tsx`**: Added `timerExId: number | null` + `secondsLeft: number` state inside `WorkoutDetail`. `setInterval` runs while `timerExId !== null`, auto-clears at 0. "✓ Set done" green button per exercise triggers 90 s countdown. Inline blue countdown strip shows `mm:ss` + shrinking progress bar + ✕ dismiss. Starting a new timer replaces the current one.
+
+### P3 #14 — Shared recent-messages sidebar in Chat
+- **`client/src/pages/chat/ChatPage.tsx`**: Layout changed from `flex-col` to `flex` with a `w-56` `<aside>` (hidden below `lg` breakpoint). `loadSidebarHistory` fetches last 30 conversations across all agents (`chatApi.getHistory(undefined, 1, 30)`) and refreshes on every new message. Each item shows agent icon, label, truncated user message, and relative day label.
+
+### P3 #15 — Chat agent-switch confirmation
+- **`client/src/pages/chat/ChatPage.tsx`**: Agent tab buttons now call `requestSwitchAgent()` instead of `setAgent()` directly. If `messages.length > 0`, sets `pendingAgent` state and shows a centered modal with agent icon, "Your conversation is saved" message, and Stay / Switch buttons. Sidebar entries use the same function.
+
+### P3 #16 — Workout training-type support
+- **`prisma/schema.prisma`**: Added `trainingType String?` to `Workout` model.
+- **`src/lib/runMigrations.ts`**: Added `Workout.trainingType TEXT` to `MIGRATIONS` array — applied on next server boot.
+- **`src/controllers/workoutController.ts`**: Both `createWorkout` and `updateWorkout` accept and persist `trainingType`.
+- **`client/src/types/index.ts`**: Added `trainingType?: string | null` to `Workout` interface.
+- **`client/src/api/index.ts`**: Added `trainingType?: string` to `WorkoutCreateInput`.
+- **`client/src/pages/workouts/WorkoutsPage.tsx`**: Added `TRAINING_TYPES` constant (Strength 🏋️ / Hypertrophy 📈 / Endurance 🏃 / Cardio ❤️ / Mobility 🧘) with per-type colours. Toggle pill-selector added to `WorkoutForm` and `EditWorkoutForm`. Coloured pill badge shown on workout cards when type is set.
+
+### P3 #17 — Store suggestedWorkout JSON in Conversation row
+- Already fully implemented in a prior session: `metadata` column in `runMigrations.ts`, `chatController.ts` stores + parses JSON, ChatPage re-hydrates save buttons from history. Confirmed complete — no additional work needed.
+
+---
+
 ## 2026-04-23
 
 ### Completed this session
@@ -264,4 +451,7 @@ Most recent session first.
 - **Meal field dropped** (backend): `meal` added to destructuring and Prisma `create`/`update` in `foodController.ts`.
 - **AI structured output broken**: System prompts updated to embed `workout-json` / `nutrition-json` fenced blocks. Backend extracts and returns them as `suggestedWorkout` / `suggestedPlan`.
 - **Report controller column drift**: Rewrote with correct Prisma field names. N+1 PR detection replaced with 2-query batched `groupBy`.
-- **Stale files deleted**: R
+- **Stale files deleted**: Root `schema.prisma` (conflicted with `prisma/schema.prisma`) and `tsconfig.ts` (CommonJS config, shadowed `tsconfig.json`).
+- **Auth error messages**: Register shows field-level Zod errors inline; login shows specific messages for 401, 429, and network errors.
+
+---

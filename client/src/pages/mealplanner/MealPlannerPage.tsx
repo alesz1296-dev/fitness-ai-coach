@@ -323,7 +323,7 @@ function DayColumn({
 
       {/* Daily totals */}
       {day.entries.length > 0 && (
-        <div className="border-t border-gray-100 pt-2 grid grid-cols-4 gap-1">
+        <div className="border-t border-gray-100 pt-2 grid grid-cols-2 sm:grid-cols-4 gap-1">
           <MacroBar label="kcal" value={totals.calories} color="text-orange-600" />
           <MacroBar label="protein" value={totals.protein} color="text-purple-600" />
           <MacroBar label="carbs" value={totals.carbs} color="text-green-600" />
@@ -389,9 +389,23 @@ function PlanList({
 }
 
 // ── Create plan modal ─────────────────────────────────────────────────────────
-function CreatePlanModal({ onSave, onClose }: { onSave: (name: string, weekStart: string) => void; onClose: () => void }) {
+function CreatePlanModal({ onSave, onClose }: { onSave: (name: string, weekStart: string) => Promise<void>; onClose: () => void }) {
   const [name, setName]           = useState("My Meal Plan");
   const [weekStart, setWeekStart] = useState(getMondayOfWeek(new Date()));
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState("");
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !weekStart) return;
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(name.trim(), weekStart);
+    } catch (e: any) {
+      setError(e?.response?.data?.error ?? e?.message ?? "Failed to create plan");
+      setSaving(false);
+    }
+  };
 
   return (
     <Modal open={true} title="Create Meal Plan" onClose={onClose}>
@@ -403,7 +417,8 @@ function CreatePlanModal({ onSave, onClose }: { onSave: (name: string, weekStart
           value={weekStart}
           onChange={(e) => setWeekStart(e.target.value)}
         />
-        <Button className="w-full" onClick={() => onSave(name, weekStart)} disabled={!name || !weekStart}>
+        {error && <p className="text-sm text-red-500">{error}</p>}
+        <Button className="w-full" onClick={handleSubmit} disabled={!name || !weekStart || saving} loading={saving}>
           Create Plan
         </Button>
       </div>
@@ -447,7 +462,7 @@ export default function MealPlannerPage() {
   }, []);
 
   // ── Create plan ────────────────────────────────────────────────────────────
-  const handleCreate = async (name: string, weekStart: string) => {
+  const handleCreate = async (name: string, weekStart: string): Promise<void> => {
     const res = await mealPlansApi.create({ name, weekStart });
     setPlans((prev) => [res.data.plan, ...prev]);
     setActivePlan(res.data.plan);

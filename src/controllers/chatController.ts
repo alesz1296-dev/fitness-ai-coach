@@ -108,12 +108,17 @@ export const sendMessage = async (
       ...(suggestedMealPlan && { suggestedMealPlan }),
     });
   } catch (error: any) {
-    // Handle OpenAI API errors gracefully
+    // User-facing errors thrown by the agent's classifyOpenAIError helper
+    if (error?.userFacing) {
+      const status = error.statusCode ?? 502;
+      return next(createError(error.message, status));
+    }
+    // Legacy OpenAI SDK status checks (belt-and-suspenders)
     if (error?.status === 401) {
       return next(createError("OpenAI API key is invalid or not configured", 503));
     }
     if (error?.status === 429) {
-      return next(createError("AI service is currently rate limited, please try again shortly", 503));
+      return next(createError("AI service is currently rate limited, please try again shortly", 429));
     }
     next(error);
   }
@@ -181,6 +186,23 @@ export const clearHistory = async (
 
     const { count } = await prisma.conversation.deleteMany({ where });
     res.json({ message: `Cleared ${count} conversation entries` });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ── GET /api/chat/ai-status ───────────────────────────────────────────────────
+// Returns whether the OpenAI API key is configured (without exposing it).
+export const getAiStatus = async (
+  _req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const key = process.env.OPENAI_API_KEY ?? "";
+    const configured = key.length > 0 && !key.startsWith("sk-your");
+    const masked = configured ? `${key.slice(0, 8)}...${key.slice(-4)}` : null;
+    res.json({ configured, masked, model: "gpt-4o-mini" });
   } catch (error) {
     next(error);
   }

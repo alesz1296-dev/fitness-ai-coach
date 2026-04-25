@@ -28,6 +28,7 @@ import weeklyPlanRoutes  from "./routes/weeklyPlan.js";
 import predictionRoutes  from "./routes/predictions.js";
 import waterRoutes       from "./routes/water.js";
 import mealPlanRoutes    from "./routes/mealPlans.js";
+import calendarRoutes    from "./routes/calendar.js";
 import { runMigrations } from "./lib/runMigrations.js";
 
 const app: Express = express();
@@ -81,6 +82,7 @@ app.use("/api/weekly-plan", weeklyPlanRoutes);
 app.use("/api/predictions", predictionRoutes);
 app.use("/api/water",       waterRoutes);
 app.use("/api/meal-plans",  mealPlanRoutes);
+app.use("/api/calendar",    calendarRoutes);
 
 // ── 404 & Error Handlers ─────────────────────────────────────────────────────
 app.use(notFound);

@@ -13,6 +13,7 @@ import {
   clearHistory,
   saveWorkoutFromChat,
   saveCaloriePlanFromChat,
+  getAiStatus,
 } from "../controllers/chatController.js";
 
 const router = Router();
@@ -32,5 +33,8 @@ router.post("/save-workout", validate(saveWorkoutFromChatSchema), saveWorkoutFro
 
 // POST   /api/chat/save-calorie-plan  (save AI-suggested nutrition plan)
 router.post("/save-calorie-plan", validate(saveCaloriePlanFromChatSchema), saveCaloriePlanFromChat);
+
+// GET    /api/chat/ai-status  (check if OpenAI key is configured)
+router.get("/ai-status", getAiStatus);
 
 export default router;
