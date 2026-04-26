@@ -4,6 +4,191 @@ Most recent session first.
 
 ---
 
+## 2026-04-25 — Session: Dark mode pass (all pages)
+
+### Dark mode — complete pass across all client pages
+
+Applied `dark:` Tailwind variants to every page that was missing them. Pages fixed:
+- `ChatPage.tsx` — agent-switch modal (final piece from last session)
+- `Dashboard.tsx` — streak cards, macro bars, weight FAB popup, chart labels, quick actions, weight log input
+- `GoalsPage.tsx` — preset buttons, form sections, goal stat boxes, past goals list
+- `ProgressPage.tsx` — tabs, body comp cards, formula select, BMI gauge, composition metrics, weight log table, prediction tables
+- `ReportsPage.tsx` — stat boxes, detail view, AI summary, selects, headings
+- `TemplatesPage.tsx` — full dark pass
+- `MealPlannerPage.tsx` — full dark pass
+
+Remaining (large files, deferred to next session):
+- `NutritionPage.tsx` (143 light-only classes)
+- `WorkoutsPage.tsx` (174 light-only classes)
+
+`Card` + `CardHeader` already had dark variants. `SettingsPage.tsx` already had dark variants. `Layout.tsx` root div already provides `dark:text-gray-100` inheritance.
+
+---
+
+## 2026-04-25 — Session: DB migration + scalability review
+
+### Scalability review findings
+
+Full audit of the codebase for scalability bottlenecks. Key findings documented in CONTEXT.md under "P4 — Scalability issues" table:
+
+- **Food + exercise static arrays** (366 foods, 105 exercises) → migrated to DB this session ✅
+- **SQLite write contention** → PostgreSQL swap is next (Docker session)
+- **In-memory token blocklist + rate limiter** → Redis (Docker session)
+- **Connection pooling** → PgBouncer / Prisma Accelerate after Postgres
+- **Dashboard `Promise.all`** → already done, no changes needed
+- **`$queryRawUnsafe` controllers** → deferred until after Postgres swap
+- **OpenAI tool loop latency** → noted, separate queue/worker before public launch
+
+### Food + exercise DB migration
+
+**Problem**: `FOOD_DB` (366 items) and `EXERCISE_DB` (105 items) were loaded into process memory on startup and searched with plain JS `.filter()` on every request. No pagination, no SQL indexing, no user-contributed items possible.
+
+**Backup files created**:
+- `docs/backup-food-db.md` — full `FOOD_DB` TypeScript source + tag reference
+- `docs/backup-exercise-db.md` — full `EXERCISE_DB` TypeScript source + muscle/equipment reference
+
+**Schema — `prisma/schema.prisma`**: Added two new models:
+- `FoodItem` — id (String PK), name, calories, protein, carbs, fats, defaultQty, defaultUnit, tags (JSON string). `@@index([name])`.
+- `ExerciseItem` — id (String PK), name, primaryMuscle, secondaryMuscles (JSON string), equipment, difficulty, instructions. `@@index([name])`, `@@index([primaryMuscle])`, `@@index([equipment])`.
+
+**`src/lib/runMigrations.ts`**: Added `FoodItem` and `ExerciseItem` to `TABLE_MIGRATIONS` (created on server boot). Added 4 entries to `INDEX_MIGRATIONS`: `idx_fooditem_name`, `idx_exerciseitem_name`, `idx_exerciseitem_primarymuscle`, `idx_exerciseitem_equipment`.
+
+**`prisma/seed.ts`** (new file): Imports `FOOD_DB` and `EXERCISE_DB`, upserts all rows via Prisma (`upsert` with `skipDuplicates`-equivalent logic). Safe to re-run. Added `"prisma:seed": "tsx prisma/seed.ts"` to `package.json`.
+
+**`src/controllers/searchController.ts`** (rewritten):
+- Both handlers are now `async` and check `db.foodItem.count()` / `db.exerciseItem.count()` first
+- If DB is populated: queries with Prisma `findMany` using `contains` for name/tag matching, `equals`/`in` for muscle+equipment filters, `take`/`skip` for pagination. Returns `source: "db"`.
+- If DB is empty (pre-seed / first boot): falls back to static array filter. Returns `source: "static"`. Zero downtime during migration.
+- JSON tag array stored as string — matched with `contains: '"tagname"'` pattern.
+- "Legs" broad alias (`in: ["Quads","Hamstrings","Glutes","Calves"]`) preserved from original.
+- Stretching excluded from default (no-muscle-filter) results preserved.
+- Response shape unchanged — frontend requires no updates.
+
+**`src/controllers/calendarController.ts`**: Fixed pre-existing TypeScript error — all 6 handler signatures used plain `Request` instead of `AuthRequest`. Replaced all with `AuthRequest`.
+
+**TypeScript**: `tsc --noEmit` → zero errors after all changes.
+
+### To activate on your machine
+
+```bash
+# From project root — one time after pulling these changes:
+npx prisma generate          # regenerates Prisma client with FoodItem + ExerciseItem
+npm run prisma:seed          # seeds 366 foods + 105 exercises into dev.db
+npm run dev                  # server boot will also create the tables via runMigrations
+```
+
+---
+
+## 2026-04-25 — Session: Mobile App (Phases 3–5)
+
+### Phase 3 — Placeholder screens + navigation wiring
+
+- **`mobile/src/screens/main/WorkoutsScreen.tsx`** — placeholder created
+- **`mobile/src/screens/main/NutritionScreen.tsx`** — placeholder created
+- **`mobile/src/screens/main/ChatScreen.tsx`** — placeholder created
+- **`mobile/src/screens/main/MoreScreen.tsx`** — placeholder created
+- **`mobile/App.tsx`** — rewritten to call `authStore.initialize()` on mount before rendering `RootNavigator`. Shows a green `ActivityIndicator` on a dark `#111827` background while the auth store hydrates from `SecureStore`. Renders `<StatusBar style="light" />` + `<RootNavigator />` once ready.
+
+---
+
+### Phase 4 — Full mobile screens with live API data
+
+#### DashboardScreen (`mobile/src/screens/main/DashboardScreen.tsx`)
+- Fetches `dashboardApi.get()` + `calorieGoalsApi.getProjection()` on mount
+- 4 stat cards: calories, protein, weight, weekly workouts
+- Calorie progress bar (goal-aware) + macro rows (Protein / Carbs / Fats)
+- 2×2 streak grid (workout streak, nutrition streak, rest days, cheat meals) + water progress bar
+- Weight Progress section: latest/starting/change stats + projection status badge ("✅ On Track" / "⚠️ Slightly Behind" / "🚀 Ahead of Schedule") using same ±0.5 kg logic as web
+- Active Goal card: Cut / Bulk / Maintain badge + daily calorie target
+- Recent Workouts list (last 3)
+- Quick Actions 2×2 grid navigating to bottom tabs
+- Floating ⚖️ FAB (bottom-right) opens a Modal for weight entry; shows "✅ Saved!" flash for 1 s before closing; re-fetches dashboard on save
+- `fmtDateShort()`, `fmtDateLong()` helpers (no date-fns dep); `greeting()` returns morning/afternoon/evening
+
+#### WorkoutsScreen (`mobile/src/screens/main/WorkoutsScreen.tsx`)
+- `workoutsApi.getAll()` paginated (page=1, limit=15 initial); infinite scroll via `onMomentumScrollEnd`
+- `WorkoutCard` component: name, date, duration, exercises list, kcal badge
+- `WorkoutDetail` modal: full exercise table (sets / reps / weight / RPE) per exercise, per-exercise notes
+- `LogWorkoutModal`: name, duration (min), calories, notes inputs; calls `workoutsApi.create()`; refreshes list on save
+- Pull-to-refresh via `RefreshControl`; "Load more" footer spinner while fetching next page
+
+#### NutritionScreen (`mobile/src/screens/main/NutritionScreen.tsx`)
+- `foodApi.getToday()` on mount; totals card (calories, protein, carbs, fats) with mini `ProgressBar` per macro
+- Logs grouped by Breakfast / Lunch / Dinner / Snack via `logsByMeal()` helper
+- Per-entry ✕ delete button calling `foodApi.delete()`
+- Full-screen Log Food Modal: meal type pills, 400 ms debounced food search via `searchApi.foods()`, `FlatList` results, quantity input, macro preview row, save
+- `MacroChip` reusable component
+
+#### ChatScreen (`mobile/src/screens/main/ChatScreen.tsx`)
+- `AGENTS` constant: coach 🏋️ / nutritionist 🥗 / general 🤖 with display names + emoji
+- `STARTERS` map: 3 conversation starter chips per agent
+- `chatApi.getHistory()` on mount and on agent tab switch; `fromHistory()` maps `Conversation[]` → `ChatMessage[]`
+- `chatApi.send()` for outgoing messages; typing indicator (3-dot animated) while awaiting response
+- User messages (right-aligned, brand-green) / assistant messages (left-aligned, dark card, avatar)
+- Suggestion chips rendered inline after assistant messages that return structured JSON
+- Agent tabs at top with active underline indicator
+
+#### MoreScreen (`mobile/src/screens/main/MoreScreen.tsx`)
+- Profile card: avatar initials circle, display name, email, username
+- Stats row: weight / height / age / fitness level
+- `EditProfileModal`: firstName, lastName, weight, height, age fields; calls `usersApi.updateProfile()`; calls `authStore.updateUser(updated)` after save
+- `MenuRow` component for tappable list rows with chevron
+- Section groups: Account, App, Support
+- Sign Out: `Alert.alert` confirmation → `authStore.logout()`
+
+---
+
+### Phase 5 — EAS Build config + Expo Go testing
+
+#### app.json (mobile)
+- `"runtimeVersion": { "policy": "appVersion" }` for OTA updates
+- `"userInterfaceStyle": "dark"`
+- `"splash": { "backgroundColor": "#111827" }`
+- `"ios": { "bundleIdentifier": "com.fitaicoach.app", "buildNumber": "1" }`
+- `"android": { "package": "com.fitaicoach.app", "versionCode": 1 }`
+
+#### eas.json (mobile) — new file
+- `development` profile: dev client + `distribution: "internal"`
+- `preview` profile: `distribution: "internal"` → direct APK install, no Play Store needed
+- `production` profile: `autoIncrement: true`, OTA channel `"production"`
+- `submit` section: iOS and Android placeholders
+
+#### @shared types internalization
+- **Problem**: EAS cloud builds only upload the `mobile/` subdirectory; `../shared/` is outside the archive boundary
+- **Fix**: Copied all shared TypeScript interfaces into `mobile/src/shared/types/index.ts` (full copy of web `shared/types/index.ts`)
+- Updated `mobile/babel.config.js`: `"@shared": "../shared"` → `"@shared": "./src/shared"`
+- Updated `mobile/tsconfig.json`: `"@shared/*": ["../shared/*"]` → `"@shared/*": ["./src/shared/*"]`
+- All `@shared/types` imports in screens continue to work unchanged
+
+#### package.json devDependencies fixes
+- Added `"babel-plugin-module-resolver": "^5.0.2"` — was a transitive dep locally but EAS clean install didn't pick it up
+- Added `"babel-preset-expo": "~12.0.0"` — same issue; EAS requires it be explicit in `package.json`
+- `expo-updates` auto-installed by EAS during first build attempt
+
+---
+
+### Build errors encountered and resolved
+
+| Error | Root cause | Fix |
+|---|---|---|
+| `eas project:init` "Invalid UUID" | Placeholder `"YOUR_EAS_PROJECT_ID"` in `app.json extra.eas` | Removed entire `extra.eas` block; re-ran `eas project:init` |
+| "Command must be re-run" | `expo-updates` was installed mid-first-build, changing config | Simply re-ran `eas build` |
+| "Unknown error — Bundle JS" | `@shared/types` alias pointed to `../shared/` outside EAS upload boundary | Internalized types to `mobile/src/shared/types/` |
+| "Cannot find module 'babel-plugin-module-resolver'" | Not in `package.json` devDependencies, only a transitive dep | Added explicitly to devDependencies |
+| "Cannot find module 'babel-preset-expo'" | Same issue | Added explicitly to devDependencies |
+
+---
+
+### Expo Go / iPhone testing setup
+
+- `--host 192.168.137.1` threw AssertionError (flag only accepts `lan`/`tunnel`/`localhost`) → use `$env:REACT_NATIVE_PACKAGER_HOSTNAME="..."` env var instead
+- Expo Go timeout on iPhone: Windows Firewall was blocking port 8081. Root cause: hotspot network is classified as **Public** profile in Windows, so rules with `-Profile Private` don't apply
+- Fix: `New-NetFirewallRule -DisplayName "Expo Metro" -Direction Inbound -Protocol TCP -LocalPort 8081 -Action Allow -Profile Any`
+- Must run PowerShell **as Administrator** or get "Access is denied"
+- Created `TESTING.md` with full setup guide, checklists, EAS build commands, and common issues table
+
+---
+
 ## 2026-04-24 — Session: Dashboard P3 #18 + #19
 
 ### Task 24 (P3 #18) — Calorie goal CTA nudge on Dashboard

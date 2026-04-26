@@ -1,12 +1,13 @@
-import type { Request, Response, NextFunction } from "express";
+import type { Response, NextFunction } from "express";
 import prisma from "../lib/prisma.js";
+import { AuthRequest } from "../middleware/auth.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/calendar?month=YYYY-MM
 // Returns all WorkoutCalendarDay entries for the user in a given month.
 // ─────────────────────────────────────────────────────────────────────────────
 export const getCalendarMonth = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -50,7 +51,7 @@ export const getCalendarMonth = async (
 // dayOfWeek: 0=Monday … 6=Sunday  (ISO week convention)
 // ─────────────────────────────────────────────────────────────────────────────
 export const populateCalendar = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -147,7 +148,7 @@ export const populateCalendar = async (
 // Body: { workoutName?, muscleGroups?, templateId?, isRestDay?, notes? }
 // ─────────────────────────────────────────────────────────────────────────────
 export const updateCalendarDay = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -193,7 +194,7 @@ export const updateCalendarDay = async (
 // Remove the planned day entry (turns the day back to unplanned).
 // ─────────────────────────────────────────────────────────────────────────────
 export const deleteCalendarDay = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -217,7 +218,7 @@ export const deleteCalendarDay = async (
 // Body: { date1: "YYYY-MM-DD", date2: "YYYY-MM-DD" }
 // ─────────────────────────────────────────────────────────────────────────────
 export const swapCalendarDays = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -269,7 +270,7 @@ export const swapCalendarDays = async (
 // Remove all planned days for a given month.
 // ─────────────────────────────────────────────────────────────────────────────
 export const clearCalendarMonth = async (
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => {

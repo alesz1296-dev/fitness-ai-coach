@@ -252,11 +252,11 @@ function BodyCompositionCard({
 
         {/* Formula selector */}
         <div>
-          <label className="text-xs font-medium text-gray-500 block mb-1">Estimation formula</label>
+          <label className="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-1">Estimation formula</label>
           <select
             value={formula}
             onChange={(e) => setFormula(e.target.value as BFFormula)}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+            className="w-full rounded-xl border border-gray-200 dark:border-gray-600 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
           >
             {(Object.entries(BF_FORMULA_LABELS) as [BFFormula, string][]).map(([k, label]) => (
               <option key={k} value={k}>{label}{k === "deurenberg" ? " ★" : ""}</option>
@@ -267,10 +267,10 @@ function BodyCompositionCard({
         {/* BMI gauge */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-500">BMI</span>
-            <span className="text-sm font-bold text-gray-800">{comp.bmi} <span className="text-xs font-normal text-gray-400">({comp.bmiCategory})</span></span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">BMI</span>
+            <span className="text-sm font-bold text-gray-800 dark:text-gray-100">{comp.bmi} <span className="text-xs font-normal text-gray-400 dark:text-gray-500">({comp.bmiCategory})</span></span>
           </div>
-          <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="relative h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
             <div className="absolute inset-y-0 left-0 w-full flex">
               <div className="flex-1 bg-blue-200 opacity-60" />
               <div className="flex-1 bg-green-200 opacity-60" />
@@ -282,44 +282,44 @@ function BodyCompositionCard({
               style={{ left: `${bmiPct}%`, transform: "translateX(-50%)" }}
             />
           </div>
-          <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+          <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
             <span>15</span><span>Underweight</span><span>Normal</span><span>Overweight</span><span>40+</span>
           </div>
         </div>
 
         {/* Composition metrics */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-red-50 rounded-xl px-3 py-3 text-center">
+          <div className="bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-3 text-center">
             <p className="text-xs text-red-400 font-medium mb-0.5">Body Fat</p>
             <p className={`text-2xl font-bold ${comp.fatColor}`}>{comp.fatPct}<span className="text-sm font-normal">%</span></p>
-            <p className="text-xs text-gray-400 mt-0.5">{comp.fatKg} kg · {comp.fatCategory}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{comp.fatKg} kg · {comp.fatCategory}</p>
           </div>
-          <div className="bg-blue-50 rounded-xl px-3 py-3 text-center">
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl px-3 py-3 text-center">
             <p className="text-xs text-blue-400 font-medium mb-0.5">Muscle Mass</p>
             <p className="text-2xl font-bold text-blue-600">{comp.musclePct}<span className="text-sm font-normal">%</span></p>
-            <p className="text-xs text-gray-400 mt-0.5">{comp.muscleKg} kg</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{comp.muscleKg} kg</p>
           </div>
-          <div className="bg-gray-50 rounded-xl px-3 py-3 text-center">
-            <p className="text-xs text-gray-400 font-medium mb-0.5">Lean Mass</p>
-            <p className="text-2xl font-bold text-gray-700">{comp.leanKg}<span className="text-sm font-normal">kg</span></p>
-            <p className="text-xs text-gray-400 mt-0.5">{Math.round((comp.leanKg / (latestWeight ?? 1)) * 100)}%</p>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-xl px-3 py-3 text-center">
+            <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mb-0.5">Lean Mass</p>
+            <p className="text-2xl font-bold text-gray-700 dark:text-gray-100">{comp.leanKg}<span className="text-sm font-normal">kg</span></p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{Math.round((comp.leanKg / (latestWeight ?? 1)) * 100)}%</p>
           </div>
-          <div className="bg-purple-50 rounded-xl px-3 py-3 text-center">
+          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl px-3 py-3 text-center">
             <p className="text-xs text-purple-400 font-medium mb-0.5">BMI</p>
             <p className="text-2xl font-bold text-purple-600">{comp.bmi}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{comp.bmiCategory}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{comp.bmiCategory}</p>
           </div>
         </div>
 
         {/* Composition bar */}
         <div>
-          <p className="text-xs text-gray-400 mb-1.5">Body breakdown</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">Body breakdown</p>
           <div className="h-4 rounded-full overflow-hidden flex">
             <div className="bg-red-400 transition-all" style={{ width: `${comp.fatPct}%` }} title={`Fat: ${comp.fatPct}%`} />
             <div className="bg-blue-400 transition-all" style={{ width: `${comp.musclePct}%` }} title={`Muscle: ${comp.musclePct}%`} />
             <div className="bg-gray-200 flex-1" title="Lean (bone/water/organs)" />
           </div>
-          <div className="flex gap-4 mt-1.5 text-[10px] text-gray-400">
+          <div className="flex gap-4 mt-1.5 text-[10px] text-gray-400 dark:text-gray-500">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />Fat {comp.fatPct}%</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />Muscle ~{comp.musclePct}%</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-200 inline-block" />Other {Math.round(100 - comp.fatPct - comp.musclePct)}%</span>
@@ -329,7 +329,7 @@ function BodyCompositionCard({
         {/* Fat % trend chart */}
         {fatTrend.length > 1 && (
           <div>
-            <p className="text-xs text-gray-400 font-medium mb-2">BODY FAT % TREND</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mb-2">BODY FAT % TREND</p>
             <ResponsiveContainer width="100%" height={120}>
               <ComposedChart data={fatTrend as any} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -347,7 +347,7 @@ function BodyCompositionCard({
           </div>
         )}
 
-        <p className="text-[10px] text-gray-300 text-center">
+        <p className="text-[10px] text-gray-300 dark:text-gray-600 text-center">
           Estimated via {BF_FORMULA_LABELS[formula]}. Results vary by formula — for clinical accuracy use DEXA or hydrostatic weighing.
         </p>
       </div>
@@ -390,8 +390,8 @@ function ExerciseProgressionSection() {
 
       {meta && (
         <div className="flex flex-wrap items-center gap-3 mb-4 text-sm">
-          <span className="font-semibold text-gray-700">{meta.exerciseName}</span>
-          <span className="text-gray-400 text-xs">{meta.totalSessions} sessions logged</span>
+          <span className="font-semibold text-gray-700 dark:text-gray-200">{meta.exerciseName}</span>
+          <span className="text-gray-400 dark:text-gray-500 text-xs">{meta.totalSessions} sessions logged</span>
           {meta.allTimePR && (
             <span className="bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-full text-xs font-semibold">
               🏆 All-time PR: {meta.allTimePR.maxWeight} kg × {meta.allTimePR.bestReps} reps ({meta.allTimePR.date})
@@ -438,10 +438,10 @@ function PredStat({ label, value, sub, color = "text-gray-900" }: {
   label: string; value: string; sub?: string; color?: string;
 }) {
   return (
-    <div className="bg-gray-50 rounded-xl px-4 py-3 text-center">
-      <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+    <div className="bg-gray-50 dark:bg-gray-700 rounded-xl px-4 py-3 text-center">
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{label}</p>
       <p className={`text-xl font-bold ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -459,7 +459,7 @@ function AdherenceGauge({ score, label }: { score: number; label: string }) {
           <circle cx="18" cy="18" r="15.9" fill="none" stroke={color} strokeWidth="3"
             strokeDasharray={strokeDash} strokeLinecap="round" />
         </svg>
-        <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">
+        <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-200">
           {pct}%
         </span>
       </div>
@@ -655,9 +655,9 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100">
+                <tr className="border-b border-gray-100 dark:border-gray-700">
                   {["Horizon", "Weight", "Body Fat %", "Lean Mass", "Fat Mass", "Δ vs Now"].map((h) => (
-                    <th key={h} className="py-2 text-xs text-gray-400 font-medium text-right first:text-left">{h}</th>
+                    <th key={h} className="py-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right first:text-left">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -666,8 +666,8 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
                   const projW = p.trendWeight ?? p.idealWeight ?? data.currentWeight;
                   const delta = (projW - data.currentWeight) as number;
                   return (
-                    <tr key={p.week} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-2.5 font-medium text-gray-800">
+                    <tr key={p.week} className="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="py-2.5 font-medium text-gray-800 dark:text-gray-100">
                         {p.week === 0 ? "Now" : `${p.week} weeks`}
                         {p.week > 0 && <span className="ml-1 text-xs text-gray-400">({p.date})</span>}
                       </td>
@@ -701,16 +701,16 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100">
+              <tr className="border-b border-gray-100 dark:border-gray-700">
                 {["Week", "Avg Weight", "Δ Weight", "Avg Kcal", "Avg Protein", "Workouts", "Net Balance"].map((h) => (
-                  <th key={h} className="py-2 text-xs text-gray-400 font-medium text-right first:text-left">{h}</th>
+                  <th key={h} className="py-2 text-xs text-gray-400 dark:text-gray-500 font-medium text-right first:text-left">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {(data.weeklyHistory ?? []).map((w: any) => (
-                <tr key={w.weekNum} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="py-2 text-gray-700 text-xs">
+                <tr key={w.weekNum} className="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="py-2 text-gray-700 dark:text-gray-300 text-xs">
                     W{w.weekNum}
                     <span className="text-gray-400 ml-1">{w.weekStart}</span>
                   </td>
@@ -842,15 +842,15 @@ export default function ProgressPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Progress</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Body composition, weight trend, and strength over time</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Progress</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Body composition, weight trend, and strength over time</p>
         </div>
         <div className="flex gap-2 shrink-0">
           {tab === "body" && (
             <select
               value={days}
               onChange={(e) => setDays(Number(e.target.value))}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option value={14}>14 days</option>
               <option value={30}>30 days</option>
@@ -863,15 +863,15 @@ export default function ProgressPage() {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex gap-2 border-b border-gray-100 pb-0">
+      <div className="flex gap-2 border-b border-gray-100 dark:border-gray-700 pb-0">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-xl border-b-2 transition-all ${
               tab === t.id
-                ? "border-brand-600 text-brand-700 bg-brand-50"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                ? "border-brand-600 text-brand-700 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
             }`}
           >
             <span>{t.icon}</span>
@@ -949,7 +949,7 @@ export default function ProgressPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100">
+                    <tr className="border-b border-gray-100 dark:border-gray-700">
                       <th className="text-left py-2 text-xs text-gray-400 font-medium">Date</th>
                       <th className="text-right py-2 text-xs text-gray-400 font-medium">Weight</th>
                       <th className="text-right py-2 text-xs text-gray-400 font-medium">Est. Fat%</th>
@@ -966,10 +966,10 @@ export default function ProgressPage() {
                         ? calcBodyFat(log.weight, user.height, user.age, user.sex as "male" | "female")
                         : null;
                       return (
-                        <tr key={log.id} className="border-b border-gray-50 hover:bg-gray-50">
-                          <td className="py-2.5 text-gray-700">{format(parseISO(log.date), "MMM d, yyyy")}</td>
-                          <td className="py-2.5 text-right font-semibold text-gray-800">{log.weight} kg</td>
-                          <td className="py-2.5 text-right text-xs text-gray-500">
+                        <tr key={log.id} className="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                          <td className="py-2.5 text-gray-700 dark:text-gray-300">{format(parseISO(log.date), "MMM d, yyyy")}</td>
+                          <td className="py-2.5 text-right font-semibold text-gray-800 dark:text-gray-100">{log.weight} kg</td>
+                          <td className="py-2.5 text-right text-xs text-gray-500 dark:text-gray-400">
                             {fat !== null ? `${fat}%` : "—"}
                           </td>
                           <td className="py-2.5 text-right text-sm">
@@ -979,33 +979,10 @@ export default function ProgressPage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-2.5 pl-4 text-gray-500 text-xs">{log.notes}</td>
+                          <td className="py-2.5 pl-4 text-gray-500 dark:text-gray-400 text-xs">{log.notes}</td>
                           <td className="py-2.5 text-right">
                             <button onClick={() => deleteLog(log.id)} className="text-gray-300 hover:text-red-400 transition-colors text-xs px-2 py-1">✕</button>
                           </td>
                         </tr>
                       );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          )}
-        </>
-      )}
-
-      {/* ── Exercise Progression tab ───────────────────────────────────────── */}
-      {tab === "strength" && <ExerciseProgressionSection />}
-
-      {/* ── Predictions tab ───────────────────────────────────────────────── */}
-      {tab === "predictions" && (
-        <PredictionCard data={predData} loading={predLoading} />
-      )}
-
-      {/* Log weight modal */}
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Log Weight" size="sm">
-        <LogWeightForm onSave={() => { setShowForm(false); load(); }} onClose={() => setShowForm(false)} />
-      </Modal>
-    </div>
-  );
-}
+                 

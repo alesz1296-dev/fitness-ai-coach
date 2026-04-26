@@ -376,6 +376,36 @@ model WorkoutCalendarDay {
   @@index([userId])
 }
 
+// ── Food & Exercise Catalogue (seeded, read-only at runtime) ──────────────────
+
+model FoodItem {
+  id          String  @id          // e.g. "f001"
+  name        String
+  calories    Float
+  protein     Float
+  carbs       Float
+  fats        Float
+  defaultQty  Float
+  defaultUnit String
+  tags        String  @default("[]") // JSON array of tag strings
+
+  @@index([name])
+}
+
+model ExerciseItem {
+  id               String  @id          // e.g. "e001"
+  name             String
+  primaryMuscle    String
+  secondaryMuscles String  @default("[]") // JSON array
+  equipment        String
+  difficulty       String  // "beginner" | "intermediate" | "advanced"
+  instructions     String
+
+  @@index([name])
+  @@index([primaryMuscle])
+  @@index([equipment])
+}
+
 model MealPlanEntry {
   id       Int    @id @default(autoincrement())
   dayId    Int

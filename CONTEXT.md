@@ -34,11 +34,45 @@ fitness_ai_coach/
 │       ├── components/         # Shared UI + layout (Sidebar, OnboardingModal)
 │       ├── store/              # Zustand stores (authStore.ts)
 │       └── types/index.ts      # Shared TypeScript interfaces
+├── mobile/                     # React Native (Expo) mobile app
+│   ├── App.tsx                 # Entry point — initializes authStore, renders RootNavigator
+│   ├── app.json                # Expo config (bundleId, dark mode, splash, runtimeVersion)
+│   ├── eas.json                # EAS build profiles: development / preview / production
+│   ├── babel.config.js         # babel-preset-expo + module-resolver (@shared alias)
+│   ├── tsconfig.json           # Extends expo/tsconfig.base, paths: @shared/* → ./src/shared/*
+│   ├── package.json            # Expo 54, RN 0.81, Zustand, Axios, react-navigation
+│   └── src/
+│       ├── api/                # Axios API client + per-domain modules (mirrors web api/)
+│       ├── navigation/         # RootNavigator (auth stack / main tabs)
+│       ├── screens/
+│       │   ├── auth/           # LoginScreen, RegisterScreen
+│       │   └── main/           # DashboardScreen, WorkoutsScreen, NutritionScreen,
+│       │                       #   ChatScreen, MoreScreen
+│       ├── store/              # Zustand authStore (initialize / logout / updateUser)
+│       └── shared/
+│           └── types/index.ts  # ← LOCAL COPY of all shared TypeScript interfaces
+│                               #   (EAS only uploads mobile/, so ../shared/ is unreachable)
 ├── scripts/
 │   └── kill-port.cjs           # Kills port 3000 before dev server starts (Windows fix)
 ├── CONTEXT.md                  # ← This file
-└── LOG.md                      # Session-by-session change log
+├── LOG.md                      # Session-by-session change log
+└── TESTING.md                  # Web + mobile testing guide + EAS build commands
 ```
+
+### Food + exercise data — important rule
+
+`src/data/foods.ts` and `src/data/exercises.ts` are **seed sources only** — they are no longer used at runtime for search. `searchController.ts` queries `FoodItem` and `ExerciseItem` DB tables directly, falling back to the static arrays only when those tables are empty (first boot before `npm run prisma:seed` has been run).
+
+**When adding new foods or exercises**: add to the static array first, then re-run `npm run prisma:seed` (upsert — safe to re-run). The backup reference copies live in `docs/backup-food-db.md` and `docs/backup-exercise-db.md`.
+
+**First-time setup on a new machine**:
+```bash
+npx prisma generate   # regenerates client with FoodItem + ExerciseItem models
+npm run prisma:seed   # seeds 366 foods + 105 exercises
+```
+
+### mobile/@shared alias — important rule
+`mobile/src/shared/types/index.ts` is a **manual copy** of the web `shared/types/index.ts`. When adding or changing interfaces in the web types, also update the mobile copy. The alias `@shared/types` in all mobile source files resolves to this local copy via `babel-plugin-module-resolver` + `tsconfig paths`. Do **not** point the alias back to `../shared/` — EAS cloud builds will fail because they only upload the `mobile/` directory.
 
 ---
 
@@ -158,11 +192,11 @@ Notable field names (easy to get wrong):
 
 ### 🟠 Phase 4 — Production hardening
 
-These should be done before any public deployment:
+These should be done before any public deployment. **Docker is the next session priority** — it unblocks PostgreSQL + Redis and enables the CI pipeline.
 
 - **PostgreSQL** — Swap SQLite (`dev.db`) for PostgreSQL. Update `DATABASE_URL` in `.env` and run `prisma migrate deploy`. No schema changes needed.
 - **Redis** — Replace in-memory token blocklist (`tokenBlocklist.ts`) and rate limiter with Redis-backed implementations. Required for multi-instance deployments.
-- **Docker** — `Dockerfile` for backend + frontend + optional Nginx reverse proxy. `docker-compose.yml` wiring them together with a Postgres service and Redis service.
+- **Docker** ⬅️ **NEXT SESSION** — `Dockerfile` for backend + frontend + optional Nginx reverse proxy. `docker-compose.yml` wiring them together with a Postgres service and Redis service. See P4 priority table for details.
 - **CI pipeline** — GitHub Actions: lint → `tsc --noEmit` (both) → `prisma validate` → build → optional test run.
 - **Env validation on startup** — Fail fast if `OPENAI_API_KEY`, `JWT_SECRET`, or `DATABASE_URL` are missing. `src/config/env.ts` already has the structure; add `process.exit(1)` on missing required vars.
 - **OpenAI API key integration test** — ⚠️ **Do not commit secrets.** Before testing live chat in any shared/CI environment, ask first. Locally: add `OPENAI_API_KEY` to `.env` (gitignored), verify the chat endpoint returns a real AI response, and confirm tool-calling round-trips work end-to-end. Rate-limit and error-handling branches should also be exercised at this stage.
@@ -285,15 +319,33 @@ Work top-to-bottom within each tier. Finish all P1s before starting P2s.
 
 > CI pipeline goes here — it's the safety net that catches regressions in everything above it, so set it up once PostgreSQL + Docker are wired, then let it run on every PR from that point forward.
 
+#### Scalability issues — ranked by urgency
+
+| Priority | Item | Status | Notes |
+| -------- | ---- | ------ | ----- |
+| 🔴 Critical | **Food + exercise DB migration** | ✅ Done | `FoodItem` + `ExerciseItem` Prisma models. `prisma/seed.ts` seeds 366 foods + 105 exercises. `searchController.ts` now queries DB with `LIKE`. Static arrays kept in `src/data/` as seed source only. |
+| 🔴 Critical | **PostgreSQL swap** | ⬅️ Next (Docker session) | SQLite serialises all writes — concurrent users will hit lock contention. Swap `DATABASE_URL` + `prisma migrate deploy`. No schema changes needed. |
+| 🔴 Critical | **Redis — token blocklist + rate limiter** | Pending | In-memory `tokenBlocklist.ts` clears on restart; re-accepts recently invalidated tokens. In-memory rate limiter doesn't span multiple processes. Both need Redis. |
+| 🟠 High | **Connection pooling** | Pending (after Postgres) | Prisma uses 1 connection in dev. Under load on Postgres, add PgBouncer or Prisma Accelerate to avoid exhausting connection limits. |
+| 🟠 High | **Dashboard `Promise.all` parallelisation** | ✅ Done | Sequential `await` calls wrapped into `Promise.all` groups — cuts latency ~3–4× on networked Postgres. Negligible on SQLite. |
+| 🟠 High | **Rewrite `$queryRawUnsafe` controllers** | Pending (after Postgres) | `waterController.ts`, `mealPlanController.ts`, `calendarController.ts` use raw SQL. Safe now on SQLite; brittle on Postgres due to type-casting differences. Rewrite to standard Prisma queries post-swap. |
+| 🟡 Medium | **Query result caching (Redis)** | Pending (after Redis) | Food search + exercise search results are user-independent and change only on seed. 10-min Redis TTL would eliminate most DB reads for search. |
+| 🟡 Medium | **OpenAI tool loop latency** | Pending | `MAX_TOOL_ROUNDS=5` with DB queries per round = 3–8 s per chat message. Chat endpoint should run on a separate queue/worker before any public launch. |
+
+#### Full P4 task list
+
 | #   | Item                                          | Location                                                                            |
 | --- | --------------------------------------------- | ----------------------------------------------------------------------------------- |
 | 21  | OpenAI API key integration test               | `.env` → live chat test (⚠️ ask before running)                                     |
-| 22  | Seeded DB tables for food & exercise          | `prisma/seed.ts` + new `FoodItem` / `ExerciseItem` models                           |
+| 22  | Food + exercise → DB (seed + rewrite search)  | ✅ `prisma/seed.ts`, `FoodItem`/`ExerciseItem` models, `searchController.ts`        |
 | 23  | PostgreSQL swap                               | `DATABASE_URL` + `prisma migrate deploy`                                            |
 | 24  | Redis — token blocklist + rate limiter        | `tokenBlocklist.ts` + `rateLimiter.ts`                                              |
 | 25  | Docker (Dockerfile + docker-compose)          | Repo root → API + Postgres + Redis services                                         |
 | 26  | CI pipeline (lint → typecheck → test → build) | `.github/workflows/ci.yml` — set up after Docker so CI runs the containerised stack |
 | 27  | Weekly plan migration reminder in onboarding  | Onboarding Step 1 or post-login gate                                                |
+| 28  | Connection pooling                            | PgBouncer or Prisma Accelerate — after Postgres swap                                |
+| 29  | Rewrite `$queryRawUnsafe` controllers         | `waterController.ts`, `mealPlanController.ts`, `calendarController.ts`              |
+| 30  | Redis query cache for search endpoints        | `GET /search/foods` + `GET /search/exercises` — after Redis is wired               |
 
 ### P5 — Larger features (plan a dedicated session for each)
 
@@ -301,10 +353,10 @@ Work top-to-bottom within each tier. Finish all P1s before starting P2s.
 | --- | ------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------- |
 | 28  | Superset / ascending series / circuit config            | Schema change + builder UI + rest timer integration                       | —                           |
 | 29  | Meal plan save as template                              | New `MealTemplate` Prisma model                                           | —                           |
-| 30  | Mobile version readiness — Phase 4.5                    | Responsive layout pass + bottom tab nav + touch targets                   | Ask for dedicated session   |
-| 31  | Progressive Web App                                     | `vite-plugin-pwa` — offline support + installable                         | Phase 4.5                   |
+| 30  | Mobile app — React Native (Expo) ✅                     | All 5 screens done (Dashboard/Workouts/Nutrition/Chat/More). Expo Go working on iPhone. EAS build profiles configured. See `mobile/` | — |
+| 31  | Progressive Web App                                     | `vite-plugin-pwa` — offline support + installable                         | —                           |
 | 32  | Admin dashboard (usage analytics)                       | Role-gated `/admin` page; aggregate queries on existing tables + Recharts | PostgreSQL (#23)            |
-| 33  | Mobile deployment (App Store + Play Store)              | Capacitor or PWABuilder wrapper; accounts + privacy policy required       | PWA (#31) + Phase 4.5 (#30) |
+| 33  | Mobile deployment (App Store + Play Store)              | EAS build + submit. Android: `eas build --platform android --profile production`. iOS: requires Apple Developer account ($99/yr). | Docker (#25) + backend on public URL |
 | 34  | Push notifications / streak reminders                   | PWA push or email; streak alerts + workout reminders                      | PWA (#31)                   |
 | 35  | Agent write tools (`log_food`, `save_workout_template`) | `src/ai/agent.ts` tool set                                                | —                           |
 | 36  | Social / sharing (workout summary image)                | Canvas API → PNG or Web Share API                                         | —                           |
@@ -323,6 +375,19 @@ npm run dev          # kills port 3000, starts tsx watch
 
 # Frontend (from client/)
 npm run dev          # Vite dev server on :5173
+
+# Mobile (from mobile/)
+npx expo start --host lan          # prints QR — scan with Expo Go on iPhone/Android
+
+# If phone can't connect (Windows hotspot classified as Public network):
+$env:REACT_NATIVE_PACKAGER_HOSTNAME="YOUR_PC_IP"; npx expo start
+# One-time firewall rule (run PowerShell as Administrator):
+New-NetFirewallRule -DisplayName "Expo Metro" -Direction Inbound -Protocol TCP -LocalPort 8081 -Action Allow -Profile Any
+
+# EAS cloud builds
+cd mobile
+eas build --platform android --profile preview   # → downloadable APK (~10 min)
+eas build --platform ios     --profile preview   # → IPA (requires Apple Developer account)
 
 # DB migrations
 npx prisma migrate dev --name <name>

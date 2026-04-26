@@ -67,7 +67,7 @@ function SuggestionCard({
   title:        string;
   question:     string;
   confirmLabel: string;
-  confirmStyle: string;  // tailwind classes for confirm button
+  confirmStyle: string;
   onConfirm:    () => Promise<void>;
 }) {
   const [state, setState] = useState<CardState>("idle");
@@ -80,18 +80,18 @@ function SuggestionCard({
       await onConfirm();
       setState("saved");
     } catch {
-      setState("idle"); // let the parent toast handle the error message
+      setState("idle");
     }
   };
 
   return (
     <div className={`mt-2 rounded-2xl border px-4 py-3 text-sm w-full max-w-sm transition-all ${
       state === "saved"
-        ? "bg-green-50 border-green-200"
-        : "bg-white border-gray-200 shadow-sm"
+        ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700"
+        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 shadow-sm"
     }`}>
       {state === "saved" ? (
-        <div className="flex items-center gap-2 text-green-700 font-medium">
+        <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium">
           <span>✅</span>
           <span>Saved! Check {title}.</span>
         </div>
@@ -100,12 +100,12 @@ function SuggestionCard({
           <div className="flex items-start gap-2 mb-3">
             <span className="text-xl shrink-0">{icon}</span>
             <div>
-              <p className="font-semibold text-gray-800 text-sm leading-tight">{title}</p>
-              <p className="text-gray-500 text-xs mt-0.5">{question}</p>
+              <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm leading-tight">{title}</p>
+              <p className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">{question}</p>
             </div>
             <button
               onClick={() => setState("dismissed")}
-              className="ml-auto text-gray-300 hover:text-gray-500 text-lg leading-none shrink-0"
+              className="ml-auto text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 text-lg leading-none shrink-0"
               title="Dismiss"
             >×</button>
           </div>
@@ -119,7 +119,7 @@ function SuggestionCard({
             </button>
             <button
               onClick={() => setState("dismissed")}
-              className="px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              className="px-3 py-2 rounded-xl text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               Not now
             </button>
@@ -169,7 +169,7 @@ function ChatBubble({ msg, agentIcon, onSaveWorkout, onSavePlan, onSaveMealPlan 
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
       {/* Avatar */}
       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 ${
-        isUser ? "bg-brand-600 text-white" : "bg-gray-100"
+        isUser ? "bg-brand-600 text-white" : "bg-gray-100 dark:bg-gray-700"
       }`}>
         {isUser ? "Me" : agentIcon}
       </div>
@@ -179,7 +179,7 @@ function ChatBubble({ msg, agentIcon, onSaveWorkout, onSavePlan, onSaveMealPlan 
         <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed space-y-1 ${
           isUser
             ? "bg-brand-600 text-white rounded-tr-sm"
-            : "bg-white border border-gray-100 text-gray-800 rounded-tl-sm shadow-sm"
+            : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-100 rounded-tl-sm shadow-sm"
         }`}>
           {renderText(displayText)}
         </div>
@@ -400,16 +400,16 @@ export default function ChatPage() {
   return (
     <>
     {/* pb-14 on mobile reserves space above the fixed bottom nav bar (h-14 = 56px) */}
-    <div className="flex h-screen max-h-screen bg-gray-50 pb-14 md:pb-0">
+    <div className="flex h-screen max-h-screen bg-gray-50 dark:bg-gray-900 pb-14 md:pb-0">
 
       {/* ── History Sidebar ────────────────────────────────────────────────── */}
-      <aside className="w-56 shrink-0 bg-white border-r border-gray-100 flex-col hidden lg:flex">
-        <div className="px-4 py-3 border-b border-gray-100">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent chats</p>
+      <aside className="w-56 shrink-0 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 flex-col hidden lg:flex">
+        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Recent chats</p>
         </div>
         <div className="flex-1 overflow-y-auto py-2">
           {sidebarHistory.length === 0 ? (
-            <p className="text-xs text-gray-300 px-4 py-3">No history yet</p>
+            <p className="text-xs text-gray-300 dark:text-gray-600 px-4 py-3">No history yet</p>
           ) : (
             sidebarHistory.map((c) => {
               const agentDef = AGENTS.find((a) => a.id === c.agentType);
@@ -417,16 +417,16 @@ export default function ChatPage() {
                 <button
                   key={c.id}
                   onClick={() => requestSwitchAgent(c.agentType as AgentType)}
-                  className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors group ${
-                    c.agentType === agent ? "bg-brand-50" : ""
+                  className={`w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors group ${
+                    c.agentType === agent ? "bg-brand-50 dark:bg-brand-900/20" : ""
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="text-base">{agentDef?.icon ?? "🤖"}</span>
-                    <span className="text-xs font-medium text-gray-500">{agentDef?.label}</span>
-                    <span className="ml-auto text-[10px] text-gray-300 group-hover:text-gray-400">{relativeDay(c.createdAt)}</span>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{agentDef?.label}</span>
+                    <span className="ml-auto text-[10px] text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500">{relativeDay(c.createdAt)}</span>
                   </div>
-                  <p className="text-xs text-gray-600 truncate pl-6">{c.message}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 truncate pl-6">{c.message}</p>
                 </button>
               );
             })
@@ -438,14 +438,14 @@ export default function ChatPage() {
       <div className="flex flex-col flex-1 min-w-0">
 
       {/* Agent switcher + header */}
-      <div className="bg-white border-b border-gray-100 px-4 sm:px-6 py-3 sm:py-4 shrink-0">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 shrink-0">
         <div className="max-w-3xl mx-auto">
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-base sm:text-lg font-bold text-gray-900">AI Coach</h1>
+            <h1 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">AI Coach</h1>
             {messages.length > 0 && (
               <button
                 onClick={clearHistory}
-                className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                className="text-xs text-gray-400 dark:text-gray-500 hover:text-red-500 transition-colors"
               >
                 Clear history
               </button>
@@ -458,8 +458,8 @@ export default function ChatPage() {
                 onClick={() => requestSwitchAgent(a.id)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
                   agent === a.id
-                    ? "bg-gray-900 text-white shadow-sm"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-sm"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                 }`}
               >
                 <span>{a.icon}</span>
@@ -480,17 +480,17 @@ export default function ChatPage() {
           ) : messages.length === 0 ? (
             /* Welcome / starter prompts */
             <div className="text-center py-10">
-              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">
                 {agentInfo.icon}
               </div>
-              <h2 className="text-lg font-bold text-gray-900 mb-1">{agentInfo.label}</h2>
-              <p className="text-sm text-gray-500 mb-8">{agentInfo.desc}</p>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{agentInfo.label}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">{agentInfo.desc}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-lg mx-auto">
                 {STARTERS[agent].map((s) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="text-left text-sm bg-white border border-gray-200 rounded-xl px-4 py-3 hover:border-brand-300 hover:bg-brand-50 transition-colors text-gray-700"
+                    className="text-left text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 hover:border-brand-300 dark:hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors text-gray-700 dark:text-gray-200"
                   >
                     {s}
                   </button>
@@ -512,10 +512,10 @@ export default function ChatPage() {
 
           {typing && (
             <div className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm shrink-0">
+              <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm shrink-0">
                 {agentInfo.icon}
               </div>
-              <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm shadow-sm">
+              <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl rounded-tl-sm shadow-sm">
                 <TypingDots />
               </div>
             </div>
@@ -535,7 +535,7 @@ export default function ChatPage() {
       )}
 
       {/* Input bar */}
-      <div className="bg-white border-t border-gray-100 px-4 py-4 shrink-0">
+      <div className="bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 px-4 py-4 shrink-0">
         <div className="max-w-3xl mx-auto flex gap-3 items-end">
           <textarea
             ref={inputRef}
@@ -546,7 +546,7 @@ export default function ChatPage() {
             }}
             placeholder={`Ask ${agentInfo.label}…  (Shift+Enter for new line)`}
             rows={1}
-            className="flex-1 rounded-2xl border border-gray-200 px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 max-h-40 overflow-y-auto"
+            className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 max-h-40 overflow-y-auto"
             style={{ minHeight: "44px" }}
             onInput={(e) => {
               const t = e.currentTarget;
@@ -574,14 +574,14 @@ export default function ChatPage() {
       const next = AGENTS.find((a) => a.id === pendingAgent)!;
       return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4">
             <div className="text-center mb-4">
               <span className="text-4xl">{next.icon}</span>
             </div>
-            <h3 className="font-bold text-gray-900 text-lg mb-1 text-center">
+            <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1 text-center">
               Switch to {next.label}?
             </h3>
-            <p className="text-sm text-gray-500 mb-5 text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 text-center">
               Your current conversation is saved. You can switch back anytime.
             </p>
             <div className="flex gap-3">

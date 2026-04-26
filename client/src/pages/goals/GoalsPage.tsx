@@ -153,7 +153,7 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
               className={`text-left rounded-xl border-2 px-3 py-2.5 transition-all hover:shadow-md ${
                 activePreset === p.key
                   ? p.color + " border-2 shadow-sm"
-                  : "border-gray-200 bg-white hover:border-gray-300"
+                  : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500"
               }`}
             >
               <p className="font-semibold text-sm">{p.icon} {p.label}</p>
@@ -163,8 +163,8 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
         </div>
       </div>
 
-      <div className="border-t border-gray-100 pt-4 space-y-4">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide -mb-1">Customise</p>
+      <div className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-4">
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide -mb-1">Customise</p>
 
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
 
@@ -192,7 +192,7 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
       </div>
 
       {/* Macro cycling option */}
-      <div className="border border-gray-100 rounded-xl p-3 space-y-2 bg-gray-50">
+      <div className="border border-gray-100 dark:border-gray-700 rounded-xl p-3 space-y-2 bg-gray-50 dark:bg-gray-700/50">
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <div
             onClick={() => { setMacrosCycling((v) => !v); setPreview(null); }}
@@ -200,7 +200,7 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
           >
             <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${macrosCycling ? "translate-x-5" : "translate-x-0.5"}`} />
           </div>
-          <span className="text-sm font-medium text-gray-700">🔄 Enable Macro Cycling</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">🔄 Enable Macro Cycling</span>
         </label>
         {macrosCycling && (
           <p className="text-xs text-indigo-600 leading-relaxed">
@@ -230,9 +230,9 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
                 { label: "Protein",        value: `${Math.round(preview.calculation.proteinGrams)}g` },
                 { label: "Weekly Change",  value: `${preview.calculation.weeklyChange > 0 ? "+" : ""}${preview.calculation.weeklyChange}kg` },
               ].map((item) => (
-                <div key={item.label} className="bg-white rounded-xl p-2">
-                  <p className="text-xs text-gray-400">{item.label}</p>
-                  <p className="font-bold text-gray-800 mt-0.5">{item.value}</p>
+                <div key={item.label} className="bg-white dark:bg-gray-700 rounded-xl p-2">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{item.label}</p>
+                  <p className="font-bold text-gray-800 dark:text-gray-100 mt-0.5">{item.value}</p>
                 </div>
               ))}
             </div>
@@ -359,8 +359,8 @@ export default function GoalsPage() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Goals</h1>
-          <p className="text-gray-500 text-sm mt-1">Calorie targets & body composition plans</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Goals</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Calorie targets & body composition plans</p>
         </div>
         <Button onClick={() => setShowForm(true)}>+ New Goal</Button>
       </div>
@@ -384,12 +384,12 @@ export default function GoalsPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                    <h2 className="font-bold text-gray-900">{activeGoal.name || "Active Goal"}</h2>
+                    <h2 className="font-bold text-gray-900 dark:text-white">{activeGoal.name || "Active Goal"}</h2>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_LABELS[activeGoal.type]?.color}`}>
                       {TYPE_LABELS[activeGoal.type]?.label}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {activeGoal.currentWeight}kg → {activeGoal.targetWeight}kg by {format(parseISO(activeGoal.targetDate), "MMM d, yyyy")}
                   </p>
                 </div>
@@ -406,9 +406,9 @@ export default function GoalsPage() {
                   { label: "Carbs",           value: `${Math.round(activeGoal.carbsGrams)}g` },
                   { label: "Fats",            value: `${Math.round(activeGoal.fatsGrams)}g` },
                 ].map((item) => (
-                  <div key={item.label} className="bg-gray-50 rounded-xl p-3 text-center">
-                    <p className="text-xs text-gray-400">{item.label}</p>
-                    <p className="font-bold text-gray-800 mt-0.5">{item.value}</p>
+                  <div key={item.label} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3 text-center">
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{item.label}</p>
+                    <p className="font-bold text-gray-800 dark:text-gray-100 mt-0.5">{item.value}</p>
                   </div>
                 ))}
               </div>
@@ -424,10 +424,10 @@ export default function GoalsPage() {
               <CardHeader title="Past Goals" />
               <div className="space-y-3">
                 {inactiveGoals.map((g) => (
-                  <div key={g.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                  <div key={g.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-xl">
                     <div>
-                      <p className="text-sm font-semibold text-gray-700">{g.name || "Goal"}</p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{g.name || "Goal"}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
                         {g.currentWeight}kg → {g.targetWeight}kg · {Math.round(g.dailyCalories)} kcal/day
                       </p>
                     </div>

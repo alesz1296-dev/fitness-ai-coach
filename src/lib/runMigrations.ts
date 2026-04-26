@@ -83,6 +83,32 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
     )`,
   },
   {
+    table: "FoodItem",
+    sql: `CREATE TABLE IF NOT EXISTS "FoodItem" (
+      "id"          TEXT PRIMARY KEY,
+      "name"        TEXT NOT NULL,
+      "calories"    REAL NOT NULL,
+      "protein"     REAL NOT NULL,
+      "carbs"       REAL NOT NULL,
+      "fats"        REAL NOT NULL,
+      "defaultQty"  REAL NOT NULL,
+      "defaultUnit" TEXT NOT NULL,
+      "tags"        TEXT NOT NULL DEFAULT '[]'
+    )`,
+  },
+  {
+    table: "ExerciseItem",
+    sql: `CREATE TABLE IF NOT EXISTS "ExerciseItem" (
+      "id"               TEXT PRIMARY KEY,
+      "name"             TEXT NOT NULL,
+      "primaryMuscle"    TEXT NOT NULL,
+      "secondaryMuscles" TEXT NOT NULL DEFAULT '[]',
+      "equipment"        TEXT NOT NULL,
+      "difficulty"       TEXT NOT NULL,
+      "instructions"     TEXT NOT NULL
+    )`,
+  },
+  {
     table: "MealPlanEntry",
     sql: `CREATE TABLE IF NOT EXISTS "MealPlanEntry" (
       "id"        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -232,6 +258,22 @@ const INDEX_MIGRATIONS: Array<{ name: string; sql: string }> = [
   {
     name: "idx_workoutcalendar_userid",
     sql: `CREATE INDEX IF NOT EXISTS "idx_workoutcalendar_userid" ON "WorkoutCalendarDay" ("userId")`,
+  },
+  {
+    name: "idx_fooditem_name",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_fooditem_name" ON "FoodItem" ("name")`,
+  },
+  {
+    name: "idx_exerciseitem_name",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_name" ON "ExerciseItem" ("name")`,
+  },
+  {
+    name: "idx_exerciseitem_primarymuscle",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_primarymuscle" ON "ExerciseItem" ("primaryMuscle")`,
+  },
+  {
+    name: "idx_exerciseitem_equipment",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_equipment" ON "ExerciseItem" ("equipment")`,
   },
 ];
 

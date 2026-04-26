@@ -38,12 +38,12 @@ function MacroBar({ label, value, target, color }: {
   return (
     <div>
       <div className="flex justify-between text-sm mb-1">
-        <span className="text-gray-600 font-medium">{label}</span>
-        <span className="text-gray-800 font-semibold">
+        <span className="text-gray-600 dark:text-gray-300 font-medium">{label}</span>
+        <span className="text-gray-800 dark:text-gray-100 font-semibold">
           {Math.round(value)}g{target ? ` / ${Math.round(target)}g` : ""}
         </span>
       </div>
-      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
         <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -220,10 +220,10 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             {greeting}, {displayName} 👋
           </h1>
-          <p className="text-gray-500 mt-1 text-sm">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
         </div>
         <div className="flex gap-2 sm:gap-3">
           <Button variant="secondary" size="sm" onClick={() => navigate("/nutrition")} className="flex-1 sm:flex-none">
@@ -270,54 +270,54 @@ export default function Dashboard() {
       {/* Streak + Water row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Workout streak */}
-        <div className="rounded-2xl bg-white border border-gray-100 p-4 flex flex-col gap-1">
+        <div className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1">
           <div className="flex items-center gap-2 text-orange-500 font-bold text-lg">
             🔥 {streaks?.workout ?? 0}
-            <span className="text-sm font-normal text-gray-500">day streak</span>
+            <span className="text-sm font-normal text-gray-500 dark:text-gray-400">day streak</span>
           </div>
-          <p className="text-xs text-gray-400">Workout streak</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Workout streak</p>
           {(streaks?.workoutBest ?? 0) > 0 && (
-            <p className="text-xs text-gray-400">Best: {streaks!.workoutBest} days</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Best: {streaks!.workoutBest} days</p>
           )}
         </div>
 
         {/* Nutrition streak */}
-        <div className="rounded-2xl bg-white border border-gray-100 p-4 flex flex-col gap-1">
+        <div className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1">
           <div className="flex items-center gap-2 text-green-600 font-bold text-lg">
             🥗 {streaks?.nutrition ?? 0}
-            <span className="text-sm font-normal text-gray-500">day streak</span>
+            <span className="text-sm font-normal text-gray-500 dark:text-gray-400">day streak</span>
           </div>
-          <p className="text-xs text-gray-400">On-target nutrition</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">On-target nutrition</p>
           {(streaks?.cheatMealsThisWeek ?? 0) > 0 && (
-            <p className="text-xs text-gray-400">🍕 {streaks!.cheatMealsThisWeek} cheat meal{streaks!.cheatMealsThisWeek > 1 ? "s" : ""} this week</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">🍕 {streaks!.cheatMealsThisWeek} cheat meal{streaks!.cheatMealsThisWeek > 1 ? "s" : ""} this week</p>
           )}
         </div>
 
         {/* Rest days */}
-        <div className="rounded-2xl bg-white border border-gray-100 p-4 flex flex-col gap-1">
+        <div className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1">
           <div className="flex items-center gap-2 text-purple-600 font-bold text-lg">
             😴 {streaks?.restDays != null ? streaks!.restDays : "—"}
-            <span className="text-sm font-normal text-gray-500">day{streaks?.restDays !== 1 ? "s" : ""} rest</span>
+            <span className="text-sm font-normal text-gray-500 dark:text-gray-400">day{streaks?.restDays !== 1 ? "s" : ""} rest</span>
           </div>
-          <p className="text-xs text-gray-400">Since last workout</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Since last workout</p>
           {today.hasWorkout && <p className="text-xs text-green-600 font-medium">✅ Trained today</p>}
         </div>
 
         {/* Water intake */}
-        <div className="rounded-2xl bg-white border border-gray-100 p-4 flex flex-col gap-2">
+        <div className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-blue-600 font-bold text-lg">
               💧 {Math.round((water?.totalMl ?? 0) / 100) / 10}L
             </span>
-            <span className="text-xs text-gray-400">/ {Math.round((water?.targetMl ?? 2000) / 100) / 10}L</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">/ {Math.round((water?.targetMl ?? 2000) / 100) / 10}L</span>
           </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full bg-blue-400 transition-all"
               style={{ width: `${Math.min(100, ((water?.totalMl ?? 0) / (water?.targetMl ?? 2000)) * 100)}%` }}
             />
           </div>
-          <p className="text-xs text-gray-400">Water today</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Water today</p>
         </div>
       </div>
 
@@ -342,12 +342,12 @@ export default function Dashboard() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-bold text-gray-900">{caloriePct}%</span>
-                <span className="text-xs text-gray-500">consumed</span>
+                <span className="text-2xl font-bold text-gray-900 dark:text-white">{caloriePct}%</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">consumed</span>
               </div>
             </div>
-            <p className="mt-3 text-gray-800 font-semibold text-lg">{Math.round(calories)} kcal</p>
-            <p className="text-gray-400 text-sm">of {Math.round(calorieTarget)} kcal</p>
+            <p className="mt-3 text-gray-800 dark:text-gray-100 font-semibold text-lg">{Math.round(calories)} kcal</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm">of {Math.round(calorieTarget)} kcal</p>
             <p className={`text-sm font-medium mt-1 ${calorieTarget - calories < 0 ? "text-red-500" : "text-brand-600"}`}>
               {calorieTarget - calories > 0
                 ? `${Math.round(calorieTarget - calories)} kcal remaining`
@@ -376,9 +376,9 @@ export default function Dashboard() {
               </div>
             )}
             {caloriesBurnedToday > 0 && (
-              <div className="mt-1 w-full bg-gray-50 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
-                <span className="text-gray-500 font-medium">Net calories</span>
-                <span className={`font-bold ${netCalories > calorieTarget ? "text-red-600" : "text-gray-700"}`}>
+              <div className="mt-1 w-full bg-gray-50 dark:bg-gray-700 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">Net calories</span>
+                <span className={`font-bold ${netCalories > calorieTarget ? "text-red-600" : "text-gray-700 dark:text-gray-200"}`}>
                   {Math.round(netCalories)} kcal
                 </span>
               </div>
@@ -386,7 +386,7 @@ export default function Dashboard() {
           </div>
 
           {/* Macros */}
-          <div className="space-y-3 mt-2 border-t border-gray-100 pt-4">
+          <div className="space-y-3 mt-2 border-t border-gray-100 dark:border-gray-700 pt-4">
             <MacroBar label="Protein" value={today.totals.protein ?? 0} target={activeGoal?.proteinGrams} color="bg-blue-500" />
             <MacroBar label="Carbs"   value={today.totals.carbs   ?? 0} target={activeGoal?.carbsGrams}   color="bg-yellow-400" />
             <MacroBar label="Fats"    value={today.totals.fats    ?? 0} target={activeGoal?.fatsGrams}    color="bg-red-400" />
@@ -463,12 +463,12 @@ export default function Dashboard() {
                 </ComposedChart>
               </ResponsiveContainer>
               {hasProjection && activeGoal && (
-                <div className="flex items-center justify-between mt-2 px-1 text-xs text-gray-500">
+                <div className="flex items-center justify-between mt-2 px-1 text-xs text-gray-500 dark:text-gray-400">
                   <span>
-                    Target: <span className="font-semibold text-gray-700">{activeGoal.targetWeight} kg</span>
+                    Target: <span className="font-semibold text-gray-700 dark:text-gray-200">{activeGoal.targetWeight} kg</span>
                   </span>
                   <span>
-                    by <span className="font-semibold text-gray-700">
+                    by <span className="font-semibold text-gray-700 dark:text-gray-200">
                       {format(parseISO(activeGoal.targetDate), "MMM d, yyyy")}
                     </span>
                   </span>
@@ -477,7 +477,7 @@ export default function Dashboard() {
                       (activeGoal.type === "cut"
                         ? weightLogs.at(-1)!.weight < activeGoal.targetWeight
                         : weightLogs.at(-1)!.weight > activeGoal.targetWeight)
-                        ? "text-green-600" : "text-gray-700"
+                        ? "text-green-600" : "text-gray-700 dark:text-gray-200"
                     }`}>
                       {Math.abs(weightLogs.at(-1)!.weight - activeGoal.targetWeight).toFixed(1)} kg to go
                     </span>
@@ -508,8 +508,8 @@ export default function Dashboard() {
       {/* ── Weight FAB ────────────────────────────────────────────────────── */}
       <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3">
         {showWeightFab && (
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
-            <p className="text-sm font-semibold text-gray-800">⚖️ Log Weight</p>
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">⚖️ Log Weight</p>
             {weightSaved ? (
               <p className="text-center text-green-600 font-medium text-sm py-1">✅ Saved!</p>
             ) : (
@@ -524,10 +524,10 @@ export default function Dashboard() {
                     value={weightVal}
                     onChange={(e) => setWeightVal(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleLogWeight()}
-                    className="flex-1 border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    className="flex-1 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                     autoFocus
                   />
-                  <span className="text-xs text-gray-400 font-medium">kg</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">kg</span>
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="secondary" className="flex-1" onClick={() => { setShowWeightFab(false); setWeightVal(""); }}>
@@ -568,15 +568,15 @@ export default function Dashboard() {
                 <div
                   key={w.id}
                   onClick={() => navigate(`/workouts/${w.id}`)}
-                  className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 bg-brand-100 rounded-xl flex items-center justify-center text-brand-600 font-bold text-sm">
                       {w.name[0]}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-800">{w.name}</p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{w.name}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
                         {format(parseISO(w.date), "MMM d")} · {w.duration}min · {w.exercises.length} exercises
                       </p>
                     </div>
@@ -616,8 +616,8 @@ export default function Dashboard() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="font-semibold text-gray-800">{activeGoal.name || "My Goal"}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="font-semibold text-gray-800 dark:text-gray-100">{activeGoal.name || "My Goal"}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                       {activeGoal.currentWeight}kg → {activeGoal.targetWeight}kg ·{" "}
                       {activeGoal.type === "cut" ? "Cutting" : activeGoal.type === "bulk" ? "Bulking" : "Maintaining"}
                     </p>
@@ -635,7 +635,7 @@ export default function Dashboard() {
                     <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
                       🔄 Macro Cycling
                     </span>
-                    <span className="text-gray-400">
+                    <span className="text-gray-400 dark:text-gray-500">
                       {today.hasWorkout ? "🏋️ Train day" : "😴 Rest day"} active
                     </span>
                   </div>
@@ -646,9 +646,9 @@ export default function Dashboard() {
                     { label: "Protein",  value: `${Math.round(activeGoal.proteinGrams)}g` },
                     { label: "Weekly",   value: `${activeGoal.weeklyChange > 0 ? "+" : ""}${activeGoal.weeklyChange}kg` },
                   ].map((item) => (
-                    <div key={item.label} className="bg-gray-50 rounded-xl p-2.5">
-                      <p className="text-xs text-gray-400">{item.label}</p>
-                      <p className="text-sm font-bold text-gray-800 mt-0.5">{item.value}</p>
+                    <div key={item.label} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-2.5">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{item.label}</p>
+                      <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mt-0.5">{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -679,7 +679,7 @@ export default function Dashboard() {
                 <button
                   key={a.label}
                   onClick={() => navigate(a.to)}
-                  className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 hover:bg-brand-50 hover:text-brand-700 transition-colors text-left text-sm font-medium text-gray-700"
+                  className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-700 dark:hover:text-brand-400 transition-colors text-left text-sm font-medium text-gray-700 dark:text-gray-200"
                 >
                   <span>{a.icon}</span>
                   {a.label}

@@ -89,15 +89,15 @@ function TemplateDetail({ template, onStart, onClose }: {
           <p className="text-sm text-gray-500">{template.dayLabel} · {template.frequency}x/week · {template.objective}</p>
         </div>
       </div>
-      {template.description && <p className="text-sm text-gray-600">{template.description}</p>}
+      {template.description && <p className="text-sm text-gray-600 dark:text-gray-300">{template.description}</p>}
 
       <div className="space-y-2">
         {template.exercises.map((ex, i) => (
           <div key={ex.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
             <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-600 text-xs font-bold flex items-center justify-center">{i + 1}</span>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-800">{ex.exerciseName}</p>
-              <p className="text-xs text-gray-400">{ex.sets} sets × {ex.reps} reps{ex.restSeconds ? ` · ${ex.restSeconds}s rest` : ""}</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{ex.exerciseName}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{ex.sets} sets × {ex.reps} reps{ex.restSeconds ? ` · ${ex.restSeconds}s rest` : ""}</p>
             </div>
           </div>
         ))}
@@ -171,8 +171,8 @@ export default function TemplatesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Templates</h1>
-          <p className="text-gray-500 text-sm mt-1">Pre-built and custom workout splits</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Templates</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Pre-built and custom workout splits</p>
         </div>
       </div>
 
@@ -224,7 +224,7 @@ export default function TemplatesPage() {
             <Card className="text-center py-14">
               <div className="text-5xl mb-4">⚙️</div>
               <h3 className="font-semibold text-gray-800 mb-2">No personal templates yet</h3>
-              <p className="text-sm text-gray-400">Save a logged workout as a template, or ask the AI Coach to generate one for you.</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">Save a logged workout as a template, or ask the AI Coach to generate one for you.</p>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

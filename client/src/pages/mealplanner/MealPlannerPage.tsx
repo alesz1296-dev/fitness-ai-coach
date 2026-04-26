@@ -36,7 +36,7 @@ function MacroBar({ label, value, color }: { label: string; value: number; color
   return (
     <div className="text-center">
       <div className={`text-sm font-bold ${color}`}>{Math.round(value)}{label === "kcal" ? "" : "g"}</div>
-      <div className="text-xs text-gray-400">{label}</div>
+      <div className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">{label}</div>
     </div>
   );
 }
@@ -155,7 +155,7 @@ function FoodSearchModal({
                 onClick={() => { setSelected(r); setQuery(r.name); setResults([]); }}
                 className="w-full text-left px-3 py-2 hover:bg-brand-50 flex justify-between items-center"
               >
-                <span className="text-sm font-medium text-gray-800">{r.name}</span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{r.name}</span>
                 <span className="text-xs text-gray-400 ml-2 shrink-0">{r.calories} kcal / {r.servingSize}g</span>
               </button>
             ))}
@@ -182,7 +182,7 @@ function FoodSearchModal({
                 placeholder="g / ml / serving"
               />
             </div>
-            <div className="flex gap-4 text-sm text-gray-600">
+            <div className="flex gap-4 text-sm text-gray-600 dark:text-gray-300">
               <span>🔥 {Math.round(selected.calories * scale)} kcal</span>
               <span>💪 {Math.round((selected.protein ?? 0) * scale)}g P</span>
               <span>🌾 {Math.round((selected.carbs ?? 0) * scale)}g C</span>
@@ -210,7 +210,7 @@ function EntryRow({
     <div className="flex items-center justify-between py-1.5 gap-2">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-gray-800 truncate">{entry.foodName}</p>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">
           {entry.quantity}{entry.unit} · {Math.round(entry.calories)} kcal
           <span className="ml-1.5 text-purple-500">{Math.round(entry.protein)}P</span>
           <span className="ml-1 text-green-500">{Math.round(entry.carbs)}C</span>
@@ -302,7 +302,7 @@ function DayColumn({
           </span>
           {isToday && <span className="text-xs bg-brand-600 text-white px-1.5 py-0.5 rounded-full">Today</span>}
         </div>
-        <p className="text-xs text-gray-400">{format(date, "MMM d")}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">{format(date, "MMM d")}</p>
       </div>
 
       {/* Meals */}
@@ -353,11 +353,11 @@ function PlanList({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-700">My Plans</h2>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">My Plans</h2>
         <Button size="sm" onClick={onCreate}>+ New Plan</Button>
       </div>
       {loading ? (
-        <div className="text-sm text-gray-400">Loading…</div>
+        <div className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-400">Loading…</div>
       ) : plans.length === 0 ? (
         <div className="text-sm text-gray-400 italic">No plans yet. Create your first!</div>
       ) : (
@@ -372,8 +372,8 @@ function PlanList({
             }`}
           >
             <div>
-              <p className="text-sm font-semibold text-gray-800">{p.name}</p>
-              <p className="text-xs text-gray-400">Week of {p.weekStart}</p>
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{p.name}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">Week of {p.weekStart}</p>
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(p.id); }}
@@ -542,8 +542,8 @@ export default function MealPlannerPage() {
     <div className="p-4 md:p-6 max-w-full space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">🥗 Meal Planner</h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">🥗 Meal Planner</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
           Plan your meals week by week — build a template, track macros, stay on goal.
         </p>
       </div>
@@ -568,7 +568,7 @@ export default function MealPlannerPage() {
           {!activePlan ? (
             <div className="flex flex-col items-center justify-center h-64 text-center">
               <span className="text-5xl mb-4">📅</span>
-              <p className="text-gray-500">Select a plan or create a new one</p>
+              <p className="text-gray-500 dark:text-gray-400">Select a plan or create a new one</p>
               <Button className="mt-4" onClick={() => setShowCreate(true)}>+ New Plan</Button>
             </div>
           ) : loadingPlan ? (
@@ -581,7 +581,7 @@ export default function MealPlannerPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">{activePlan.name}</h2>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-400">
                     {format(parseISO(activePlan.weekStart), "MMM d")} — {format(addDays(parseISO(activePlan.weekStart), 6), "MMM d, yyyy")}
                   </p>
                 </div>
@@ -589,11 +589,11 @@ export default function MealPlannerPage() {
                   <div className="flex gap-4">
                     <div className="text-center">
                       <div className="text-sm font-bold text-orange-600">{Math.round(avgCalories)}</div>
-                      <div className="text-xs text-gray-400">avg kcal/day</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">avg kcal/day</div>
                     </div>
                     <div className="text-center">
                       <div className="text-sm font-bold text-purple-600">{Math.round(weeklyTotals.protein / 7)}g</div>
-                      <div className="text-xs text-gray-400">avg protein</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">avg protein</div>
                     </div>
                   </div>
                 )}
