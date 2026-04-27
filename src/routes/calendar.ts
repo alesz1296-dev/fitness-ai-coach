@@ -1,5 +1,11 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import {
+  populateCalendarSchema,
+  swapCalendarDaysSchema,
+  updateCalendarDaySchema,
+} from "../middleware/schemas.js";
 import {
   getCalendarMonth,
   populateCalendar,
@@ -10,14 +16,13 @@ import {
 } from "../controllers/calendarController.js";
 
 const router = Router();
-
 router.use(authenticate);
 
-router.get("/",          getCalendarMonth);   // GET  /api/calendar?month=YYYY-MM
-router.post("/populate", populateCalendar);   // POST /api/calendar/populate
-router.post("/swap",     swapCalendarDays);   // POST /api/calendar/swap
-router.delete("/clear",  clearCalendarMonth); // DELETE /api/calendar/clear?month=YYYY-MM
-router.put("/:date",     updateCalendarDay);  // PUT  /api/calendar/:date
-router.delete("/:date",  deleteCalendarDay);  // DELETE /api/calendar/:date
+router.get("/", getCalendarMonth);
+router.post("/populate", validate(populateCalendarSchema), populateCalendar);
+router.post("/swap", validate(swapCalendarDaysSchema), swapCalendarDays);
+router.delete("/clear", clearCalendarMonth);
+router.put("/:date", validate(updateCalendarDaySchema), updateCalendarDay);
+router.delete("/:date", deleteCalendarDay);
 
 export default router;

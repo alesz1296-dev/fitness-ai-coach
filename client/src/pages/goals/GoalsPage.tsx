@@ -315,7 +315,7 @@ function GoalProjectionChart({ goalId }: { goalId: number }) {
 }
 
 // ── Main Goals page ───────────────────────────────────────────────────────────
-export default function GoalsPage() {
+export default function GoalsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [goals,    setGoals]    = useState<CalorieGoal[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -356,14 +356,22 @@ export default function GoalsPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Goals</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Calorie targets & body composition plans</p>
+    <div className={embedded ? "p-4 sm:p-6 max-w-5xl mx-auto space-y-6" : "p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6"}>
+      {!embedded && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Goals</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Calorie targets & body composition plans</p>
+          </div>
+          <Button onClick={() => setShowForm(true)}>+ New Goal</Button>
         </div>
-        <Button onClick={() => setShowForm(true)}>+ New Goal</Button>
-      </div>
+      )}
+      {embedded && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Calorie targets & body composition plans</p>
+          <Button size="sm" onClick={() => setShowForm(true)}>+ New Goal</Button>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-20"><div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" /></div>

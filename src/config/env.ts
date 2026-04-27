@@ -1,4 +1,4 @@
-﻿import dotenv from 'dotenv';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -27,6 +27,7 @@ export const config = {
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRY: process.env.JWT_EXPIRY || '7d',
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  REDIS_URL: process.env.REDIS_URL || null,
   APP_NAME: process.env.APP_NAME || 'FitAI Coach',
   APP_VERSION: process.env.APP_VERSION || '1.0.0',
 };

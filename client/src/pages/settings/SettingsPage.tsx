@@ -1,13 +1,32 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { applyDark, readDarkPref } from "../../hooks/useDarkMode";
-import { usersApi } from "../../api";
+import { usersApi, calorieGoalsApi } from "../../api";
 import { useAuthStore } from "../../store/authStore";
 import type { User } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+function useToast() {
+  const [msg, setMsg] = useState<string | null>(null);
+  const show = (message: string) => {
+    setMsg(message);
+    setTimeout(() => setMsg(null), 3000);
+  };
+  return { msg, show };
+}
+function ToastBanner({ msg }: { msg: string | null }) {
+  if (!msg) return null;
+  return (
+    <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-xl flex items-center gap-2">
+      <span className="text-green-400">✓</span>
+      {msg}
+    </div>
+  );
+}
 
 /** Extracts a user-readable message from an Axios error, including Zod field details.
  *  In development, also appends the raw server detail for easier debugging. */
@@ -28,6 +47,14 @@ function parseApiError(e: any): string {
 function ProfileForm() {
   const { user, updateUser } = useAuthStore();
   const navigate = useNavigate();
+  const [activeGoalId, setActiveGoalId] = useState<number | null>(null);
+
+  // Load active goal ID once so we can sync trainingDaysPerWeek to it on save
+  useEffect(() => {
+    calorieGoalsApi.getActive().then((r) => {
+      if (r.data.goal) setActiveGoalId(r.data.goal.id);
+    }).catch(() => {});
+  }, []);
 
   const [form, setForm] = useState({
     firstName:           user?.firstName          ?? "",
@@ -46,11 +73,32 @@ function ProfileForm() {
   const [saving,  setSaving]  = useState(false);
   const [success, setSuccess] = useState("");
   const [error,   setError]   = useState("");
+  const toast = useToast();
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [k]: e.target.value }));
 
   const [planNudge, setPlanNudge] = useState<number | null>(null);
+
+  // Re-sync form when auth store user is updated externally (e.g. WeeklyPlanWidget saves plan)
+  useEffect(() => {
+    if (!user) return;
+    setForm({
+      firstName:           user.firstName          ?? "",
+      lastName:            user.lastName           ?? "",
+      age:                 String(user.age         ?? ""),
+      weight:              String(user.weight      ?? ""),
+      height:              String(user.height      ?? ""),
+      sex:                 user.sex                ?? "",
+      activityLevel:       user.activityLevel      ?? "",
+      fitnessLevel:        user.fitnessLevel       ?? "",
+      goal:                user.goal               ?? "",
+      trainingDaysPerWeek: String(user.trainingDaysPerWeek ?? ""),
+      trainingHoursPerDay: String(user.trainingHoursPerDay ?? ""),
+    });
+  // Only re-sync when key scheduling fields change — avoids fighting the user mid-edit
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.trainingDaysPerWeek, user?.trainingHoursPerDay]);
 
   const save = async () => {
     setSaving(true); setError(""); setSuccess(""); setPlanNudge(null);
@@ -73,11 +121,16 @@ function ProfileForm() {
       const res = await usersApi.updateProfile(payload);
       updateUser(res.data.user);
 
-      // If training days changed, set a flag so the Dashboard can auto-open the plan modal
+      // If training days changed — sync to calorieGoal + show toast
       if (newDays && newDays !== oldDays) {
         try { localStorage.setItem("fitai_plan_days_hint", String(newDays)); } catch { /* ignore */ }
+        // Sync training days to the active calorie goal so WorkoutsPage stays in sync
+        if (activeGoalId) {
+          calorieGoalsApi.update(activeGoalId, { trainingDaysPerWeek: newDays }).catch(() => {});
+        }
         setPlanNudge(newDays);
         setTimeout(() => setPlanNudge(null), 8000);
+        toast.show(`Training days updated to ${newDays}! 💪`);
       } else {
         setSuccess("Profile saved!");
         setTimeout(() => setSuccess(""), 3000);
@@ -226,6 +279,7 @@ function ProfileForm() {
 
         <Button loading={saving} onClick={save} className="w-full">Save Profile</Button>
       </div>
+      <ToastBanner msg={toast.msg} />
     </Card>
   );
 }
@@ -663,7 +717,7 @@ function AccountInfo() {
   );
 }
 
-// ── Main Settings page ────────────────────────────────────────────────────────
+// ── Main Settings page ────────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const { user, updateUser } = useAuthStore();
 
@@ -675,7 +729,7 @@ export default function SettingsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Profile</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Manage your profile and account</p>
       </div>
 

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import { ProtectedRoute } from "./components/layout/ProtectedRoute";
+import { ErrorBoundary } from "./components/layout/ErrorBoundary";
 
 // Auth
 import Login    from "./pages/auth/Login";
@@ -28,16 +29,16 @@ export default function App() {
         {/* Protected */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/workouts"  element={<WorkoutsPage />} />
+            <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+            <Route path="/workouts"  element={<ErrorBoundary><WorkoutsPage /></ErrorBoundary>} />
             <Route path="/templates" element={<Navigate to="/workouts" replace />} />
-            <Route path="/nutrition" element={<NutritionPage />} />
-            <Route path="/progress"  element={<ProgressPage />} />
-            <Route path="/goals"     element={<GoalsPage />} />
-            <Route path="/chat"         element={<ChatPage />} />
-            <Route path="/meal-planner" element={<MealPlannerPage />} />
-            <Route path="/reports"      element={<ReportsPage />} />
-            <Route path="/settings"     element={<SettingsPage />} />
+            <Route path="/nutrition" element={<ErrorBoundary><NutritionPage /></ErrorBoundary>} />
+            <Route path="/progress"  element={<ErrorBoundary><ProgressPage /></ErrorBoundary>} />
+            <Route path="/goals"     element={<Navigate to="/progress" replace />} />
+            <Route path="/chat"         element={<ErrorBoundary><ChatPage /></ErrorBoundary>} />
+            <Route path="/meal-planner" element={<ErrorBoundary><MealPlannerPage /></ErrorBoundary>} />
+            <Route path="/reports"      element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />
+            <Route path="/settings"     element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
           </Route>
         </Route>
 

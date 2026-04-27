@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const PREF_KEY = "app_prefs_v1";
 
@@ -29,4 +29,22 @@ export function useDarkModeInit() {
   useEffect(() => {
     applyDark(readDarkPref());
   }, []);
+}
+
+/**
+ * Returns true when the dark class is currently on <html>.
+ * Re-renders whenever the class list changes (e.g. user toggles dark mode in Settings).
+ */
+export function useIsDark(): boolean {
+  const [dark, setDark] = useState(() =>
+    document.documentElement.classList.contains("dark")
+  );
+  useEffect(() => {
+    const obs = new MutationObserver(() =>
+      setDark(document.documentElement.classList.contains("dark"))
+    );
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
 }

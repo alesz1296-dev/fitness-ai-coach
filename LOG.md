@@ -4,6 +4,305 @@ Most recent session first.
 
 ---
 
+## 2026-04-26 — Session: MacroRing goal-progress fix + Docker prep
+
+### #59 — MacroRing: arc now tracks goal progress (not macro distribution)
+`NutritionPage.tsx` — `MacroRing` rewritten to fix the core logic bug:
+
+**Root cause**: `pct = value / totalMacroG` (distribution) was driving the SVG arc. `goalPct = value / goal` only controlled glow/colour — the arc never reflected goal progress, so rings stayed ≪ 100% even when a macro was far exceeded.
+
+**Fix**:
+- `arcPct` = `goal ? Math.min(rawGoalPct, 100) : distributionPct` — drives the SVG arc; capped at 100 so it never wraps past full circle
+- `displayPct` = uncapped `rawGoalPct` when goal is set — centre label shows e.g. "112%" when over goal
+- **Three visual states**:
+  - < 70 % of goal → normal colour, no glow
+  - ≥ 70 % of goal → blue glow
+  - ≥ 100 % of goal → ring full, green colour + green glow, "Goal met ✓" badge
+  - > 100 % (over) → red text + red glow + "Over goal" badge (was previously invisible)
+- Without a goal the ring still shows macro distribution proportion (fallback, unchanged behaviour)
+- File truncation (recurring issue — file ended mid-statement at `open={sho`) detected and repaired; all three trailing modals (`LogFoodForm`, `SuggestMealPlanModal`, `BuildDishModal`) restored
+
+---
+
+## 2026-04-26 — Session: Calendar overhaul, training sync fix, macro by-food, Progress & Goals
+
+### #54 — Calendar Monthly Plan Builder
+`WorkoutsPage.tsx` — `CalendarTab` overhauled:
+- New **"🗓 Build Plan"** button is now the primary CTA (was "Apply Template")
+- **Empty-state card** shown when calendar has no entries: "No plan for [Month] — Build My Monthly Plan"
+- New `MonthlyPlanBuilderModal` component (Mon–Sun grid):
+  - Each weekday toggles between **workout** (brand) and **rest** (green) with a single click
+  - Workout days: template picker dropdown + free-text workout name field
+  - Pre-fills workout/rest based on `user.trainingDaysPerWeek` via `DEFAULT_DAY_PATTERNS`
+  - Duration: 1 / 2 / 3 months — fills ALL matching weekdays across the range
+  - Rest days are written as explicit `isRestDay: true` entries so they show on the calendar
+  - "Apply Template" button demoted to secondary action
+
+### #55 — Training days sync — definitive fix (v3, final)
+Root cause: `WorkoutsPage.trainingDays` was **local state** initialised from `calorieGoalsApi.getActive()` — a completely separate DB field from `user.trainingDaysPerWeek`. Profile saves updated the user record but never touched the calorie goal record, so WorkoutsPage never saw the change.
+
+**Fix: single source of truth = auth store**
+- `WorkoutsPage` — `trainingDays` is now a **derived constant** (`const trainingDays = user?.trainingDaysPerWeek ?? 4`), not state. No `setTrainingDays` anywhere.
+- `saveTrainingDays()` in WorkoutsPage now calls:
+  1. `usersApi.updateProfile({ trainingDaysPerWeek: n })` — writes the user record
+  2. `updateUser(res.data.user)` — pushes the change into the Zustand auth store, which propagates to Profile and any other consumers immediately
+  3. `calorieGoalsApi.update(activeGoalId, { trainingDaysPerWeek: n })` — keeps calorie goal record in sync as a side effect
+- `useRef` tracks previous value so the "Training days updated to N 💪" toast only fires on actual changes, not on component mount
+- `SettingsPage.ProfileForm` — on save calls `calorieGoalsApi.update(activeGoalId, { trainingDaysPerWeek })` too
+- `WeeklyPlanWidget.SetupModal` — on save syncs calorie goal record via `calorieGoalsApi`
+
+### #58 — Inline calendar day editor (no modal for quick edits)
+`WorkoutsPage.tsx` — `CalendarTab` selected-day panel replaced with fast inline editor:
+- **Workout / Rest Day** toggle buttons side-by-side; tapping Rest Day saves immediately (no extra click)
+- Workout name text input — Enter key saves; blue Save button saves
+- "Apply to all [Weekday]s this month" quick-action link — calls `calendarApi.populate` for every matching weekday in the current month in one tap
+- Remove button to delete the day's entry
+- Logged workouts shown read-only below
+- "⚙️ More" button opens full `EditCalendarDayModal` for notes / multi-month bulk operations
+- `saveInline()` async helper used by all quick actions — calls `calendarApi.updateDay` then `loadCalendar()`
+- `prevSelectedRef` useRef syncs inline state whenever the selected date changes
+
+### #56 — Macro breakdown by food source
+`NutritionPage.tsx` — new **"🔍 By Food"** view added to the macro tab toggle (alongside Rings / Breakdown / By Meal / vs Goals):
+- `MacroByFood` component: sortable table of every food logged today
+- Columns: Food name, Protein (g), Carbs (g), Fat (g), Calories
+- Click any column header to sort; click again to reverse
+- Mini percentage bar under each macro value (relative to that macro's daily total)
+- Totals row in `<tfoot>`
+- Shows meal label and quantity in subtext per food row
+
+### #57 — Merge Goals into Progress & Goals
+- `ProgressPage.tsx` — added **"🎯 Goals"** as 4th tab; renders `<GoalsPage embedded />` inside a tab panel
+- `GoalsPage.tsx` — accepts `embedded?: boolean` prop; hides top H1 and uses tighter padding when embedded; `/goals` route now redirects to `/progress` via `<Navigate>`
+- Page header updated to "Progress & Goals"
+- `Sidebar.tsx` + `BottomNav.tsx` — "Progress" renamed to "Progress & Goals" (icon 📈); separate "Goals" nav entry removed (was duplicate)
+
+---
+
+## 2026-04-26 — Session: Calendar full-plan builder + macro ring glow
+
+### MacroRing SVG glow (#52)
+`client/src/pages/nutrition/NutritionPage.tsx` — `MacroRing` updated with optional `goal` prop:
+- `goalPct` computed as `(value / goal) * 100`
+- SVG `filter: drop-shadow(...)` applied to wrapper div: blue at ≥70%, green at ≥100%
+- Stroke colour switches to `#22c55e` at 100%
+- Label + value text turns green, "Goal met" badge appears
+- Three call sites already pass `goal={activeGoal?.proteinGrams}` etc.
+
+### ApplyTemplateModal — 1–3 month duration (#53)
+`client/src/pages/workouts/WorkoutsPage.tsx` — `ApplyTemplateModal` redesigned:
+- **Duration picker**: 1 / 2 / 3 month buttons shown above assignment rows
+- **Range label**: shows e.g. "2026-04 – 2026-06" under the picker
+- `handleApply` now loops through all months via `getMonthRange()` helper and accumulates total day count
+- Toast message covers the full date range: "Applied 48 day(s) across 2026-04 – 2026-06"
+- Dark mode polish on all selects / weekday buttons
+
+### EditCalendarDayModal — bulk-apply multi-month (#53)
+- Added `bulkDuration` state (1 | 2 | 3 months) with toggle buttons in the bulk-apply section
+- `handleApplyAll` now loops through `getMonthRange(month, bulkDuration)` and calls `calendarApi.populate` per month
+- Button label dynamically shows "Apply to all {Weekday}s (2 months)" etc.
+
+### getMonthRange() helper
+Added `function getMonthRange(startMonth: string, count: number): string[]` in WorkoutsPage before `ApplyTemplateModal`. Takes a `"YYYY-MM"` start and count, returns an array of month strings. Reused by both `ApplyTemplateModal` and `EditCalendarDayModal`.
+
+### TypeScript — Modal open prop
+Added `open` (always `true`) to all self-contained modal components that use `<Modal>` without the prop: `PlanToCalendarModal`, `ApplyTemplateModal`, `EditCalendarDayModal`, `SyncCalendarModal`.
+
+---
+
+## 2026-04-26 — Session: Bug fixes — Dashboard hooks, training sync, macro glow, calendar
+
+### Dashboard hooks crash fixed
+`client/src/pages/dashboard/Dashboard.tsx` — `useIsDark()` and `chartColors` were called after an early `return` (loading spinner), violating React Rules of Hooks. Moved both to before the first early return. Eliminates "Rendered more hooks than during the previous render" crash.
+
+### Training days bidirectional sync + toast
+**`client/src/components/WeeklyPlanWidget.tsx`**:
+- `SetupModal.save()` now `await`s `usersApi.updateProfile()` (was fire-and-forget — caused race where `getProfile()` ran before the write finished)
+- `onSave` callback shows a "Training days saved!" toast via new `useToast` / `ToastBanner` inline hook
+- Added `📆 Sync to calendar` link in the day-grid footer (visible when a plan exists)
+- Added `SyncCalendarModal` — reads the full weekly plan (each day with its own label), shows a 1/2/3-month duration picker, calls `calendarApi.populate` per month; addresses "full weekly plan in calendar, not single day" issue
+
+**`client/src/pages/settings/SettingsPage.tsx`**:
+- Added `useToast` / `ToastBanner` to `ProfileForm`
+- Toast "Training days updated to N!" shown when `trainingDaysPerWeek` changes on save (alongside the existing plan-nudge banner)
+
+### Macro progress glow — NutritionPage + Dashboard
+**`MacroGoalBar`** (NutritionPage goals tab):
+- ≥ 70 % of goal → blue glow `box-shadow: 0 0 8px 2px rgba(59,130,246,0.40)`
+- ≥ 100 % of goal → fill turns green + green glow + "✓" badge in value label
+
+**`MacroBar`** (Dashboard daily macros):
+- Same thresholds: blue glow at 70 %, green fill + glow + "✓" at 100 %
+
+### Calendar: sync full weekly plan for 1–3 months
+`SyncCalendarModal` in `WeeklyPlanWidget` maps each active plan day (with its unique label — Push/Pull/Legs etc.) to `calendarApi.populate` assignments. Previously you could only push one template at a time; now the entire split schedule populates in one action across 1, 2, or 3 months.
+
+---
+
+## 2026-04-26 — Session: Docker + Redis + Zod validation + Error boundary
+
+### Docker — full stack
+**`Dockerfile`** (backend, multi-stage):
+- Stage 1 (`builder`): `node:20-alpine`, installs all deps, runs `tsc`
+- Stage 2 (production): `node:20-alpine`, prod-only deps + `prisma generate`, copies `dist/`
+- Entrypoint: `entrypoint.sh` runs `prisma db push` on every start; seeds DB when `SEED_DB=true`
+
+**`client/Dockerfile`** (frontend, multi-stage):
+- Stage 1 (`builder`): `node:20-alpine`, runs `npm run build` (Vite)
+- Stage 2: `nginx:1.27-alpine`, serves `dist/` with `client/nginx.conf`
+
+**`client/nginx.conf`**:
+- `location /api/` → `proxy_pass http://server:3000` (reverse proxy to backend service)
+- `location /` → `try_files $uri /index.html` (SPA fallback)
+- Static asset caching (`1y, immutable`), gzip enabled
+
+**`docker-compose.yml`** — 4 services:
+- `postgres` (postgres:16-alpine) — named volume `postgres_data`, healthcheck `pg_isready`
+- `redis` (redis:7-alpine) — named volume `redis_data`, healthcheck `redis-cli ping`, persistence on
+- `server` — builds from root Dockerfile, `env_file: .env.production`, DATABASE_URL + REDIS_URL injected, `depends_on` postgres + redis (healthy)
+- `client` — builds from `client/Dockerfile`, port 80, `depends_on` server
+
+**`.env.production`** — template with placeholder secrets for POSTGRES_PASSWORD, JWT_SECRET, OPENAI_API_KEY; comments for SEED_DB and rate-limit overrides
+
+**`.dockerignore`** (root + client/) — excludes `node_modules`, `dist`, `.env`, `mobile/`, `*.md`
+
+### Redis integration
+**`src/lib/redis.ts`** — ioredis singleton. Returns `null` when `REDIS_URL` is not set (dev without Docker).
+
+**`src/lib/tokenBlocklist.ts`** — rewritten:
+- With Redis: `SET blocklist:{jti} 1 EX {ttlSec}` / `GET blocklist:{jti}`
+- Without Redis: original in-memory Map fallback
+- `blockToken` + `isBlocked` are now `async` — `authController.ts` updated with `await`
+
+**`src/middleware/rateLimiter.ts`** — rewritten:
+- With Redis: `rate-limit-redis` `RedisStore` per limiter (prefixed `rl:general:`, `rl:auth:`, etc.)
+- Without Redis: express-rate-limit default memory store (unchanged dev behaviour)
+
+**`src/config/env.ts`** — `REDIS_URL` added as optional (no crash when missing)
+
+**`package.json`** — added `ioredis@^5.3.2` + `rate-limit-redis@^4.2.0`
+
+### Zod validation — all routes covered
+8 new schemas in `schemas.ts`: logWater, updateWaterTarget, populateCalendar, swapCalendarDays, updateCalendarDay, createMealPlan, updateMealPlan, addMealPlanEntry, updateMealPlanDayNotes. Wired into `routes/water.ts`, `routes/calendar.ts`, `routes/mealPlans.ts`.
+
+### React error boundary
+`client/src/components/layout/ErrorBoundary.tsx` — class component with `getDerivedStateFromError`. Every protected route in `App.tsx` wrapped. Fallback UI: icon + message + collapsible error detail + "Try again" / "Go to Dashboard" buttons.
+
+### Commands to run after pulling
+```bash
+npm install                         # picks up ioredis + rate-limit-redis
+cp .env.production .env.production.local
+# edit: POSTGRES_PASSWORD, JWT_SECRET, OPENAI_API_KEY
+
+# First deploy (seeds DB):
+SEED_DB=true docker compose --env-file .env.production up --build -d
+
+# Subsequent deploys:
+docker compose --env-file .env.production up --build -d
+```
+
+---
+
+## 2026-04-26 — Session: Zod validation + Error boundary + CONTEXT update
+
+### Input validation — all remaining unvalidated routes covered
+Added 8 new Zod schemas to `src/middleware/schemas.ts`:
+- `logWaterSchema` — `POST /api/water` (amount: positive int ≤ 5000)
+- `updateWaterTargetSchema` — `PUT /api/water/target` (targetMl: 250–10 000)
+- `populateCalendarSchema` — `POST /api/calendar/populate` (month, assignments array, overwrite flag)
+- `swapCalendarDaysSchema` — `POST /api/calendar/swap` (date1, date2, refine: must differ)
+- `updateCalendarDaySchema` — `PUT /api/calendar/:date` (workoutName, muscleGroups, templateId, isRestDay, notes)
+- `createMealPlanSchema` — `POST /api/meal-plans` (name, weekStart YYYY-MM-DD)
+- `updateMealPlanSchema` — `PUT /api/meal-plans/:id` (name)
+- `addMealPlanEntrySchema` — `POST /api/meal-plans/:id/days/:dayId/entries` (full food fields + meal enum)
+- `updateMealPlanDayNotesSchema` — `PUT /api/meal-plans/:id/days/:dayId/notes`
+
+Wired up `validate()` + `validateIdParam()` in:
+- `src/routes/water.ts` — POST, PUT/target
+- `src/routes/calendar.ts` — POST/populate, POST/swap, PUT/:date
+- `src/routes/mealPlans.ts` — all POST/PUT routes
+
+`tsc --noEmit` passes clean after fixes.
+
+### React error boundary
+Created `client/src/components/layout/ErrorBoundary.tsx`:
+- Class component with `getDerivedStateFromError` + `componentDidCatch`
+- Friendly fallback UI: icon, message, collapsible error detail, "Try again" + "Go to Dashboard" buttons
+- Accepts optional `fallback` render prop for custom UIs
+- Wrapped every protected page route in `App.tsx` with `<ErrorBoundary>` — a crash in one page no longer takes down the whole app
+
+### CONTEXT.md updated
+- Stack description: SQLite → PostgreSQL
+- Scalability table: PostgreSQL swap ✅, `$queryRawUnsafe` rewrite ✅
+- Phase 4 bullet: PostgreSQL item marked ✅ with detail
+- Running the project: `prisma db push` + Docker Postgres command added
+- Note for new machines rewritten with full bootstrap sequence
+
+---
+
+## 2026-04-26 — Session: Dark mode complete + PostgreSQL migration
+
+### Dark mode — full pass completed
+- `ChatPage.tsx` — agent-switch modal dark variants (carried over from previous session)
+- `Dashboard.tsx` — streak cards, macro bars, calorie ring, weight FAB, chart labels, quick actions
+- `GoalsPage.tsx` — presets, form sections, stat boxes, past goals
+- `ProgressPage.tsx` — tabs, body comp cards, formula select, composition metrics, tables
+- `ReportsPage.tsx` — stat boxes, detail view, AI summary text, selects
+- `TemplatesPage.tsx`, `MealPlannerPage.tsx` — full dark pass
+- `NutritionPage.tsx` (143 classes) + `WorkoutsPage.tsx` (174 classes) — systematic Python pass
+- `Login.tsx`, `Register.tsx` — card bg + link text
+- Added `useIsDark()` hook (`useDarkMode.ts`) — MutationObserver on `<html>` class, reactive
+- Recharts charts in `Dashboard.tsx` and `ProgressPage.tsx` — dynamic colors via `useIsDark()`; grid, ticks, tooltip bg/border all adapt to dark mode
+
+### PostgreSQL migration
+**Schema** (`prisma/schema.prisma`): `provider = "sqlite"` → `provider = "postgresql"`
+
+**`runMigrations.ts`** — complete rewrite:
+- `PRAGMA table_info` → `information_schema.columns WHERE table_schema='public'`
+- `sqlite_master WHERE type='table'` → `information_schema.tables WHERE table_schema='public'`
+- `sqlite_master WHERE type='index'` → `pg_indexes WHERE schemaname='public'`
+- All CREATE TABLE SQL converted: `INTEGER PRIMARY KEY AUTOINCREMENT` → `SERIAL PRIMARY KEY`, `datetime('now')` → `NOW()`, `INTEGER` booleans → `BOOLEAN`, `TEXT` timestamps → `TIMESTAMPTZ`, `REAL` → `DOUBLE PRECISION`
+- All ALTER TABLE SQL converted to PostgreSQL types
+
+**`waterController.ts`** — rewritten to pure Prisma ORM (`db.waterLog.create/findMany/findFirst/delete`). Zero raw SQL.
+
+**`mealPlanController.ts`** — rewritten to pure Prisma ORM:
+- `loadPlan()` now uses `db.mealPlan.findFirst({ include: { days: { include: { entries } } } })`
+- `createPlan()` uses nested `days: { create: [...] }` for 7 slots in one transaction
+- `deletePlan()` relies on Prisma cascade (schema has `onDelete: Cascade`)
+- All other handlers use `findFirst / update / delete / aggregate`
+- Eliminates all 20+ `$queryRawUnsafe` + `$executeRawUnsafe` calls — SQL injection surface removed
+
+**`predictionController.ts`** — SQLite `date(date)` → PostgreSQL `"date"::date` cast
+
+**`package.json`** — removed `better-sqlite3` + `@types/better-sqlite3`, added `pg@^8.13.3` + `@types/pg`
+
+**`.env` + `.env.example`** — `DATABASE_URL` updated to `postgresql://postgres:postgres@localhost:5432/fitai`
+
+### Commands to run after pulling this branch
+```bash
+# 1. Install updated deps
+npm install
+
+# 2. Start a local Postgres (Docker)
+docker run -d --name fitai-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=fitai -p 5432:5432 postgres:16
+
+# 3. Re-generate Prisma client for PostgreSQL
+npx prisma generate
+
+# 4. Push schema to Postgres (first time) OR run migrate
+npx prisma db push          # fast, for dev
+# npx prisma migrate dev    # for production-grade migration history
+
+# 5. Seed food + exercise data
+npm run prisma:seed
+
+# 6. Start dev server
+npm run dev
+```
+
+---
+
 ## 2026-04-25 — Session: Dark mode pass (all pages)
 
 ### Dark mode — complete pass across all client pages

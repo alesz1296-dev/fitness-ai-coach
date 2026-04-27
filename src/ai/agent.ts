@@ -32,6 +32,33 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "get_user_profile",
+      description:
+        "Fetch the user's full profile/settings context: age, sex, height, weight, activity level, fitness level, primary goal, injuries, training schedule, protein multiplier, and water target. " +
+        "Use this before making personalised workout, nutrition, calorie, or meal-plan changes.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_user_goals",
+      description:
+        "Fetch the user's active fitness goals and calorie goals. Use this before suggesting changes to workouts, calories, macros, meal plans, or progress targets.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_recent_workouts",
       description:
         "Fetch the user's logged workout sessions from the last N days, including exercises, sets, reps, and weights. " +
@@ -107,6 +134,26 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "get_meal_plans",
+      description:
+        "Fetch the user's current Meal Planner plans, including day IDs, day indexes, meals, foods, calories, and macros. " +
+        "Use this when creating or adjusting nutrition plans so the JSON proposal can target an existing plan with targetPlanId when appropriate.",
+      parameters: {
+        type: "object",
+        properties: {
+          limit: {
+            type: "number",
+            description:
+              "How many recent meal plans to fetch. Default 3, max 10.",
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_workout_templates",
       description:
         "Fetch the user's saved workout templates including their exercises, sets, and reps. " +
@@ -132,7 +179,8 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
         properties: {
           exerciseName: {
             type: "string",
-            description: "Optional. If provided, return the PR only for this exercise.",
+            description:
+              "Optional. If provided, return the PR only for this exercise.",
           },
         },
         required: [],
@@ -157,7 +205,8 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
         properties: {
           foodName: {
             type: "string",
-            description: "Name of the food item (e.g. 'Grilled Chicken Breast', '2 Scrambled Eggs').",
+            description:
+              "Name of the food item (e.g. 'Grilled Chicken Breast', '2 Scrambled Eggs').",
           },
           calories: {
             type: "number",
@@ -181,12 +230,14 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
           },
           unit: {
             type: "string",
-            description: "Measurement unit (e.g. 'serving', 'g', 'cup', 'piece', 'slice'). Default 'serving'.",
+            description:
+              "Measurement unit (e.g. 'serving', 'g', 'cup', 'piece', 'slice'). Default 'serving'.",
           },
           meal: {
             type: "string",
             enum: ["breakfast", "lunch", "dinner", "snack"],
-            description: "Meal category. Infer from context or the time of day if not specified.",
+            description:
+              "Meal category. Infer from context or the time of day if not specified.",
           },
           date: {
             type: "string",
@@ -212,29 +263,41 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
         properties: {
           name: {
             type: "string",
-            description: "Short descriptive name (e.g. 'Push Day A', 'Full Body Strength').",
+            description:
+              "Short descriptive name (e.g. 'Push Day A', 'Full Body Strength').",
           },
           description: {
             type: "string",
-            description: "Brief description of the template's purpose and target audience.",
+            description:
+              "Brief description of the template's purpose and target audience.",
           },
           splitType: {
             type: "string",
-            description: "Training split (e.g. 'Push/Pull/Legs', 'Upper/Lower', 'Full Body', 'Custom').",
+            description:
+              "Training split (e.g. 'Push/Pull/Legs', 'Upper/Lower', 'Full Body', 'Custom').",
           },
           objective: {
             type: "string",
-            enum: ["strength", "hypertrophy", "endurance", "weight_loss", "general", "custom"],
+            enum: [
+              "strength",
+              "hypertrophy",
+              "endurance",
+              "weight_loss",
+              "general",
+              "custom",
+            ],
             description: "Primary training objective.",
           },
           dayLabel: {
             type: "string",
-            description: "Label in the split schedule (e.g. 'Day 1', 'Push Day'). Defaults to name.",
+            description:
+              "Label in the split schedule (e.g. 'Day 1', 'Push Day'). Defaults to name.",
           },
           muscleGroups: {
             type: "array",
             items: { type: "string" },
-            description: "Primary muscle groups (e.g. ['chest', 'shoulders', 'triceps']).",
+            description:
+              "Primary muscle groups (e.g. ['chest', 'shoulders', 'triceps']).",
           },
           exercises: {
             type: "array",
@@ -243,10 +306,19 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
               type: "object",
               properties: {
                 exerciseName: { type: "string" },
-                sets:         { type: "number" },
-                reps:         { type: "string", description: "Reps or range e.g. '8', '8-12'." },
-                restSeconds:  { type: "number", description: "Rest in seconds between sets." },
-                notes:        { type: "string", description: "Form cues or technique notes." },
+                sets: { type: "number" },
+                reps: {
+                  type: "string",
+                  description: "Reps or range e.g. '8', '8-12'.",
+                },
+                restSeconds: {
+                  type: "number",
+                  description: "Rest in seconds between sets.",
+                },
+                notes: {
+                  type: "string",
+                  description: "Form cues or technique notes.",
+                },
               },
               required: ["exerciseName", "sets", "reps"],
             },
@@ -260,19 +332,43 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
 
 // Each agent gets only the tools relevant to its role.
 // Giving the nutritionist access to PR data would just create noise.
+const READ_ONLY_TOOL_NAMES = [
+  "get_user_profile",
+  "get_user_goals",
+  "get_recent_workouts",
+  "get_nutrition_summary",
+  "get_weight_trend",
+  "get_active_calorie_goal",
+  "get_meal_plans",
+  "get_workout_templates",
+  "get_personal_records",
+];
+
 const AGENT_TOOLS: Record<AgentType, OpenAI.Chat.ChatCompletionTool[]> = {
   coach: TOOL_DEFINITIONS.filter((t) =>
     [
-      "get_recent_workouts", "get_workout_templates", "get_personal_records",
-      "get_weight_trend", "save_workout_template", "log_food",
-    ].includes(t.function.name)
+      "get_user_profile",
+      "get_user_goals",
+      "get_recent_workouts",
+      "get_workout_templates",
+      "get_personal_records",
+      "get_weight_trend",
+      "get_active_calorie_goal",
+    ].includes(t.function.name),
   ),
   nutritionist: TOOL_DEFINITIONS.filter((t) =>
     [
-      "get_nutrition_summary", "get_active_calorie_goal", "get_weight_trend", "log_food",
-    ].includes(t.function.name)
+      "get_user_profile",
+      "get_user_goals",
+      "get_nutrition_summary",
+      "get_active_calorie_goal",
+      "get_meal_plans",
+      "get_weight_trend",
+    ].includes(t.function.name),
   ),
-  general: TOOL_DEFINITIONS, // general agent gets everything
+  general: TOOL_DEFINITIONS.filter((t) =>
+    READ_ONLY_TOOL_NAMES.includes(t.function.name),
+  ),
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -290,7 +386,79 @@ const AGENT_TOOLS: Record<AgentType, OpenAI.Chat.ChatCompletionTool[]> = {
 // {"calories":1840,"protein":142} with no context.
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function handleGetRecentWorkouts(userId: number, args: any): Promise<string> {
+async function handleGetUserProfile(userId: number): Promise<string> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      username: true,
+      firstName: true,
+      lastName: true,
+      age: true,
+      weight: true,
+      height: true,
+      sex: true,
+      activityLevel: true,
+      fitnessLevel: true,
+      goal: true,
+      proteinMultiplier: true,
+      trainingDaysPerWeek: true,
+      trainingHoursPerDay: true,
+      injuries: true,
+      waterTargetMl: true,
+    },
+  });
+
+  if (!user) return "User profile not found.";
+
+  return (
+    `User profile/settings:\n` +
+    `Name: ${[user.firstName, user.lastName].filter(Boolean).join(" ") || user.username}\n` +
+    `Age: ${user.age ?? "unknown"} | Sex: ${user.sex ?? "unknown"} | Height: ${user.height ?? "unknown"} cm | Weight: ${user.weight ?? "unknown"} kg\n` +
+    `Activity: ${user.activityLevel ?? "unknown"} | Fitness level: ${user.fitnessLevel ?? "unknown"} | Goal: ${user.goal ?? "not set"}\n` +
+    `Protein multiplier: ${user.proteinMultiplier ?? "not set"} g/kg | Training: ${user.trainingDaysPerWeek ?? "unknown"} days/week × ${user.trainingHoursPerDay ?? "unknown"} h/session\n` +
+    `Injuries/limitations: ${user.injuries ?? "none listed"} | Water target: ${user.waterTargetMl ?? "not set"} ml/day`
+  );
+}
+
+async function handleGetUserGoals(userId: number): Promise<string> {
+  const [goals, calorieGoals] = await Promise.all([
+    prisma.goal.findMany({
+      where: { userId },
+      orderBy: [{ achieved: "asc" }, { createdAt: "desc" }],
+      take: 10,
+    }),
+    prisma.calorieGoal.findMany({
+      where: { userId },
+      orderBy: [{ active: "desc" }, { createdAt: "desc" }],
+      take: 5,
+    }),
+  ]);
+
+  const goalLines = goals.length
+    ? goals
+        .map(
+          (g) =>
+            `• #${g.id} ${g.type}: ${g.current}/${g.target} ${g.unit}${g.achieved ? " (achieved)" : ""}`,
+        )
+        .join("\n")
+    : "No fitness goals saved.";
+
+  const calorieLines = calorieGoals.length
+    ? calorieGoals
+        .map(
+          (g) =>
+            `• #${g.id}${g.active ? " ACTIVE" : ""} ${g.name ?? g.type}: ${g.dailyCalories} kcal | P ${g.proteinGrams}g C ${g.carbsGrams}g F ${g.fatsGrams}g | ${g.currentWeight}kg → ${g.targetWeight}kg by ${g.targetDate.toISOString().split("T")[0]}`,
+        )
+        .join("\n")
+    : "No calorie goals saved.";
+
+  return `Fitness goals:\n${goalLines}\n\nCalorie/macro goals:\n${calorieLines}`;
+}
+
+async function handleGetRecentWorkouts(
+  userId: number,
+  args: any,
+): Promise<string> {
   const days = Math.min(Number(args.days) || 7, 90);
   const since = new Date();
   since.setDate(since.getDate() - days);
@@ -308,10 +476,14 @@ async function handleGetRecentWorkouts(userId: number, args: any): Promise<strin
   const lines = workouts.map((w) => {
     const date = w.date.toISOString().split("T")[0];
     const totalVolume = w.exercises.reduce(
-      (sum, ex) => sum + ex.sets * ex.reps * (ex.weight ?? 0), 0
+      (sum, ex) => sum + ex.sets * ex.reps * (ex.weight ?? 0),
+      0,
     );
     const exerciseList = w.exercises
-      .map((ex) => `${ex.exerciseName} ${ex.sets}×${ex.reps}${ex.weight ? ` @ ${ex.weight}kg` : ""}`)
+      .map(
+        (ex) =>
+          `${ex.exerciseName} ${ex.sets}×${ex.reps}${ex.weight ? ` @ ${ex.weight}kg` : ""}`,
+      )
       .join(", ");
     return `• ${date} — ${w.name}${w.duration ? ` (${w.duration} min)` : ""}: ${exerciseList}. Volume: ${Math.round(totalVolume)}kg`;
   });
@@ -319,7 +491,10 @@ async function handleGetRecentWorkouts(userId: number, args: any): Promise<strin
   return `Workouts in the last ${days} days (${workouts.length} sessions):\n${lines.join("\n")}`;
 }
 
-async function handleGetNutritionSummary(userId: number, args: any): Promise<string> {
+async function handleGetNutritionSummary(
+  userId: number,
+  args: any,
+): Promise<string> {
   const days = Math.min(Number(args.days) || 7, 90);
   const since = new Date();
   since.setDate(since.getDate() - days);
@@ -334,28 +509,45 @@ async function handleGetNutritionSummary(userId: number, args: any): Promise<str
   }
 
   // Group by day
-  const byDay: Record<string, { calories: number; protein: number; carbs: number; fats: number }> = {};
+  const byDay: Record<
+    string,
+    { calories: number; protein: number; carbs: number; fats: number }
+  > = {};
   for (const log of logs) {
     const day = log.date.toISOString().split("T")[0];
-    if (!byDay[day]) byDay[day] = { calories: 0, protein: 0, carbs: 0, fats: 0 };
+    if (!byDay[day])
+      byDay[day] = { calories: 0, protein: 0, carbs: 0, fats: 0 };
     byDay[day].calories += log.calories;
-    byDay[day].protein  += log.protein  ?? 0;
-    byDay[day].carbs    += log.carbs    ?? 0;
-    byDay[day].fats     += log.fats     ?? 0;
+    byDay[day].protein += log.protein ?? 0;
+    byDay[day].carbs += log.carbs ?? 0;
+    byDay[day].fats += log.fats ?? 0;
   }
 
-  const dayEntries = Object.entries(byDay).sort((a, b) => b[0].localeCompare(a[0]));
-  const totalDays  = dayEntries.length;
+  const dayEntries = Object.entries(byDay).sort((a, b) =>
+    b[0].localeCompare(a[0]),
+  );
+  const totalDays = dayEntries.length;
   const avg = {
-    calories: Math.round(dayEntries.reduce((s, [, d]) => s + d.calories, 0) / totalDays),
-    protein:  Math.round(dayEntries.reduce((s, [, d]) => s + d.protein,  0) / totalDays),
-    carbs:    Math.round(dayEntries.reduce((s, [, d]) => s + d.carbs,    0) / totalDays),
-    fats:     Math.round(dayEntries.reduce((s, [, d]) => s + d.fats,     0) / totalDays),
+    calories: Math.round(
+      dayEntries.reduce((s, [, d]) => s + d.calories, 0) / totalDays,
+    ),
+    protein: Math.round(
+      dayEntries.reduce((s, [, d]) => s + d.protein, 0) / totalDays,
+    ),
+    carbs: Math.round(
+      dayEntries.reduce((s, [, d]) => s + d.carbs, 0) / totalDays,
+    ),
+    fats: Math.round(
+      dayEntries.reduce((s, [, d]) => s + d.fats, 0) / totalDays,
+    ),
   };
 
-  const dailyLines = dayEntries.slice(0, 7).map(([date, d]) =>
-    `• ${date}: ${Math.round(d.calories)} kcal | P: ${Math.round(d.protein)}g | C: ${Math.round(d.carbs)}g | F: ${Math.round(d.fats)}g`
-  );
+  const dailyLines = dayEntries
+    .slice(0, 7)
+    .map(
+      ([date, d]) =>
+        `• ${date}: ${Math.round(d.calories)} kcal | P: ${Math.round(d.protein)}g | C: ${Math.round(d.carbs)}g | F: ${Math.round(d.fats)}g`,
+    );
 
   return (
     `Nutrition over the last ${days} days (${totalDays} days tracked):\n` +
@@ -364,7 +556,10 @@ async function handleGetNutritionSummary(userId: number, args: any): Promise<str
   );
 }
 
-async function handleGetWeightTrend(userId: number, args: any): Promise<string> {
+async function handleGetWeightTrend(
+  userId: number,
+  args: any,
+): Promise<string> {
   const weeks = Math.min(Number(args.weeks) || 4, 24);
   const since = new Date();
   since.setDate(since.getDate() - weeks * 7);
@@ -379,21 +574,24 @@ async function handleGetWeightTrend(userId: number, args: any): Promise<string> 
   }
 
   const first = entries[0];
-  const last  = entries[entries.length - 1];
+  const last = entries[entries.length - 1];
   const delta = Math.round((last.weight - first.weight) * 100) / 100;
-  const daysDiff = Math.max(1,
-    (last.date.getTime() - first.date.getTime()) / (1000 * 60 * 60 * 24)
+  const daysDiff = Math.max(
+    1,
+    (last.date.getTime() - first.date.getTime()) / (1000 * 60 * 60 * 24),
   );
   const weeklyRate = Math.round((delta / (daysDiff / 7)) * 100) / 100;
 
   const direction =
-    Math.abs(delta) < 0.3 ? "maintaining"
-    : delta < 0 ? "losing weight"
-    : "gaining weight";
+    Math.abs(delta) < 0.3
+      ? "maintaining"
+      : delta < 0
+        ? "losing weight"
+        : "gaining weight";
 
-  const recentLines = entries.slice(-5).map((e) =>
-    `• ${e.date.toISOString().split("T")[0]}: ${e.weight} kg`
-  );
+  const recentLines = entries
+    .slice(-5)
+    .map((e) => `• ${e.date.toISOString().split("T")[0]}: ${e.weight} kg`);
 
   return (
     `Weight trend over the last ${weeks} weeks (${entries.length} entries):\n` +
@@ -425,6 +623,40 @@ async function handleGetActiveCalorieGoal(userId: number): Promise<string> {
   );
 }
 
+async function handleGetMealPlans(userId: number, args: any): Promise<string> {
+  const limit = Math.min(Number(args.limit) || 3, 10);
+  const plans = await (prisma as any).mealPlan.findMany({
+    where: { userId },
+    include: {
+      days: {
+        orderBy: { dayIndex: "asc" },
+        include: { entries: { orderBy: [{ meal: "asc" }, { order: "asc" }] } },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+
+  if (plans.length === 0) return "The user has no Meal Planner plans saved.";
+
+  const planLines = plans.map((p: any) => {
+    const days = p.days
+      .map((d: any) => {
+        const entries = d.entries
+          .map(
+            (e: any) =>
+              `${e.meal}: ${e.foodName} (${Math.round(e.calories)} kcal, P${Math.round(e.protein)} C${Math.round(e.carbs)} F${Math.round(e.fats)})`,
+          )
+          .join("; ");
+        return `  Day ${d.dayIndex} (dayId ${d.id}): ${entries || "empty"}`;
+      })
+      .join("\n");
+    return `• Plan #${p.id}: ${p.name} (weekStart ${p.weekStart})\n${days}`;
+  });
+
+  return `Current meal plans (${plans.length}):\n${planLines.join("\n")}`;
+}
+
 async function handleGetWorkoutTemplates(userId: number): Promise<string> {
   const templates = await prisma.workoutTemplate.findMany({
     where: { userId },
@@ -440,13 +672,16 @@ async function handleGetWorkoutTemplates(userId: number): Promise<string> {
     const exerciseList = t.exercises
       .map((ex) => `${ex.exerciseName} ${ex.sets}×${ex.reps}`)
       .join(", ");
-    return `• ${t.name} (${t.splitType}, ${t.objective}): ${exerciseList}`;
+    return `• #${t.id} ${t.name} (${t.splitType}, ${t.objective}, ${t.frequency}d/week): ${exerciseList}`;
   });
 
   return `Saved workout templates (${templates.length}):\n${lines.join("\n")}`;
 }
 
-async function handleGetPersonalRecords(userId: number, args: any): Promise<string> {
+async function handleGetPersonalRecords(
+  userId: number,
+  args: any,
+): Promise<string> {
   const where: any = {
     workout: { userId },
     weight: { not: null },
@@ -469,9 +704,7 @@ async function handleGetPersonalRecords(userId: number, args: any): Promise<stri
       : "No personal records found yet — no weighted exercises have been logged.";
   }
 
-  const lines = records.map(
-    (r) => `• ${r.exerciseName}: ${r._max.weight} kg`
-  );
+  const lines = records.map((r) => `• ${r.exerciseName}: ${r._max.weight} kg`);
 
   return `Personal records (best weight lifted):\n${lines.join("\n")}`;
 }
@@ -480,8 +713,15 @@ async function handleGetPersonalRecords(userId: number, args: any): Promise<stri
 
 async function handleLogFood(userId: number, args: any): Promise<string> {
   const {
-    foodName, calories, protein = 0, carbs = 0, fats = 0,
-    quantity = 1, unit = "serving", meal, date,
+    foodName,
+    calories,
+    protein = 0,
+    carbs = 0,
+    fats = 0,
+    quantity = 1,
+    unit = "serving",
+    meal,
+    date,
   } = args;
 
   if (!foodName || calories == null) {
@@ -498,13 +738,13 @@ async function handleLogFood(userId: number, args: any): Promise<string> {
       userId,
       foodName,
       calories: Math.round(calories),
-      protein:  Math.round(protein  ?? 0),
-      carbs:    Math.round(carbs    ?? 0),
-      fats:     Math.round(fats     ?? 0),
+      protein: Math.round(protein ?? 0),
+      carbs: Math.round(carbs ?? 0),
+      fats: Math.round(fats ?? 0),
       quantity: quantity ?? 1,
-      unit:     unit ?? "serving",
-      meal:     meal ?? null,
-      date:     targetDate,
+      unit: unit ?? "serving",
+      meal: meal ?? null,
+      date: targetDate,
     },
   });
 
@@ -512,7 +752,7 @@ async function handleLogFood(userId: number, args: any): Promise<string> {
   // mention it in the response without needing another tool call.
   const startOfDay = new Date(targetDate);
   startOfDay.setUTCHours(0, 0, 0, 0);
-  const endOfDay   = new Date(targetDate);
+  const endOfDay = new Date(targetDate);
   endOfDay.setUTCHours(23, 59, 59, 999);
 
   const dayLogs = await (prisma.foodLog as any).findMany({
@@ -523,14 +763,16 @@ async function handleLogFood(userId: number, args: any): Promise<string> {
   const totals = dayLogs.reduce(
     (acc: any, l: any) => ({
       calories: acc.calories + l.calories,
-      protein:  acc.protein  + (l.protein  ?? 0),
-      carbs:    acc.carbs    + (l.carbs    ?? 0),
-      fats:     acc.fats     + (l.fats     ?? 0),
+      protein: acc.protein + (l.protein ?? 0),
+      carbs: acc.carbs + (l.carbs ?? 0),
+      fats: acc.fats + (l.fats ?? 0),
     }),
-    { calories: 0, protein: 0, carbs: 0, fats: 0 }
+    { calories: 0, protein: 0, carbs: 0, fats: 0 },
   );
 
-  logger.info(`AI logged food for user ${userId}: ${foodName} (${Math.round(calories)} kcal)`);
+  logger.info(
+    `AI logged food for user ${userId}: ${foodName} (${Math.round(calories)} kcal)`,
+  );
 
   return (
     `✅ Logged: "${foodName}" — ${Math.round(calories)} kcal | P: ${Math.round(protein)}g | C: ${Math.round(carbs)}g | F: ${Math.round(fats)}g\n` +
@@ -538,13 +780,26 @@ async function handleLogFood(userId: number, args: any): Promise<string> {
   );
 }
 
-async function handleSaveWorkoutTemplate(userId: number, args: any): Promise<string> {
+async function handleSaveWorkoutTemplate(
+  userId: number,
+  args: any,
+): Promise<string> {
   const {
-    name, description, splitType = "Custom", objective = "general",
-    dayLabel, muscleGroups = [], exercises,
+    name,
+    description,
+    splitType = "Custom",
+    objective = "general",
+    dayLabel,
+    muscleGroups = [],
+    exercises,
   } = args;
 
-  if (!name || !exercises || !Array.isArray(exercises) || exercises.length === 0) {
+  if (
+    !name ||
+    !exercises ||
+    !Array.isArray(exercises) ||
+    exercises.length === 0
+  ) {
     return "Cannot save template: name and at least one exercise are required.";
   }
 
@@ -556,17 +811,19 @@ async function handleSaveWorkoutTemplate(userId: number, args: any): Promise<str
       splitType,
       objective,
       frequency: 3,
-      dayLabel:  dayLabel || name,
-      muscleGroups: JSON.stringify(Array.isArray(muscleGroups) ? muscleGroups : []),
+      dayLabel: dayLabel || name,
+      muscleGroups: JSON.stringify(
+        Array.isArray(muscleGroups) ? muscleGroups : [],
+      ),
       aiGenerated: true,
       exercises: {
         create: exercises.map((ex: any, i: number) => ({
           exerciseName: ex.exerciseName,
-          sets:         Number(ex.sets),
-          reps:         String(ex.reps),
-          restSeconds:  ex.restSeconds ? Number(ex.restSeconds) : null,
-          notes:        ex.notes ?? null,
-          order:        ex.order ?? i,
+          sets: Number(ex.sets),
+          reps: String(ex.reps),
+          restSeconds: ex.restSeconds ? Number(ex.restSeconds) : null,
+          notes: ex.notes ?? null,
+          order: ex.order ?? i,
         })),
       },
     },
@@ -577,11 +834,14 @@ async function handleSaveWorkoutTemplate(userId: number, args: any): Promise<str
     .map((ex) => `${ex.exerciseName} ${ex.sets}×${ex.reps}`)
     .join(", ");
 
-  logger.info(`AI saved workout template for user ${userId}: ${name} (${template.exercises.length} exercises)`);
+  logger.info(
+    `AI saved workout template for user ${userId}: ${name} (${template.exercises.length} exercises)`,
+  );
 
   return (
     `✅ Workout template "${name}" saved to your library with ${template.exercises.length} exercises:\n` +
-    exerciseList + "\n" +
+    exerciseList +
+    "\n" +
     `You can find it in the Workouts → Templates tab and start it any time.`
   );
 }
@@ -596,19 +856,33 @@ async function handleSaveWorkoutTemplate(userId: number, args: any): Promise<str
 async function dispatchTool(
   name: string,
   args: any,
-  userId: number
+  userId: number,
 ): Promise<string> {
   logger.debug(`Tool call: ${name}(${JSON.stringify(args)})`);
 
   switch (name) {
-    case "get_recent_workouts":     return handleGetRecentWorkouts(userId, args);
-    case "get_nutrition_summary":   return handleGetNutritionSummary(userId, args);
-    case "get_weight_trend":        return handleGetWeightTrend(userId, args);
-    case "get_active_calorie_goal": return handleGetActiveCalorieGoal(userId);
-    case "get_workout_templates":   return handleGetWorkoutTemplates(userId);
-    case "get_personal_records":    return handleGetPersonalRecords(userId, args);
-    case "log_food":                return handleLogFood(userId, args);
-    case "save_workout_template":   return handleSaveWorkoutTemplate(userId, args);
+    case "get_user_profile":
+      return handleGetUserProfile(userId);
+    case "get_user_goals":
+      return handleGetUserGoals(userId);
+    case "get_recent_workouts":
+      return handleGetRecentWorkouts(userId, args);
+    case "get_nutrition_summary":
+      return handleGetNutritionSummary(userId, args);
+    case "get_weight_trend":
+      return handleGetWeightTrend(userId, args);
+    case "get_active_calorie_goal":
+      return handleGetActiveCalorieGoal(userId);
+    case "get_meal_plans":
+      return handleGetMealPlans(userId, args);
+    case "get_workout_templates":
+      return handleGetWorkoutTemplates(userId);
+    case "get_personal_records":
+      return handleGetPersonalRecords(userId, args);
+    case "log_food":
+      return "For safety, food logging requires explicit user confirmation in the app UI.";
+    case "save_workout_template":
+      return "For safety, workout changes require explicit user confirmation in the app UI.";
     default:
       return `Unknown tool: ${name}`;
   }
@@ -643,8 +917,8 @@ function classifyOpenAIError(error: unknown): string {
 
   if (error instanceof OpenAI.APIError) {
     const status = error.status;
-    const code   = (error as any).code as string | undefined;
-    const type   = (error as any).type as string | undefined;
+    const code = (error as any).code as string | undefined;
+    const type = (error as any).type as string | undefined;
 
     if (status === 429) {
       return "The AI service is temporarily rate-limited. Please wait a moment and try again.";
@@ -654,7 +928,10 @@ function classifyOpenAIError(error: unknown): string {
       return "OpenAI is temporarily overloaded. Please try again in a few seconds.";
     }
 
-    if (status === 400 && (code === "context_length_exceeded" || type === "invalid_request_error")) {
+    if (
+      status === 400 &&
+      (code === "context_length_exceeded" || type === "invalid_request_error")
+    ) {
       return "This conversation is too long for the AI to process. Please start a new chat to continue.";
     }
 
@@ -682,7 +959,7 @@ export const chat = async (
   userMessage: string,
   agentType: AgentType,
   user: UserContext & { id?: number },
-  history: ChatMessage[] = []
+  history: ChatMessage[] = [],
 ): Promise<AgentResponse> => {
   const systemPrompt = buildSystemPrompt(agentType, user);
   const tools = AGENT_TOOLS[agentType];
@@ -701,7 +978,9 @@ export const chat = async (
 
   // ── The loop ────────────────────────────────────────────────────────────────
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    logger.debug(`AI agent (${agentType}) — round ${round + 1}, ${messages.length} messages`);
+    logger.debug(
+      `AI agent (${agentType}) — round ${round + 1}, ${messages.length} messages`,
+    );
 
     let completion: OpenAI.Chat.ChatCompletion;
     try {
@@ -717,10 +996,14 @@ export const chat = async (
       });
     } catch (error) {
       const userFacingMsg = classifyOpenAIError(error);
-      logger.error(`OpenAI API error (${agentType}, round ${round + 1}):`, error);
+      logger.error(
+        `OpenAI API error (${agentType}, round ${round + 1}):`,
+        error,
+      );
       // Throw a structured error the chatController can catch and return as HTTP 502
       const apiError = new Error(userFacingMsg) as any;
-      apiError.statusCode = error instanceof OpenAI.APIError && error.status === 429 ? 429 : 502;
+      apiError.statusCode =
+        error instanceof OpenAI.APIError && error.status === 429 ? 429 : 502;
       apiError.userFacing = true;
       throw apiError;
     }
@@ -731,11 +1014,17 @@ export const chat = async (
     if (!responseMessage) break;
 
     // ── Case 1: No tool calls → the AI is done, return the text ────────────
-    if (!responseMessage.tool_calls || responseMessage.tool_calls.length === 0) {
-      const reply = responseMessage.content
-        ?? "I'm sorry, I couldn't generate a response. Please try again.";
+    if (
+      !responseMessage.tool_calls ||
+      responseMessage.tool_calls.length === 0
+    ) {
+      const reply =
+        responseMessage.content ??
+        "I'm sorry, I couldn't generate a response. Please try again.";
 
-      logger.debug(`AI agent done — ${totalTokens} total tokens, ${round + 1} round(s)`);
+      logger.debug(
+        `AI agent done — ${totalTokens} total tokens, ${round + 1} round(s)`,
+      );
       return { message: reply, tokensUsed: totalTokens };
     }
 
@@ -764,7 +1053,7 @@ export const chat = async (
           tool_call_id: toolCall.id,
           content: result,
         });
-      })
+      }),
     );
 
     // Loop again — the AI will now read the tool results and either
@@ -772,9 +1061,12 @@ export const chat = async (
   }
 
   // Safety fallback — if we hit MAX_TOOL_ROUNDS without a text response
-  logger.warn(`AI agent hit MAX_TOOL_ROUNDS (${MAX_TOOL_ROUNDS}) without a final response`);
+  logger.warn(
+    `AI agent hit MAX_TOOL_ROUNDS (${MAX_TOOL_ROUNDS}) without a final response`,
+  );
   return {
-    message: "I gathered your data but ran into an issue composing a response. Please try again.",
+    message:
+      "I gathered your data but ran into an issue composing a response. Please try again.",
     tokensUsed: totalTokens,
   };
 };

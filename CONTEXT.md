@@ -8,7 +8,7 @@ Read this at the start of every session before touching any code.
 
 A full-stack AI-powered fitness coaching web app.
 
-- **Backend**: Node.js + Express + TypeScript (ESM / NodeNext), Prisma ORM + SQLite (`dev.db`), JWT auth, OpenAI API
+- **Backend**: Node.js + Express + TypeScript (ESM / NodeNext), Prisma ORM + PostgreSQL, Redis (token blocklist + rate-limiter store), JWT auth, OpenAI API
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS, Zustand auth store, Recharts, React Router v6
 - **AI**: 3 chat agents (coach, nutritionist, general) via OpenAI with tool-calling (MAX_TOOL_ROUNDS=5). Agents embed structured fenced blocks (`workout-json`, `nutrition-json`, `meal-plan-json`) in responses so the frontend can offer save/log actions.
 
@@ -82,11 +82,11 @@ npm run prisma:seed   # seeds 366 foods + 105 exercises
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Module system          | ESM (`"module": "NodeNext"` in tsconfig.json). All imports need `.js` extensions.                                                                                                                                                             |
 | Auth                   | JWT access tokens (15 min) + JWT refresh tokens (30 days) with JTI-based in-memory revocation. No DB table for tokens.                                                                                                                        |
-| Token revocation       | `src/lib/tokenBlocklist.ts` — in-memory Map, cleared on restart. Production needs Redis.                                                                                                                                                      |
+| Token revocation       | `src/lib/tokenBlocklist.ts` — Redis-backed when `REDIS_URL` is set (`SET jti EX ttl`). Falls back to in-memory Map in dev (no `REDIS_URL`). `blockToken` / `isBlocked` are async.                                                            |
 | Schema source of truth | `prisma/schema.prisma` only. The root `schema.prisma` was stale and has been deleted.                                                                                                                                                         |
 | AI structured output   | AI embeds fenced blocks: ` ```workout-json``` `, ` ```nutrition-json``` `, ` ```meal-plan-json``` `. Backend extracts with regex, returns as `suggestedWorkout` / `suggestedPlan` / `suggestedMealPlan` in chat API response.                 |
 | AI tool-calling        | `agent.ts` uses a MAX_TOOL_ROUNDS=5 loop. 6 read-only tools: get_recent_workouts, get_nutrition_summary, get_weight_trend, get_active_calorie_goal, get_workout_templates, get_personal_records. Each agent type gets a tailored tool subset. |
-| Rate limiting          | `generalLimiter` mounted on `/api/` in `server.ts`. In-memory (needs Redis for production).                                                                                                                                                   |
+| Rate limiting          | `generalLimiter` mounted on `/api/` in `server.ts`. Uses `RedisStore` (rate-limit-redis) when `REDIS_URL` is set; falls back to memory store in dev.                                                                                         |
 | Validation             | All routes use Zod schemas via `validate()` middleware. `schemas.ts` is the single source of all schemas.                                                                                                                                     |
 | Windows dev            | `predev` script runs `scripts/kill-port.cjs` to kill port 3000. Server has SIGINT handler + 3s force-exit.                                                                                                                                    |
 | Onboarding detection   | `Layout.tsx` checks `!user.goal && !localStorage.getItem('fitai_onboarded_${userId}')` to show the wizard.                                                                                                                                    |
@@ -151,7 +151,7 @@ Notable field names (easy to get wrong):
 - `Workout`: `trainingType` (nullable text: "strength" | "hypertrophy" | "endurance" | "cardio" | "mobility") — added via `runMigrations.ts`
 - `WeeklyPlan` unique: `@@unique([userId, weekStart])` → key name `userId_weekStart`
 - `MonthlyReport` unique: `@@unique([userId, year, month])` → key name `userId_year_month`
-- `WorkoutCalendarDay`: `date` is `String` (YYYY-MM-DD), `muscleGroups` stored as JSON string in SQLite. Unique: `@@unique([userId, date])` → key `userId_date`. Created via `TABLE_MIGRATIONS` in `runMigrations.ts` (no Prisma migration file needed).
+- `WorkoutCalendarDay`: `date` is `String` (YYYY-MM-DD), `muscleGroups` stored as JSON string. Unique: `@@unique([userId, date])` → key `userId_date`. Created via `TABLE_MIGRATIONS` in `runMigrations.ts` (no Prisma migration file needed).
 
 ---
 
@@ -160,15 +160,15 @@ Notable field names (easy to get wrong):
 | Route / File      | Status     | Notes                                                                                                                                                         |
 | ----------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/dashboard`      | ✅ Done    | Dashboard aggregates, recent workouts, calorie goal progress. Weight FAB (fixed ⚖️ button, bottom-right) for quick weigh-ins.                                 |
-| `/workouts`       | ✅ Done    | History tab + Calendar tab + Templates tab. Training-type pill selector + coloured card badge. Inline rest timer in workout detail. Calendar: monthly grid with planned days overlay, "Apply Template" modal (assign templates to weekdays → fills whole month), click-to-edit days, swap-days mode, clear month. **PlanToCalendarModal**: from template detail, populates 1–3 months with pre-filled weekday pills + duration picker. **EditCalendarDayModal** now has "🔁 Apply to all [Mon/Tue/…]s this month" bulk-apply button (calls `calendarApi.populate` for that single weekday + overwrite). Training days/week selector is now an obvious labeled badge with pencil icon. Templates include endurance (running base/intervals/tempo/long run/triathlon/HIIT/rowing) and powerlifting (5/3/1 variants) plans. |
+| `/workouts`       | ✅ Done    | History + **Calendar** (default tab) + Templates. Colour-coded cards, inline rest timer. **MonthlyPlanBuilderModal**: Mon–Sun weekday grid → toggle workout/rest per day, template picker, 1/2/3-month duration, fills ALL matching weekdays. **Inline day editor**: click date → Workout/Rest toggle (rest saves instantly), name input, "Apply to all [Weekday]s this month" shortcut, Remove, "⚙️ More" (full modal). Training days counter reads from auth store — writes to both user record + calorie goal on every change + toast. Templates: endurance + powerlifting plans. |
 | `/templates`      | ✅ Removed | Redirects to `/workouts`                                                                                                                                      |
-| `/nutrition`      | ✅ Done    | Food log by meal, macro rings, AI meal plan suggestion (✨ Suggest Plan), delete entries, live macro recalculation. ⚡ Quick Re-log amber strip (top 5 frequent foods). |
+| `/nutrition`      | ✅ Done    | Food log by meal, **macro rings** (arc fills to goal %, shows >100% when over, red warning, green at goal met, blue glow at 70%), AI meal plan, delete, live recalc. ⚡ Quick Re-log. **"🔍 By Food" view**: sortable per-food protein/carbs/fat table with mini bars + totals. |
 | `/weight`         | ✅ Done    | Weight log + trend chart                                                                                                                                      |
-| `/goals`          | ✅ Done    | CRUD for fitness goals                                                                                                                                        |
+| `/goals`          | ✅ Redirects to `/progress` (Goals merged as 4th tab in Progress page)                                                                                       |
 | `/chat`           | ✅ Done    | 3 agents, tool-calling, save workout/plan from chat. History sidebar (last 30 across agents). Agent-switch confirmation modal. Save buttons re-hydrated from `metadata` on history load. AI suggestions now show as prominent `SuggestionCard` components (icon + question + confirm/dismiss/saved states) instead of small link buttons. |
 | `/reports`        | ✅ Done    | Monthly reports with AI summary                                                                                                                               |
 | `/settings`       | ✅ Done    | ProfileForm, PasswordForm, AccountInfo                                                                                                                        |
-| `/progress`       | ✅ Done    | Two tabs: Body & Weight (weight trend + body composition card with fat%/muscle% auto-calc via Deurenberg) and Exercise Progression (per-exercise line charts) |
+| `/progress`       | ✅ Done    | **"Progress & Goals"** — 4 tabs: Body & Weight (trend + body comp via Deurenberg), Exercise Progression (per-exercise line charts), Predictions, **Goals** (GoalsPage embedded, 4th tab). Nav entry renamed to "Progress & Goals". |
 | `OnboardingModal` | ✅ Done    | 3-step wizard shown to new users. Goal → Stats → Plan preview (TDEE + macros + suggested template). Saves profile + calorie goal.                             |
 
 ---
@@ -184,19 +184,33 @@ Notable field names (easy to get wrong):
 - ✅ **Rest/Workout days ↔ Settings desync** — Fixed in `WeeklyPlanWidget.tsx`: `SetupModal` receives `initialDays` from `user.trainingDaysPerWeek`; on save it calls `usersApi.updateProfile({ trainingDaysPerWeek })` and refreshes the auth store so Settings stays in sync.
 - ✅ **No scroll / no category filter in workout builder** — Fixed in `WorkoutsPage.tsx`: added `BUILDER_MUSCLE_GROUPS` filter chips above `ExerciseRows` in `WorkoutForm`; selected muscle passed as `defaultMuscle` prop and forwarded to each `ExerciseSearch`.
 - ✅ **Water intake not optional** — Fixed: `App Preferences` card added to SettingsPage with `trackWater` toggle stored in `localStorage("app_prefs_v1")`; NutritionPage conditionally renders the water widget based on this preference. Also fixed WeeklyPlanWidget: mismatch banner shown when `user.trainingDaysPerWeek` ≠ `plan.days.length` with an "Adjust plan →" CTA. Header button now reads "✏️ Edit Schedule" with scroll hint in plan picker.
+- ✅ **Dashboard "Rendered more hooks than previous render" crash** — `useIsDark()` was called after an early loading-spinner return, violating React Rules of Hooks. Moved it (and `chartColors`) before the first early return.
+- ✅ **Training days toast + race condition** — `SetupModal.save()` now `await`s `usersApi.updateProfile()` (was fire-and-forget, causing stale auth store reads). Toast "Training days saved!" shown in both `WeeklyPlanWidget` and `SettingsPage` when days change.
+- ✅ **Training days sync — definitive** — `WorkoutsPage.trainingDays` is now a derived constant from the auth store (`user?.trainingDaysPerWeek ?? 4`), not local state. `saveTrainingDays()` calls `usersApi.updateProfile` + `updateUser(authStore)` + `calorieGoalsApi.update` atomically. Any write from any page propagates everywhere instantly.
+- ✅ **Macro progress glow** — `MacroGoalBar` (NutritionPage) and `MacroBar` (Dashboard) now glow blue at ≥ 70 % of goal and turn green + glow green at ≥ 100 %. Fill color also switches to green at completion.
+- ✅ **MacroRing arc tracks goal (not distribution)** — Ring SVG arc now fills based on `value/goal` progress. Displays >100% when over goal with red warning. Arc was previously driven by `value/totalMacroG` so it never reached 100% even when macros were exceeded.
+- ✅ **Calendar: full weekly plan sync** — `WeeklyPlanWidget` now has a "📆 Sync to calendar" button that opens `SyncCalendarModal`. It maps every active plan day (with its unique label — Push/Pull/Legs etc.) to `calendarApi.populate` assignments, repeating across 1, 2, or 3 months. Previously only one template/day-type could be pushed at a time.
 
-> **Note for next deploy:** DB migrations were applied directly via sqlite3 in the sandbox. When pulling to a new machine, run `npx prisma generate` to regenerate Prisma client types, then `npx prisma migrate deploy` to apply:
->
-> - `20260423000000_add_conversation_metadata_and_profile_complete`
-> - `20260423000001_add_protein_multiplier`
+> **Note for new machines / after pulling this branch:**
+> ```bash
+> npm install                         # picks up pg, removes better-sqlite3
+> docker run -d --name fitai-pg \
+>   -e POSTGRES_PASSWORD=postgres \
+>   -e POSTGRES_DB=fitai \
+>   -p 5432:5432 postgres:16
+> npx prisma generate                 # regenerates Prisma client
+> npx prisma db push                  # applies schema to Postgres
+> npm run prisma:seed                 # seeds foods + exercises
+> npm run dev
+> ```
 
 ### 🟠 Phase 4 — Production hardening
 
 These should be done before any public deployment. **Docker is the next session priority** — it unblocks PostgreSQL + Redis and enables the CI pipeline.
 
-- **PostgreSQL** — Swap SQLite (`dev.db`) for PostgreSQL. Update `DATABASE_URL` in `.env` and run `prisma migrate deploy`. No schema changes needed.
-- **Redis** — Replace in-memory token blocklist (`tokenBlocklist.ts`) and rate limiter with Redis-backed implementations. Required for multi-instance deployments.
-- **Docker** ⬅️ **NEXT SESSION** — `Dockerfile` for backend + frontend + optional Nginx reverse proxy. `docker-compose.yml` wiring them together with a Postgres service and Redis service. See P4 priority table for details.
+- ✅ **PostgreSQL** — Swapped. `DATABASE_URL` updated, `prisma/schema.prisma` provider is `postgresql`, `runMigrations.ts` uses `information_schema` / PostgreSQL DDL. `waterController.ts` + `mealPlanController.ts` rewritten to Prisma ORM. `predictionController.ts` uses `::date` cast. `pg` replaces `better-sqlite3`.
+- ✅ **Redis** — `src/lib/redis.ts` (ioredis singleton). `tokenBlocklist.ts` uses Redis `SET jti EX ttl` when `REDIS_URL` is set; in-memory fallback otherwise. `rateLimiter.ts` uses `rate-limit-redis` `RedisStore`; memory fallback otherwise.
+- ✅ **Docker** — `Dockerfile` (backend, multi-stage), `client/Dockerfile` (Vite → nginx), `docker-compose.yml` (server + client + postgres:16 + redis:7), `entrypoint.sh` (runs `prisma db push` + optional seed), `.env.production` template, `.dockerignore` files.
 - **CI pipeline** — GitHub Actions: lint → `tsc --noEmit` (both) → `prisma validate` → build → optional test run.
 - **Env validation on startup** — Fail fast if `OPENAI_API_KEY`, `JWT_SECRET`, or `DATABASE_URL` are missing. `src/config/env.ts` already has the structure; add `process.exit(1)` on missing required vars.
 - **OpenAI API key integration test** — ⚠️ **Do not commit secrets.** Before testing live chat in any shared/CI environment, ask first. Locally: add `OPENAI_API_KEY` to `.env` (gitignored), verify the chat endpoint returns a real AI response, and confirm tool-calling round-trips work end-to-end. Rate-limit and error-handling branches should also be exercised at this stage.
@@ -324,11 +338,11 @@ Work top-to-bottom within each tier. Finish all P1s before starting P2s.
 | Priority | Item | Status | Notes |
 | -------- | ---- | ------ | ----- |
 | 🔴 Critical | **Food + exercise DB migration** | ✅ Done | `FoodItem` + `ExerciseItem` Prisma models. `prisma/seed.ts` seeds 366 foods + 105 exercises. `searchController.ts` now queries DB with `LIKE`. Static arrays kept in `src/data/` as seed source only. |
-| 🔴 Critical | **PostgreSQL swap** | ⬅️ Next (Docker session) | SQLite serialises all writes — concurrent users will hit lock contention. Swap `DATABASE_URL` + `prisma migrate deploy`. No schema changes needed. |
-| 🔴 Critical | **Redis — token blocklist + rate limiter** | Pending | In-memory `tokenBlocklist.ts` clears on restart; re-accepts recently invalidated tokens. In-memory rate limiter doesn't span multiple processes. Both need Redis. |
+| 🔴 Critical | **PostgreSQL swap** | ✅ Done | Provider swapped to `postgresql`. `runMigrations.ts` uses `information_schema`. `pg` added, `better-sqlite3` removed. `DATABASE_URL` updated in `.env` + `.env.example`. |
+| 🔴 Critical | **Redis — token blocklist + rate limiter** | ✅ Done | `src/lib/redis.ts` (ioredis). `tokenBlocklist.ts` + `rateLimiter.ts` both use Redis when `REDIS_URL` set; graceful in-memory fallback in dev. |
 | 🟠 High | **Connection pooling** | Pending (after Postgres) | Prisma uses 1 connection in dev. Under load on Postgres, add PgBouncer or Prisma Accelerate to avoid exhausting connection limits. |
 | 🟠 High | **Dashboard `Promise.all` parallelisation** | ✅ Done | Sequential `await` calls wrapped into `Promise.all` groups — cuts latency ~3–4× on networked Postgres. Negligible on SQLite. |
-| 🟠 High | **Rewrite `$queryRawUnsafe` controllers** | Pending (after Postgres) | `waterController.ts`, `mealPlanController.ts`, `calendarController.ts` use raw SQL. Safe now on SQLite; brittle on Postgres due to type-casting differences. Rewrite to standard Prisma queries post-swap. |
+| 🟠 High | **Rewrite `$queryRawUnsafe` controllers** | ✅ Done | `waterController.ts` + `mealPlanController.ts` fully rewritten to Prisma ORM. `calendarController.ts` rewritten to Prisma ORM. `predictionController.ts` raw SQL updated to PostgreSQL `::date` cast. |
 | 🟡 Medium | **Query result caching (Redis)** | Pending (after Redis) | Food search + exercise search results are user-independent and change only on seed. 10-min Redis TTL would eliminate most DB reads for search. |
 | 🟡 Medium | **OpenAI tool loop latency** | Pending | `MAX_TOOL_ROUNDS=5` with DB queries per round = 3–8 s per chat message. Chat endpoint should run on a separate queue/worker before any public launch. |
 
@@ -338,13 +352,13 @@ Work top-to-bottom within each tier. Finish all P1s before starting P2s.
 | --- | --------------------------------------------- | ----------------------------------------------------------------------------------- |
 | 21  | OpenAI API key integration test               | `.env` → live chat test (⚠️ ask before running)                                     |
 | 22  | Food + exercise → DB (seed + rewrite search)  | ✅ `prisma/seed.ts`, `FoodItem`/`ExerciseItem` models, `searchController.ts`        |
-| 23  | PostgreSQL swap                               | `DATABASE_URL` + `prisma migrate deploy`                                            |
-| 24  | Redis — token blocklist + rate limiter        | `tokenBlocklist.ts` + `rateLimiter.ts`                                              |
-| 25  | Docker (Dockerfile + docker-compose)          | Repo root → API + Postgres + Redis services                                         |
+| 23  | PostgreSQL swap                               | ✅ Done — `DATABASE_URL`, schema provider, `runMigrations.ts`, `pg` dep             |
+| 24  | Redis — token blocklist + rate limiter        | ✅ Done — ioredis + rate-limit-redis, graceful in-memory fallback in dev            |
+| 25  | Docker (Dockerfile + docker-compose)          | ✅ Done — multi-stage Dockerfiles, docker-compose.yml, entrypoint.sh, .env.production |
 | 26  | CI pipeline (lint → typecheck → test → build) | `.github/workflows/ci.yml` — set up after Docker so CI runs the containerised stack |
 | 27  | Weekly plan migration reminder in onboarding  | Onboarding Step 1 or post-login gate                                                |
 | 28  | Connection pooling                            | PgBouncer or Prisma Accelerate — after Postgres swap                                |
-| 29  | Rewrite `$queryRawUnsafe` controllers         | `waterController.ts`, `mealPlanController.ts`, `calendarController.ts`              |
+| 29  | Rewrite `$queryRawUnsafe` controllers         | ✅ Done — all three controllers rewritten to Prisma ORM                             |
 | 30  | Redis query cache for search endpoints        | `GET /search/foods` + `GET /search/exercises` — after Redis is wired               |
 
 ### P5 — Larger features (plan a dedicated session for each)
@@ -370,6 +384,26 @@ Work top-to-bottom within each tier. Finish all P1s before starting P2s.
 ## Running the Project
 
 ```bash
+# ── Docker (full stack, recommended for production) ──────────────────────────
+# 1. Copy and fill in secrets
+cp .env.production .env.production.local   # edit POSTGRES_PASSWORD, JWT_SECRET, OPENAI_API_KEY
+
+# 2. First deploy — seed the DB
+SEED_DB=true docker compose --env-file .env.production up --build -d
+
+# 3. Subsequent deploys (no seed)
+docker compose --env-file .env.production up --build -d
+
+# Tear down (keeps volumes)
+docker compose down
+
+# Tear down + wipe data
+docker compose down -v
+
+# ── Local dev (no Docker) ────────────────────────────────────────────────────
+# Requires: local Postgres on :5432, DATABASE_URL in .env
+# Redis is optional — omit REDIS_URL to use in-memory fallback
+
 # Backend (from project root)
 npm run dev          # kills port 3000, starts tsx watch
 
@@ -386,27 +420,4 @@ New-NetFirewallRule -DisplayName "Expo Metro" -Direction Inbound -Protocol TCP -
 
 # EAS cloud builds
 cd mobile
-eas build --platform android --profile preview   # → downloadable APK (~10 min)
-eas build --platform ios     --profile preview   # → IPA (requires Apple Developer account)
-
-# DB migrations
-npx prisma migrate dev --name <name>
-npx prisma generate
-
-# If Prisma client is stale
-npx prisma generate && npx prisma migrate dev
-```
-
----
-
-## Common Gotchas
-
-- Always run `npx prisma generate` after changing `prisma/schema.prisma`
-- On Windows, `Remove-Item -Recurse -Force node_modules/.prisma` (not `rd /s /q`) if client is stale
-- ESM imports require `.js` extension even for `.ts` source files
-- CORS preflight: `OPTIONS` must be in `allowedHeaders` and `app.options("*", cors())` must be present
-- `WeeklyPlanWidget` will crash if the `WeeklyPlan` migration hasn't been run — it has a try/catch that shows a migration reminder
-- Token blocklist is in-memory — cleared on server restart, so recently logged-out refresh tokens become temporarily valid again
-- `meal` field on `FoodLog`: typed as `"breakfast" | "lunch" | "dinner" | "snack" | null` — never pass a plain `string`
-- Food DB stores nutrition per 100g. Use `calcMacro(valuePer100g, qty, unit, defaultQty)` in `NutritionPage.tsx` — the unit-aware formula differs for weight vs count-based units
-- Onboarding wizard is suppressed by `localStorage.fitai_onboarded_${userId}`. Clear that key to re-trigger it during testing
+eas 

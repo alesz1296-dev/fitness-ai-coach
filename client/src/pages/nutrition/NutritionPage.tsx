@@ -271,18 +271,18 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
           className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
             activeTag === ""
               ? "bg-brand-600 text-white border-brand-600"
-              : "bg-white text-gray-600 border-gray-200 hover:border-brand-400 hover:text-brand-600"
+              : "bg-white text-gray-600 dark:text-gray-300 border-gray-200 hover:border-brand-400 hover:text-brand-600"
           }`}
         >
           🍽️ All
         </button>
         {/* Cuisine */}
         <div>
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Cuisine</p>
+          <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Cuisine</p>
           <div className="flex flex-wrap gap-1.5">
             {CUISINE_TAGS.map(({ tag, label, emoji }) => (
               <button key={tag} type="button" onClick={() => handleTagClick(tag)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-600 border-gray-200 hover:border-brand-400 hover:text-brand-600"}`}>
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-600 dark:text-gray-300 border-gray-200 hover:border-brand-400 hover:text-brand-600"}`}>
                 {emoji} {label}
               </button>
             ))}
@@ -290,11 +290,11 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
         </div>
         {/* Dietary Category */}
         <div>
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Dietary Category</p>
+          <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Dietary Category</p>
           <div className="flex flex-wrap gap-1.5">
             {DIETARY_TAGS.map(({ tag, label, emoji }) => (
               <button key={tag} type="button" onClick={() => handleTagClick(tag)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-600 border-gray-200 hover:border-brand-400 hover:text-brand-600"}`}>
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-600 dark:text-gray-300 border-gray-200 hover:border-brand-400 hover:text-brand-600"}`}>
                 {emoji} {label}
               </button>
             ))}
@@ -302,11 +302,11 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
         </div>
         {/* Food Type */}
         <div>
-          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Food Type</p>
+          <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Food Type</p>
           <div className="flex flex-wrap gap-1.5">
             {FOOD_TYPE_TAGS.map(({ tag, label, emoji }) => (
               <button key={tag} type="button" onClick={() => handleTagClick(tag)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-600 border-gray-200 hover:border-brand-400 hover:text-brand-600"}`}>
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-600 dark:text-gray-300 border-gray-200 hover:border-brand-400 hover:text-brand-600"}`}>
                 {emoji} {label}
               </button>
             ))}
@@ -325,7 +325,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
           label="Search Food Database"
         />
         {open && results.length > 0 && (
-          <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+          <ul className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-64 overflow-y-auto">
             {results.map((f) => {
               const displayCal = calcMacro(f.calories, f.defaultQty, f.defaultUnit, f.defaultQty);
               const displayP   = calcMacro(f.protein,  f.defaultQty, f.defaultUnit, f.defaultQty);
@@ -339,7 +339,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
                   className="px-4 py-2.5 hover:bg-brand-50 cursor-pointer border-b border-gray-50 last:border-0"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-800">{f.name}</p>
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 dark:text-gray-100">{f.name}</p>
                     {visibleTags.length > 0 && (
                       <div className="flex gap-1 flex-shrink-0 flex-wrap justify-end">
                         {visibleTags.map((tag: string) => (
@@ -350,7 +350,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                     {displayCal} kcal · {f.defaultQty} {f.defaultUnit} &nbsp;|&nbsp;
                     P: {displayP}g &nbsp;C: {displayC}g &nbsp;F: {displayF}g
                   </p>
@@ -360,7 +360,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
           </ul>
         )}
         {open && results.length === 0 && (query.trim().length > 1 || activeTag) && (
-          <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-400">
+          <div className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-400 dark:text-gray-500 dark:text-gray-500">
             No results — enter details manually below
           </div>
         )}
@@ -515,10 +515,10 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
           📏 {showUnitRef ? "Hide" : "Show"} unit reference (spoon, cup, bowl…)
         </button>
         {showUnitRef && (
-          <div className="mt-2 border border-gray-100 rounded-xl overflow-hidden text-xs">
+          <div className="mt-2 border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden text-xs">
             <table className="w-full">
               <thead>
-                <tr className="bg-gray-50 text-gray-400 text-left">
+                <tr className="bg-gray-50 text-gray-400 dark:text-gray-500 text-left">
                   <th className="px-3 py-1.5 font-medium">Unit</th>
                   <th className="px-3 py-1.5 font-medium">≈ grams</th>
                   <th className="px-3 py-1.5 font-medium hidden sm:table-cell">Note</th>
@@ -527,9 +527,9 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
               <tbody>
                 {UNIT_REFERENCE.map((r) => (
                   <tr key={r.unit} className="border-t border-gray-50">
-                    <td className="px-3 py-1.5 text-gray-700 font-medium">{r.unit}</td>
-                    <td className="px-3 py-1.5 text-gray-500">~{r.approxG}g</td>
-                    <td className="px-3 py-1.5 text-gray-400 hidden sm:table-cell">{r.note}</td>
+                    <td className="px-3 py-1.5 text-gray-700 dark:text-gray-200 font-medium">{r.unit}</td>
+                    <td className="px-3 py-1.5 text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">~{r.approxG}g</td>
+                    <td className="px-3 py-1.5 text-gray-400 dark:text-gray-500 hidden sm:table-cell">{r.note}</td>
                   </tr>
                 ))}
               </tbody>
@@ -555,7 +555,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
       {/* Cooking / topping additions — shown only when relevant to the selected food */}
       {(showsOil(baseFood) || showsBreading(baseFood) || showsSweetener(baseFood)) && (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Cooking extras</p>
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Cooking extras</p>
           <div className={`grid gap-3 ${
             [showsOil(baseFood), showsBreading(baseFood), showsSweetener(baseFood)].filter(Boolean).length === 1
               ? "grid-cols-1"
@@ -623,12 +623,12 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
         >
           <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${isCheatMeal ? "translate-x-5" : "translate-x-0.5"}`} />
         </div>
-        <span className="text-sm text-gray-600">
+        <span className="text-sm text-gray-600 dark:text-gray-300 dark:text-gray-300">
           🍕 Mark as cheat meal
         </span>
       </label>
 
-      <div className="flex gap-2 pt-2 border-t border-gray-100">
+      <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
         <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
         <Button className="flex-1" loading={loading} onClick={submit}>
           {editItem ? "Save Changes" : "Log Food"}
@@ -638,25 +638,55 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   );
 }
 
-// ── Macro ring (distribution view) ───────────────────────────────────────────
-function MacroRing({ label, value, total, color }: {
-  label: string; value: number; total: number; color: string;
+// ── Macro ring ────────────────────────────────────────────────────────────────
+// When a goal is provided the arc fills toward that goal (and the % shown is
+// goal-progress, which can exceed 100%).  Without a goal the arc shows the
+// macro's share of total daily macros (distribution mode).
+function MacroRing({ label, value, total, color, goal }: {
+  label: string; value: number; total: number; color: string; goal?: number;
 }) {
-  const pct = total > 0 ? Math.min((value / total) * 100, 100) : 0;
+  // Raw progress toward goal (unbounded — can exceed 100)
+  const rawGoalPct  = goal && goal > 0 ? (value / goal) * 100 : 0;
+  // What to draw on the SVG arc — capped at 100 so it never wraps past full
+  const arcPct      = goal && goal > 0
+    ? Math.min(rawGoalPct, 100)
+    : (total > 0 ? Math.min((value / total) * 100, 100) : 0);
+  // What to display in the centre label — shows >100 when over goal
+  const displayPct  = goal && goal > 0
+    ? Math.round(rawGoalPct)
+    : Math.round(arcPct);
+
+  const over        = goal != null && rawGoalPct > 100;
+  const met         = goal != null && rawGoalPct >= 100;
+  const strokeColor = met  ? "#22c55e" : over ? "#ef4444" : color;
+  const glowFilter  =
+    over ? "drop-shadow(0 0 6px rgba(239,68,68,0.60))"
+    : met ? "drop-shadow(0 0 5px rgba(34,197,94,0.65))"
+    : rawGoalPct >= 70 && goal ? "drop-shadow(0 0 5px rgba(59,130,246,0.55))"
+    : "none";
+
   return (
     <div className="text-center">
-      <div className="relative w-16 h-16 mx-auto">
+      <div className="relative w-16 h-16 mx-auto" style={{ filter: glowFilter }}>
         <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
           <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f3f4f6" strokeWidth="3" />
-          <circle cx="18" cy="18" r="15.9" fill="none" stroke={color} strokeWidth="3"
-            strokeDasharray={`${pct} ${100 - pct}`} strokeLinecap="round" />
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke={strokeColor} strokeWidth="3"
+            strokeDasharray={`${arcPct} ${100 - arcPct}`} strokeLinecap="round" />
         </svg>
-        <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">
-          {Math.round(pct)}%
+        <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
+          over ? "text-red-500" : met ? "text-green-500" : "text-gray-700 dark:text-gray-200"
+        }`}>
+          {displayPct}%
         </span>
       </div>
-      <p className="text-xs text-gray-500 mt-1">{label}</p>
-      <p className="text-sm font-semibold text-gray-800">{Math.round(value)}g</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</p>
+      <p className={`text-sm font-semibold mt-0.5 ${
+        over ? "text-red-500" : met ? "text-green-500" : "text-gray-800 dark:text-gray-100"
+      }`}>
+        {Math.round(value)}g{goal ? <span className="font-normal text-gray-400">/{Math.round(goal)}g</span> : null}
+      </p>
+      {over && <p className="text-xs text-red-500 font-medium">Over goal</p>}
+      {!over && met && <p className="text-xs text-green-500 font-medium">Goal met ✓</p>}
     </div>
   );
 }
@@ -684,7 +714,7 @@ function MacroBreakdown({ protein, carbs, fats }: {
     <div className="space-y-4">
       {/* Stacked calorie bar */}
       <div>
-        <p className="text-xs text-gray-400 mb-1.5">Calorie composition</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">Calorie composition</p>
         <div className="h-6 rounded-full overflow-hidden flex">
           {rows.map((r) => (
             <div
@@ -706,7 +736,7 @@ function MacroBreakdown({ protein, carbs, fats }: {
       {/* Detail table */}
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-100 text-xs text-gray-400">
+          <tr className="border-b border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">
             <th className="text-left pb-2 font-medium">Macro</th>
             <th className="text-right pb-2 font-medium">Grams</th>
             <th className="text-right pb-2 font-medium">Calories</th>
@@ -717,23 +747,23 @@ function MacroBreakdown({ protein, carbs, fats }: {
           {rows.map((r) => (
             <tr key={r.label} className="border-b border-gray-50">
               <td className={`py-2 font-medium ${r.textColor}`}>{r.label}</td>
-              <td className="py-2 text-right text-gray-700">{Math.round(r.g)}g</td>
-              <td className="py-2 text-right text-gray-700">{r.cal} kcal</td>
+              <td className="py-2 text-right text-gray-700 dark:text-gray-200 dark:text-gray-200">{Math.round(r.g)}g</td>
+              <td className="py-2 text-right text-gray-700 dark:text-gray-200 dark:text-gray-200">{r.cal} kcal</td>
               <td className="py-2 text-right">
                 <div className="flex items-center justify-end gap-1.5">
                   <div className="w-12 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${r.pct}%`, backgroundColor: r.color }} />
                   </div>
-                  <span className="text-gray-500 w-7 text-right">{Math.round(r.pct)}%</span>
+                  <span className="text-gray-500 dark:text-gray-400 dark:text-gray-500 w-7 text-right">{Math.round(r.pct)}%</span>
                 </div>
               </td>
             </tr>
           ))}
-          <tr className="font-semibold text-gray-800 text-sm border-t border-gray-200">
+          <tr className="font-semibold text-gray-800 dark:text-gray-100 text-sm border-t border-gray-200">
             <td className="pt-2.5">Total</td>
             <td className="pt-2.5 text-right">{Math.round(protein + carbs + fats)}g</td>
             <td className="pt-2.5 text-right">{total} kcal</td>
-            <td className="pt-2.5 text-right text-gray-500">100%</td>
+            <td className="pt-2.5 text-right text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">100%</td>
           </tr>
         </tbody>
       </table>
@@ -771,12 +801,12 @@ function MacroByMeal({ grouped, mealOrder }: {
         return (
           <div key={meal}>
             <div className="flex items-baseline justify-between mb-1">
-              <span className="text-sm font-medium text-gray-700 capitalize">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200 capitalize">
                 {MEAL_ICONS[meal] ?? "🍽️"}{" "}
                 {meal === "other" ? "Other" : meal.charAt(0).toUpperCase() + meal.slice(1)}
               </span>
-              <span className="text-xs text-gray-400">
-                <span className="font-semibold text-gray-600">{Math.round(cal)}</span> kcal
+              <span className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">
+                <span className="font-semibold text-gray-600 dark:text-gray-300 dark:text-gray-300">{Math.round(cal)}</span> kcal
                 {" · "}P:{Math.round(p)}g C:{Math.round(c)}g F:{Math.round(f)}g
               </span>
             </div>
@@ -792,7 +822,7 @@ function MacroByMeal({ grouped, mealOrder }: {
         );
       })}
 
-      <div className="flex gap-4 justify-center text-xs text-gray-400 pt-1 border-t border-gray-50">
+      <div className="flex gap-4 justify-center text-xs text-gray-400 dark:text-gray-500 pt-1 border-t border-gray-50">
         {[["#3b82f6","Protein"],["#f59e0b","Carbs"],["#ef4444","Fats"]].map(([color, name]) => (
           <span key={name} className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: color }} />
@@ -805,6 +835,108 @@ function MacroByMeal({ grouped, mealOrder }: {
   );
 }
 
+// ── Macro by-food source table ────────────────────────────────────────────────
+type SortKey = "name" | "protein" | "carbs" | "fats" | "calories";
+
+function MacroByFood({ logs }: { logs: import("../../types").FoodLog[] }) {
+  const [sortKey, setSortKey] = useState<SortKey>("calories");
+  const [sortAsc, setSortAsc] = useState(false);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortAsc((v) => !v);
+    else { setSortKey(key); setSortAsc(false); }
+  };
+
+  const sorted = [...logs].sort((a, b) => {
+    let av = 0, bv = 0;
+    if (sortKey === "name")     { av = a.foodName.localeCompare(b.foodName) as any; bv = 0; }
+    else if (sortKey === "protein")  { av = a.protein  ?? 0; bv = b.protein  ?? 0; }
+    else if (sortKey === "carbs")    { av = a.carbs    ?? 0; bv = b.carbs    ?? 0; }
+    else if (sortKey === "fats")     { av = a.fats     ?? 0; bv = b.fats     ?? 0; }
+    else                             { av = a.calories ?? 0; bv = b.calories ?? 0; }
+    if (sortKey === "name") return sortAsc ? av : -av;
+    return sortAsc ? av - bv : bv - av;
+  });
+
+  const totP = logs.reduce((s, l) => s + (l.protein  ?? 0), 0);
+  const totC = logs.reduce((s, l) => s + (l.carbs    ?? 0), 0);
+  const totF = logs.reduce((s, l) => s + (l.fats     ?? 0), 0);
+  const totK = logs.reduce((s, l) => s + (l.calories ?? 0), 0);
+
+  const SortBtn = ({ k, label }: { k: SortKey; label: string }) => (
+    <button
+      onClick={() => handleSort(k)}
+      className="flex items-center gap-0.5 hover:text-gray-900 dark:hover:text-white transition font-semibold"
+    >
+      {label}
+      <span className="text-[10px] opacity-60 ml-0.5">
+        {sortKey === k ? (sortAsc ? "▲" : "▼") : "⇅"}
+      </span>
+    </button>
+  );
+
+  if (logs.length === 0) {
+    return <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No foods logged yet today.</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto -mx-1">
+      <table className="w-full text-xs min-w-[380px]">
+        <thead>
+          <tr className="text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
+            <th className="text-left py-2 px-2"><SortBtn k="name" label="Food" /></th>
+            <th className="text-right py-2 px-2 text-blue-500"><SortBtn k="protein" label="Protein" /></th>
+            <th className="text-right py-2 px-2 text-amber-500"><SortBtn k="carbs" label="Carbs" /></th>
+            <th className="text-right py-2 px-2 text-red-500"><SortBtn k="fats" label="Fat" /></th>
+            <th className="text-right py-2 px-2"><SortBtn k="calories" label="kcal" /></th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((log) => {
+            const pPct = totP > 0 ? ((log.protein ?? 0) / totP) * 100 : 0;
+            const cPct = totC > 0 ? ((log.carbs   ?? 0) / totC) * 100 : 0;
+            const fPct = totF > 0 ? ((log.fats    ?? 0) / totF) * 100 : 0;
+            return (
+              <tr key={log.id} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40 transition">
+                <td className="py-2 px-2">
+                  <p className="font-medium text-gray-800 dark:text-gray-100 truncate max-w-[140px]">{log.foodName}</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-[10px]">
+                    {log.quantity}{log.unit}{log.meal ? ` · ${log.meal}` : ""}
+                  </p>
+                </td>
+                <td className="py-2 px-2 text-right">
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">{Math.round(log.protein ?? 0)}g</span>
+                  {pPct > 0 && <div className="h-1 bg-blue-200 dark:bg-blue-900 rounded mt-0.5 ml-auto" style={{ width: `${Math.round(pPct)}%`, minWidth: "2px", maxWidth: "100%", backgroundColor: "#3b82f6", opacity: 0.5 }} />}
+                </td>
+                <td className="py-2 px-2 text-right">
+                  <span className="font-semibold text-amber-600 dark:text-amber-400">{Math.round(log.carbs ?? 0)}g</span>
+                  {cPct > 0 && <div className="h-1 bg-amber-200 dark:bg-amber-900 rounded mt-0.5 ml-auto" style={{ width: `${Math.round(cPct)}%`, minWidth: "2px", maxWidth: "100%", backgroundColor: "#f59e0b", opacity: 0.5 }} />}
+                </td>
+                <td className="py-2 px-2 text-right">
+                  <span className="font-semibold text-red-500 dark:text-red-400">{Math.round(log.fats ?? 0)}g</span>
+                  {fPct > 0 && <div className="h-1 bg-red-200 dark:bg-red-900 rounded mt-0.5 ml-auto" style={{ width: `${Math.round(fPct)}%`, minWidth: "2px", maxWidth: "100%", backgroundColor: "#ef4444", opacity: 0.5 }} />}
+                </td>
+                <td className="py-2 px-2 text-right font-medium text-gray-700 dark:text-gray-300">
+                  {Math.round(log.calories)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-gray-200 dark:border-gray-600 font-bold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800/50">
+            <td className="py-2 px-2 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</td>
+            <td className="py-2 px-2 text-right text-blue-600 dark:text-blue-400">{Math.round(totP)}g</td>
+            <td className="py-2 px-2 text-right text-amber-600 dark:text-amber-400">{Math.round(totC)}g</td>
+            <td className="py-2 px-2 text-right text-red-500 dark:text-red-400">{Math.round(totF)}g</td>
+            <td className="py-2 px-2 text-right">{Math.round(totK)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
+
 // ── Macro goal bar (vs goal view) ─────────────────────────────────────────────
 function MacroGoalBar({ label, consumed, target, color, bgColor }: {
   label: string; consumed: number; target: number; color: string; bgColor: string;
@@ -813,23 +945,34 @@ function MacroGoalBar({ label, consumed, target, color, bgColor }: {
   const over   = consumed > target;
   const diff   = Math.abs(Math.round(target - consumed));
 
+  // Glow: blue at >=70%, green at >=100%
+  const fillColor = pct >= 100 ? "#22c55e" : color;
+  const glowStyle: React.CSSProperties =
+    pct >= 100
+      ? { boxShadow: "0 0 8px 2px rgba(34,197,94,0.45)" }
+      : pct >= 70
+      ? { boxShadow: "0 0 8px 2px rgba(59,130,246,0.40)" }
+      : {};
+
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-xs">
-        <span className="font-medium text-gray-700">{label}</span>
-        <span className={over ? "text-red-500 font-semibold" : "text-gray-500"}>
-          <span className="font-bold text-gray-800">{Math.round(consumed)}</span>
+        <span className="font-medium text-gray-700 dark:text-gray-200">{label}</span>
+        <span className={over ? "text-red-500 font-semibold" : pct >= 100 ? "text-green-600 font-semibold" : "text-gray-500"}>
+          <span className="font-bold text-gray-800 dark:text-gray-100">{Math.round(consumed)}</span>
           {" / "}{Math.round(target)}g
           {over
             ? <span className="ml-1 text-red-500">(+{diff}g)</span>
-            : <span className="ml-1 text-gray-400">({diff}g left)</span>
+            : pct >= 100
+            ? <span className="ml-1 text-green-500">✓</span>
+            : <span className="ml-1 text-gray-400 dark:text-gray-500">({diff}g left)</span>
           }
         </span>
       </div>
-      <div className={`h-2.5 rounded-full overflow-hidden ${bgColor}`}>
+      <div className={`h-2.5 rounded-full overflow-hidden ${bgColor}`} style={glowStyle}>
         <div
           className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${pct}%`, backgroundColor: color }}
+          style={{ width: `${pct}%`, backgroundColor: fillColor }}
         />
       </div>
     </div>
@@ -849,7 +992,7 @@ function CalorieProgress({ consumed, target }: { consumed: number; target: numbe
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="flex justify-between mt-1.5 text-xs text-gray-400">
+      <div className="flex justify-between mt-1.5 text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">
         <span>{Math.round(consumed)} kcal consumed</span>
         <span className={over ? "text-red-500 font-medium" : ""}>
           {over ? `${Math.round(-remaining)} kcal over` : `${Math.round(remaining)} kcal left`}
@@ -977,14 +1120,14 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
       {status === "fetching" && (
         <div className="flex flex-col items-center gap-4 py-12">
           <div className="animate-spin w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full" />
-          <p className="text-sm text-gray-500">Nutritionist is building your plan…</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">Nutritionist is building your plan…</p>
         </div>
       )}
 
       {status === "done" && (
         <div className="flex flex-col items-center gap-4 py-10">
           <div className="text-5xl">✅</div>
-          <p className="font-semibold text-gray-800">Meals logged successfully!</p>
+          <p className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">Meals logged successfully!</p>
         </div>
       )}
 
@@ -993,24 +1136,24 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
           {/* Summary bar */}
           <div className="flex gap-4 bg-brand-50 rounded-xl px-4 py-3 text-sm">
             <span className="font-semibold text-brand-700">{plan.totalCalories} kcal</span>
-            <span className="text-gray-500">P: {plan.totalProtein}g</span>
-            <span className="text-gray-500">C: {plan.totalCarbs}g</span>
-            <span className="text-gray-500">F: {plan.totalFats}g</span>
+            <span className="text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">P: {plan.totalProtein}g</span>
+            <span className="text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">C: {plan.totalCarbs}g</span>
+            <span className="text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">F: {plan.totalFats}g</span>
           </div>
 
           {/* Meals */}
           <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
             {plan.meals.map((m) => (
-              <div key={m.meal} className="border border-gray-100 rounded-xl p-3">
-                <p className="text-sm font-semibold text-gray-800 mb-2 capitalize">
+              <div key={m.meal} className="border border-gray-100 dark:border-gray-700 rounded-xl p-3">
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 capitalize">
                   {MEAL_ICONS[m.meal]} {m.meal}
                 </p>
                 {m.items.length === 0 ? (
-                  <p className="text-xs text-gray-400">No items</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">No items</p>
                 ) : (
-                  <table className="w-full text-xs text-gray-600">
+                  <table className="w-full text-xs text-gray-600 dark:text-gray-300 dark:text-gray-300">
                     <thead>
-                      <tr className="border-b border-gray-100 text-gray-400">
+                      <tr className="border-b border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-500 dark:text-gray-500">
                         <th className="text-left pb-1">Food</th>
                         <th className="text-right pb-1">Qty</th>
                         <th className="text-right pb-1">Kcal</th>
@@ -1039,7 +1182,7 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
 
           {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
 
-          <div className="flex gap-2 pt-2 border-t border-gray-100">
+          <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
             <Button variant="secondary" className="flex-1" onClick={fetchPlan} disabled={status === "logging"}>
               🔄 Regenerate
             </Button>
@@ -1168,13 +1311,13 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
         />
 
         {/* Add ingredient */}
-        <div className="border border-gray-100 rounded-xl p-4 space-y-3 bg-gray-50">
-          <p className="text-sm font-medium text-gray-700">Add ingredient</p>
+        <div className="border border-gray-100 dark:border-gray-700 rounded-xl p-4 space-y-3 bg-gray-50 dark:bg-gray-700/50">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 dark:text-gray-200">Add ingredient</p>
           <FoodSearch onSelect={(f) => { setSelFood(f); setSelUnit(f.defaultUnit); setSelQty(String(f.defaultQty)); }} />
           {selFood && (
             <div className="flex items-end gap-2 flex-wrap">
               <div className="flex-1 min-w-24">
-                <p className="text-xs text-gray-500 mb-1 font-medium">{selFood.name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1 font-medium">{selFood.name}</p>
                 <div className="flex gap-2">
                   <Input
                     label="Qty"
@@ -1193,7 +1336,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
                     className="w-20"
                   />
                 </div>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   → {calcMacro(selFood.calories, Number(selQty)||0, selUnit, selFood.defaultQty)} kcal ·
                   P:{calcMacro(selFood.protein, Number(selQty)||0, selUnit, selFood.defaultQty)}g ·
                   C:{calcMacro(selFood.carbs,   Number(selQty)||0, selUnit, selFood.defaultQty)}g ·
@@ -1207,24 +1350,24 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
 
         {/* Ingredients list */}
         {ingredients.length > 0 && (
-          <div className="border border-gray-100 rounded-xl overflow-hidden">
+          <div className="border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left px-3 py-2 text-xs text-gray-400 font-medium">Ingredient</th>
-                  <th className="text-right px-2 py-2 text-xs text-gray-400 font-medium">Kcal</th>
-                  <th className="text-right px-2 py-2 text-xs text-gray-400 font-medium">P</th>
-                  <th className="text-right px-2 py-2 text-xs text-gray-400 font-medium">C</th>
-                  <th className="text-right px-2 py-2 text-xs text-gray-400 font-medium">F</th>
+                <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700 dark:border-gray-700">
+                  <th className="text-left px-3 py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Ingredient</th>
+                  <th className="text-right px-2 py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Kcal</th>
+                  <th className="text-right px-2 py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">P</th>
+                  <th className="text-right px-2 py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">C</th>
+                  <th className="text-right px-2 py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">F</th>
                   <th className="w-8" />
                 </tr>
               </thead>
               <tbody>
                 {ingredients.map((ing, idx) => (
                   <tr key={idx} className="border-b border-gray-50">
-                    <td className="px-3 py-2 text-gray-700 text-xs">
+                    <td className="px-3 py-2 text-gray-700 dark:text-gray-200 text-xs">
                       {ing.food.name}
-                      <span className="text-gray-400 ml-1">({ing.qty} {ing.unit})</span>
+                      <span className="text-gray-400 dark:text-gray-500 ml-1">({ing.qty} {ing.unit})</span>
                     </td>
                     <td className="px-2 py-2 text-right text-xs font-semibold">{ing.cal}</td>
                     <td className="px-2 py-2 text-right text-xs text-blue-600">{ing.protein}g</td>
@@ -1259,7 +1402,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
             placeholder="Select meal (optional)"
           />
           <div className="flex flex-col justify-end">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 mb-1.5">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-300 mb-1.5">
               <input
                 type="checkbox"
                 checked={logSeparate}
@@ -1268,7 +1411,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
               />
               Log ingredients separately
             </label>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">
               {logSeparate ? "Each ingredient logged individually" : "Logged as one combined dish entry"}
             </p>
           </div>
@@ -1276,7 +1419,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
 
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
 
-        <div className="flex gap-2 pt-2 border-t border-gray-100">
+        <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
           <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
           <Button className="flex-1" loading={loading} onClick={saveDish} disabled={ingredients.length === 0}>
             Log {logSeparate ? `${ingredients.length} items` : "Dish"}
@@ -1390,7 +1533,7 @@ export default function NutritionPage() {
   const [showMealPlan, setShowMealPlan] = useState(false);
   const [showDish,     setShowDish]     = useState(false);
   const [activeGoal,  setActiveGoal]  = useState<CalorieGoal | null>(null);
-  const [macroView,   setMacroView]   = useState<"distribution" | "breakdown" | "by-meal" | "goals">("distribution");
+  const [macroView,   setMacroView]   = useState<"distribution" | "breakdown" | "by-meal" | "by-food" | "goals">("distribution");
 
   // ── Supplements ──────────────────────────────────────────────────────────────
   const SUPPLEMENT_DEFS = {
@@ -1665,8 +1808,8 @@ export default function NutritionPage() {
       {/* Header + date nav */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nutrition</h1>
-          <p className="text-gray-500 text-sm mt-1">{format(parseISO(date), "EEEE, MMMM d")}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white">Nutrition</h1>
+          <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm mt-1">{format(parseISO(date), "EEEE, MMMM d")}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="secondary" size="sm"
@@ -1676,7 +1819,7 @@ export default function NutritionPage() {
             value={date}
             max={new Date().toISOString().split("T")[0]}
             onChange={(e) => setDate(e.target.value)}
-            className="border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
           <Button variant="secondary" size="sm"
             disabled={isToday}
@@ -1766,7 +1909,7 @@ export default function NutritionPage() {
                 key={food.foodName}
                 disabled={!!relogging}
                 onClick={() => handleQuickRelog(food)}
-                className="flex items-center gap-1.5 bg-white border border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 bg-white border border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-gray-700 dark:text-gray-200 text-xs font-medium px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title={`${food.timesLogged}× logged · ${food.quantity} ${food.unit}`}
               >
                 {relogging === food.foodName && (
@@ -1783,8 +1926,8 @@ export default function NutritionPage() {
       {/* ── Water tracking widget ─────────────────────────────────────────── */}
       {trackWater && <Card className="p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-800">💧 Water Intake</h3>
-          <span className="text-sm text-gray-500">
+          <h3 className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">💧 Water Intake</h3>
+          <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">
             <span className="font-bold text-blue-600">{Math.round(waterTotal / 100) / 10}L</span>
             {" / "}
             {Math.round(waterTarget / 100) / 10}L
@@ -1854,7 +1997,7 @@ export default function NutritionPage() {
       {/* Supplements widget */}
       <Card>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-900">💊 Supplements</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white dark:text-white">💊 Supplements</h3>
           {suppMacros.calories > 0 && (
             <span className="text-xs text-purple-600 font-medium bg-purple-50 px-2 py-0.5 rounded-full">
               +{Math.round(suppMacros.calories)} kcal · +{Math.round(suppMacros.protein)}g protein added
@@ -1880,7 +2023,7 @@ export default function NutritionPage() {
                     className={`relative cursor-pointer rounded-xl border p-2.5 text-center transition-all select-none ${
                       s.enabled
                         ? "border-purple-400 bg-purple-50 shadow-sm"
-                        : "border-gray-200 bg-white hover:border-gray-300"
+                        : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500"
                     }`}
                   >
                     {/* Edit macros button */}
@@ -1890,7 +2033,7 @@ export default function NutritionPage() {
                       className={`absolute top-1.5 left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-colors z-10 ${
                         hasOverride
                           ? "bg-amber-400 text-white"
-                          : "bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                          : "bg-gray-100 text-gray-400 dark:text-gray-500 hover:bg-gray-200 hover:text-gray-600"
                       }`}
                     >✏️</button>
 
@@ -1900,14 +2043,14 @@ export default function NutritionPage() {
                     <div className="flex items-center justify-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => updateSupp(id as SuppId, { qty: Math.max(0, s.qty - 1) })}
-                        className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200"
+                        className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200"
                       >−</button>
-                      <span className="text-xs font-semibold text-gray-800 w-6 text-center">{s.qty}</span>
+                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-100 w-6 text-center">{s.qty}</span>
                       <button
                         onClick={() => updateSupp(id as SuppId, { qty: s.qty + 1 })}
-                        className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200"
+                        className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200"
                       >+</button>
-                      <span className="text-[10px] text-gray-400">{def.unit}</span>
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 dark:text-gray-500">{def.unit}</span>
                     </div>
                     {s.enabled && macroLine && (
                       <p className="text-[10px] text-purple-600 mt-1 font-medium">{macroLine}</p>
@@ -1927,7 +2070,7 @@ export default function NutritionPage() {
                     <div className="grid grid-cols-2 gap-1 mb-2">
                       {(["cal", "p", "c", "f"] as const).map((key) => (
                         <div key={key} className="text-left">
-                          <label className="text-[9px] text-gray-500 uppercase font-semibold">{key === "cal" ? "kcal" : key === "p" ? "prot" : key === "c" ? "carbs" : "fat"}</label>
+                          <label className="text-[9px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase font-semibold">{key === "cal" ? "kcal" : key === "p" ? "prot" : key === "c" ? "carbs" : "fat"}</label>
                           <input
                             type="number"
                             min="0"
@@ -1941,8 +2084,8 @@ export default function NutritionPage() {
                     </div>
                     <div className="flex gap-1 justify-center">
                       <button onClick={saveSuppEdit}    className="text-[10px] px-2 py-1 rounded-lg bg-amber-500 text-white font-semibold hover:bg-amber-600">Save</button>
-                      <button onClick={() => resetSuppEdit(id as SuppId)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">Reset</button>
-                      <button onClick={() => setEditingSupp(null)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">✕</button>
+                      <button onClick={() => resetSuppEdit(id as SuppId)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 dark:text-gray-300 hover:bg-gray-200">Reset</button>
+                      <button onClick={() => setEditingSupp(null)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 dark:text-gray-300 hover:bg-gray-200">✕</button>
                     </div>
                   </div>
                 )}
@@ -1950,7 +2093,7 @@ export default function NutritionPage() {
             );
           })}
         </div>
-        <p className="text-[10px] text-gray-400 mt-2">Click to toggle · ✏️ edits macros per unit · preferences saved automatically</p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">Click to toggle · ✏️ edits macros per unit · preferences saved automatically</p>
       </Card>
 
       {/* Daily summary */}
@@ -1960,11 +2103,11 @@ export default function NutritionPage() {
         <Card className="lg:col-span-1">
           <CardHeader title="Calories" />
           <div className="text-center py-2">
-            <p className="text-4xl font-bold text-gray-900">{Math.round(effectiveTotals.calories)}</p>
-            <p className="text-sm text-gray-400 mt-1">kcal consumed{suppMacros.calories > 0 ? <span className="text-purple-600"> (incl. supps)</span> : ""}</p>
+            <p className="text-4xl font-bold text-gray-900 dark:text-white dark:text-white">{Math.round(effectiveTotals.calories)}</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">kcal consumed{suppMacros.calories > 0 ? <span className="text-purple-600"> (incl. supps)</span> : ""}</p>
             {hasGoal && (
-              <p className="text-sm text-gray-500 mt-0.5">
-                Goal: <span className="font-semibold text-gray-700">{Math.round(activeGoal!.dailyCalories)} kcal</span>
+              <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5">
+                Goal: <span className="font-semibold text-gray-700 dark:text-gray-200 dark:text-gray-200">{Math.round(activeGoal!.dailyCalories)} kcal</span>
               </p>
             )}
           </div>
@@ -1985,7 +2128,7 @@ export default function NutritionPage() {
 
           {/* No goal nudge */}
           {!hasGoal && (
-            <p className="text-xs text-gray-400 text-center mt-2">
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-2">
               <button
                 onClick={() => navigate("/goals")}
                 className="text-brand-600 hover:underline"
@@ -1993,19 +2136,19 @@ export default function NutritionPage() {
             </p>
           )}
 
-          <div className="flex justify-around pt-4 border-t border-gray-100 text-center mt-3">
+          <div className="flex justify-around pt-4 border-t border-gray-100 dark:border-gray-700 text-center mt-3">
             <div>
-              <p className="text-xs text-gray-400">Entries</p>
-              <p className="font-bold text-gray-800">{logs.length}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">Entries</p>
+              <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{logs.length}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">Meals</p>
-              <p className="font-bold text-gray-800">{Object.keys(grouped).length}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">Meals</p>
+              <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{Object.keys(grouped).length}</p>
             </div>
             {hasGoal && (
               <div>
-                <p className="text-xs text-gray-400">TDEE</p>
-                <p className="font-bold text-gray-800">{Math.round(activeGoal!.tdee ?? 0)}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">TDEE</p>
+                <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{Math.round(activeGoal!.tdee ?? 0)}</p>
               </div>
             )}
           </div>
@@ -2014,7 +2157,7 @@ export default function NutritionPage() {
         {/* ── Macronutrients card ── */}
         <Card className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h3 className="font-semibold text-gray-900">Macronutrients</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white dark:text-white">Macronutrients</h3>
 
             {/* View toggle — always visible; "vs Goals" only when a goal exists */}
             <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5 text-xs">
@@ -2022,6 +2165,7 @@ export default function NutritionPage() {
                 { key: "distribution", label: "🍩 Rings"      },
                 { key: "breakdown",    label: "📊 Breakdown"  },
                 { key: "by-meal",      label: "🍽️ By Meal"   },
+                { key: "by-food",      label: "🔍 By Food"   },
                 ...(hasGoal ? [{ key: "goals", label: "🎯 vs Goals" }] : []),
               ] as { key: typeof macroView; label: string }[]).map(({ key, label }) => (
                 <button
@@ -2029,8 +2173,8 @@ export default function NutritionPage() {
                   onClick={() => setMacroView(key)}
                   className={`px-2.5 py-1 rounded-md font-medium transition-all whitespace-nowrap ${
                     macroView === key
-                      ? "bg-white shadow-sm text-gray-900"
-                      : "text-gray-500 hover:text-gray-700"
+                      ? "bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white"
+                      : "text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700"
                   }`}
                 >
                   {label}
@@ -2044,15 +2188,15 @@ export default function NutritionPage() {
               {/* 🍩 Distribution — macro rings showing % of total grams */}
               {macroView === "distribution" && (
                 <div className="flex items-center justify-around">
-                  <MacroRing label="Protein" value={effectiveTotals.protein} total={totalMacroG} color="#3b82f6" />
-                  <MacroRing label="Carbs"   value={effectiveTotals.carbs}   total={totalMacroG} color="#f59e0b" />
-                  <MacroRing label="Fats"    value={effectiveTotals.fats}    total={totalMacroG} color="#ef4444" />
+                  <MacroRing label="Protein" value={effectiveTotals.protein} total={totalMacroG} color="#3b82f6" goal={activeGoal?.proteinGrams} />
+                  <MacroRing label="Carbs"   value={effectiveTotals.carbs}   total={totalMacroG} color="#f59e0b" goal={activeGoal?.carbsGrams} />
+                  <MacroRing label="Fats"    value={effectiveTotals.fats}    total={totalMacroG} color="#ef4444" goal={activeGoal?.fatsGrams} />
                   <div className="text-center">
-                    <p className="text-xs text-gray-400 mb-1">Calories from macros</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Calories from macros</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white">
                       {Math.round(effectiveTotals.protein * 4 + effectiveTotals.carbs * 4 + effectiveTotals.fats * 9)}
                     </p>
-                    <p className="text-xs text-gray-400">kcal</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">kcal</p>
                   </div>
                 </div>
               )}
@@ -2069,6 +2213,11 @@ export default function NutritionPage() {
               {/* 🍽️ By Meal — per-meal stacked bars */}
               {macroView === "by-meal" && (
                 <MacroByMeal grouped={grouped} mealOrder={mealOrder} />
+              )}
+
+              {/* 🔍 By Food — per-food macro source table */}
+              {macroView === "by-food" && (
+                <MacroByFood logs={logs} />
               )}
 
               {/* 🎯 vs Goals — progress bars against calorie goal targets */}
@@ -2095,7 +2244,7 @@ export default function NutritionPage() {
                     color="#ef4444"
                     bgColor="bg-red-100"
                   />
-                  <div className="text-xs text-gray-400 text-right pt-1">
+                  <div className="text-xs text-gray-400 dark:text-gray-500 text-right pt-1">
                     From goal: {activeGoal!.name ?? activeGoal!.type}
                     {" · "}{Math.round(activeGoal!.dailyCalories)} kcal / day
                   </div>
@@ -2104,7 +2253,7 @@ export default function NutritionPage() {
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 gap-2">
-              <p className="text-sm text-gray-400">Log food to see macro breakdown</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-500">Log food to see macro breakdown</p>
               <Button size="sm" onClick={() => setShowForm(true)}>Log First Meal</Button>
             </div>
           )}
@@ -2119,8 +2268,8 @@ export default function NutritionPage() {
       ) : logs.length === 0 ? (
         <Card className="text-center py-14">
           <div className="text-5xl mb-3">🥗</div>
-          <h3 className="font-semibold text-gray-800 mb-2">Nothing logged yet</h3>
-          <p className="text-sm text-gray-400 mb-4">
+          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Nothing logged yet</h3>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">
             {isToday
               ? "Log your first meal to start tracking today's nutrition."
               : `Nothing was logged on ${format(parseISO(date), "MMM d")}.`}
@@ -2146,11 +2295,11 @@ export default function NutritionPage() {
                 <Card key={meal}>
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h3 className="font-semibold text-gray-900">
+                      <h3 className="font-semibold text-gray-900 dark:text-white dark:text-white">
                         {MEAL_ICONS[meal] ?? "🍽️"}{" "}
                         {meal === "other" ? "Other" : meal.charAt(0).toUpperCase() + meal.slice(1)}
                       </h3>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                         {Math.round(mealCal)} kcal &nbsp;·&nbsp;
                         P: {Math.round(mealP)}g &nbsp;
                         C: {Math.round(mealC)}g &nbsp;
@@ -2167,25 +2316,25 @@ export default function NutritionPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100">
-                          <th className="text-left py-2 text-xs text-gray-400 font-medium">Food</th>
-                          <th className="text-right py-2 text-xs text-gray-400 font-medium">Qty</th>
-                          <th className="text-right py-2 text-xs text-gray-400 font-medium">Kcal</th>
-                          <th className="text-right py-2 text-xs text-gray-400 font-medium">P</th>
-                          <th className="text-right py-2 text-xs text-gray-400 font-medium">C</th>
-                          <th className="text-right py-2 text-xs text-gray-400 font-medium">F</th>
+                        <tr className="border-b border-gray-100 dark:border-gray-700 dark:border-gray-700">
+                          <th className="text-left py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Food</th>
+                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Qty</th>
+                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Kcal</th>
+                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">P</th>
+                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">C</th>
+                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">F</th>
                           <th className="w-16" />
                         </tr>
                       </thead>
                       <tbody>
                         {mealLogs.map((log) => (
-                          <tr key={log.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                            <td className="py-2.5 font-medium text-gray-800">
+                          <tr key={log.id} className="border-b border-gray-50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <td className="py-2.5 font-medium text-gray-800 dark:text-gray-100 dark:text-gray-100">
                               {log.foodName}
                               {log.isCheatMeal && <span className="ml-1.5 text-xs">🍕</span>}
                             </td>
-                            <td className="py-2.5 text-right text-gray-500">{log.quantity}{log.unit}</td>
-                            <td className="py-2.5 text-right font-semibold text-gray-800">{Math.round(log.calories)}</td>
+                            <td className="py-2.5 text-right text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">{log.quantity}{log.unit}</td>
+                            <td className="py-2.5 text-right font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">{Math.round(log.calories)}</td>
                             <td className="py-2.5 text-right text-blue-600">{log.protein != null ? Math.round(log.protein) : "—"}</td>
                             <td className="py-2.5 text-right text-yellow-600">{log.carbs  != null ? Math.round(log.carbs)   : "—"}</td>
                             <td className="py-2.5 text-right text-red-500">{log.fats    != null ? Math.round(log.fats)    : "—"}</td>
@@ -2193,7 +2342,7 @@ export default function NutritionPage() {
                               <div className="flex gap-1 justify-end">
                                 <button
                                   onClick={() => { setEditItem(log); setShowForm(true); }}
-                                  className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+                                  className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 dark:text-gray-300 transition-colors"
                                   title="Edit"
                                 >✏️</button>
                                 <button

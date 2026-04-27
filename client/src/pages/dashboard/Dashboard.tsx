@@ -10,6 +10,7 @@ import { dashboardApi, calorieGoalsApi, weightApi } from "../../api";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import WeeklyPlanWidget from "../../components/WeeklyPlanWidget";
+import { useIsDark } from "../../hooks/useDarkMode";
 import type { DashboardData } from "../../types";
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
@@ -35,16 +36,27 @@ function MacroBar({ label, value, target, color }: {
   label: string; value: number; target?: number; color: string;
 }) {
   const pct = target ? Math.min(100, Math.round((value / target) * 100)) : 0;
+
+  // Glow: blue at >=70%, green at >=100%
+  const fillClass  = pct >= 100 ? "bg-green-500" : color;
+  const glowStyle: React.CSSProperties =
+    pct >= 100
+      ? { boxShadow: "0 0 8px 2px rgba(34,197,94,0.45)" }
+      : pct >= 70
+      ? { boxShadow: "0 0 8px 2px rgba(59,130,246,0.40)" }
+      : {};
+
   return (
     <div>
       <div className="flex justify-between text-sm mb-1">
         <span className="text-gray-600 dark:text-gray-300 font-medium">{label}</span>
-        <span className="text-gray-800 dark:text-gray-100 font-semibold">
+        <span className={pct >= 100 ? "text-green-500 font-semibold" : "text-gray-800 dark:text-gray-100 font-semibold"}>
           {Math.round(value)}g{target ? ` / ${Math.round(target)}g` : ""}
+          {pct >= 100 && <span className="ml-1">✓</span>}
         </span>
       </div>
-      <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
+      <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden" style={glowStyle}>
+        <div className={`h-full rounded-full transition-all duration-500 ${fillClass}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -63,6 +75,18 @@ export default function Dashboard() {
   const [weightVal,      setWeightVal]      = useState("");
   const [savingWeight,   setSavingWeight]   = useState(false);
   const [weightSaved,    setWeightSaved]    = useState(false);
+
+  // ── Dark mode (must be before any early return — Rules of Hooks) ─────────────
+  const isDark = useIsDark();
+
+  // Dynamic chart colors that adapt to dark mode
+  const chartColors = {
+    grid:    isDark ? "#374151" : "#f0f0f0",   // gray-700 vs light gray
+    tick:    isDark ? "#9ca3af" : "#9ca3af",   // same gray-400 both modes
+    tooltip: isDark ? { background: "#1f2937", border: "#374151", color: "#f3f4f6" }
+                    : { background: "#ffffff", border: "#e5e7eb", color: "#111827" },
+    ring:    isDark ? "#374151" : "#f3f4f6",   // track ring color
+  };
 
   const handleLogWeight = async () => {
     const w = parseFloat(weightVal);
@@ -330,7 +354,7 @@ export default function Dashboard() {
             {/* Ring */}
             <div className="relative w-36 h-36">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#f3f4f6" strokeWidth="10" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke={chartColors.ring} strokeWidth="10" />
                 <circle
                   cx="50" cy="50" r="42" fill="none"
                   stroke={caloriePct >= 100 ? "#ef4444" : "#22c55e"}
@@ -427,11 +451,11 @@ export default function Dashboard() {
                       <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                  <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: chartColors.tick }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                  <YAxis tick={{ fontSize: 11, fill: chartColors.tick }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
                   <Tooltip
-                    contentStyle={{ borderRadius: "12px", border: "1px solid #e5e7eb", fontSize: "13px" }}
+                    contentStyle={{ borderRadius: "12px", border: `1px solid ${chartColors.tooltip.border}`, fontSize: "13px", backgroundColor: chartColors.tooltip.background, color: chartColors.tooltip.color }}
                     formatter={(v: number, name: string) => [
                       v != null ? `${Number(v).toFixed(1)} kg` : null,
                       name === "weight" ? "Actual" : "Projected",

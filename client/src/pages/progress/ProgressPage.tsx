@@ -8,6 +8,8 @@ import {
 import { weightApi, workoutsApi, predictionsApi } from "../../api";
 import type { WeightLog, WeightStats, ExerciseProgression } from "../../types";
 import { useAuthStore } from "../../store/authStore";
+import GoalsPage from "../goals/GoalsPage";
+import { useIsDark } from "../../hooks/useDarkMode";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -199,6 +201,12 @@ function BodyCompositionCard({
   age: number | null | undefined;
   sex: "male" | "female" | null | undefined;
 }) {
+  const isDark   = useIsDark();
+  const chartGrid   = isDark ? "#374151" : "#f0f0f0";
+  const chartTick   = isDark ? "#9ca3af" : "#9ca3af";
+  const chartBg     = isDark ? "#1f2937" : "#ffffff";
+  const chartBorder = isDark ? "#374151" : "#e5e7eb";
+  const chartText   = isDark ? "#f3f4f6" : "#111827";
   const [formula, setFormula] = useState<BFFormula>("deurenberg");
 
   const missingFields = !weight || !heightCm || !age || !sex;
@@ -332,12 +340,12 @@ function BodyCompositionCard({
             <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mb-2">BODY FAT % TREND</p>
             <ResponsiveContainer width="100%" height={120}>
               <ComposedChart data={fatTrend as any} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-                <YAxis yAxisId="fat" domain={["auto", "auto"]} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                <YAxis yAxisId="wt" orientation="right" domain={["auto", "auto"]} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}kg`} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                <YAxis yAxisId="fat" domain={["auto", "auto"]} tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
+                <YAxis yAxisId="wt" orientation="right" domain={["auto", "auto"]} tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}kg`} />
                 <Tooltip
-                  contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                  contentStyle={{ fontSize: 11, borderRadius: 8, border: `1px solid ${chartBorder}`, backgroundColor: chartBg, color: chartText }}
                   formatter={(v: number, n: string) => [n === "fatPct" ? `${v}%` : `${v} kg`, n === "fatPct" ? "Body fat" : "Weight"]}
                 />
                 <Line yAxisId="fat" type="monotone" dataKey="fatPct" stroke="#f87171" strokeWidth={2} dot={false} name="fatPct" />
@@ -359,6 +367,12 @@ function BodyCompositionCard({
 // Exercise progression section
 // ─────────────────────────────────────────────────────────────────────────────
 function ExerciseProgressionSection() {
+  const isDark   = useIsDark();
+  const chartGrid   = isDark ? "#374151" : "#f0f0f0";
+  const chartTick   = isDark ? "#9ca3af" : "#9ca3af";
+  const chartBg     = isDark ? "#1f2937" : "#ffffff";
+  const chartBorder = isDark ? "#374151" : "#e5e7eb";
+  const chartText   = isDark ? "#f3f4f6" : "#111827";
   const [query,   setQuery]   = useState("");
   const [data,    setData]    = useState<ExerciseProgression[]>([]);
   const [meta,    setMeta]    = useState<{ exerciseName: string; allTimePR: any; totalSessions: number } | null>(null);
@@ -403,12 +417,12 @@ function ExerciseProgressionSection() {
       {data.length > 0 ? (
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={data} margin={{ top: 5, right: 20, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-            <YAxis yAxisId="left"  tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+            <XAxis dataKey="date" tick={{ fontSize: 11, fill: chartTick }} axisLine={false} tickLine={false} />
+            <YAxis yAxisId="left"  tick={{ fontSize: 11, fill: chartTick }} axisLine={false} tickLine={false} />
+            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: chartTick }} axisLine={false} tickLine={false} />
             <Tooltip
-              contentStyle={{ borderRadius: "12px", border: "1px solid #e5e7eb", fontSize: "12px" }}
+              contentStyle={{ borderRadius: "12px", border: `1px solid ${chartBorder}`, backgroundColor: chartBg, color: chartText, fontSize: "12px" }}
               formatter={(v: number, n: string) => [
                 n === "totalVolume" ? `${v.toLocaleString()} kg` : `${v} kg`,
                 n === "maxWeight" ? "Max Weight" : n === "estimated1RM" ? "Est. 1RM" : "Volume",
@@ -469,6 +483,12 @@ function AdherenceGauge({ score, label }: { score: number; label: string }) {
 }
 
 function PredictionCard({ data, loading }: { data: any | null; loading: boolean }) {
+  const isDark      = useIsDark();
+  const chartGrid   = isDark ? "#374151" : "#f0f0f0";
+  const chartTick   = isDark ? "#9ca3af" : "#9ca3af";
+  const chartBg     = isDark ? "#1f2937" : "#ffffff";
+  const chartBorder = isDark ? "#374151" : "#e5e7eb";
+  const chartText   = isDark ? "#f3f4f6" : "#111827";
   if (loading) {
     return (
       <Card>
@@ -608,11 +628,11 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
         />
         <ResponsiveContainer width="100%" height={270}>
           <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
             <Tooltip
-              contentStyle={{ borderRadius: "12px", border: "1px solid #e5e7eb", fontSize: "12px" }}
+              contentStyle={{ borderRadius: "12px", border: `1px solid ${chartBorder}`, backgroundColor: chartBg, color: chartText, fontSize: "12px" }}
               formatter={(v: any, name: string) => {
                 if (v == null) return [null, name];
                 const labels: Record<string, string> = {
@@ -784,10 +804,17 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Progress page
 // ─────────────────────────────────────────────────────────────────────────────
-type TabId = "body" | "strength" | "predictions";
+type TabId = "body" | "strength" | "predictions" | "goals";
 
 export default function ProgressPage() {
   const { user }                   = useAuthStore();
+  const isDark   = useIsDark();
+  const chartGrid   = isDark ? "#374151" : "#f0f0f0";
+  const chartTick   = isDark ? "#9ca3af" : "#9ca3af";
+  const chartBg     = isDark ? "#1f2937" : "#ffffff";
+  const chartBorder = isDark ? "#374151" : "#e5e7eb";
+  const chartText   = isDark ? "#f3f4f6" : "#111827";
+
   const [logs,     setLogs]        = useState<WeightLog[]>([]);
   const [stats,    setStats]       = useState<WeightStats | null>(null);
   const [loading,  setLoading]     = useState(true);
@@ -835,6 +862,7 @@ export default function ProgressPage() {
     { id: "body",        label: "Body & Weight",       icon: "⚖️" },
     { id: "strength",    label: "Exercise Progression", icon: "🏋️" },
     { id: "predictions", label: "Predictions",          icon: "🔮" },
+    { id: "goals",       label: "Goals",                icon: "🎯" },
   ];
 
   return (
@@ -842,8 +870,8 @@ export default function ProgressPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Progress</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Body composition, weight trend, and strength over time</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Progress & Goals</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Body composition, weight trend, strength, and calorie goals</p>
         </div>
         <div className="flex gap-2 shrink-0">
           {tab === "body" && (
@@ -918,11 +946,11 @@ export default function ProgressPage() {
                       <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: chartTick }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: chartTick }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
                   <Tooltip
-                    contentStyle={{ borderRadius: "12px", border: "1px solid #e5e7eb", fontSize: "13px" }}
+                    contentStyle={{ borderRadius: "12px", border: `1px solid ${chartBorder}`, backgroundColor: chartBg, color: chartText, fontSize: "13px" }}
                     formatter={(v: number) => [`${v} kg`, "Weight"]}
                   />
                   <Area type="monotone" dataKey="weight" stroke="#22c55e" strokeWidth={2.5} fill="url(#wGrad)" dot={{ fill: "#22c55e", r: 3 }} />
@@ -985,4 +1013,28 @@ export default function ProgressPage() {
                           </td>
                         </tr>
                       );
-                 
+                                     })}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+        </>
+      )}
+
+      {/* ── Exercise Progression tab ───────────────────────────────────────── */}
+      {tab === "strength" && <ExerciseProgressionSection />}
+
+      {/* ── Predictions tab ───────────────────────────────────────────────── */}
+      {tab === "predictions" && <PredictionCard data={predData} loading={predLoading} />}
+
+      {/* ── Goals tab ─────────────────────────────────────────────────────── */}
+      {tab === "goals" && (
+        <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+          <GoalsPage embedded />
+        </div>
+      )}
+
+    </div>
+  );
+}

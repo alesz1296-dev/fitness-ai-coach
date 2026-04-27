@@ -1,11 +1,30 @@
 import { useState, useEffect, useCallback } from "react";
 import { startOfWeek, addDays, format, isToday, parseISO } from "date-fns";
-import { weeklyPlanApi, usersApi } from "../api";
+import { weeklyPlanApi, usersApi, calendarApi, calorieGoalsApi } from "../api";
 import { useAuthStore } from "../store/authStore";
 import type { WeeklyPlan, WeeklyPlanDay } from "../types";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { Modal } from "./ui/Modal";
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+function useToast() {
+  const [msg, setMsg] = useState<string | null>(null);
+  const show = (message: string) => {
+    setMsg(message);
+    setTimeout(() => setMsg(null), 3000);
+  };
+  return { msg, show };
+}
+function ToastBanner({ msg }: { msg: string | null }) {
+  if (!msg) return null;
+  return (
+    <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-xl flex items-center gap-2">
+      <span className="text-green-400">✓</span>
+      {msg}
+    </div>
+  );
+}
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -385,9 +404,14 @@ function SetupModal({
           targetCalories: d.targetCalories ? Number(d.targetCalories) : null,
         })),
       });
-      // Sync trainingDaysPerWeek in the user profile so Settings stays in step.
-      // Fire-and-forget — don't block the modal close if profile update fails.
-      usersApi.updateProfile({ trainingDaysPerWeek: activeDays.length } as any).catch(() => {});
+      // Await the profile sync so the auth store is fresh before the parent re-fetches.
+      await usersApi.updateProfile({ trainingDaysPerWeek: activeDays.length } as any).catch(() => {});
+      // Also sync to active calorie goal so WorkoutsPage.trainingDays stays in sync
+      calorieGoalsApi.getActive().then((r) => {
+        if (r.data.goal?.id) {
+          calorieGoalsApi.update(r.data.goal.id, { trainingDaysPerWeek: activeDays.length }).catch(() => {});
+        }
+      }).catch(() => {});
       onSave();
     } finally { setLoading(false); }
   };
@@ -587,16 +611,127 @@ function LogCaloriesModal({
   );
 }
 
+// ── Sync-to-calendar modal ────────────────────────────────────────────────────
+function SyncCalendarModal({
+  plan,
+  onClose,
+  onSynced,
+}: {
+  plan: WeeklyPlan;
+  onClose: () => void;
+  onSynced: (msg: string) => void;
+}) {
+  const today     = new Date();
+  const thisMonth = format(today, "yyyy-MM");
+  const nextMonth = format(new Date(today.getFullYear(), today.getMonth() + 1, 1), "yyyy-MM");
+  const twoMonths = format(new Date(today.getFullYear(), today.getMonth() + 2, 1), "yyyy-MM");
+  const ALL_MONTHS = [thisMonth, nextMonth, twoMonths];
+
+  const [duration,  setDuration]  = useState<"1" | "2" | "3">("1");
+  const [overwrite, setOverwrite] = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [error,     setError]     = useState("");
+
+  const activeDays = plan.days.filter((d) => d.dayIndex >= 0);
+  const months     = ALL_MONTHS.slice(0, Number(duration));
+
+  const handleSync = async () => {
+    if (activeDays.length === 0) { setError("No active days to sync."); return; }
+    setSaving(true);
+    setError("");
+    const assignments = activeDays.map((d) => ({
+      dayOfWeek:    d.dayIndex,           // 0=Mon … 6=Sun (matches backend convention)
+      workoutName:  d.label,
+      muscleGroups: [] as string[],
+      isRestDay:    false,
+    }));
+    try {
+      let total = 0;
+      for (const month of months) {
+        const res = await calendarApi.populate({ month, assignments, overwrite });
+        total += res.data.count;
+      }
+      onSynced(`Synced ${total} day${total !== 1 ? "s" : ""} across ${months.length} month${months.length !== 1 ? "s" : ""}! Open the Calendar tab to review.`);
+    } catch {
+      setError("Failed to sync to calendar.");
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal open title="Sync Weekly Plan to Calendar" onClose={onClose} size="sm">
+      <div className="space-y-4 p-1">
+        <p className="text-sm text-gray-500">
+          Fills your workout calendar with this week's schedule, repeated across the selected months.
+        </p>
+
+        {/* Preview of days being synced */}
+        <div className="bg-gray-50 rounded-xl px-3 py-2.5 space-y-1">
+          {activeDays.map((d) => (
+            <div key={d.dayIndex} className="flex items-center gap-2 text-xs">
+              <span className="w-8 font-semibold text-brand-600">{DAY_LABELS[d.dayIndex]}</span>
+              <span className="text-gray-600 truncate">{d.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Duration picker */}
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-2">How many months?</p>
+          <div className="flex gap-2">
+            {([
+              { val: "1", label: "This month",   sub: thisMonth },
+              { val: "2", label: "+ Next month",  sub: nextMonth },
+              { val: "3", label: "+ 2 months",    sub: twoMonths },
+            ] as const).map(({ val, label, sub }) => (
+              <button
+                key={val}
+                onClick={() => setDuration(val)}
+                className={`flex-1 rounded-xl border px-2 py-2 text-xs font-semibold transition
+                  ${duration === val
+                    ? "bg-brand-600 text-white border-brand-600"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-brand-300"}`}
+              >
+                <div>{label}</div>
+                <div className="text-[10px] opacity-75 mt-0.5">{sub}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={overwrite}
+            onChange={(e) => setOverwrite(e.target.checked)}
+            className="w-4 h-4 accent-brand-600"
+          />
+          Replace existing calendar days
+        </label>
+
+        {error && <p className="text-sm text-red-500">{error}</p>}
+
+        <div className="flex gap-3">
+          <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button onClick={handleSync} loading={saving} className="flex-1">Sync to Calendar</Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Main widget ───────────────────────────────────────────────────────────────
 export default function WeeklyPlanWidget() {
   const { user, updateUser } = useAuthStore();
-  const [plan, setPlan] = useState<WeeklyPlan | null>(null);
+  const [plan, setPlan]           = useState<WeeklyPlan | null>(null);
   const [weekStart, setWeekStart] = useState<string>(getThisMonday());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]     = useState(true);
   const [showSetup, setShowSetup] = useState(false);
-  const [loggingDay, setLoggingDay] = useState<WeeklyPlanDay | null>(null);
-  const [toggling, setToggling] = useState<number | null>(null);
-  const [apiError, setApiError] = useState(false);
+  const [showSyncCal, setShowSyncCal] = useState(false);
+  const [loggingDay, setLoggingDay]   = useState<WeeklyPlanDay | null>(null);
+  const [toggling, setToggling]   = useState<number | null>(null);
+  const [apiError, setApiError]   = useState(false);
+  const toast = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -607,16 +742,11 @@ export default function WeeklyPlanWidget() {
       setPlan(fetchedPlan);
       setWeekStart(res.data.weekStart.split("T")[0]);
 
-      // If Settings flagged a training-days change, auto-open the plan modal
-      // so the user can reconcile their schedule without hunting for the edit button.
       try {
         const hint = localStorage.getItem("fitai_plan_days_hint");
         if (hint) {
           localStorage.removeItem("fitai_plan_days_hint");
-          // Only auto-open if there's already an existing plan to update
-          if (fetchedPlan) {
-            setShowSetup(true);
-          }
+          if (fetchedPlan) setShowSetup(true);
         }
       } catch { /* ignore */ }
     } catch {
@@ -626,11 +756,20 @@ export default function WeeklyPlanWidget() {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleToggle = async (day: WeeklyPlanDay) => {
-    if (!day.completed) {
-      setLoggingDay(day);
-      return;
+  // Show a toast in this widget when Profile page updates trainingDaysPerWeek
+  const [prevTrainingDays, setPrevTrainingDays] = useState<number | null | undefined>(user?.trainingDaysPerWeek);
+  useEffect(() => {
+    if (user?.trainingDaysPerWeek == null) return;
+    if (prevTrainingDays == null) { setPrevTrainingDays(user.trainingDaysPerWeek); return; }
+    if (user.trainingDaysPerWeek !== prevTrainingDays) {
+      toast.show(`Training days updated to ${user.trainingDaysPerWeek} 💪 — update your weekly plan to match!`);
+      setPrevTrainingDays(user.trainingDaysPerWeek);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.trainingDaysPerWeek]);
+
+  const handleToggle = async (day: WeeklyPlanDay) => {
+    if (!day.completed) { setLoggingDay(day); return; }
     setToggling(day.id);
     try {
       const res = await weeklyPlanApi.toggleDay(day.id);
@@ -669,17 +808,17 @@ export default function WeeklyPlanWidget() {
     <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
       <h2 className="text-base font-semibold text-gray-900 mb-3">Weekly Training Plan</h2>
       <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-3 py-2 text-center">
-        ⚠️ Run <code className="font-mono">npx prisma migrate dev --name weekly_plan</code> to enable this feature
+        Run <code className="font-mono">npx prisma migrate dev --name weekly_plan</code> to enable this feature
       </p>
     </div>
   );
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">Weekly Training Plan</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">Weekly Training Plan</h2>
           <p className="text-xs text-gray-400 mt-0.5">Week of {format(parseISO(weekStart), "MMM d")}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -693,22 +832,22 @@ export default function WeeklyPlanWidget() {
             variant={plan ? "secondary" : "primary"}
             onClick={() => setShowSetup(true)}
           >
-            {plan ? "✏️ Edit Schedule" : "Set Up Plan"}
+            {plan ? "Edit Schedule" : "Set Up Plan"}
           </Button>
         </div>
       </div>
 
-      {/* ── Mismatch banner ─────────────────────────────────────────────────── */}
+      {/* Mismatch banner */}
       {plan && total > 0 && user?.trainingDaysPerWeek != null && user.trainingDaysPerWeek !== total && (
         <div className="mb-3 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
           <span className="text-xs text-amber-700 flex-1">
-            ⚠️ Your profile says <strong>{user.trainingDaysPerWeek} training day{user.trainingDaysPerWeek !== 1 ? "s" : ""}</strong>, but your plan has <strong>{total}</strong>.
+            Your profile says <strong>{user.trainingDaysPerWeek} training day{user.trainingDaysPerWeek !== 1 ? "s" : ""}</strong>, but your plan has <strong>{total}</strong>.
           </span>
           <button
             onClick={() => setShowSetup(true)}
             className="text-xs font-semibold text-amber-700 hover:text-amber-900 whitespace-nowrap"
           >
-            Adjust plan →
+            Adjust plan
           </button>
         </div>
       )}
@@ -716,7 +855,7 @@ export default function WeeklyPlanWidget() {
       {!plan || total === 0 ? (
         <div className="text-center py-6">
           <p className="text-2xl mb-2">📅</p>
-          <p className="text-sm font-medium text-gray-700 mb-1">No plan for this week</p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">No plan for this week</p>
           <p className="text-xs text-gray-400 mb-4">Choose from beginner-friendly to advanced templates</p>
           <Button size="sm" onClick={() => setShowSetup(true)}>Browse Plans</Button>
         </div>
@@ -724,7 +863,7 @@ export default function WeeklyPlanWidget() {
         <>
           {/* Progress bar */}
           <div className="mb-4">
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
               <div
                 className="h-full bg-brand-500 rounded-full transition-all duration-500"
                 style={{ width: total > 0 ? `${(completed / total) * 100}%` : "0%" }}
@@ -732,7 +871,7 @@ export default function WeeklyPlanWidget() {
             </div>
             {avgCal > 0 && (
               <p className="text-xs text-gray-400 mt-1.5">
-                Avg calories burned: <span className="font-medium text-gray-600">{Math.round(avgCal)} kcal</span>
+                Avg calories burned: <span className="font-medium text-gray-600 dark:text-gray-300">{Math.round(avgCal)} kcal</span>
               </p>
             )}
           </div>
@@ -746,9 +885,9 @@ export default function WeeklyPlanWidget() {
 
               if (!day) {
                 return (
-                  <div key={i} className={`rounded-xl p-2 text-center ${isCurrentDay ? "bg-gray-50 ring-1 ring-gray-200" : ""}`}>
-                    <p className={`text-xs font-medium ${isCurrentDay ? "text-gray-700" : "text-gray-300"}`}>{label}</p>
-                    <p className="text-xs text-gray-300 mt-1">{format(date, "d")}</p>
+                  <div key={i} className={`rounded-xl p-2 text-center ${isCurrentDay ? "bg-gray-50 dark:bg-gray-700 ring-1 ring-gray-200 dark:ring-gray-600" : ""}`}>
+                    <p className={`text-xs font-medium ${isCurrentDay ? "text-gray-700 dark:text-gray-200" : "text-gray-300 dark:text-gray-600"}`}>{label}</p>
+                    <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">{format(date, "d")}</p>
                     <div className="mt-2 h-5" />
                   </div>
                 );
@@ -761,44 +900,55 @@ export default function WeeklyPlanWidget() {
                   disabled={toggling === day.id}
                   className={`rounded-xl p-2 text-center transition-all ${
                     day.completed
-                      ? "bg-green-50 ring-1 ring-green-200"
+                      ? "bg-green-50 dark:bg-green-900/30 ring-1 ring-green-200 dark:ring-green-700"
                       : isCurrentDay
-                      ? "bg-brand-50 ring-1 ring-brand-300 hover:bg-brand-100"
-                      : "bg-gray-50 hover:bg-gray-100"
+                      ? "bg-brand-50 dark:bg-brand-900/30 ring-1 ring-brand-300 hover:bg-brand-100"
+                      : "bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
                   }`}
                 >
                   <p className={`text-xs font-semibold ${
-                    day.completed ? "text-green-700" : isCurrentDay ? "text-brand-700" : "text-gray-600"
+                    day.completed ? "text-green-700 dark:text-green-400"
+                    : isCurrentDay ? "text-brand-700 dark:text-brand-400"
+                    : "text-gray-600 dark:text-gray-300"
                   }`}>
                     {label}
                   </p>
-                  <p className="text-xs text-gray-400">{format(date, "d")}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{format(date, "d")}</p>
                   <div className="mt-1.5 flex justify-center">
                     {toggling === day.id ? (
                       <div className="w-4 h-4 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
                     ) : day.completed ? (
                       <span className="text-green-500 text-sm">✓</span>
                     ) : (
-                      <div className="w-4 h-4 rounded-full border-2 border-gray-300" />
+                      <div className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-500" />
                     )}
                   </div>
                   {day.actualCalories && (
-                    <p className="text-xs text-green-600 font-medium mt-0.5">{day.actualCalories}</p>
+                    <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-0.5">{day.actualCalories}</p>
                   )}
                   {!day.actualCalories && day.targetCalories && (
-                    <p className="text-xs text-gray-400 mt-0.5">{day.targetCalories}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{day.targetCalories}</p>
                   )}
                 </button>
               );
             })}
           </div>
 
-          <p className="text-xs text-gray-400 mt-3 text-center">
-            Tap a day to mark it complete · Numbers show kcal ·{" "}
-            <button onClick={() => setShowSetup(true)} className="text-brand-500 hover:underline font-medium">
-              Edit schedule
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              Tap a day to mark complete · Numbers show kcal ·{" "}
+              <button onClick={() => setShowSetup(true)} className="text-brand-500 hover:underline font-medium">
+                Edit schedule
+              </button>
+            </p>
+            <button
+              onClick={() => setShowSyncCal(true)}
+              className="text-xs text-brand-500 hover:text-brand-700 dark:hover:text-brand-300 font-medium whitespace-nowrap ml-3"
+              title="Push this week's schedule to the workout calendar for 1-3 months"
+            >
+              📆 Sync to calendar
             </button>
-          </p>
+          </div>
         </>
       )}
 
@@ -808,8 +958,10 @@ export default function WeeklyPlanWidget() {
           initialDays={user?.trainingDaysPerWeek ?? undefined}
           onSave={() => {
             setShowSetup(false);
+            toast.show("Training days saved!");
             load();
-            // Refresh auth store so Settings page reflects the updated trainingDaysPerWeek
+            // Refresh auth store so Settings page reflects the updated trainingDaysPerWeek.
+            // updateProfile was already awaited in SetupModal.save(), so this sees fresh data.
             usersApi.getProfile().then((r) => updateUser(r.data.user)).catch(() => {});
           }}
           onClose={() => setShowSetup(false)}
@@ -825,6 +977,16 @@ export default function WeeklyPlanWidget() {
           />
         )}
       </Modal>
+
+      {showSyncCal && plan && (
+        <SyncCalendarModal
+          plan={plan}
+          onClose={() => setShowSyncCal(false)}
+          onSynced={(msg) => { setShowSyncCal(false); toast.show(msg); }}
+        />
+      )}
+
+      <ToastBanner msg={toast.msg} />
     </div>
   );
 }

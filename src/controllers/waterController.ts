@@ -3,6 +3,9 @@ import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
 
+// Cast for new models not yet in generated client
+const db = prisma as any;
+
 // ── POST /api/water ───────────────────────────────────────────────────────────
 export const logWater = async (
   req: AuthRequest,
@@ -15,30 +18,20 @@ export const logWater = async (
       return next(createError("amount (ml) is required and must be positive", 400));
     }
 
-    // Always store at UTC start of the given date so getToday() can reliably
-    // find it with a UTC midnight–23:59 range.
-    let dateStr: string;
-    if (date) {
-      dateStr = (date as string).split("T")[0];
-    } else {
-      dateStr = new Date().toISOString().split("T")[0];
-    }
-    const logDate = `${dateStr}T00:00:00.000Z`;
+    const dateStr = date
+      ? (date as string).split("T")[0]
+      : new Date().toISOString().split("T")[0];
+    const logDate = new Date(`${dateStr}T00:00:00.000Z`);
 
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO "WaterLog" ("userId", "amount", "date", "createdAt") VALUES (?, ?, ?, datetime('now'))`,
-      req.user!.id,
-      Number(amount),
-      logDate
-    );
+    const log = await db.waterLog.create({
+      data: {
+        userId: req.user!.id,
+        amount: Number(amount),
+        date:   logDate,
+      },
+    });
 
-    // Return the newly created row
-    const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "WaterLog" WHERE "userId" = ? ORDER BY "id" DESC LIMIT 1`,
-      req.user!.id
-    );
-
-    res.status(201).json({ log: rows[0] ?? { userId: req.user!.id, amount, date: logDate } });
+    res.status(201).json({ log });
   } catch (error) {
     next(error);
   }
@@ -51,32 +44,31 @@ export const getToday = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId    = req.user!.id;
     const dateParam = req.query.date as string | undefined;
-    const dateStr = dateParam
+    const dateStr   = dateParam
       ? (dateParam as string).split("T")[0]
       : new Date().toISOString().split("T")[0];
 
-    const start = `${dateStr}T00:00:00.000Z`;
-    const end   = `${dateStr}T23:59:59.999Z`;
+    const start = new Date(`${dateStr}T00:00:00.000Z`);
+    const end   = new Date(`${dateStr}T23:59:59.999Z`);
 
-    const logs = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "WaterLog" WHERE "userId" = ? AND "date" >= ? AND "date" <= ? ORDER BY "date" ASC`,
-      userId, start, end
-    );
+    const logs = await db.waterLog.findMany({
+      where:   { userId, date: { gte: start, lte: end } },
+      orderBy: { date: "asc" },
+    });
 
-    const totalMl = logs.reduce((sum, l) => sum + Number(l.amount), 0);
+    const totalMl = logs.reduce((sum: number, l: any) => sum + Number(l.amount), 0);
 
-    // Fetch user's water target
-    const users = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT "waterTargetMl" FROM "User" WHERE "id" = ?`,
-      userId
-    );
+    const user = await prisma.user.findUnique({
+      where:  { id: userId },
+      select: { waterTargetMl: true },
+    });
 
     res.json({
       logs,
       totalMl,
-      targetMl: users[0]?.waterTargetMl ?? 2000,
+      targetMl: (user as any)?.waterTargetMl ?? 2000,
       date: dateStr,
     });
   } catch (error) {
@@ -91,20 +83,18 @@ export const getHistory = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const days = Math.min(30, Math.max(1, Number(req.query.days ?? 7)));
+    const days   = Math.min(30, Math.max(1, Number(req.query.days ?? 7)));
     const userId = req.user!.id;
 
     const since = new Date();
     since.setDate(since.getDate() - days + 1);
     since.setUTCHours(0, 0, 0, 0);
-    const sinceStr = since.toISOString();
 
-    const logs = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT * FROM "WaterLog" WHERE "userId" = ? AND "date" >= ? ORDER BY "date" ASC`,
-      userId, sinceStr
-    );
+    const logs = await db.waterLog.findMany({
+      where:   { userId, date: { gte: since } },
+      orderBy: { date: "asc" },
+    });
 
-    // Group by date
     const byDate: Record<string, number> = {};
     for (const l of logs) {
       const d = new Date(l.date).toISOString().split("T")[0];
@@ -126,20 +116,12 @@ export const deleteLog = async (
   try {
     const id = Number(req.params.id);
 
-    const existing = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT "id" FROM "WaterLog" WHERE "id" = ? AND "userId" = ?`,
-      id, req.user!.id
-    );
+    const existing = await db.waterLog.findFirst({
+      where: { id, userId: req.user!.id },
+    });
+    if (!existing) return next(createError("Water log not found", 404));
 
-    if (!existing.length) {
-      return next(createError("Water log not found", 404));
-    }
-
-    await prisma.$executeRawUnsafe(
-      `DELETE FROM "WaterLog" WHERE "id" = ?`,
-      id
-    );
-
+    await db.waterLog.delete({ where: { id } });
     res.json({ message: "Deleted" });
   } catch (error) {
     next(error);
@@ -158,10 +140,10 @@ export const updateWaterTarget = async (
 
     const clamped = Math.min(6000, Math.max(500, Number(targetMl)));
 
-    await prisma.$executeRawUnsafe(
-      `UPDATE "User" SET "waterTargetMl" = ? WHERE "id" = ?`,
-      clamped, req.user!.id
-    );
+    await prisma.user.update({
+      where: { id: req.user!.id },
+      data:  { waterTargetMl: clamped } as any,
+    });
 
     res.json({ targetMl: clamped });
   } catch (error) {

@@ -1,66 +1,81 @@
 /**
- * Lightweight startup migration guard.
+ * Lightweight startup migration guard for PostgreSQL.
  *
- * Runs before the HTTP server starts and ensures every column that was added
- * after the initial prisma migrate dev is present in the live database.
- * Uses Prisma's $queryRawUnsafe so it always targets the same DB file that
- * the rest of the app uses (whatever DATABASE_URL resolves to at runtime).
+ * Runs before the HTTP server starts and ensures every table/column/index
+ * that was added after the initial schema is present in the live database.
  *
- * Safe to run on every boot — checks column existence before ALTER TABLE.
+ * Uses information_schema and pg_indexes (PostgreSQL system catalog).
+ * Safe to run on every boot — all checks are existence-gated.
  */
 import prisma from "./prisma.js";
 import logger from "./logger.js";
 
-interface PragmaRow { name: string }
-interface TableRow  { name: string }
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function getColumns(table: string): Promise<Set<string>> {
-  const rows = await prisma.$queryRawUnsafe<PragmaRow[]>(
-    `PRAGMA table_info("${table}")`
+  const rows = await prisma.$queryRawUnsafe<{ column_name: string }[]>(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = $1`,
+    table
   );
-  return new Set(rows.map((r) => r.name));
+  return new Set(rows.map((r) => r.column_name));
 }
 
 async function tableExists(table: string): Promise<boolean> {
-  const rows = await prisma.$queryRawUnsafe<TableRow[]>(
-    `SELECT name FROM sqlite_master WHERE type='table' AND name='${table}'`
+  const rows = await prisma.$queryRawUnsafe<{ table_name: string }[]>(
+    `SELECT table_name
+     FROM information_schema.tables
+     WHERE table_schema = 'public' AND table_name = $1`,
+    table
   );
   return rows.length > 0;
 }
 
-// New tables to create if they don't exist yet
+async function indexExists(indexName: string): Promise<boolean> {
+  const rows = await prisma.$queryRawUnsafe<{ indexname: string }[]>(
+    `SELECT indexname
+     FROM pg_indexes
+     WHERE schemaname = 'public' AND indexname = $1`,
+    indexName
+  );
+  return rows.length > 0;
+}
+
+// ── Table migrations ──────────────────────────────────────────────────────────
+
 const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
   {
     table: "WaterLog",
     sql: `CREATE TABLE IF NOT EXISTS "WaterLog" (
-      "id"        INTEGER PRIMARY KEY AUTOINCREMENT,
+      "id"        SERIAL PRIMARY KEY,
       "userId"    INTEGER NOT NULL,
-      "amount"    REAL    NOT NULL,
-      "date"      TEXT    NOT NULL DEFAULT (datetime('now')),
-      "createdAt" TEXT    NOT NULL DEFAULT (datetime('now')),
+      "amount"    DOUBLE PRECISION NOT NULL,
+      "date"      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
     )`,
   },
   {
     table: "MealPlan",
     sql: `CREATE TABLE IF NOT EXISTS "MealPlan" (
-      "id"        INTEGER PRIMARY KEY AUTOINCREMENT,
+      "id"        SERIAL PRIMARY KEY,
       "userId"    INTEGER NOT NULL,
-      "name"      TEXT    NOT NULL,
-      "weekStart" TEXT    NOT NULL,
-      "createdAt" TEXT    NOT NULL DEFAULT (datetime('now')),
-      "updatedAt" TEXT    NOT NULL DEFAULT (datetime('now')),
+      "name"      TEXT NOT NULL,
+      "weekStart" TEXT NOT NULL,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
     )`,
   },
   {
     table: "MealPlanDay",
     sql: `CREATE TABLE IF NOT EXISTS "MealPlanDay" (
-      "id"        INTEGER PRIMARY KEY AUTOINCREMENT,
+      "id"        SERIAL PRIMARY KEY,
       "planId"    INTEGER NOT NULL,
       "dayIndex"  INTEGER NOT NULL,
       "notes"     TEXT,
-      "createdAt" TEXT NOT NULL DEFAULT (datetime('now')),
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       FOREIGN KEY ("planId") REFERENCES "MealPlan"("id") ON DELETE CASCADE,
       UNIQUE("planId", "dayIndex")
     )`,
@@ -68,16 +83,16 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
   {
     table: "WorkoutCalendarDay",
     sql: `CREATE TABLE IF NOT EXISTS "WorkoutCalendarDay" (
-      "id"           INTEGER PRIMARY KEY AUTOINCREMENT,
+      "id"           SERIAL PRIMARY KEY,
       "userId"       INTEGER NOT NULL,
-      "date"         TEXT    NOT NULL,
+      "date"         TEXT NOT NULL,
       "workoutName"  TEXT,
       "muscleGroups" TEXT,
       "templateId"   INTEGER,
-      "isRestDay"    INTEGER NOT NULL DEFAULT 0,
+      "isRestDay"    BOOLEAN NOT NULL DEFAULT FALSE,
       "notes"        TEXT,
-      "createdAt"    TEXT    NOT NULL DEFAULT (datetime('now')),
-      "updatedAt"    TEXT    NOT NULL DEFAULT (datetime('now')),
+      "createdAt"    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "updatedAt"    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,
       UNIQUE("userId", "date")
     )`,
@@ -87,11 +102,11 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
     sql: `CREATE TABLE IF NOT EXISTS "FoodItem" (
       "id"          TEXT PRIMARY KEY,
       "name"        TEXT NOT NULL,
-      "calories"    REAL NOT NULL,
-      "protein"     REAL NOT NULL,
-      "carbs"       REAL NOT NULL,
-      "fats"        REAL NOT NULL,
-      "defaultQty"  REAL NOT NULL,
+      "calories"    DOUBLE PRECISION NOT NULL,
+      "protein"     DOUBLE PRECISION NOT NULL,
+      "carbs"       DOUBLE PRECISION NOT NULL,
+      "fats"        DOUBLE PRECISION NOT NULL,
+      "defaultQty"  DOUBLE PRECISION NOT NULL,
       "defaultUnit" TEXT NOT NULL,
       "tags"        TEXT NOT NULL DEFAULT '[]'
     )`,
@@ -111,178 +126,94 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
   {
     table: "MealPlanEntry",
     sql: `CREATE TABLE IF NOT EXISTS "MealPlanEntry" (
-      "id"        INTEGER PRIMARY KEY AUTOINCREMENT,
+      "id"        SERIAL PRIMARY KEY,
       "dayId"     INTEGER NOT NULL,
-      "meal"      TEXT    NOT NULL,
-      "foodName"  TEXT    NOT NULL,
-      "calories"  REAL    NOT NULL,
-      "protein"   REAL    NOT NULL DEFAULT 0,
-      "carbs"     REAL    NOT NULL DEFAULT 0,
-      "fats"      REAL    NOT NULL DEFAULT 0,
-      "quantity"  REAL    NOT NULL DEFAULT 1,
-      "unit"      TEXT    NOT NULL DEFAULT 'serving',
+      "meal"      TEXT NOT NULL,
+      "foodName"  TEXT NOT NULL,
+      "calories"  DOUBLE PRECISION NOT NULL,
+      "protein"   DOUBLE PRECISION NOT NULL DEFAULT 0,
+      "carbs"     DOUBLE PRECISION NOT NULL DEFAULT 0,
+      "fats"      DOUBLE PRECISION NOT NULL DEFAULT 0,
+      "quantity"  DOUBLE PRECISION NOT NULL DEFAULT 1,
+      "unit"      TEXT NOT NULL DEFAULT 'serving',
       "order"     INTEGER NOT NULL DEFAULT 0,
-      "createdAt" TEXT    NOT NULL DEFAULT (datetime('now')),
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       FOREIGN KEY ("dayId") REFERENCES "MealPlanDay"("id") ON DELETE CASCADE
     )`,
   },
 ];
 
+// ── Column migrations ─────────────────────────────────────────────────────────
+
 const MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
-  {
-    table: "Conversation",
-    column: "metadata",
-    sql: `ALTER TABLE "Conversation" ADD COLUMN "metadata" TEXT`,
-  },
-  {
-    table: "User",
-    column: "profileComplete",
-    sql: `ALTER TABLE "User" ADD COLUMN "profileComplete" INTEGER NOT NULL DEFAULT 0`,
-  },
-  {
-    table: "User",
-    column: "proteinMultiplier",
-    sql: `ALTER TABLE "User" ADD COLUMN "proteinMultiplier" REAL NOT NULL DEFAULT 2.0`,
-  },
-  {
-    table: "User",
-    column: "trainingDaysPerWeek",
-    sql: `ALTER TABLE "User" ADD COLUMN "trainingDaysPerWeek" INTEGER`,
-  },
-  {
-    table: "User",
-    column: "trainingHoursPerDay",
-    sql: `ALTER TABLE "User" ADD COLUMN "trainingHoursPerDay" REAL`,
-  },
-  {
-    table: "User",
-    column: "injuries",
-    sql: `ALTER TABLE "User" ADD COLUMN "injuries" TEXT`,
-  },
-  {
-    table: "User",
-    column: "periodStart",
-    sql: `ALTER TABLE "User" ADD COLUMN "periodStart" TEXT`,
-  },
-  {
-    table: "User",
-    column: "cycleLength",
-    sql: `ALTER TABLE "User" ADD COLUMN "cycleLength" INTEGER`,
-  },
-  {
-    table: "User",
-    column: "waterTargetMl",
-    sql: `ALTER TABLE "User" ADD COLUMN "waterTargetMl" REAL NOT NULL DEFAULT 2000`,
-  },
-  {
-    table: "FoodLog",
-    column: "isCheatMeal",
-    sql: `ALTER TABLE "FoodLog" ADD COLUMN "isCheatMeal" INTEGER NOT NULL DEFAULT 0`,
-  },
-  // Training type on Workout
-  {
-    table: "Workout",
-    column: "trainingType",
-    sql: `ALTER TABLE "Workout" ADD COLUMN "trainingType" TEXT`,
-  },
-  // Macro cycling columns on CalorieGoal
-  {
-    table: "CalorieGoal",
-    column: "macrosCycling",
-    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "macrosCycling" INTEGER NOT NULL DEFAULT 0`,
-  },
-  {
-    table: "CalorieGoal",
-    column: "trainDayCalories",
-    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "trainDayCalories" REAL`,
-  },
-  {
-    table: "CalorieGoal",
-    column: "trainDayProtein",
-    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "trainDayProtein" REAL`,
-  },
-  {
-    table: "CalorieGoal",
-    column: "trainDayCarbs",
-    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "trainDayCarbs" REAL`,
-  },
-  {
-    table: "CalorieGoal",
-    column: "trainDayFats",
-    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "trainDayFats" REAL`,
-  },
-  {
-    table: "CalorieGoal",
-    column: "restDayCalories",
-    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "restDayCalories" REAL`,
-  },
-  {
-    table: "CalorieGoal",
-    column: "restDayProtein",
-    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "restDayProtein" REAL`,
-  },
-  {
-    table: "CalorieGoal",
-    column: "restDayCarbs",
-    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "restDayCarbs" REAL`,
-  },
-  {
-    table: "CalorieGoal",
-    column: "restDayFats",
-    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "restDayFats" REAL`,
-  },
+  { table: "Conversation", column: "metadata",
+    sql: `ALTER TABLE "Conversation" ADD COLUMN "metadata" TEXT` },
+  { table: "User", column: "profileComplete",
+    sql: `ALTER TABLE "User" ADD COLUMN "profileComplete" BOOLEAN NOT NULL DEFAULT FALSE` },
+  { table: "User", column: "proteinMultiplier",
+    sql: `ALTER TABLE "User" ADD COLUMN "proteinMultiplier" DOUBLE PRECISION NOT NULL DEFAULT 2.0` },
+  { table: "User", column: "trainingDaysPerWeek",
+    sql: `ALTER TABLE "User" ADD COLUMN "trainingDaysPerWeek" INTEGER` },
+  { table: "User", column: "trainingHoursPerDay",
+    sql: `ALTER TABLE "User" ADD COLUMN "trainingHoursPerDay" DOUBLE PRECISION` },
+  { table: "User", column: "injuries",
+    sql: `ALTER TABLE "User" ADD COLUMN "injuries" TEXT` },
+  { table: "User", column: "periodStart",
+    sql: `ALTER TABLE "User" ADD COLUMN "periodStart" TEXT` },
+  { table: "User", column: "cycleLength",
+    sql: `ALTER TABLE "User" ADD COLUMN "cycleLength" INTEGER` },
+  { table: "User", column: "waterTargetMl",
+    sql: `ALTER TABLE "User" ADD COLUMN "waterTargetMl" DOUBLE PRECISION NOT NULL DEFAULT 2000` },
+  { table: "FoodLog", column: "isCheatMeal",
+    sql: `ALTER TABLE "FoodLog" ADD COLUMN "isCheatMeal" BOOLEAN NOT NULL DEFAULT FALSE` },
+  { table: "Workout", column: "trainingType",
+    sql: `ALTER TABLE "Workout" ADD COLUMN "trainingType" TEXT` },
+  { table: "CalorieGoal", column: "macrosCycling",
+    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "macrosCycling" BOOLEAN NOT NULL DEFAULT FALSE` },
+  { table: "CalorieGoal", column: "trainDayCalories",
+    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "trainDayCalories" DOUBLE PRECISION` },
+  { table: "CalorieGoal", column: "trainDayProtein",
+    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "trainDayProtein" DOUBLE PRECISION` },
+  { table: "CalorieGoal", column: "trainDayCarbs",
+    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "trainDayCarbs" DOUBLE PRECISION` },
+  { table: "CalorieGoal", column: "trainDayFats",
+    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "trainDayFats" DOUBLE PRECISION` },
+  { table: "CalorieGoal", column: "restDayCalories",
+    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "restDayCalories" DOUBLE PRECISION` },
+  { table: "CalorieGoal", column: "restDayProtein",
+    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "restDayProtein" DOUBLE PRECISION` },
+  { table: "CalorieGoal", column: "restDayCarbs",
+    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "restDayCarbs" DOUBLE PRECISION` },
+  { table: "CalorieGoal", column: "restDayFats",
+    sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "restDayFats" DOUBLE PRECISION` },
 ];
 
-// Performance indexes for high-traffic query patterns
+// ── Index migrations ──────────────────────────────────────────────────────────
+
 const INDEX_MIGRATIONS: Array<{ name: string; sql: string }> = [
-  {
-    name: "idx_waterlog_userid_date",
-    sql: `CREATE INDEX IF NOT EXISTS "idx_waterlog_userid_date" ON "WaterLog" ("userId", "date")`,
-  },
-  {
-    name: "idx_foodlog_userid_date",
-    sql: `CREATE INDEX IF NOT EXISTS "idx_foodlog_userid_date" ON "FoodLog" ("userId", "date")`,
-  },
-  {
-    name: "idx_workout_userid_date",
-    sql: `CREATE INDEX IF NOT EXISTS "idx_workout_userid_date" ON "Workout" ("userId", "date")`,
-  },
-  {
-    name: "idx_conversation_userid",
-    sql: `CREATE INDEX IF NOT EXISTS "idx_conversation_userid" ON "Conversation" ("userId")`,
-  },
-  {
-    name: "idx_mealplan_userid_weekstart",
-    sql: `CREATE INDEX IF NOT EXISTS "idx_mealplan_userid_weekstart" ON "MealPlan" ("userId", "weekStart")`,
-  },
-  {
-    name: "idx_workoutcalendar_userid",
-    sql: `CREATE INDEX IF NOT EXISTS "idx_workoutcalendar_userid" ON "WorkoutCalendarDay" ("userId")`,
-  },
-  {
-    name: "idx_fooditem_name",
-    sql: `CREATE INDEX IF NOT EXISTS "idx_fooditem_name" ON "FoodItem" ("name")`,
-  },
-  {
-    name: "idx_exerciseitem_name",
-    sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_name" ON "ExerciseItem" ("name")`,
-  },
-  {
-    name: "idx_exerciseitem_primarymuscle",
-    sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_primarymuscle" ON "ExerciseItem" ("primaryMuscle")`,
-  },
-  {
-    name: "idx_exerciseitem_equipment",
-    sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_equipment" ON "ExerciseItem" ("equipment")`,
-  },
+  { name: "idx_waterlog_userid_date",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_waterlog_userid_date" ON "WaterLog" ("userId", "date")` },
+  { name: "idx_foodlog_userid_date",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_foodlog_userid_date" ON "FoodLog" ("userId", "date")` },
+  { name: "idx_workout_userid_date",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_workout_userid_date" ON "Workout" ("userId", "date")` },
+  { name: "idx_conversation_userid",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_conversation_userid" ON "Conversation" ("userId")` },
+  { name: "idx_mealplan_userid_weekstart",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_mealplan_userid_weekstart" ON "MealPlan" ("userId", "weekStart")` },
+  { name: "idx_workoutcalendar_userid",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_workoutcalendar_userid" ON "WorkoutCalendarDay" ("userId")` },
+  { name: "idx_fooditem_name",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_fooditem_name" ON "FoodItem" ("name")` },
+  { name: "idx_exerciseitem_name",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_name" ON "ExerciseItem" ("name")` },
+  { name: "idx_exerciseitem_primarymuscle",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_primarymuscle" ON "ExerciseItem" ("primaryMuscle")` },
+  { name: "idx_exerciseitem_equipment",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_equipment" ON "ExerciseItem" ("equipment")` },
 ];
 
-async function indexExists(indexName: string): Promise<boolean> {
-  const rows = await prisma.$queryRawUnsafe<TableRow[]>(
-    `SELECT name FROM sqlite_master WHERE type='index' AND name='${indexName}'`
-  );
-  return rows.length > 0;
-}
+// ── Runner ────────────────────────────────────────────────────────────────────
 
 export async function runMigrations(): Promise<void> {
   let applied = 0;
@@ -299,14 +230,9 @@ export async function runMigrations(): Promise<void> {
 
   // 2. Add missing columns to existing tables
   const cache: Record<string, Set<string>> = {};
-
   for (const { table, column, sql } of MIGRATIONS) {
-    if (!cache[table]) {
-      cache[table] = await getColumns(table);
-    }
-
+    if (!cache[table]) cache[table] = await getColumns(table);
     if (cache[table].has(column)) continue;
-
     await prisma.$executeRawUnsafe(sql);
     cache[table].add(column);
     logger.info(`[migration] Added ${table}.${column}`);
@@ -321,14 +247,11 @@ export async function runMigrations(): Promise<void> {
         await prisma.$executeRawUnsafe(sql);
         logger.info(`[migration] Created index ${name}`);
         applied++;
-      } catch (e) {
-        // Index on a table that doesn't exist yet is fine — skip silently
+      } catch {
         logger.warn(`[migration] Skipped index ${name} (table may not exist yet)`);
       }
     }
   }
 
-  if (applied > 0) {
-    logger.info(`[migration] Applied ${applied} migration(s)`);
-  }
+  if (applied > 0) logger.info(`[migration] Applied ${applied} migration(s)`);
 }

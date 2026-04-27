@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths } from "date-fns";
-import { workoutsApi, templatesApi, searchApi, foodApi, calorieGoalsApi, calendarApi } from "../../api";
+import { workoutsApi, templatesApi, searchApi, foodApi, calorieGoalsApi, calendarApi, usersApi } from "../../api";
 import type { Workout, WorkoutExercise, PRResult, WorkoutTemplate, WorkoutCalendarDay } from "../../types";
 import { useAuthStore } from "../../store/authStore";
 import { Card } from "../../components/ui/Card";
@@ -135,12 +135,12 @@ function CalorieCalculator({
     <div className="rounded-xl border border-brand-100 bg-brand-50 p-3 space-y-2.5">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-brand-700 uppercase tracking-wide">🔥 Calorie Calculator</p>
-        <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-400 hover:text-gray-600">✕ close</button>
+        <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 dark:text-gray-300">✕ close</button>
       </div>
 
       {/* Activity selector */}
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Activity type</label>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Activity type</label>
         <select
           value={activityId}
           onChange={(e) => setActivityId(e.target.value)}
@@ -157,14 +157,14 @@ function CalorieCalculator({
           ))}
         </select>
         {activity.notes && (
-          <p className="text-xs text-gray-400 mt-0.5">{activity.notes}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{activity.notes}</p>
         )}
       </div>
 
       {/* Steps input for walking activities */}
       {isStepActivity && (
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Steps (optional — overrides duration)</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Steps (optional — overrides duration)</label>
           <input
             type="number"
             value={steps}
@@ -172,15 +172,15 @@ function CalorieCalculator({
             placeholder="e.g. 8000"
             className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
           />
-          <p className="text-xs text-gray-400 mt-0.5">~0.04 kcal/step, adjusted for your weight</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">~0.04 kcal/step, adjusted for your weight</p>
         </div>
       )}
 
       {/* Estimate row */}
-      <div className="flex items-center justify-between rounded-lg bg-white border border-brand-200 px-3 py-2">
+      <div className="flex items-center justify-between rounded-lg bg-white dark:bg-gray-800 border border-brand-200 dark:border-brand-700 px-3 py-2">
         <div>
-          <p className="text-sm font-semibold text-gray-900">≈ {estimated} kcal</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white dark:text-white">≈ {estimated} kcal</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">
             {isStepActivity && steps
               ? `${Number(steps).toLocaleString()} steps × 0.04 kcal (weight-adjusted)`
               : `MET ${activity.met} × ${weightKg} kg × ${durationMin} min`}
@@ -261,8 +261,8 @@ function CardioSuggestionsPanel({ goal }: { goal?: string | null }) {
           {suggestions.map((s, i) => {
             const cardioAct = getActivity(s.cardioId);
             return (
-              <div key={i} className="bg-white rounded-xl border border-blue-100 p-3 space-y-2">
-                <p className="text-sm font-semibold text-gray-800">{s.title}</p>
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-xl border border-blue-100 dark:border-blue-900/40 p-3 space-y-2">
+                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">{s.title}</p>
                 <div className="flex gap-3 text-xs">
                   <span className="bg-orange-50 border border-orange-200 text-orange-700 rounded-lg px-2 py-1">
                     🏋️ {s.weightsMin} min weights
@@ -271,7 +271,7 @@ function CardioSuggestionsPanel({ goal }: { goal?: string | null }) {
                     {cardioAct?.icon ?? "🏃"} {s.cardioMin} min {cardioAct?.name ?? s.cardioId}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 leading-relaxed">{s.rationale}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 leading-relaxed">{s.rationale}</p>
               </div>
             );
           })}
@@ -419,7 +419,7 @@ function ExerciseSuggestPanel({
     <div className="rounded-xl border border-brand-200 bg-brand-50 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-brand-700">💡 Exercise Suggestions</p>
-        <button type="button" onClick={onClose} className="text-xs text-gray-400 hover:text-gray-600">✕ close</button>
+        <button type="button" onClick={onClose} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 dark:text-gray-300">✕ close</button>
       </div>
 
       {injuries.length > 0 && (
@@ -440,7 +440,7 @@ function ExerciseSuggestPanel({
             className={`text-xs px-2 py-0.5 rounded-full border transition-all ${
               filterMuscle === m
                 ? "border-brand-400 bg-brand-500 text-white"
-                : "border-gray-200 bg-white text-gray-600 hover:border-brand-300"
+                : "border-gray-200 bg-white text-gray-600 dark:text-gray-300 hover:border-brand-300"
             }`}
           >
             {m || "All"}
@@ -458,9 +458,9 @@ function ExerciseSuggestPanel({
 
       {/* Results */}
       <div className="max-h-56 overflow-y-auto space-y-1">
-        {loading && <p className="text-xs text-gray-400 text-center py-2">Searching…</p>}
+        {loading && <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">Searching…</p>}
         {!loading && results.length === 0 && (
-          <p className="text-xs text-gray-400 text-center py-2">No results — try a different muscle or name</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">No results — try a different muscle or name</p>
         )}
         {results.map((ex) => {
           const banned = isContraindicated(ex.name, injuries);
@@ -468,15 +468,15 @@ function ExerciseSuggestPanel({
             <div
               key={ex.id}
               className={`flex items-start justify-between rounded-lg px-3 py-2 text-sm ${
-                banned ? "opacity-40 bg-red-50 border border-red-100" : "bg-white border border-gray-100 hover:border-brand-300 cursor-pointer"
+                banned ? "opacity-40 bg-red-50 border border-red-100" : "bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:border-brand-300 cursor-pointer"
               }`}
               onClick={() => !banned && onSelect(ex.name, ex)}
             >
               <div className="flex-1 min-w-0">
-                <p className={`font-medium text-sm truncate ${banned ? "line-through text-gray-400" : "text-gray-800"}`}>
+                <p className={`font-medium text-sm truncate ${banned ? "line-through text-gray-400" : "text-gray-800 dark:text-gray-100"}`}>
                   {ex.name}
                 </p>
-                <p className="text-xs text-gray-400">{ex.primaryMuscle} · {ex.equipment} · {ex.difficulty}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{ex.primaryMuscle} · {ex.equipment} · {ex.difficulty}</p>
               </div>
               {banned ? (
                 <span className="text-xs text-red-400 ml-2 shrink-0">⚠️ injury</span>
@@ -523,10 +523,10 @@ function ExerciseSearch({
         onFocus={() => query && setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+        className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
       />
       {open && results.length > 0 && (
-        <ul className="absolute z-30 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+        <ul className="absolute z-30 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
           {results.map((ex) => (
             <li
               key={ex.id}
@@ -534,7 +534,7 @@ function ExerciseSearch({
               className="px-3 py-2 text-sm hover:bg-brand-50 cursor-pointer"
             >
               <span className="font-medium">{ex.name}</span>
-              <span className="ml-2 text-xs text-gray-400">{ex.primaryMuscle} · {ex.equipment}</span>
+              <span className="ml-2 text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{ex.primaryMuscle} · {ex.equipment}</span>
             </li>
           ))}
         </ul>
@@ -577,7 +577,7 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-semibold text-gray-700">Exercises</p>
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 dark:text-gray-200">Exercises</p>
         <Button size="sm" variant="secondary" onClick={() => setRows((p) => [...p, newRow()])}>+ Add</Button>
       </div>
       <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
@@ -627,11 +627,11 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
         })}
       </div>
       <div className="grid grid-cols-12 gap-1.5 mt-1">
-        <p className="col-span-4 text-xs text-gray-400 pl-2">Exercise (💡 = suggest)</p>
-        <p className="col-span-2 text-xs text-gray-400 text-center">Sets</p>
-        <p className="col-span-2 text-xs text-gray-400 text-center">Reps</p>
-        <p className="col-span-2 text-xs text-gray-400 text-center">kg</p>
-        <p className="col-span-1 text-xs text-gray-400 text-center">RPE</p>
+        <p className="col-span-4 text-xs text-gray-400 dark:text-gray-500 pl-2">Exercise (💡 = suggest)</p>
+        <p className="col-span-2 text-xs text-gray-400 dark:text-gray-500 text-center">Sets</p>
+        <p className="col-span-2 text-xs text-gray-400 dark:text-gray-500 text-center">Reps</p>
+        <p className="col-span-2 text-xs text-gray-400 dark:text-gray-500 text-center">kg</p>
+        <p className="col-span-1 text-xs text-gray-400 dark:text-gray-500 text-center">RPE</p>
       </div>
     </div>
   );
@@ -686,17 +686,17 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
   if (newPRs.length) return (
     <div className="text-center space-y-4">
       <div className="text-5xl">🏆</div>
-      <h3 className="text-lg font-bold text-gray-900">New Personal Records!</h3>
+      <h3 className="text-lg font-bold text-gray-900 dark:text-white dark:text-white">New Personal Records!</h3>
       <div className="space-y-2">
         {newPRs.map((pr) => (
           <div key={pr.exerciseName} className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3">
             <div className="text-left">
-              <p className="font-semibold text-gray-800">{pr.exerciseName}</p>
-              <p className="text-xs text-gray-500">Previous best: {pr.previousBest > 0 ? `${pr.previousBest} kg` : "First time"}</p>
+              <p className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">{pr.exerciseName}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">Previous best: {pr.previousBest > 0 ? `${pr.previousBest} kg` : "First time"}</p>
             </div>
             <div className="text-right">
               <p className="text-lg font-bold text-yellow-600">{pr.weight} kg</p>
-              <p className="text-xs text-gray-500">× {pr.reps} reps</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">× {pr.reps} reps</p>
             </div>
           </div>
         ))}
@@ -715,7 +715,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
         <Input label="Calories Burned" type="number" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="optional — or use calculator ↓" className="col-span-2" />
         <Textarea label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="How did it go?" className="col-span-2" />
         <div className="col-span-2">
-          <p className="text-xs text-gray-500 mb-1.5">Training type (optional)</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1.5">Training type (optional)</p>
           <div className="flex flex-wrap gap-1.5">
             {TRAINING_TYPES.map((t) => (
               <button
@@ -725,7 +725,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
                 className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                   trainingType === t.value
                     ? t.color + " ring-2 ring-offset-1 ring-current"
-                    : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300"
+                    : "bg-gray-50 border-gray-200 text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:border-gray-300"
                 }`}
               >
                 {t.icon} {t.label}
@@ -744,7 +744,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
 
       {/* Muscle-group filter chips — filters ExerciseSearch results in all rows */}
       <div>
-        <p className="text-xs text-gray-500 mb-1.5">Filter exercises by muscle group</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1.5">Filter exercises by muscle group</p>
         <div className="flex flex-wrap gap-1.5">
           {BUILDER_MUSCLE_GROUPS.map((mg) => (
             <button
@@ -754,7 +754,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
               className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                 builderMuscle === mg
                   ? "bg-brand-600 text-white"
-                  : "bg-gray-100 border border-gray-200 text-gray-600 hover:border-brand-400"
+                  : "bg-gray-100 border border-gray-200 text-gray-600 dark:text-gray-300 hover:border-brand-400"
               }`}
             >
               {mg}
@@ -764,7 +764,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
       </div>
 
       <ExerciseRows rows={rows} setRows={setRows} injuries={injuries} defaultMuscle={builderMuscle} />
-      <div className="flex gap-2 pt-2 border-t border-gray-100">
+      <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
         <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
         <Button className="flex-1" loading={loading} onClick={submit}>Save Workout</Button>
       </div>
@@ -811,7 +811,7 @@ function EditWorkoutForm({ workout, onSave, onClose }: { workout: Workout; onSav
         <Input label="Calories Burned" type="number" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="optional" className="col-span-2" />
         <Textarea label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="col-span-2" />
         <div className="col-span-2">
-          <p className="text-xs text-gray-500 mb-1.5">Training type</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1.5">Training type</p>
           <div className="flex flex-wrap gap-1.5">
             {TRAINING_TYPES.map((t) => (
               <button
@@ -821,7 +821,7 @@ function EditWorkoutForm({ workout, onSave, onClose }: { workout: Workout; onSav
                 className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                   trainingType === t.value
                     ? t.color + " ring-2 ring-offset-1 ring-current"
-                    : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300"
+                    : "bg-gray-50 border-gray-200 text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:border-gray-300"
                 }`}
               >
                 {t.icon} {t.label}
@@ -830,7 +830,7 @@ function EditWorkoutForm({ workout, onSave, onClose }: { workout: Workout; onSav
           </div>
         </div>
       </div>
-      <div className="flex gap-2 pt-2 border-t border-gray-100">
+      <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
         <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
         <Button className="flex-1" loading={loading} onClick={submit}>Save Changes</Button>
       </div>
@@ -912,7 +912,7 @@ function AddExercisePanel({
             className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
               muscle === mg
                 ? "bg-brand-600 text-white"
-                : "bg-white border border-gray-200 text-gray-600 hover:border-brand-400"
+                : "bg-white border border-gray-200 text-gray-600 dark:text-gray-300 hover:border-brand-400"
             }`}
           >
             {mg}
@@ -926,15 +926,15 @@ function AddExercisePanel({
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder={`Filter ${muscle !== "Any" ? muscle : ""} exercises…`}
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white mb-2"
+          className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white mb-2"
         />
-        <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white divide-y divide-gray-50">
+        <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 divide-y divide-gray-50 dark:divide-gray-700">
           {listLoading ? (
             <div className="flex justify-center py-4">
               <div className="w-5 h-5 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : displayed.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-4">No exercises found</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">No exercises found</p>
           ) : displayed.map((ex) => (
             <button
               key={ex.name}
@@ -942,11 +942,11 @@ function AddExercisePanel({
               className={`w-full flex items-center justify-between px-3 py-2 text-left transition-colors ${
                 selected === ex.name
                   ? "bg-brand-50 text-brand-800"
-                  : "hover:bg-gray-50 text-gray-700"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700"
               }`}
             >
               <span className="text-sm font-medium">{ex.name}</span>
-              <span className="text-xs text-gray-400">{ex.equipment || ex.muscleGroup || ""}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{ex.equipment || ex.muscleGroup || ""}</span>
             </button>
           ))}
         </div>
@@ -964,7 +964,7 @@ function AddExercisePanel({
           { label: "RPE",  value: rpe,    onChange: setRpe,    placeholder: "opt." },
         ].map(({ label, value, onChange, placeholder }) => (
           <div key={label}>
-            <p className="text-xs text-gray-500 mb-1">{label}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">{label}</p>
             <input
               value={value}
               onChange={(e) => onChange(e.target.value)}
@@ -1063,7 +1063,7 @@ function WorkoutDetail({
     <div className="space-y-4">
       {/* Meta row */}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">
           <span>{format(parseISO(workout.date), "EEEE, MMMM d, yyyy")}</span>
           <span className="mx-2">·</span>
           <span>{workout.duration} min</span>
@@ -1075,15 +1075,15 @@ function WorkoutDetail({
         </div>
       </div>
 
-      {workout.notes && <p className="text-sm text-gray-600 italic bg-gray-50 rounded-xl px-3 py-2">{workout.notes}</p>}
+      {workout.notes && <p className="text-sm text-gray-600 dark:text-gray-300 italic bg-gray-50 dark:bg-gray-700 rounded-xl px-3 py-2">{workout.notes}</p>}
 
       {/* Exercise list */}
       <div className="space-y-2">
         {exercises.map((ex) => (
-          <div key={ex.id} className="border border-gray-100 rounded-xl p-3">
+          <div key={ex.id} className="border border-gray-100 dark:border-gray-700 rounded-xl p-3">
             {editing === ex.id ? (
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-gray-700">{ex.exerciseName}</p>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 dark:text-gray-200">{ex.exerciseName}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     { label: "Sets",     defaultValue: ex.sets,        field: "sets"   as const },
@@ -1092,7 +1092,7 @@ function WorkoutDetail({
                     { label: "RPE",      defaultValue: ex.rpe ?? "",   field: "rpe"    as const },
                   ].map(({ label, defaultValue, field }) => (
                     <div key={field}>
-                      <p className="text-xs text-gray-400 mb-1">{label}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{label}</p>
                       <input
                         defaultValue={String(defaultValue)}
                         onChange={(e) => updateEditData({
@@ -1115,8 +1115,8 @@ function WorkoutDetail({
               <div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-gray-800">{ex.exerciseName}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">{ex.exerciseName}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5">
                       {ex.sets} sets × {ex.reps} reps{ex.weight ? ` @ ${ex.weight} kg` : ""}
                       {ex.rpe ? ` · RPE ${ex.rpe}` : ""}
                     </p>
@@ -1135,7 +1135,7 @@ function WorkoutDetail({
                     </button>
                     <button
                       onClick={() => { setEditing(ex.id); setEditData({ sets: ex.sets, reps: ex.reps, weight: ex.weight ?? null, rpe: ex.rpe ?? null }); }}
-                      className="px-2.5 py-1 rounded-lg text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+                      className="px-2.5 py-1 rounded-lg text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 dark:text-gray-300 transition-colors"
                     >
                       Edit
                     </button>
@@ -1172,7 +1172,7 @@ function WorkoutDetail({
             )}
           </div>
         ))}
-        {exercises.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No exercises logged</p>}
+        {exercises.length === 0 && <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No exercises logged</p>}
       </div>
 
       {/* Add exercise */}
@@ -1185,7 +1185,7 @@ function WorkoutDetail({
       ) : (
         <button
           onClick={() => setShowAddPanel(true)}
-          className="w-full border-2 border-dashed border-gray-200 rounded-xl py-2.5 text-sm text-gray-400 hover:border-brand-400 hover:text-brand-600 transition-colors"
+          className="w-full border-2 border-dashed border-gray-200 rounded-xl py-2.5 text-sm text-gray-400 dark:text-gray-500 hover:border-brand-400 hover:text-brand-600 transition-colors"
         >
           + Add Exercise
         </button>
@@ -1368,12 +1368,12 @@ function SmartPlanSuggestions({ template, user }: {
   const colorMap = {
     warning: "border-amber-200 bg-amber-50 text-amber-800",
     tip:     "border-blue-200  bg-blue-50  text-blue-800",
-    info:    "border-gray-200  bg-gray-50  text-gray-700",
+    info:    "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200",
   };
 
   return (
     <div className="space-y-2 mt-2">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Smart Suggestions</p>
+      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Smart Suggestions</p>
       {suggestions.map((s, i) => (
         <div key={i} className={`border rounded-xl px-3 py-2.5 text-xs leading-relaxed ${colorMap[s.type]}`}>
           {s.text}
@@ -1395,9 +1395,9 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-base">{SPLIT_ICONS[template.splitType] ?? "🏋️"}</span>
-            <h3 className="font-semibold text-gray-900 text-sm leading-tight">{template.name}</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{template.name}</h3>
           </div>
-          <p className="text-xs text-gray-500">{template.dayLabel} · {template.frequency}×/week</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">{template.dayLabel} · {template.frequency}×/week</p>
         </div>
         <div className="flex gap-1 shrink-0">
           {template.isSystem && <Badge variant="info">Recommended</Badge>}
@@ -1406,7 +1406,7 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
       </div>
 
       {template.description && (
-        <p className="text-xs text-gray-500 mb-3 leading-relaxed">{template.description}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-3 leading-relaxed">{template.description}</p>
       )}
 
       <div className="flex gap-1.5 flex-wrap mb-3">
@@ -1414,12 +1414,12 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
           {template.objective.replace("_", " ")}
         </span>
         {muscleGroups.slice(0, 3).map((m) => (
-          <span key={m} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{m}</span>
+          <span key={m} className="text-xs bg-gray-100 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">{m}</span>
         ))}
       </div>
 
       {template.exercises.length > 0 && (
-        <div className="text-xs text-gray-400 mb-3 space-y-0.5">
+        <div className="text-xs text-gray-400 dark:text-gray-500 mb-3 space-y-0.5">
           {template.exercises.slice(0, 4).map((e) => (
             <p key={e.id}>· {e.exerciseName} <span className="text-gray-300">({e.sets}×{e.reps})</span></p>
           ))}
@@ -1427,7 +1427,7 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
         </div>
       )}
 
-      <div className="mt-auto flex gap-2 pt-3 border-t border-gray-100">
+      <div className="mt-auto flex gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
         {onDelete && (
           <button onClick={onDelete} className="px-2 text-xs text-red-400 hover:text-red-600 transition-colors">🗑</button>
         )}
@@ -1515,17 +1515,17 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-gray-900 truncate">{template.name}</h3>
+              <h3 className="font-bold text-gray-900 dark:text-white truncate">{template.name}</h3>
               {!template.isSystem && onRename && (
-                <button onClick={() => setRenaming(true)} className="text-xs text-gray-400 hover:text-brand-600 transition-colors shrink-0">✏️</button>
+                <button onClick={() => setRenaming(true)} className="text-xs text-gray-400 dark:text-gray-500 hover:text-brand-600 transition-colors shrink-0">✏️</button>
               )}
             </div>
           )}
-          <p className="text-sm text-gray-500">{template.dayLabel} · {template.frequency}×/week · {template.objective}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">{template.dayLabel} · {template.frequency}×/week · {template.objective}</p>
         </div>
       </div>
 
-      {template.description && <p className="text-sm text-gray-600">{template.description}</p>}
+      {template.description && <p className="text-sm text-gray-600 dark:text-gray-300 dark:text-gray-300">{template.description}</p>}
 
       {/* System template fork notice */}
       {template.isSystem && onFork && (
@@ -1556,7 +1556,7 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
                 <div className="flex-1 min-w-0">
                   {editingId === ex.id ? (
                     <div className="space-y-1.5">
-                      <p className="text-sm font-semibold text-gray-800">{ex.exerciseName}</p>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">{ex.exerciseName}</p>
                       <div className="flex gap-2">
                         <input
                           value={editSets}
@@ -1564,7 +1564,7 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
                           placeholder={`${ex.sets} sets`}
                           className="w-20 border rounded-lg px-2 py-1 text-sm text-center"
                         />
-                        <span className="self-center text-gray-400 text-xs">×</span>
+                        <span className="self-center text-gray-400 dark:text-gray-500 text-xs">×</span>
                         <input
                           value={editReps}
                           onChange={(e) => setEditReps(e.target.value)}
@@ -1577,8 +1577,8 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
                     </div>
                   ) : (
                     <>
-                      <p className={`text-sm font-semibold ${banned ? "text-red-700" : "text-gray-800"}`}>{ex.exerciseName}</p>
-                      <p className="text-xs text-gray-400">{ex.sets} sets × {ex.reps} reps{ex.restSeconds ? ` · ${ex.restSeconds}s rest` : ""}</p>
+                      <p className={`text-sm font-semibold ${banned ? "text-red-700" : "text-gray-800 dark:text-gray-100"}`}>{ex.exerciseName}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{ex.sets} sets × {ex.reps} reps{ex.restSeconds ? ` · ${ex.restSeconds}s rest` : ""}</p>
                       {banned && <p className="text-[10px] text-red-500">⚠️ May stress injured area — consider replacing</p>}
                     </>
                   )}
@@ -1588,7 +1588,7 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
                     <button
                       type="button"
                       onClick={() => { setEditSets(""); setEditReps(""); setEditingId(ex.id); setSuggestForId(null); }}
-                      className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-lg hover:border-brand-300 text-gray-600 transition-colors"
+                      className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-lg hover:border-brand-300 text-gray-600 dark:text-gray-300 transition-colors"
                     >Edit</button>
                     <button
                       type="button"
@@ -1598,13 +1598,13 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
                           ? "border-brand-400 bg-brand-50 text-brand-700"
                           : banned
                             ? "border-red-300 bg-red-50 text-red-700"
-                            : "border-gray-200 bg-white text-gray-600 hover:border-brand-300"
+                            : "border-gray-200 bg-white text-gray-600 dark:text-gray-300 hover:border-brand-300"
                       }`}
                     >{banned ? "⚠️ Replace" : "💡 Replace"}</button>
                     <button
                       type="button"
                       onClick={() => removeExercise(ex.id)}
-                      className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-lg hover:border-red-300 hover:text-red-600 text-gray-400 transition-colors"
+                      className="px-2 py-1 text-xs bg-white border border-gray-200 rounded-lg hover:border-red-300 hover:text-red-600 text-gray-400 dark:text-gray-500 transition-colors"
                     >✕</button>
                   </div>
                 )}
@@ -1626,7 +1626,7 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
       {/* Smart suggestions panel */}
       <SmartPlanSuggestions template={{ ...template, exercises }} user={user ?? undefined} />
 
-      <div className="flex gap-2 pt-2 border-t border-gray-100">
+      <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
         <Button variant="secondary" className="flex-1" onClick={onClose}>Close</Button>
         <Button className="flex-1" onClick={onStart}>▶ Start Workout</Button>
       </div>
@@ -1811,7 +1811,7 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
           <button
             key={t}
             onClick={() => setSubTab(t)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${subTab === t ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${subTab === t ? "bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700"}`}
           >
             {t === "recommended" ? "📋 Recommended" : `⚙️ My Templates${mine.length ? ` (${mine.length})` : ""}`}
           </button>
@@ -1822,8 +1822,8 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
         Object.keys(grouped).length === 0 ? (
           <Card className="text-center py-14">
             <div className="text-5xl mb-4">📋</div>
-            <h3 className="font-semibold text-gray-800 mb-2">No recommended templates yet</h3>
-            <p className="text-sm text-gray-400 mb-4">Seed the database with 24 research-based workout splits</p>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">No recommended templates yet</h3>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Seed the database with 24 research-based workout splits</p>
             <Button loading={seeding} onClick={seedTemplates}>Seed Recommended Templates</Button>
           </Card>
         ) : (
@@ -1831,7 +1831,7 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
             <RecommendedBanner goal={user?.goal} />
             {Object.entries(grouped).map(([groupKey, templates]) => (
               <div key={groupKey}>
-                <h2 className="text-base font-bold text-gray-800 mb-4">{SPLIT_LABELS[groupKey] ?? groupKey}</h2>
+                <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-4">{SPLIT_LABELS[groupKey] ?? groupKey}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {templates.map((t) => (
                     <TemplateCard
@@ -1850,8 +1850,8 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
         mine.length === 0 ? (
           <Card className="text-center py-14">
             <div className="text-5xl mb-4">⚙️</div>
-            <h3 className="font-semibold text-gray-800 mb-2">No personal templates yet</h3>
-            <p className="text-sm text-gray-400 mb-4">Save a logged workout as a template, or ask the AI Coach to generate one.</p>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">No personal templates yet</h3>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Save a logged workout as a template, or ask the AI Coach to generate one.</p>
             <Button variant="secondary" onClick={() => navigate("/chat?agent=coach")}>🤖 Ask AI Coach</Button>
           </Card>
         ) : (
@@ -1880,7 +1880,7 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
               onFork={detail.isSystem ? () => forkTemplate(detail) : undefined}
               onRename={!detail.isSystem ? (name) => renameTemplate(detail.id, name) : undefined}
             />
-            <div className="px-4 pb-4 mt-2 border-t border-gray-100 pt-3 space-y-2">
+            <div className="px-4 pb-4 mt-2 border-t border-gray-100 dark:border-gray-700 pt-3 space-y-2">
               {/* Add to Calendar — populate month */}
               <Button
                 className="w-full"
@@ -1888,7 +1888,7 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
               >
                 📆 Add to Monthly Calendar
               </Button>
-              <p className="text-xs text-gray-400 text-center">
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
                 Fills your training calendar for 1–3 months. Fully editable afterwards.
               </p>
               {/* Schedule actual logged workouts this week */}
@@ -1900,7 +1900,7 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
               >
                 📅 Log Workouts for This Week ({trainingDays} days)
               </Button>
-              <p className="text-xs text-gray-400 text-center">Creates {trainingDays} logged workouts in your history</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-center">Creates {trainingDays} logged workouts in your history</p>
             </div>
           </>
         )}
@@ -1989,7 +1989,7 @@ function PlanToCalendarModal({
   };
 
   return (
-    <Modal title="Add to Monthly Calendar" onClose={onClose} size="md">
+    <Modal open title="Add to Monthly Calendar" onClose={onClose} size="md">
       <div className="space-y-5 p-1">
         {/* Template info */}
         <div className="bg-brand-50 border border-brand-100 rounded-xl px-4 py-3">
@@ -2001,8 +2001,8 @@ function PlanToCalendarModal({
 
         {/* Weekday picker */}
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">
-            Which days of the week? <span className="text-gray-400 text-xs">(template frequency: {template.frequency}x/week)</span>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+            Which days of the week? <span className="text-gray-400 dark:text-gray-500 text-xs">(template frequency: {template.frequency}x/week)</span>
           </p>
           <div className="flex gap-1.5 flex-wrap">
             {WEEKDAY_LABELS.map((label, dow) => (
@@ -2013,7 +2013,7 @@ function PlanToCalendarModal({
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition
                   ${weekdays.has(dow)
                     ? "bg-brand-600 text-white border-brand-600"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-brand-300"}`}
+                    : "bg-white text-gray-600 dark:text-gray-300 border-gray-200 hover:border-brand-300"}`}
               >
                 {label}
               </button>
@@ -2028,7 +2028,7 @@ function PlanToCalendarModal({
 
         {/* Duration picker */}
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">How many months to fill?</p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">How many months to fill?</p>
           <div className="flex gap-2">
             {([
               { val: "1", label: "This month", sub: thisMonth },
@@ -2041,7 +2041,7 @@ function PlanToCalendarModal({
                 className={`flex-1 rounded-xl border px-3 py-2 text-xs font-semibold transition
                   ${duration === val
                     ? "bg-brand-600 text-white border-brand-600"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-brand-300"}`}
+                    : "bg-white text-gray-600 dark:text-gray-300 border-gray-200 hover:border-brand-300"}`}
               >
                 <div>{label}</div>
                 <div className="text-[10px] opacity-75 mt-0.5">{sub}</div>
@@ -2051,7 +2051,7 @@ function PlanToCalendarModal({
         </div>
 
         {/* Overwrite toggle */}
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
           <input
             type="checkbox"
             checked={overwrite}
@@ -2063,7 +2063,7 @@ function PlanToCalendarModal({
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 
-        <div className="bg-gray-50 rounded-xl px-4 py-2 text-xs text-gray-500">
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-xl px-4 py-2 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">
           📆 Fills <strong>{weekdays.size} day{weekdays.size !== 1 ? "s" : ""}/week × {months.length} month{months.length !== 1 ? "s" : ""}</strong> on the Calendar tab.
           You can edit, move, or delete any individual day afterwards.
         </div>
@@ -2097,9 +2097,14 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
   const [swapping, setSwapping]           = useState(false);
   // apply template modal
   const [showApply, setShowApply]         = useState(false);
-  // edit day modal
+  const [showBuilder, setShowBuilder]     = useState(false);
+  // edit day modal (full editor with notes, bulk apply)
   const [editDay, setEditDay]             = useState<string | null>(null);
   const [editWorking, setEditWorking]     = useState(false);
+  // inline day editor state (fast single-day edits directly in the panel)
+  const [inlineName, setInlineName]       = useState("");
+  const [inlineRest, setInlineRest]       = useState(false);
+  const [inlineSaving, setInlineSaving]   = useState(false);
   // available templates
   const [templates, setTemplates]         = useState<WorkoutTemplate[]>([]);
   const useToastInCal                     = useToast();
@@ -2216,6 +2221,33 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
   const selectedWorkouts   = selected ? (workoutDayMap[selected] ?? []) : [];
   const selectedCalDay     = selected ? calendarDayMap[selected] : null;
 
+  // Sync inline editor whenever selected day or its calendar data changes
+  const prevSelectedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (selected === prevSelectedRef.current) return;
+    prevSelectedRef.current = selected;
+    const cal = selected ? calendarDayMap[selected] : null;
+    setInlineRest(cal?.isRestDay ?? false);
+    setInlineName(cal?.workoutName ?? "");
+  }, [selected, calendarDayMap]);
+
+  const saveInline = async (overrideRest?: boolean, overrideName?: string) => {
+    if (!selected) return;
+    setInlineSaving(true);
+    const isRest   = overrideRest  ?? inlineRest;
+    const name     = overrideName  ?? inlineName;
+    try {
+      await calendarApi.updateDay(selected, {
+        workoutName:  isRest ? "Rest" : (name.trim() || "Workout"),
+        muscleGroups: [],
+        isRestDay:    isRest,
+      });
+      await loadCalendar();
+      useToastInCal.show(isRest ? "Marked as rest day 😴" : `Saved: ${name.trim() || "Workout"}`);
+    } catch { useToastInCal.show("Failed to save"); }
+    finally { setInlineSaving(false); }
+  };
+
   return (
     <div className="space-y-4">
       {/* Controls row */}
@@ -2223,27 +2255,31 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
         {/* Month nav */}
         <div className="flex items-center gap-2">
           <button onClick={() => { setMonth((m) => subMonths(m, 1)); setSelected(null); }}
-            className="p-2 rounded-xl hover:bg-gray-100 text-gray-600 font-bold text-lg leading-none">‹</button>
-          <h3 className="font-bold text-gray-900 text-lg min-w-[160px] text-center">{format(month, "MMMM yyyy")}</h3>
+            className="p-2 rounded-xl hover:bg-gray-100 text-gray-600 dark:text-gray-300 font-bold text-lg leading-none">‹</button>
+          <h3 className="font-bold text-gray-900 dark:text-white text-lg min-w-[160px] text-center">{format(month, "MMMM yyyy")}</h3>
           <button onClick={() => { setMonth((m) => addMonths(m, 1)); setSelected(null); }}
-            className="p-2 rounded-xl hover:bg-gray-100 text-gray-600 font-bold text-lg leading-none">›</button>
+            className="p-2 rounded-xl hover:bg-gray-100 text-gray-600 dark:text-gray-300 font-bold text-lg leading-none">›</button>
         </div>
 
         {/* Action buttons */}
         <div className="flex gap-2 flex-wrap">
-          <button onClick={() => setShowApply(true)}
+          <button onClick={() => setShowBuilder(true)}
             className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition">
-            📅 Apply Template
+            🗓 Build Plan
+          </button>
+          <button onClick={() => setShowApply(true)}
+            className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-brand-300 text-brand-700 dark:text-brand-400 text-xs font-semibold px-3 py-1.5 rounded-xl transition hover:bg-brand-50">
+            📋 Apply Template
           </button>
           <button
             onClick={() => { setSwapMode((v) => !v); setSwapFrom(null); setSelected(null); }}
             className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition
-              ${swapMode ? "bg-amber-100 border-amber-400 text-amber-700" : "bg-white border-gray-200 text-gray-600 hover:border-gray-400"}`}>
+              ${swapMode ? "bg-amber-100 border-amber-400 text-amber-700" : "bg-white border-gray-200 text-gray-600 dark:text-gray-300 hover:border-gray-400"}`}>
             🔄 {swapMode ? "Swapping…" : "Swap Days"}
           </button>
           {calendarDays.length > 0 && (
             <button onClick={handleClearMonth}
-              className="flex items-center gap-1.5 bg-white border border-red-200 hover:border-red-400 text-red-600 text-xs font-semibold px-3 py-1.5 rounded-xl transition">
+              className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 hover:border-red-400 text-red-600 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-xl transition">
               🗑 Clear Month
             </button>
           )}
@@ -2263,7 +2299,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
       {/* Day-of-week headers */}
       <div className="grid grid-cols-7 gap-1">
         {WEEKDAY_LABELS.map((d) => (
-          <div key={d} className="text-center text-xs font-semibold text-gray-400 py-1">{d}</div>
+          <div key={d} className="text-center text-xs font-semibold text-gray-400 dark:text-gray-500 py-1">{d}</div>
         ))}
       </div>
 
@@ -2324,83 +2360,157 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 text-xs text-gray-500 mt-2">
+      <div className="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-2">
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-brand-100 inline-block" /> Logged workout</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-indigo-50 inline-block" /> Planned workout</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-50 inline-block" /> 😴 Rest day</span>
         <span className="flex items-center gap-1.5">🍕 Cheat meal</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-brand-400 inline-block" /> Today</span>
-        {loadingCal && <span className="text-gray-400 italic">Loading…</span>}
+        {loadingCal && <span className="text-gray-400 dark:text-gray-500 italic">Loading…</span>}
       </div>
 
-      {/* Selected day detail panel */}
+      {/* ── Inline day editor ── */}
       {selected && !swapMode && (
-        <div className="border border-brand-200 rounded-2xl p-4 bg-brand-50 space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="font-bold text-brand-800">
+        <div className={`rounded-2xl border-2 p-4 space-y-3 transition
+          ${inlineRest
+            ? "bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700"
+            : "bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-700"}`}>
+
+          {/* Header row */}
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="font-bold text-gray-900 dark:text-white text-base">
               {format(new Date(selected + "T12:00:00"), "EEEE, MMMM d")}
             </h4>
-            <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setEditDay(selected)}
+                className="text-xs text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 px-2 py-1 rounded-lg hover:bg-brand-100 dark:hover:bg-brand-900 transition"
+                title="Full editor (notes, bulk apply)"
+              >⚙️ More</button>
+              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-1">✕</button>
+            </div>
           </div>
 
-          {/* Planned info */}
-          {selectedCalDay && (
-            <div className="bg-white rounded-xl p-3 border border-indigo-100">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">
-                  {selectedCalDay.isRestDay ? "😴 Planned Rest Day" : "📅 Planned Workout"}
-                </span>
-                <div className="flex gap-1">
-                  <button onClick={() => setEditDay(selected)}
-                    className="text-[10px] text-gray-400 hover:text-brand-600 underline">edit</button>
-                  <span className="text-gray-300">·</span>
-                  <button onClick={() => handleDeleteDay(selected)}
-                    className="text-[10px] text-red-400 hover:text-red-600 underline">remove</button>
-                </div>
-              </div>
-              {!selectedCalDay.isRestDay && (
-                <>
-                  <p className="font-semibold text-gray-800">{selectedCalDay.workoutName}</p>
-                  {selectedCalDay.muscleGroups && selectedCalDay.muscleGroups.length > 0 && (
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {selectedCalDay.muscleGroups.join(" · ")}
-                    </p>
-                  )}
-                </>
-              )}
+          {/* Workout / Rest toggle */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => { setInlineRest(false); if (inlineRest) saveInline(false, inlineName); }}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition
+                ${!inlineRest
+                  ? "bg-brand-600 text-white border-brand-600"
+                  : "bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600 hover:border-brand-300"}`}
+            >
+              💪 Workout
+            </button>
+            <button
+              type="button"
+              onClick={() => { setInlineRest(true); saveInline(true, "Rest"); }}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition
+                ${inlineRest
+                  ? "bg-green-500 text-white border-green-500"
+                  : "bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600 hover:border-green-300"}`}
+            >
+              😴 Rest Day
+            </button>
+          </div>
+
+          {/* Workout name input (only when not rest) */}
+          {!inlineRest && (
+            <div className="flex gap-2">
+              <input
+                value={inlineName}
+                onChange={(e) => setInlineName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && saveInline()}
+                placeholder="Workout name (e.g. Push Day, Leg Day…)"
+                className="flex-1 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-brand-400"
+              />
+              <button
+                onClick={() => saveInline()}
+                disabled={inlineSaving}
+                className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition disabled:opacity-50"
+              >
+                {inlineSaving ? "…" : "Save"}
+              </button>
             </div>
           )}
 
-          {/* Logged workouts */}
-          {selectedWorkouts.length > 0 ? (
-            selectedWorkouts.map((w) => (
-              <div key={w.id} className="bg-white rounded-xl p-3 border border-brand-100">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-gray-800">✅ {w.name}</span>
-                  <span className="text-xs text-gray-400">{w.duration} min{w.caloriesBurned ? ` · 🔥${Math.round(w.caloriesBurned)} kcal` : ""}</span>
+          {/* Logged workouts (read-only) */}
+          {selectedWorkouts.length > 0 && (
+            <div className="space-y-1.5 pt-1 border-t border-gray-100 dark:border-gray-700">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Logged</p>
+              {selectedWorkouts.map((w) => (
+                <div key={w.id} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl px-3 py-2 border border-brand-100 dark:border-brand-900">
+                  <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">✅ {w.name}</span>
+                  <span className="text-xs text-gray-400">{w.duration}min{w.caloriesBurned ? ` · 🔥${Math.round(w.caloriesBurned)}` : ""}</span>
                 </div>
-                {w.exercises.length > 0 && (
-                  <p className="text-xs text-gray-500">
-                    {w.exercises.slice(0, 4).map((e) => e.exerciseName).join(" · ")}
-                    {w.exercises.length > 4 ? ` +${w.exercises.length - 4} more` : ""}
-                  </p>
-                )}
-              </div>
-            ))
-          ) : !selectedCalDay ? (
-            <div className="flex gap-2 flex-wrap">
-              <p className="text-sm text-gray-500 italic flex-1">Nothing planned — add a plan below.</p>
-              <button onClick={() => setEditDay(selected)}
-                className="text-xs bg-brand-600 text-white px-3 py-1 rounded-lg hover:bg-brand-700">
-                + Add Plan
-              </button>
-              <button onClick={() => handleMarkRest(selected)}
-                className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-lg hover:bg-green-200">
-                😴 Mark Rest
-              </button>
+              ))}
             </div>
-          ) : null}
+          )}
+
+          {/* Quick actions footer */}
+          <div className="flex gap-2 pt-1 border-t border-gray-100 dark:border-gray-700 flex-wrap">
+            <button
+              onClick={async () => {
+                if (!selected) return;
+                const rawDay = getDay(new Date(selected + "T12:00:00"));
+                const weekday = rawDay === 0 ? 6 : rawDay - 1;
+                const wd = WEEKDAY_LABELS[weekday];
+                const isRest = inlineRest;
+                const name   = isRest ? "Rest" : (inlineName.trim() || "Workout");
+                setInlineSaving(true);
+                try {
+                  const res = await calendarApi.populate({
+                    month: monthKey,
+                    overwrite: true,
+                    assignments: [{ dayOfWeek: weekday, workoutName: name, muscleGroups: [], isRestDay: isRest }],
+                  });
+                  await loadCalendar();
+                  useToastInCal.show(`Applied to all ${wd}s this month (${res.data.count} days)`);
+                } catch { useToastInCal.show("Failed"); }
+                finally { setInlineSaving(false); }
+              }}
+              disabled={inlineSaving}
+              className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg hover:border-brand-300 transition disabled:opacity-50"
+            >
+              🔁 Apply to all {WEEKDAY_LABELS[(() => { const r = getDay(new Date((selected ?? "2000-01-01") + "T12:00:00")); return r === 0 ? 6 : r - 1; })()]}s
+            </button>
+            {selectedCalDay && (
+              <button
+                onClick={() => handleDeleteDay(selected!)}
+                className="text-xs bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 text-red-500 px-3 py-1.5 rounded-lg hover:border-red-400 transition"
+              >
+                🗑 Remove
+              </button>
+            )}
+          </div>
         </div>
+      )}
+
+      {/* Empty state — show plan builder CTA when no plan exists */}
+      {!loadingCal && calendarDays.length === 0 && !swapMode && (
+        <div className="border-2 border-dashed border-brand-200 dark:border-brand-800 rounded-2xl p-6 text-center space-y-3">
+          <p className="text-2xl">🗓</p>
+          <p className="font-bold text-gray-700 dark:text-gray-200 text-base">No plan for {format(month, "MMMM yyyy")}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Build a full monthly workout schedule in seconds — pick your workout days, rest days, and how many months to fill.</p>
+          <button
+            onClick={() => setShowBuilder(true)}
+            className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold px-5 py-2.5 rounded-xl transition"
+          >
+            🗓 Build My Monthly Plan
+          </button>
+        </div>
+      )}
+
+      {/* Plan Builder Modal */}
+      {showBuilder && (
+        <MonthlyPlanBuilderModal
+          month={monthKey}
+          trainingDays={trainingDays}
+          templates={templates}
+          onClose={() => setShowBuilder(false)}
+          onBuilt={(msg) => { setShowBuilder(false); loadCalendar(); useToastInCal.show(msg); }}
+        />
       )}
 
       {/* Apply Template Modal */}
@@ -2433,11 +2543,230 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Monthly Plan Builder Modal
+// ─────────────────────────────────────────────────────────────────────────────
+type BuilderDay = {
+  dayIndex: number;   // 0=Mon...6=Sun
+  isRest: boolean;
+  workoutName: string;
+  templateId: number | "";
+};
+
+const BUILDER_PRESETS: Record<string, string[]> = {
+  "Push — Chest · Shoulders · Triceps": ["Chest", "Shoulders", "Triceps"],
+  "Pull — Back · Biceps":              ["Back", "Biceps"],
+  "Legs — Quads · Hamstrings · Glutes":["Quads", "Hamstrings", "Glutes"],
+  "Upper Body":                        ["Chest", "Back", "Shoulders"],
+  "Lower Body":                        ["Quads", "Hamstrings", "Glutes"],
+  "Full Body":                         [],
+  "Cardio":                            [],
+  "Core & Abs":                        ["Abs", "Core"],
+  "Arms":                              ["Biceps", "Triceps"],
+};
+
+function MonthlyPlanBuilderModal({
+  month, trainingDays, templates, onClose, onBuilt,
+}: {
+  month: string;
+  trainingDays: number;
+  templates: WorkoutTemplate[];
+  onClose: () => void;
+  onBuilt: (msg: string) => void;
+}) {
+  const defaultPattern = DEFAULT_DAY_PATTERNS[Math.min(trainingDays, 7)] ?? DEFAULT_DAY_PATTERNS[4];
+
+  const [days, setDays] = useState<BuilderDay[]>(
+    WEEKDAY_LABELS.map((_, i) => ({
+      dayIndex:    i,
+      isRest:      !defaultPattern.includes(i),
+      workoutName: "",
+      templateId:  "" as number | "",
+    }))
+  );
+  const [duration, setDuration] = useState(1);
+  const [overwrite, setOverwrite] = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState("");
+
+  const toggle = (i: number) =>
+    setDays((prev) => prev.map((d, idx) => idx === i ? { ...d, isRest: !d.isRest } : d));
+
+  const setName = (i: number, name: string) =>
+    setDays((prev) => prev.map((d, idx) => idx === i ? { ...d, workoutName: name } : d));
+
+  const setTpl = (i: number, tplId: number | "") =>
+    setDays((prev) => prev.map((d, idx) => {
+      if (idx !== i) return d;
+      const tpl = templates.find((t) => t.id === Number(tplId));
+      return { ...d, templateId: tplId, workoutName: tplId ? (tpl?.dayLabel || tpl?.name || d.workoutName) : d.workoutName };
+    }));
+
+  const workoutDays = days.filter((d) => !d.isRest);
+
+  const handleBuild = async () => {
+    if (workoutDays.length === 0) { setError("Mark at least one day as a workout day."); return; }
+    setError("");
+    setSaving(true);
+    const assignments = workoutDays.map((d) => {
+      const tpl = templates.find((t) => t.id === Number(d.templateId));
+      return {
+        dayOfWeek:    d.dayIndex,
+        workoutName:  d.workoutName.trim() || tpl?.dayLabel || tpl?.name || WEEKDAY_LABELS[d.dayIndex] + " Workout",
+        muscleGroups: Array.isArray(tpl?.muscleGroups) ? (tpl!.muscleGroups as string[]) : [],
+        templateId:   d.templateId ? Number(d.templateId) : undefined,
+        isRestDay:    false,
+      };
+    });
+
+    // Also add explicit rest day entries so rest days show on calendar
+    const restAssignments = days.filter((d) => d.isRest).map((d) => ({
+      dayOfWeek:    d.dayIndex,
+      workoutName:  "Rest",
+      muscleGroups: [] as string[],
+      isRestDay:    true,
+    }));
+
+    const allAssignments = [...assignments, ...restAssignments];
+    const months = getMonthRange(month, duration);
+    let total = 0;
+
+    try {
+      for (const m of months) {
+        const res = await calendarApi.populate({ month: m, assignments: allAssignments, overwrite });
+        total += res.data.count ?? 0;
+      }
+      const label = months.length === 1 ? months[0] : `${months[0]} – ${months[months.length - 1]}`;
+      onBuilt(`Plan built! ${total} days scheduled across ${label} 🎉`);
+    } catch {
+      setError("Failed to build plan. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const restDayCount = days.filter((d) => d.isRest).length;
+
+  return (
+    <Modal open title="Build Monthly Workout Plan" onClose={onClose} size="lg">
+      <div className="space-y-5 p-1">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Set each day as a workout or rest, name your sessions, then choose how many months to fill.
+          Every matching weekday across the range will be scheduled automatically.
+        </p>
+
+        {/* Duration picker */}
+        <div>
+          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-2">Duration</label>
+          <div className="flex gap-2">
+            {[
+              { n: 1, label: "1 Month" },
+              { n: 2, label: "2 Months" },
+              { n: 3, label: "3 Months" },
+            ].map(({ n, label }) => (
+              <button key={n} type="button" onClick={() => setDuration(n)}
+                className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition
+                  ${duration === n
+                    ? "bg-brand-600 text-white border-brand-600"
+                    : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-brand-300"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Range: <strong>{getMonthRange(month, duration).join(" → ")}</strong>
+            {" · "}{workoutDays.length} workout day{workoutDays.length !== 1 ? "s" : ""}, {restDayCount} rest day{restDayCount !== 1 ? "s" : ""}/week
+          </p>
+        </div>
+
+        {/* Day grid */}
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block">Weekly Schedule</label>
+          {days.map((d, i) => (
+            <div key={i}
+              className={`rounded-xl border p-3 transition
+                ${d.isRest
+                  ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                  : "bg-brand-50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800"}`}>
+              <div className="flex items-center gap-3">
+                {/* Day label + toggle */}
+                <button
+                  type="button"
+                  onClick={() => toggle(i)}
+                  className={`w-14 text-center py-1.5 rounded-lg text-xs font-bold border transition flex-shrink-0
+                    ${d.isRest
+                      ? "bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 border-green-300"
+                      : "bg-brand-600 text-white border-brand-600"}`}
+                  title="Click to toggle workout/rest"
+                >
+                  {WEEKDAY_LABELS[i]}
+                </button>
+
+                {d.isRest ? (
+                  <span className="text-sm text-green-600 dark:text-green-400 font-medium flex-1">😴 Rest Day <span className="text-xs text-gray-400 font-normal">(click day to make it a workout)</span></span>
+                ) : (
+                  <div className="flex gap-2 flex-1 min-w-0">
+                    {/* Quick presets */}
+                    <select
+                      value={d.templateId}
+                      onChange={(e) => setTpl(i, e.target.value === "" ? "" : Number(e.target.value))}
+                      className="border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-xs bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:border-brand-400 w-44 flex-shrink-0"
+                    >
+                      <option value="">— No template —</option>
+                      {templates.map((t) => (
+                        <option key={t.id} value={t.id}>{t.dayLabel || t.name}</option>
+                      ))}
+                    </select>
+                    {/* Custom name */}
+                    <input
+                      value={d.workoutName}
+                      onChange={(e) => setName(i, e.target.value)}
+                      placeholder={`e.g. Push Day, Leg Day…`}
+                      className="flex-1 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-brand-400 min-w-0"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Overwrite toggle */}
+        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
+          <input type="checkbox" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} className="w-4 h-4 accent-brand-600" />
+          Overwrite days that already have a plan
+        </label>
+
+        {error && <p className="text-sm text-red-500">{error}</p>}
+
+        <div className="flex gap-3 pt-1">
+          <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button onClick={handleBuild} loading={saving} className="flex-1 bg-brand-600">
+            🗓 Build {duration} Month{duration > 1 ? "s" : ""}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // Apply Template Modal
 // ─────────────────────────────────────────────────────────────────────────────
 interface TemplateAssignment {
   template: WorkoutTemplate | null;
   weekdays: Set<number>;   // 0=Mon…6=Sun
+}
+
+/** Returns an array of N month strings starting from `startMonth` ("YYYY-MM"). */
+function getMonthRange(startMonth: string, count: number): string[] {
+  const months: string[] = [];
+  const [y, m] = startMonth.split("-").map(Number);
+  for (let i = 0; i < count; i++) {
+    const d = new Date(y, m - 1 + i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  }
+  return months;
 }
 
 function ApplyTemplateModal({
@@ -2451,6 +2780,7 @@ function ApplyTemplateModal({
   const [assignments, setAssignments] = useState<TemplateAssignment[]>([
     { template: null, weekdays: new Set() },
   ]);
+  const [duration, setDuration] = useState(1);   // 1 | 2 | 3 months
   const [overwrite, setOverwrite] = useState(false);
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState("");
@@ -2506,9 +2836,15 @@ function ApplyTemplateModal({
     }
 
     setSaving(true);
+    const months = getMonthRange(month, duration);
+    let totalCount = 0;
     try {
-      const res = await calendarApi.populate({ month, assignments: payload, overwrite });
-      onApplied(`Applied ${res.data.count} day(s) to ${month}`);
+      for (const m of months) {
+        const res = await calendarApi.populate({ month: m, assignments: payload, overwrite });
+        totalCount += res.data.count ?? 0;
+      }
+      const label = months.length === 1 ? months[0] : `${months[0]} – ${months[months.length - 1]}`;
+      onApplied(`Applied ${totalCount} day(s) across ${label}`);
     } catch {
       setError("Failed to populate calendar.");
     } finally {
@@ -2516,17 +2852,43 @@ function ApplyTemplateModal({
     }
   };
 
+  const months = getMonthRange(month, duration);
+  const rangeLabel = months.length === 1
+    ? months[0]
+    : `${months[0]} – ${months[months.length - 1]}`;
+
   return (
-    <Modal title={`Apply Template — ${month}`} onClose={onClose} size="lg">
+    <Modal open title="Apply Template to Calendar" onClose={onClose} size="lg">
       <div className="space-y-5 p-1">
-        <p className="text-sm text-gray-500">
-          Assign workout templates to specific days of the week. Every matching day in <strong>{month}</strong> will be populated.
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Assign workout templates to weekdays. Every matching day in the selected range will be populated.
         </p>
 
+        {/* Duration picker */}
+        <div>
+          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-2">Duration</label>
+          <div className="flex gap-2">
+            {[1, 2, 3].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setDuration(n)}
+                className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition
+                  ${duration === n
+                    ? "bg-brand-600 text-white border-brand-600"
+                    : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-brand-300"}`}
+              >
+                {n} month{n > 1 ? "s" : ""}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">Range: <strong>{rangeLabel}</strong></p>
+        </div>
+
         {assignments.map((a, i) => (
-          <div key={i} className="bg-gray-50 rounded-2xl p-4 space-y-3 border border-gray-200">
+          <div key={i} className="bg-gray-50 dark:bg-gray-700 rounded-2xl p-4 space-y-3 border border-gray-200 dark:border-gray-600">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Assignment {i + 1}</span>
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Assignment {i + 1}</span>
               {assignments.length > 1 && (
                 <button onClick={() => removeRow(i)} className="text-red-400 hover:text-red-600 text-xs">✕ Remove</button>
               )}
@@ -2534,14 +2896,14 @@ function ApplyTemplateModal({
 
             {/* Template picker */}
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Template / Day</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block mb-1">Template / Day</label>
               <select
                 value={a.template?.id ?? ""}
                 onChange={(e) => {
                   const found = templates.find((t) => t.id === Number(e.target.value)) ?? null;
                   setRowTemplate(i, found);
                 }}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-400"
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-400 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               >
                 <option value="">— Select template —</option>
                 {templates.map((t) => (
@@ -2554,7 +2916,7 @@ function ApplyTemplateModal({
 
             {/* Weekday checkboxes */}
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Repeat on weekdays</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block mb-1">Repeat on weekdays</label>
               <div className="flex gap-1.5 flex-wrap">
                 {WEEKDAY_LABELS.map((label, dow) => (
                   <button
@@ -2564,7 +2926,7 @@ function ApplyTemplateModal({
                     className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition
                       ${a.weekdays.has(dow)
                         ? "bg-brand-600 text-white border-brand-600"
-                        : "bg-white text-gray-600 border-gray-200 hover:border-brand-300"}`}
+                        : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-brand-300"}`}
                   >
                     {label}
                   </button>
@@ -2582,7 +2944,7 @@ function ApplyTemplateModal({
         </button>
 
         {/* Overwrite toggle */}
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
           <input
             type="checkbox"
             checked={overwrite}
@@ -2597,7 +2959,7 @@ function ApplyTemplateModal({
         <div className="flex gap-3 pt-2">
           <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
           <Button onClick={handleApply} loading={saving} className="flex-1">
-            Populate {month}
+            Populate {duration} month{duration > 1 ? "s" : ""}
           </Button>
         </div>
       </div>
@@ -2620,16 +2982,16 @@ function EditCalendarDayModal({
   onClose: () => void;
   onSaved: (msg: string) => void;
 }) {
-  const [isRest, setIsRest]       = useState(current?.isRestDay ?? false);
+  const [isRest, setIsRest]           = useState(current?.isRestDay ?? false);
   const [workoutName, setWorkoutName] = useState(current?.workoutName ?? "");
   const [selectedTpl, setSelectedTpl] = useState<number | "">(current?.templateId ?? "");
-  const [notes, setNotes]         = useState(current?.notes ?? "");
+  const [notes, setNotes]             = useState(current?.notes ?? "");
   const [bulkWorking, setBulkWorking] = useState(false);
+  const [bulkDuration, setBulkDuration] = useState(1);   // 1 | 2 | 3 months
 
   // Which ISO weekday (0=Mon…6=Sun) does this date fall on?
-  // date-fns getDay() returns 0=Sun…6=Sat — convert to Mon-based
-  const rawDay = getDay(new Date(date + "T12:00:00")); // 0=Sun
-  const weekday = rawDay === 0 ? 6 : rawDay - 1;       // 0=Mon…6=Sun
+  const rawDay  = getDay(new Date(date + "T12:00:00")); // 0=Sun
+  const weekday = rawDay === 0 ? 6 : rawDay - 1;        // 0=Mon…6=Sun
   const weekdayLabel = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][weekday];
 
   const buildPayload = () => {
@@ -2655,27 +3017,33 @@ function EditCalendarDayModal({
     setBulkWorking(true);
     try {
       const p = buildPayload();
-      const res = await calendarApi.populate({
-        month,
-        overwrite: true,
-        assignments: [{
-          dayOfWeek:   weekday,
-          workoutName: p.workoutName,
-          muscleGroups: p.muscleGroups,
-          templateId:  p.templateId ?? undefined,
-          isRestDay:   p.isRestDay,
-        }],
-      });
-      onSaved(`Applied to all ${weekdayLabel}s this month (${res.data.count} day${res.data.count !== 1 ? "s" : ""} updated)`);
+      const months = getMonthRange(month, bulkDuration);
+      let total = 0;
+      for (const m of months) {
+        const res = await calendarApi.populate({
+          month: m,
+          overwrite: true,
+          assignments: [{
+            dayOfWeek:    weekday,
+            workoutName:  p.workoutName,
+            muscleGroups: p.muscleGroups,
+            templateId:   p.templateId ?? undefined,
+            isRestDay:    p.isRestDay,
+          }],
+        });
+        total += res.data.count ?? 0;
+      }
+      const label = months.length === 1 ? months[0] : `${months[0]} – ${months[months.length - 1]}`;
+      onSaved(`Applied to every ${weekdayLabel} in ${label} (${total} day${total !== 1 ? "s" : ""} updated)`);
     } catch { onSaved("Failed to apply to all days"); }
     finally { setBulkWorking(false); }
   };
 
   return (
-    <Modal title={`Edit — ${format(new Date(date + "T12:00:00"), "EEE, MMM d")}`} onClose={onClose}>
+    <Modal open title={`Edit — ${format(new Date(date + "T12:00:00"), "EEE, MMM d")}`} onClose={onClose}>
       <div className="space-y-4 p-1">
         {/* Rest toggle */}
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 cursor-pointer">
           <input type="checkbox" checked={isRest} onChange={(e) => setIsRest(e.target.checked)}
             className="w-4 h-4 accent-brand-600" />
           😴 Mark as rest day
@@ -2685,7 +3053,7 @@ function EditCalendarDayModal({
           <>
             {/* Template picker */}
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Link to template (optional)</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block mb-1">Link to template (optional)</label>
               <select
                 value={selectedTpl}
                 onChange={(e) => {
@@ -2695,9 +3063,9 @@ function EditCalendarDayModal({
                     if (tpl) setWorkoutName(tpl.dayLabel || tpl.name);
                   }
                 }}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-400"
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-400 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               >
-                <option value="">— None —</option>
+                <option value="">— None (custom) —</option>
                 {templates.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.dayLabel || t.name}
@@ -2708,7 +3076,7 @@ function EditCalendarDayModal({
 
             {/* Name override */}
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Label (shown on calendar)</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block mb-1">Label (shown on calendar)</label>
               <Input
                 value={workoutName}
                 onChange={(e) => setWorkoutName(e.target.value)}
@@ -2720,7 +3088,7 @@ function EditCalendarDayModal({
 
         {/* Notes */}
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Notes (optional)</label>
+          <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block mb-1">Notes (optional)</label>
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -2736,17 +3104,35 @@ function EditCalendarDayModal({
         </div>
 
         {/* Bulk-apply */}
-        <div className="border-t border-gray-100 pt-3">
+        <div className="border-t border-gray-100 dark:border-gray-700 pt-3 space-y-2">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            🔁 Apply every {weekdayLabel} for…
+          </p>
+          <div className="flex gap-2">
+            {[1, 2, 3].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setBulkDuration(n)}
+                className={`flex-1 py-1.5 rounded-xl text-xs font-semibold border transition
+                  ${bulkDuration === n
+                    ? "bg-brand-600 text-white border-brand-600"
+                    : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-brand-300"}`}
+              >
+                {n} month{n > 1 ? "s" : ""}
+              </button>
+            ))}
+          </div>
           <Button
             variant="secondary"
             onClick={handleApplyAll}
             loading={bulkWorking}
             className="w-full text-sm text-brand-700 border-brand-200 hover:bg-brand-50"
           >
-            🔁 Apply to all {weekdayLabel}s in {format(new Date(month + "-15"), "MMMM")}
+            Apply to all {weekdayLabel}s ({bulkDuration} month{bulkDuration > 1 ? "s" : ""})
           </Button>
-          <p className="text-xs text-gray-400 text-center mt-1">
-            Overwrites every {weekdayLabel} this month with the settings above
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+            Overwrites every {weekdayLabel} across the selected range
           </p>
         </div>
       </div>
@@ -2758,8 +3144,8 @@ function EditCalendarDayModal({
 // Main page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function WorkoutsPage() {
-  const { user } = useAuthStore();
-  const [tab, setTab] = useState<"history" | "calendar" | "templates">("history");
+  const { user, updateUser } = useAuthStore();
+  const [tab, setTab] = useState<"history" | "calendar" | "templates">("calendar");
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [allWorkouts, setAllWorkouts] = useState<Workout[]>([]);
   const [total, setTotal] = useState(0);
@@ -2771,8 +3157,9 @@ export default function WorkoutsPage() {
   const [editing, setEditing] = useState<Workout | null>(null);
   const toast = useToast();
 
-  // Training days per week — loaded from active goal, editable
-  const [trainingDays, setTrainingDays]   = useState<number>(user?.trainingDaysPerWeek ?? 4);
+  // Training days — SINGLE SOURCE OF TRUTH: user.trainingDaysPerWeek from auth store
+  // Never use local state for the value; derive from store so Profile ↔ Workouts always match
+  const trainingDays = user?.trainingDaysPerWeek ?? 4;
   const [activeGoalId, setActiveGoalId]   = useState<number | null>(null);
   const [editingDays,  setEditingDays]    = useState(false);
   const [daysInput,    setDaysInput]      = useState(String(trainingDays));
@@ -2796,27 +3183,42 @@ export default function WorkoutsPage() {
     } catch { /* silent */ }
   }, []);
 
-  // Load training days from active goal
+  // Load active goal ID on mount (still needed for calorie goal updates)
   useEffect(() => {
     calorieGoalsApi.getActive().then((res) => {
-      const goal = res.data.goal;
-      if (goal) {
-        setActiveGoalId(goal.id);
-        const days = goal.trainingDaysPerWeek ?? 4;
-        setTrainingDays(days);
-        setDaysInput(String(days));
-      }
+      if (res.data.goal?.id) setActiveGoalId(res.data.goal.id);
     }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Keep daysInput in sync when the auth store value changes from outside (e.g. Profile saves)
+  // Only update daysInput when NOT actively editing, and only show toast when value actually changed
+  const prevDaysRef = useRef<number | null>(null);
+  useEffect(() => {
+    const n = user?.trainingDaysPerWeek ?? 4;
+    if (!editingDays) setDaysInput(String(n));
+    if (prevDaysRef.current !== null && prevDaysRef.current !== n) {
+      toast.show(`Training days updated to ${n} 💪`);
+    }
+    prevDaysRef.current = n;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.trainingDaysPerWeek]);
+
+  // Save training days — writes to BOTH user profile (auth store) AND calorie goal
+  // This is the single write path from the Workouts tab, ensuring Profile always stays in sync
   const saveTrainingDays = async () => {
     const n = Math.max(1, Math.min(7, Number(daysInput) || trainingDays));
-    setTrainingDays(n);
-    setDaysInput(String(n));
     setEditingDays(false);
-    if (activeGoalId) {
-      try { await calorieGoalsApi.update(activeGoalId, { trainingDaysPerWeek: n }); }
-      catch { /* silent */ }
+    if (n === trainingDays) { setDaysInput(String(n)); return; } // no change
+    try {
+      const res = await usersApi.updateProfile({ trainingDaysPerWeek: n } as any);
+      updateUser(res.data.user);                  // ← updates auth store → Profile re-syncs
+      if (activeGoalId) {
+        calorieGoalsApi.update(activeGoalId, { trainingDaysPerWeek: n }).catch(() => {});
+      }
+      toast.show(`Training days set to ${n} 💪`);
+    } catch {
+      setDaysInput(String(trainingDays));          // revert input on error
     }
   };
 
@@ -2835,8 +3237,8 @@ export default function WorkoutsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Workouts</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white dark:text-white">Workouts</h1>
+          <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm mt-1">
             {tab === "history"   ? `${total} workout${total !== 1 ? "s" : ""} logged`
             : tab === "calendar" ? "Training calendar"
             :                      "Pre-built and custom workout splits"}
@@ -2861,7 +3263,7 @@ export default function WorkoutsPage() {
                 Save
               </button>
               <button onClick={() => setEditingDays(false)}
-                className="text-xs text-gray-400 hover:text-gray-600">✕</button>
+                className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 dark:text-gray-300">✕</button>
             </div>
           ) : (
             <button
@@ -2893,7 +3295,7 @@ export default function WorkoutsPage() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${tab === key ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}
+            className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${tab === key ? "bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700"}`}
           >
             {label}
           </button>
@@ -2916,8 +3318,8 @@ export default function WorkoutsPage() {
         ) : workouts.length === 0 ? (
           <Card className="text-center py-16">
             <div className="text-5xl mb-4">🏋️</div>
-            <h3 className="font-semibold text-gray-800 mb-2">No workouts yet</h3>
-            <p className="text-sm text-gray-400 mb-4">Log your first workout to start tracking progress</p>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">No workouts yet</h3>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Log your first workout to start tracking progress</p>
             <div className="flex gap-2 justify-center">
               <Button onClick={() => setShowForm(true)}>Log Your First Workout</Button>
               <Button variant="secondary" onClick={() => setTab("templates")}>Browse Templates</Button>
@@ -2937,12 +3339,12 @@ export default function WorkoutsPage() {
                         {w.name[0]?.toUpperCase()}
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{w.name}</h3>
-                        <p className="text-sm text-gray-500 mt-0.5">
+                        <h3 className="font-semibold text-gray-900 dark:text-white dark:text-white">{w.name}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5">
                           {format(parseISO(w.date), "MMM d, yyyy")} · {w.duration} min · {w.exercises.length} exercises
                         </p>
                         {w.exercises.length > 0 && (
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                             {w.exercises.slice(0, 3).map((e) => e.exerciseName).join(" · ")}
                             {w.exercises.length > 3 ? ` +${w.exercises.length - 3} more` : ""}
                           </p>
@@ -2959,7 +3361,7 @@ export default function WorkoutsPage() {
                         ) : null;
                       })()}
                       {w.caloriesBurned && <Badge variant="warning">{Math.round(w.caloriesBurned)} kcal</Badge>}
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">
                         {w.exercises.reduce((s, e) => s + e.sets * e.reps * (e.weight ?? 0), 0).toLocaleString()} kg vol
                       </p>
                     </div>
@@ -2971,7 +3373,7 @@ export default function WorkoutsPage() {
             {pages > 1 && (
               <div className="flex justify-center gap-2">
                 <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => load(page - 1)}>← Prev</Button>
-                <span className="text-sm text-gray-500 py-1.5">Page {page} of {pages}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 py-1.5">Page {page} of {pages}</span>
                 <Button variant="secondary" size="sm" disabled={page >= pages} onClick={() => load(page + 1)}>Next →</Button>
               </div>
             )}

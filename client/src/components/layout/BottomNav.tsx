@@ -14,10 +14,9 @@ const PRIMARY_ITEMS = [
 // Overflow items shown in the "More" sheet
 const MORE_ITEMS = [
   { to: "/meal-planner", icon: "📅", label: "Meal Planner" },
-  { to: "/progress",     icon: "📈", label: "Progress" },
-  { to: "/goals",        icon: "🎯", label: "Goals" },
+  { to: "/progress",     icon: "📈", label: "Progress & Goals" },
   { to: "/reports",      icon: "📊", label: "Reports" },
-  { to: "/settings",     icon: "⚙️", label: "Settings" },
+  { to: "/settings",     icon: "⚙️", label: "Profile" },
 ];
 
 // All routes that belong to "more" — used to highlight the More button when active

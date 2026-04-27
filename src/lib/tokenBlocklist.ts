@@ -1,39 +1,63 @@
 /**
- * In-memory refresh token blocklist.
+ * Refresh token blocklist.
  *
- * Stores the JTI (JWT ID) of revoked refresh tokens so they can't be reused
- * even within their 30-day validity window (e.g. after logout or token theft).
- *
- * Trade-off: the set is cleared on server restart. For production,
- * replace with Redis (SET jti EX <ttl>) to survive restarts.
+ * Uses Redis when REDIS_URL is set (survives restarts, works across multiple
+ * server instances). Falls back to an in-memory Map otherwise (dev / no-Redis).
  */
+import redisClient from "./redis.js";
+
+// ── Redis implementation ──────────────────────────────────────────────────────
+
+async function blockTokenRedis(jti: string, ttlMs: number): Promise<void> {
+  const ttlSec = Math.ceil(ttlMs / 1000);
+  await redisClient!.set(`blocklist:${jti}`, "1", "EX", ttlSec);
+}
+
+async function isBlockedRedis(jti: string): Promise<boolean> {
+  const val = await redisClient!.get(`blocklist:${jti}`);
+  return val !== null;
+}
+
+// ── In-memory fallback ────────────────────────────────────────────────────────
 
 interface BlockedEntry {
-  expiresAt: number; // epoch ms — allows periodic cleanup
+  expiresAt: number;
 }
 
-const blocklist = new Map<string, BlockedEntry>();
+const memBlocklist = new Map<string, BlockedEntry>();
 
-/** Add a JTI to the blocklist. `ttlMs` should match the token's remaining lifetime. */
-export function blockToken(jti: string, ttlMs: number): void {
-  blocklist.set(jti, { expiresAt: Date.now() + ttlMs });
+function blockTokenMem(jti: string, ttlMs: number): void {
+  memBlocklist.set(jti, { expiresAt: Date.now() + ttlMs });
 }
 
-/** Returns true if the JTI has been revoked. */
-export function isBlocked(jti: string): boolean {
-  const entry = blocklist.get(jti);
+function isBlockedMem(jti: string): boolean {
+  const entry = memBlocklist.get(jti);
   if (!entry) return false;
   if (Date.now() > entry.expiresAt) {
-    blocklist.delete(jti); // lazy cleanup
+    memBlocklist.delete(jti);
     return false;
   }
   return true;
 }
 
-// Periodic cleanup — remove expired entries every 10 minutes
+// Periodic cleanup for in-memory store
 setInterval(() => {
   const now = Date.now();
-  for (const [jti, entry] of blocklist.entries()) {
-    if (now > entry.expiresAt) blocklist.delete(jti);
+  for (const [jti, entry] of memBlocklist.entries()) {
+    if (now > entry.expiresAt) memBlocklist.delete(jti);
   }
 }, 10 * 60 * 1000).unref();
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+/** Add a JTI to the blocklist. ttlMs should match the token's remaining lifetime. */
+export async function blockToken(jti: string, ttlMs: number): Promise<void> {
+  if (redisClient) return blockTokenRedis(jti, ttlMs);
+  blockTokenMem(jti, ttlMs);
+}
+
+/** Returns true if the JTI has been revoked. */
+export async function isBlocked(jti: string): Promise<boolean> {
+  if (redisClient) return isBlockedRedis(jti);
+  return isBlockedMem(jti);
+}

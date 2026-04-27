@@ -197,13 +197,13 @@ export const getPredictions = async (
       { day: string; totalCal: number; totalProtein: number; entries: number }[]
     >(
       `SELECT
-         date(date) AS day,
-         SUM(calories) AS totalCal,
-         SUM(COALESCE(protein, 0)) AS totalProtein,
+         "date"::date AS day,
+         SUM(calories) AS "totalCal",
+         SUM(COALESCE(protein, 0)) AS "totalProtein",
          COUNT(*) AS entries
        FROM "FoodLog"
        WHERE "userId" = ${userId}
-       GROUP BY date(date)
+       GROUP BY "date"::date
        ORDER BY day ASC`
     );
 

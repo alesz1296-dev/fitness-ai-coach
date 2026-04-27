@@ -3,34 +3,23 @@ import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
 
-// ── Raw-SQL helpers ───────────────────────────────────────────────────────────
-// All queries use $queryRawUnsafe / $executeRawUnsafe so this controller works
-// regardless of whether `prisma generate` has been run after the models were
-// added to schema.prisma.
+// Cast for new models not yet in generated client
+const db = prisma as any;
 
-type Row = Record<string, any>;
-
+// ── Helper: load full plan with days + entries ────────────────────────────────
 async function loadPlan(planId: number, userId: number) {
-  const plans = await prisma.$queryRawUnsafe<Row[]>(
-    `SELECT * FROM "MealPlan" WHERE "id" = ? AND "userId" = ?`,
-    planId, userId
-  );
-  if (!plans.length) return null;
-  const plan = plans[0];
-
-  const days = await prisma.$queryRawUnsafe<Row[]>(
-    `SELECT * FROM "MealPlanDay" WHERE "planId" = ? ORDER BY "dayIndex" ASC`,
-    planId
-  );
-
-  for (const day of days) {
-    day.entries = await prisma.$queryRawUnsafe<Row[]>(
-      `SELECT * FROM "MealPlanEntry" WHERE "dayId" = ? ORDER BY "meal" ASC, "order" ASC`,
-      day.id
-    );
-  }
-
-  return { ...plan, days };
+  const plan = await db.mealPlan.findFirst({
+    where: { id: planId, userId },
+    include: {
+      days: {
+        orderBy: { dayIndex: "asc" },
+        include: {
+          entries: { orderBy: [{ meal: "asc" }, { order: "asc" }] },
+        },
+      },
+    },
+  });
+  return plan;
 }
 
 // ── GET /api/meal-plans ───────────────────────────────────────────────────────
@@ -40,10 +29,10 @@ export const getPlans = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const plans = await prisma.$queryRawUnsafe<Row[]>(
-      `SELECT * FROM "MealPlan" WHERE "userId" = ? ORDER BY "createdAt" DESC`,
-      req.user!.id
-    );
+    const plans = await db.mealPlan.findMany({
+      where:   { userId: req.user!.id },
+      orderBy: { createdAt: "desc" },
+    });
     res.json({ plans });
   } catch (error) {
     next(error);
@@ -77,29 +66,25 @@ export const createPlan = async (
       return next(createError("name and weekStart are required", 400));
     }
 
-    const now = new Date().toISOString();
+    // Create plan with 7 pre-built day slots in a single transaction
+    const plan = await db.mealPlan.create({
+      data: {
+        userId:    req.user!.id,
+        name,
+        weekStart,
+        days: {
+          create: Array.from({ length: 7 }, (_, i) => ({ dayIndex: i })),
+        },
+      },
+      include: {
+        days: {
+          orderBy: { dayIndex: "asc" },
+          include: { entries: true },
+        },
+      },
+    });
 
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO "MealPlan" ("userId","name","weekStart","createdAt","updatedAt") VALUES (?,?,?,?,?)`,
-      req.user!.id, name, weekStart, now, now
-    );
-
-    const newPlans = await prisma.$queryRawUnsafe<Row[]>(
-      `SELECT * FROM "MealPlan" WHERE "userId" = ? ORDER BY "id" DESC LIMIT 1`,
-      req.user!.id
-    );
-    const plan = newPlans[0];
-
-    // Pre-create 7 day slots
-    for (let i = 0; i < 7; i++) {
-      await prisma.$executeRawUnsafe(
-        `INSERT INTO "MealPlanDay" ("planId","dayIndex","createdAt") VALUES (?,?,?)`,
-        plan.id, i, now
-      );
-    }
-
-    const full = await loadPlan(plan.id, req.user!.id);
-    res.status(201).json({ plan: full });
+    res.status(201).json({ plan });
   } catch (error) {
     next(error);
   }
@@ -115,25 +100,13 @@ export const updatePlan = async (
     const id = Number(req.params.id);
     const { name, weekStart } = req.body;
 
-    const existing = await prisma.$queryRawUnsafe<Row[]>(
-      `SELECT "id" FROM "MealPlan" WHERE "id" = ? AND "userId" = ?`,
-      id, req.user!.id
-    );
-    if (!existing.length) return next(createError("Meal plan not found", 404));
+    const existing = await db.mealPlan.findFirst({ where: { id, userId: req.user!.id } });
+    if (!existing) return next(createError("Meal plan not found", 404));
 
-    const now = new Date().toISOString();
-    if (name !== undefined) {
-      await prisma.$executeRawUnsafe(
-        `UPDATE "MealPlan" SET "name" = ?, "updatedAt" = ? WHERE "id" = ?`,
-        name, now, id
-      );
-    }
-    if (weekStart !== undefined) {
-      await prisma.$executeRawUnsafe(
-        `UPDATE "MealPlan" SET "weekStart" = ?, "updatedAt" = ? WHERE "id" = ?`,
-        weekStart, now, id
-      );
-    }
+    await db.mealPlan.update({
+      where: { id },
+      data:  { ...(name !== undefined && { name }), ...(weekStart !== undefined && { weekStart }) },
+    });
 
     const full = await loadPlan(id, req.user!.id);
     res.json({ plan: full });
@@ -150,22 +123,11 @@ export const deletePlan = async (
 ): Promise<void> => {
   try {
     const id = Number(req.params.id);
-    const existing = await prisma.$queryRawUnsafe<Row[]>(
-      `SELECT "id" FROM "MealPlan" WHERE "id" = ? AND "userId" = ?`,
-      id, req.user!.id
-    );
-    if (!existing.length) return next(createError("Meal plan not found", 404));
+    const existing = await db.mealPlan.findFirst({ where: { id, userId: req.user!.id } });
+    if (!existing) return next(createError("Meal plan not found", 404));
 
-    // Cascade: entries → days → plan
-    const days = await prisma.$queryRawUnsafe<Row[]>(
-      `SELECT "id" FROM "MealPlanDay" WHERE "planId" = ?`, id
-    );
-    for (const day of days) {
-      await prisma.$executeRawUnsafe(`DELETE FROM "MealPlanEntry" WHERE "dayId" = ?`, day.id);
-    }
-    await prisma.$executeRawUnsafe(`DELETE FROM "MealPlanDay" WHERE "planId" = ?`, id);
-    await prisma.$executeRawUnsafe(`DELETE FROM "MealPlan" WHERE "id" = ?`, id);
-
+    // Prisma cascade handles MealPlanDay → MealPlanEntry via schema relations
+    await db.mealPlan.delete({ where: { id } });
     res.json({ message: "Deleted" });
   } catch (error) {
     next(error);
@@ -183,45 +145,40 @@ export const addEntry = async (
     const dayId  = Number(req.params.dayId);
 
     // Verify ownership
-    const plan = await prisma.$queryRawUnsafe<Row[]>(
-      `SELECT "id" FROM "MealPlan" WHERE "id" = ? AND "userId" = ?`,
-      planId, req.user!.id
-    );
-    if (!plan.length) return next(createError("Meal plan not found", 404));
+    const plan = await db.mealPlan.findFirst({ where: { id: planId, userId: req.user!.id } });
+    if (!plan) return next(createError("Meal plan not found", 404));
 
-    const day = await prisma.$queryRawUnsafe<Row[]>(
-      `SELECT "id" FROM "MealPlanDay" WHERE "id" = ? AND "planId" = ?`,
-      dayId, planId
-    );
-    if (!day.length) return next(createError("Day not found", 404));
+    const day = await db.mealPlanDay.findFirst({ where: { id: dayId, planId } });
+    if (!day) return next(createError("Day not found", 404));
 
     const { meal, foodName, calories, protein = 0, carbs = 0, fats = 0, quantity = 1, unit = "serving" } = req.body;
     if (!meal || !foodName || calories == null) {
       return next(createError("meal, foodName, and calories are required", 400));
     }
 
-    // Get current max order for this day+meal
-    const maxRows = await prisma.$queryRawUnsafe<Row[]>(
-      `SELECT MAX("order") as maxOrd FROM "MealPlanEntry" WHERE "dayId" = ? AND "meal" = ?`,
-      dayId, meal
-    );
-    const nextOrder = ((maxRows[0]?.maxOrd as number | null) ?? -1) + 1;
+    // Compute next order value for this day+meal
+    const agg = await db.mealPlanEntry.aggregate({
+      where:  { dayId, meal },
+      _max:   { order: true },
+    });
+    const nextOrder = ((agg._max?.order as number | null) ?? -1) + 1;
 
-    const now = new Date().toISOString();
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO "MealPlanEntry" ("dayId","meal","foodName","calories","protein","carbs","fats","quantity","unit","order","createdAt")
-       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-      dayId, meal, foodName,
-      Number(calories), Number(protein), Number(carbs), Number(fats),
-      Number(quantity), unit, nextOrder, now
-    );
+    const entry = await db.mealPlanEntry.create({
+      data: {
+        dayId,
+        meal,
+        foodName,
+        calories: Number(calories),
+        protein:  Number(protein),
+        carbs:    Number(carbs),
+        fats:     Number(fats),
+        quantity: Number(quantity),
+        unit,
+        order: nextOrder,
+      },
+    });
 
-    const entry = await prisma.$queryRawUnsafe<Row[]>(
-      `SELECT * FROM "MealPlanEntry" WHERE "dayId" = ? AND "meal" = ? ORDER BY "id" DESC LIMIT 1`,
-      dayId, meal
-    );
-
-    res.status(201).json({ entry: entry[0] });
+    res.status(201).json({ entry });
   } catch (error) {
     next(error);
   }
@@ -237,14 +194,10 @@ export const deleteEntry = async (
     const planId  = Number(req.params.id);
     const entryId = Number(req.params.entryId);
 
-    // Verify ownership via plan
-    const plan = await prisma.$queryRawUnsafe<Row[]>(
-      `SELECT "id" FROM "MealPlan" WHERE "id" = ? AND "userId" = ?`,
-      planId, req.user!.id
-    );
-    if (!plan.length) return next(createError("Meal plan not found", 404));
+    const plan = await db.mealPlan.findFirst({ where: { id: planId, userId: req.user!.id } });
+    if (!plan) return next(createError("Meal plan not found", 404));
 
-    await prisma.$executeRawUnsafe(`DELETE FROM "MealPlanEntry" WHERE "id" = ?`, entryId);
+    await db.mealPlanEntry.delete({ where: { id: entryId } });
     res.json({ message: "Deleted" });
   } catch (error) {
     next(error);
@@ -261,16 +214,13 @@ export const updateDayNotes = async (
     const planId = Number(req.params.id);
     const dayId  = Number(req.params.dayId);
 
-    const plan = await prisma.$queryRawUnsafe<Row[]>(
-      `SELECT "id" FROM "MealPlan" WHERE "id" = ? AND "userId" = ?`,
-      planId, req.user!.id
-    );
-    if (!plan.length) return next(createError("Meal plan not found", 404));
+    const plan = await db.mealPlan.findFirst({ where: { id: planId, userId: req.user!.id } });
+    if (!plan) return next(createError("Meal plan not found", 404));
 
-    await prisma.$executeRawUnsafe(
-      `UPDATE "MealPlanDay" SET "notes" = ? WHERE "id" = ?`,
-      req.body.notes ?? null, dayId
-    );
+    await db.mealPlanDay.update({
+      where: { id: dayId },
+      data:  { notes: req.body.notes ?? null },
+    });
 
     res.json({ message: "Updated" });
   } catch (error) {
