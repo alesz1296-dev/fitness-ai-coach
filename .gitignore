@@ -1,7 +1,17 @@
 node_modules/
 dist/
 logs/*.log
+
+# ── Environment / secrets — NEVER commit these ──────────────────────────────
 .env
+.env.*
+.env.productio
+.env.production.local
+!.env.example
+
+# ── Local dev databases ──────────────────────────────────────────────────────
 dev.db
 dev.db-journal
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
 *.backup

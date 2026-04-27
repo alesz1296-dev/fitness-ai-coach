@@ -175,6 +175,58 @@ Notable field names (easy to get wrong):
 
 ## Known Issues & TODO
 
+### 🔴 Pre-production audit — findings (2026-04-26)
+
+Full codebase audit run before production hardening. Fix in order of priority.
+
+#### 🔴 Critical — fix before any public traffic
+
+| # | Item | File | Fix |
+|---|------|------|-----|
+| A | Hardcoded secret fallbacks | `src/controllers/authController.ts` L11+13 | Remove `\|\| "secret-key"` and `\|\| "refresh-secret-key"` — Zod env validation will catch missing vars at startup |
+| B | CORS wildcard fallback | `src/server.ts` | Replace `CLIENT_URL \|\| "*"` with explicit allowed-origins array; no wildcard fallback |
+| C | JSON body limit 10mb | `src/server.ts` | Change to `100kb`; 10mb is a DoS vector |
+| D | Shallow health check | `src/server.ts` `/api/health` | Add `prisma.$queryRaw\`SELECT 1\`` + `redis.ping()` with 2s timeout; return 503 on failure |
+| E | Stale duplicate file | `src/controllers/authController_clean.ts` | Delete — 180-line duplicate with same insecure fallbacks |
+
+#### 🟠 High — before first real users
+
+| # | Item | Fix |
+|---|------|-----|
+| F | No forgot password / reset | Add `POST /auth/forgot-password` + `POST /auth/reset-password/:token` |
+| G | No email verification | Accounts active immediately; blocks safe password reset |
+| H | No request timeout | Add middleware that sends 503 after 30s — OpenAI calls can hang indefinitely |
+| I | 4 controllers bypass Zod | `mealPlanController`, `reportController`, `templateController`, `workoutController` read `req.body` directly |
+| J | 36 `any` types in backend | Run `tsc --strict` pass to eliminate |
+
+#### 🟡 Medium — polished product
+
+| # | Item | Fix |
+|---|------|-----|
+| K | No pagination | `goalController`, `mealPlanController`, `foodController`, `calendarController` — add `take`/`skip`, default 50 |
+| L | No optimistic UI | Common actions (toggle rest day, tick set) should update instantly and roll back on error |
+| M | Incomplete empty states | Nutrition, Reports, Weight, MealPlanner, Chat have no first-user empty state |
+| N | No offline detection | `navigator.onLine` listener + dismissible banner when API unreachable |
+| O | Weak password policy | Only `min(8)` — add complexity requirement |
+| P | No session expiry UX | Axios interceptor should catch 401, attempt refresh, redirect to `/login` with toast on failure |
+
+#### 🔵 Lower priority
+
+| # | Item |
+|---|------|
+| Q | No account data export (`GET /users/export`) |
+| R | Redis search cache not wired (10-min TTL for food/exercise results) |
+| S | No streaming chat responses (SSE would cut perceived latency from 3–8s to instant) |
+| T | No "remember me" on login |
+
+### ✅ Security incident — resolved (2026-04-26)
+
+- `.env.production` and `.env.production.local` were committed with `POSTGRES_PASSWORD` in plaintext. Detected by GitGuardian.
+- Both files purged from all 28 commits via `git filter-repo --invert-paths --force`. History force-pushed.
+- `.gitignore` updated: `.env.*` blanket-ignored; only `!.env.example` allowed.
+- **Pending user action**: Rotate `POSTGRES_PASSWORD` on actual Postgres instance + update local `.env`.
+- **Pending user action**: Mark incident as Remediated on GitGuardian dashboard.
+
 ### 🔴 Active bugs / gaps
 
 - _(All Phase 3 items resolved in Session 8 — see LOG.md)_

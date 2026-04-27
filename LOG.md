@@ -4,6 +4,76 @@ Most recent session first.
 
 ---
 
+## 2026-04-26 — Session: Security incident + pre-production audit
+
+### GitGuardian incident — POSTGRES_PASSWORD exposed in git history
+
+**What happened**: `.env.production` and `.env.production.local` were committed in `e0c63f8` with `POSTGRES_PASSWORD=Spsc1296!postgres` in plaintext. GitGuardian detected and emailed.
+
+**What was NOT exposed** (confirmed via full history scan):
+- `.env` was never committed — real `OPENAI_API_KEY`, `JWT_SECRET`, `REFRESH_SECRET` were safe on disk only
+- `mobile/.env` was never committed
+- The `sk-proj-...your-key-here...` in `.env.example` history was a placeholder, not the real key
+
+**Remediation steps taken:**
+1. Scrubbed both files — replaced real password with `CHANGE_ME` placeholders
+2. Ran `git rm --cached .env.production .env.production.local` to untrack both files
+3. Updated `.gitignore` — added `.env.*` blanket pattern (only `!.env.example` allowed through)
+4. Ran `py -m git_filter_repo --path .env.production --invert-paths --force` × 2 to purge both files from all 28 commits in history
+5. Force-pushed cleaned history to GitHub (`git push origin --force --all`)
+6. **Action required by user**: Rotate `POSTGRES_PASSWORD` on the actual Postgres instance + update local `.env`
+7. **Action required by user**: Mark incident as Remediated on GitGuardian dashboard
+
+### Pre-production security & UX audit
+
+Full codebase audit completed. Findings documented in CONTEXT.md under "Pre-production audit". Key findings:
+
+**🔴 Critical (5 items — fix before any public traffic):**
+- Hardcoded JWT/REFRESH_SECRET fallbacks in `authController.ts` (`|| "secret-key"`)
+- CORS wildcard fallback (`CLIENT_URL || "*"`)
+- JSON body limit `10mb` → should be `100kb`
+- Health check doesn't probe DB or Redis
+- Stale `authController_clean.ts` duplicate file (delete it)
+
+**🟠 High (5 items — before first real users):**
+- No forgot password / reset flow
+- No email verification
+- No request timeout middleware (OpenAI calls can hang indefinitely)
+- 4 controllers bypass Zod (`mealPlanController`, `reportController`, `templateController`, `workoutController`)
+- 36 `any` types in backend TypeScript
+
+**🟡 Medium (6 items — polished product):**
+- No pagination on `goalController`, `mealPlanController`, `foodController`, `calendarController`
+- No optimistic UI updates
+- Empty states missing on Nutrition, Reports, Weight, MealPlanner, Chat
+- No offline/network error detection
+- Password strength only `min(8)` — no complexity
+- No session expiry UX (Axios interceptor doesn't redirect on 401)
+
+**🔵 Lower priority (4 items):**
+- No account data export endpoint
+- Redis search cache not wired
+- No streaming chat responses (SSE)
+- No "remember me" on login
+
+### Production roadmap formalised
+
+CONTEXT.md Phase 4/5 section rewritten. Full 9-item sequence to production:
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | PostgreSQL migration | ✅ Done |
+| 2 | Docker Compose | ✅ Done |
+| 3 | Env validation with Zod | ⏳ Next session |
+| 4 | Backend tests (Vitest) | ⏳ Pending |
+| 5 | GitHub Actions CI | ⏳ Pending |
+| 6 | Redis (core ✅ / query cache ⏳) | Partial |
+| 7 | CD pipeline | ⏳ Pending |
+| 8 | Deployment (VPS + EAS mobile) | ⏳ Pending |
+| 9 | Monitoring & Logging (pino + Sentry) | ⏳ Pending |
+
+---
+
 ## 2026-04-26 — Session: MacroRing goal-progress fix + Docker prep
 
 ### #59 — MacroRing: arc now tracks goal progress (not macro distribution)
