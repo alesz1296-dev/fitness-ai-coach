@@ -32,6 +32,7 @@ export const getPlans = async (
     const plans = await db.mealPlan.findMany({
       where:   { userId: req.user!.id },
       orderBy: { createdAt: "desc" },
+      take:    50, // safety cap — pull the 50 most recent plans
     });
     res.json({ plans });
   } catch (error) {

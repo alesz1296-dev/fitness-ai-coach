@@ -7,6 +7,7 @@ import {
   updateProfile,
   changePassword,
   deleteAccount,
+  exportData,
 } from "../controllers/userController.js";
 
 const router = Router();
@@ -22,6 +23,9 @@ router.put("/profile", validate(updateProfileSchema), updateProfile);
 
 // PUT  /api/users/password
 router.put("/password", validate(changePasswordSchema), changePassword);
+
+// GET /api/users/export — full data export (JSON download)
+router.get("/export", exportData);
 
 // DELETE /api/users/account
 router.delete("/account", deleteAccount);

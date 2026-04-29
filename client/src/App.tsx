@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import { ProtectedRoute } from "./components/layout/ProtectedRoute";
 import { ErrorBoundary } from "./components/layout/ErrorBoundary";
+import { OfflineBanner } from "./components/OfflineBanner";
+import { InstallPrompt } from "./components/InstallPrompt";
 
 // Auth
 import Login    from "./pages/auth/Login";
@@ -21,6 +23,8 @@ import MealPlannerPage from "./pages/mealplanner/MealPlannerPage";
 export default function App() {
   return (
     <BrowserRouter>
+      <OfflineBanner />
+      <InstallPrompt />
       <Routes>
         {/* Public */}
         <Route path="/login"    element={<Login />} />

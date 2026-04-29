@@ -28,7 +28,10 @@ export const registerSchema = z.object({
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")
-    .max(128),
+    .max(128)
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
   firstName: optionalString,
   lastName: optionalString,
 });
@@ -392,6 +395,15 @@ export const updateDaySchema = z.object({
   workoutId: z.coerce.number().int().positive().nullable().optional(),
 });
 
+// ── Workouts — start from template ───────────────────────────────────────────
+
+export const startFromTemplateSchema = z.object({
+  // Optional date the workout is being started (defaults to now in controller)
+  date: dateString.optional(),
+  // Optional custom name override (controller builds a default from template label + date)
+  name: z.string().trim().min(1).max(200).optional(),
+});
+
 // ── Workouts — add exercise to existing workout ───────────────────────────────
 
 export const addExerciseToWorkoutSchema = z.object({
@@ -517,4 +529,25 @@ export const addMealPlanEntrySchema = z.object({
 
 export const updateMealPlanDayNotesSchema = z.object({
   notes: z.string().trim().max(2000).optional(),
+});
+
+// ── Auth — password reset + email verification ────────────────────────────────
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email format"),
+});
+
+export const resetPasswordSchema = z.object({
+  token:    z.string().min(1, "Reset token is required"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128)
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+});
+
+export const verifyEmailSchema = z.object({
+  token: z.string().min(1, "Verification token is required"),
 });

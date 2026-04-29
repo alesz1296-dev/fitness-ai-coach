@@ -183,11 +183,11 @@ Full codebase audit run before production hardening. Fix in order of priority.
 
 | # | Item | File | Fix |
 |---|------|------|-----|
-| A | Hardcoded secret fallbacks | `src/controllers/authController.ts` L11+13 | Remove `\|\| "secret-key"` and `\|\| "refresh-secret-key"` — Zod env validation will catch missing vars at startup |
-| B | CORS wildcard fallback | `src/server.ts` | Replace `CLIENT_URL \|\| "*"` with explicit allowed-origins array; no wildcard fallback |
-| C | JSON body limit 10mb | `src/server.ts` | Change to `100kb`; 10mb is a DoS vector |
-| D | Shallow health check | `src/server.ts` `/api/health` | Add `prisma.$queryRaw\`SELECT 1\`` + `redis.ping()` with 2s timeout; return 503 on failure |
-| E | Stale duplicate file | `src/controllers/authController_clean.ts` | Delete — 180-line duplicate with same insecure fallbacks |
+| ~~A~~ | ~~Hardcoded secret fallbacks~~ | ✅ Fixed | `env.ts` Zod schema; `authController.ts` + `auth.ts` import from `env` — no fallbacks |
+| ~~B~~ | ~~CORS wildcard fallback~~ | ✅ Fixed | Explicit origin callback in `server.ts`; dev localhost list when `CLIENT_URL` unset |
+| ~~C~~ | ~~JSON body limit 10mb~~ | ✅ Fixed | `100kb` for both `json` and `urlencoded` |
+| ~~D~~ | ~~Shallow health check~~ | ✅ Fixed | Deep probe: Postgres `SELECT 1` + Redis `ping()` with 2s timeout; 503 on failure |
+| E | Stale duplicate file | ⚠️ Pending manual delete | `Remove-Item src\controllers\authController_clean.ts` — sandbox cannot delete files |
 
 #### 🟠 High — before first real users
 

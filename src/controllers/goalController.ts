@@ -12,8 +12,9 @@ export const getGoals = async (
 ): Promise<void> => {
   try {
     const goals = await prisma.goal.findMany({
-      where: { userId: req.user!.id },
+      where:   { userId: req.user!.id },
       orderBy: { createdAt: "desc" },
+      take:    50, // safety cap — users rarely have more than 50 goals
     });
     res.json({ goals });
   } catch (error) {

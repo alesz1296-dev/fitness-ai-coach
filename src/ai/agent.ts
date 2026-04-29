@@ -1,7 +1,52 @@
 import OpenAI from "openai";
+import { Prisma } from "@prisma/client";
 import { AgentType, buildSystemPrompt, UserContext } from "./prompts.js";
 import prisma from "../lib/prisma.js";
 import logger from "../lib/logger.js";
+
+// ── Typed argument interfaces for tool handlers ────────────────────────────────
+
+interface DaysArgs       { days?: number }
+interface WeeksArgs      { weeks?: number }
+interface LimitArgs      { limit?: number }
+interface ExerciseArgs   { exerciseName?: string }
+
+interface LogFoodArgs {
+  foodName: string;
+  calories: number;
+  protein?: number;
+  carbs?: number;
+  fats?: number;
+  quantity?: number;
+  unit?: string;
+  meal?: string;
+  date?: string;
+}
+
+interface TemplateExerciseArg {
+  exerciseName: string;
+  sets: number;
+  reps: string;
+  restSeconds?: number;
+  notes?: string;
+  order?: number;
+}
+
+interface SaveTemplateArgs {
+  name: string;
+  description?: string;
+  splitType?: string;
+  objective?: string;
+  dayLabel?: string;
+  muscleGroups?: string[];
+  exercises: TemplateExerciseArg[];
+}
+
+// Typed accumulator for daily food totals
+interface MacroTotals { calories: number; protein: number; carbs: number; fats: number }
+
+// Structured error type for upstream HTTP status propagation
+interface AppError extends Error { statusCode: number; userFacing: boolean }
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -457,7 +502,7 @@ async function handleGetUserGoals(userId: number): Promise<string> {
 
 async function handleGetRecentWorkouts(
   userId: number,
-  args: any,
+  args: DaysArgs,
 ): Promise<string> {
   const days = Math.min(Number(args.days) || 7, 90);
   const since = new Date();
@@ -493,7 +538,7 @@ async function handleGetRecentWorkouts(
 
 async function handleGetNutritionSummary(
   userId: number,
-  args: any,
+  args: DaysArgs,
 ): Promise<string> {
   const days = Math.min(Number(args.days) || 7, 90);
   const since = new Date();
@@ -558,7 +603,7 @@ async function handleGetNutritionSummary(
 
 async function handleGetWeightTrend(
   userId: number,
-  args: any,
+  args: WeeksArgs,
 ): Promise<string> {
   const weeks = Math.min(Number(args.weeks) || 4, 24);
   const since = new Date();
@@ -623,9 +668,9 @@ async function handleGetActiveCalorieGoal(userId: number): Promise<string> {
   );
 }
 
-async function handleGetMealPlans(userId: number, args: any): Promise<string> {
+async function handleGetMealPlans(userId: number, args: LimitArgs): Promise<string> {
   const limit = Math.min(Number(args.limit) || 3, 10);
-  const plans = await (prisma as any).mealPlan.findMany({
+  const plans = await prisma.mealPlan.findMany({
     where: { userId },
     include: {
       days: {
@@ -639,13 +684,13 @@ async function handleGetMealPlans(userId: number, args: any): Promise<string> {
 
   if (plans.length === 0) return "The user has no Meal Planner plans saved.";
 
-  const planLines = plans.map((p: any) => {
+  const planLines = plans.map((p) => {
     const days = p.days
-      .map((d: any) => {
+      .map((d) => {
         const entries = d.entries
           .map(
-            (e: any) =>
-              `${e.meal}: ${e.foodName} (${Math.round(e.calories)} kcal, P${Math.round(e.protein)} C${Math.round(e.carbs)} F${Math.round(e.fats)})`,
+            (e) =>
+              `${e.meal}: ${e.foodName} (${Math.round(e.calories)} kcal, P${Math.round(e.protein ?? 0)} C${Math.round(e.carbs ?? 0)} F${Math.round(e.fats ?? 0)})`,
           )
           .join("; ");
         return `  Day ${d.dayIndex} (dayId ${d.id}): ${entries || "empty"}`;
@@ -680,9 +725,9 @@ async function handleGetWorkoutTemplates(userId: number): Promise<string> {
 
 async function handleGetPersonalRecords(
   userId: number,
-  args: any,
+  args: ExerciseArgs,
 ): Promise<string> {
-  const where: any = {
+  const where: Prisma.WorkoutExerciseWhereInput = {
     workout: { userId },
     weight: { not: null },
   };
@@ -711,7 +756,7 @@ async function handleGetPersonalRecords(
 
 // ── WRITE TOOL HANDLERS ──────────────────────────────────────────────────────
 
-async function handleLogFood(userId: number, args: any): Promise<string> {
+async function handleLogFood(userId: number, args: LogFoodArgs): Promise<string> {
   const {
     foodName,
     calories,
@@ -733,7 +778,7 @@ async function handleLogFood(userId: number, args: any): Promise<string> {
   // Normalize to midnight UTC to match how other food logs are stored
   targetDate.setUTCHours(0, 0, 0, 0);
 
-  const log = await (prisma.foodLog as any).create({
+  await prisma.foodLog.create({
     data: {
       userId,
       foodName,
@@ -755,13 +800,13 @@ async function handleLogFood(userId: number, args: any): Promise<string> {
   const endOfDay = new Date(targetDate);
   endOfDay.setUTCHours(23, 59, 59, 999);
 
-  const dayLogs = await (prisma.foodLog as any).findMany({
+  const dayLogs = await prisma.foodLog.findMany({
     where: { userId, date: { gte: startOfDay, lte: endOfDay } },
     select: { calories: true, protein: true, carbs: true, fats: true },
   });
 
-  const totals = dayLogs.reduce(
-    (acc: any, l: any) => ({
+  const totals = dayLogs.reduce<MacroTotals>(
+    (acc, l) => ({
       calories: acc.calories + l.calories,
       protein: acc.protein + (l.protein ?? 0),
       carbs: acc.carbs + (l.carbs ?? 0),
@@ -782,7 +827,7 @@ async function handleLogFood(userId: number, args: any): Promise<string> {
 
 async function handleSaveWorkoutTemplate(
   userId: number,
-  args: any,
+  args: SaveTemplateArgs,
 ): Promise<string> {
   const {
     name,
@@ -817,7 +862,7 @@ async function handleSaveWorkoutTemplate(
       ),
       aiGenerated: true,
       exercises: {
-        create: exercises.map((ex: any, i: number) => ({
+        create: exercises.map((ex: TemplateExerciseArg, i: number) => ({
           exerciseName: ex.exerciseName,
           sets: Number(ex.sets),
           reps: String(ex.reps),
@@ -855,7 +900,7 @@ async function handleSaveWorkoutTemplate(
 
 async function dispatchTool(
   name: string,
-  args: any,
+  args: Record<string, unknown>,
   userId: number,
 ): Promise<string> {
   logger.debug(`Tool call: ${name}(${JSON.stringify(args)})`);
@@ -917,8 +962,8 @@ function classifyOpenAIError(error: unknown): string {
 
   if (error instanceof OpenAI.APIError) {
     const status = error.status;
-    const code = (error as any).code as string | undefined;
-    const type = (error as any).type as string | undefined;
+    const code = error.code as string | undefined;
+    const type = error.type as string | undefined;
 
     if (status === 429) {
       return "The AI service is temporarily rate-limited. Please wait a moment and try again.";
@@ -1001,10 +1046,10 @@ export const chat = async (
         error,
       );
       // Throw a structured error the chatController can catch and return as HTTP 502
-      const apiError = new Error(userFacingMsg) as any;
-      apiError.statusCode =
-        error instanceof OpenAI.APIError && error.status === 429 ? 429 : 502;
-      apiError.userFacing = true;
+      const apiError = Object.assign(new Error(userFacingMsg), {
+        statusCode: error instanceof OpenAI.APIError && error.status === 429 ? 429 : 502,
+        userFacing: true,
+      }) as AppError;
       throw apiError;
     }
 

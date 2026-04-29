@@ -6,6 +6,7 @@ import {
   updateWorkoutSchema,
   updateExerciseEntrySchema,
   addExerciseToWorkoutSchema,
+  startFromTemplateSchema,
 } from "../middleware/schemas.js";
 import {
   getWorkouts,
@@ -47,7 +48,7 @@ router.delete(
 );
 
 // POST   /api/workouts/start-from-template/:templateId
-router.post("/start-from-template/:templateId", validateIdParam("templateId"), startFromTemplate);
+router.post("/start-from-template/:templateId", validateIdParam("templateId"), validate(startFromTemplateSchema), startFromTemplate);
 
 // ── Workout CRUD ──────────────────────────────────────────────────────────────
 // GET  /api/workouts

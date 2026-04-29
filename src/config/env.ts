@@ -1,33 +1,42 @@
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
+import { z } from "zod";
 
 dotenv.config();
 
-const requiredEnvVars = [
-  'NODE_ENV',
-  'PORT',
-  'DATABASE_URL',
-  'JWT_SECRET',
-  'OPENAI_API_KEY',
-];
+const envSchema = z.object({
+  NODE_ENV:             z.enum(["development", "production", "test"]).default("development"),
+  PORT:                 z.coerce.number().default(3000),
+  DATABASE_URL:         z.string().min(1, "DATABASE_URL is required"),
+  JWT_SECRET:           z.string().min(32, "JWT_SECRET must be at least 32 characters"),
+  JWT_EXPIRY:           z.string().default("15m"),
+  REFRESH_SECRET:       z.string().min(32, "REFRESH_SECRET must be at least 32 characters"),
+  REFRESH_EXPIRY_DAYS:  z.coerce.number().default(30),
+  OPENAI_API_KEY:       z.string().min(1, "OPENAI_API_KEY is required"),
+  REDIS_URL:            z.string().optional(),
+  CLIENT_URL:           z.string().url().optional(),
+  APP_NAME:             z.string().default("FitAI Coach"),
+  APP_VERSION:          z.string().default("1.0.0"),
+  POSTGRES_USER:        z.string().optional(),
+  POSTGRES_PASSWORD:    z.string().optional(),
+  POSTGRES_DB:          z.string().optional(),
+  SEED_DB:              z.string().optional(),
+  // Email / SMTP — all optional; if SMTP_HOST is absent, emails log to stdout
+  SMTP_HOST:    z.string().optional(),
+  SMTP_PORT:    z.coerce.number().default(587),
+  SMTP_SECURE:  z.string().default("false").transform((v) => v === "true"),
+  SMTP_USER:    z.string().optional(),
+  SMTP_PASS:    z.string().optional(),
+  SMTP_FROM:    z.string().optional(),
+});
 
-const missingEnvVars = requiredEnvVars.filter(
-  (envVar) => !process.env[envVar]
-);
+const parsed = envSchema.safeParse(process.env);
 
-if (missingEnvVars.length > 0) {
-  throw new Error(
-    `Missing required environment variables: ${missingEnvVars.join(', ')}`
-  );
+if (!parsed.success) {
+  console.error("\u274c  Invalid environment variables \u2014 fix before starting:\n");
+  parsed.error.issues.forEach((issue) => {
+    console.error(`   ${issue.path.join(".")}: ${issue.message}`);
+  });
+  process.exit(1);
 }
 
-export const config = {
-  NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: parseInt(process.env.PORT || '3000', 10),
-  DATABASE_URL: process.env.DATABASE_URL,
-  JWT_SECRET: process.env.JWT_SECRET,
-  JWT_EXPIRY: process.env.JWT_EXPIRY || '7d',
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-  REDIS_URL: process.env.REDIS_URL || null,
-  APP_NAME: process.env.APP_NAME || 'FitAI Coach',
-  APP_VERSION: process.env.APP_VERSION || '1.0.0',
-};
+export const env = parsed.data;

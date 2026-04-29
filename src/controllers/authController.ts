@@ -6,12 +6,15 @@ import prisma from "../lib/prisma.js";
 import { createError } from "../middleware/errorHandler.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { blockToken, isBlocked } from "../lib/tokenBlocklist.js";
+import { storeToken, consumeToken } from "../lib/tokenStore.js";
+import { sendPasswordResetEmail, sendEmailVerificationEmail } from "../lib/email.js";
 import logger from "../lib/logger.js";
+import { env } from "../config/env.js";
 
-const JWT_SECRET          = process.env.JWT_SECRET    || "secret-key";
-const JWT_EXPIRY          = process.env.JWT_EXPIRY     || "15m";
-const REFRESH_SECRET      = process.env.REFRESH_SECRET || "refresh-secret-key";
-const REFRESH_EXPIRY_DAYS = Number(process.env.REFRESH_EXPIRY_DAYS) || 30;
+const JWT_SECRET          = env.JWT_SECRET;
+const JWT_EXPIRY          = env.JWT_EXPIRY;
+const REFRESH_SECRET      = env.REFRESH_SECRET;
+const REFRESH_EXPIRY_DAYS = env.REFRESH_EXPIRY_DAYS;
 const REFRESH_EXPIRY_MS   = REFRESH_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
 
 // ── Token helpers ──────────────────────────────────────────────────────────────
@@ -22,16 +25,17 @@ function signAccessToken(userId: number, email: string): string {
   } as jwt.SignOptions);
 }
 
-function signRefreshToken(userId: number, email: string): string {
-  // jti (JWT ID) is a unique random ID per token — used for revocation
+function signRefreshToken(userId: number, email: string, rememberMe = true): string {
   const jti = crypto.randomBytes(16).toString("hex");
+  // rememberMe=true → 30 days; rememberMe=false → 24 hours (shared/public device)
+  const expiry = rememberMe ? `${REFRESH_EXPIRY_DAYS}d` : "24h";
   return jwt.sign({ id: userId, email, type: "refresh", jti }, REFRESH_SECRET, {
-    expiresIn: `${REFRESH_EXPIRY_DAYS}d`,
+    expiresIn: expiry,
   } as jwt.SignOptions);
 }
 
 function verifyRefreshToken(token: string): { id: number; email: string; jti: string; exp: number } {
-  const payload = jwt.verify(token, REFRESH_SECRET) as any;
+  const payload = jwt.verify(token, REFRESH_SECRET) as { id: number; email: string; type: string; jti: string; exp: number };
   if (payload.type !== "refresh") throw new Error("Invalid token type");
   if (!payload.jti)               throw new Error("Token missing JTI");
   return { id: payload.id, email: payload.email, jti: payload.jti, exp: payload.exp };
@@ -58,12 +62,18 @@ export const register = async (
     const accessToken  = signAccessToken(user.id, user.email);
     const refreshToken = signRefreshToken(user.id, user.email);
 
+    // Fire-and-forget — don't block registration if email fails
+    const verifyToken = crypto.randomBytes(32).toString("hex");
+    storeToken(`verify:${verifyToken}`, String(user.id), 24 * 60 * 60)
+      .then(() => sendEmailVerificationEmail(user.email, user.username, verifyToken))
+      .catch((err: Error) => logger.warn(`Failed to send verification email: ${err.message}`));
+
     logger.info(`New user registered: ${username} (${email})`);
     res.status(201).json({
-      message: "Registration successful",
+      message: "Registration successful. Check your email to verify your account.",
       accessToken,
       refreshToken,
-      user: { id: user.id, email: user.email, username: user.username, firstName: user.firstName, lastName: user.lastName },
+      user: { id: user.id, email: user.email, username: user.username, firstName: user.firstName, lastName: user.lastName, emailVerified: false },
     });
   } catch (error) { next(error); }
 };
@@ -74,7 +84,7 @@ export const login = async (
   req: Request, res: Response, next: NextFunction
 ): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe = true } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return next(createError("Invalid credentials", 401));
@@ -83,7 +93,7 @@ export const login = async (
     if (!passwordMatch) return next(createError("Invalid credentials", 401));
 
     const accessToken  = signAccessToken(user.id, user.email);
-    const refreshToken = signRefreshToken(user.id, user.email);
+    const refreshToken = signRefreshToken(user.id, user.email, Boolean(rememberMe));
 
     logger.info(`User logged in: ${user.username}`);
     res.json({
@@ -112,14 +122,12 @@ export const refresh = async (
       return next(createError("Invalid or expired refresh token — please log in again", 401));
     }
 
-    // Check revocation blocklist
     if (await isBlocked(payload.jti))
       return next(createError("Refresh token has been revoked — please log in again", 401));
 
     const user = await prisma.user.findUnique({ where: { id: payload.id } });
     if (!user) return next(createError("User not found", 404));
 
-    // Revoke the used token (rotation — prevents reuse)
     const remainingMs = (payload.exp * 1000) - Date.now();
     if (remainingMs > 0) await blockToken(payload.jti, remainingMs);
 
@@ -139,7 +147,6 @@ export const logout = async (
   try {
     const { refreshToken } = req.body;
 
-    // Revoke the submitted refresh token immediately
     if (refreshToken && typeof refreshToken === "string") {
       try {
         const payload = verifyRefreshToken(refreshToken);
@@ -171,10 +178,97 @@ export const getMe = async (
         fitnessLevel: true, goal: true,
         profileComplete: true, proteinMultiplier: true,
         trainingDaysPerWeek: true, trainingHoursPerDay: true,
+        // @ts-expect-error — run 'npx prisma generate' after adding emailVerified to schema
+        emailVerified: true,
         createdAt: true,
       },
     });
     if (!user) return next(createError("User not found", 404));
     res.json({ user });
+  } catch (error) { next(error); }
+};
+
+// ── Forgot Password ────────────────────────────────────────────────────────────
+
+export const forgotPassword = async (
+  req: Request, res: Response, next: NextFunction
+): Promise<void> => {
+  try {
+    const { email } = req.body as { email: string };
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (user) {
+      const token  = crypto.randomBytes(32).toString("hex");
+      await storeToken(`reset:${token}`, String(user.id), 60 * 60); // 1 hour
+      await sendPasswordResetEmail(user.email, user.username, token);
+    }
+
+    // Always 200 — prevents email enumeration
+    res.json({ message: "If an account with that email exists, a reset link has been sent." });
+  } catch (error) { next(error); }
+};
+
+// ── Reset Password ─────────────────────────────────────────────────────────────
+
+export const resetPassword = async (
+  req: Request, res: Response, next: NextFunction
+): Promise<void> => {
+  try {
+    const { token, password } = req.body as { token: string; password: string };
+
+    const userIdStr = await consumeToken(`reset:${token}`);
+    if (!userIdStr) return next(createError("Reset link is invalid or has expired", 400));
+
+    const userId = Number(userIdStr);
+    const user   = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return next(createError("User not found", 404));
+
+    const hashedPassword = await bcryptjs.hash(password, 12);
+    await prisma.user.update({ where: { id: userId }, data: { password: hashedPassword } });
+
+    logger.info(`Password reset for user ${userId}`);
+    res.json({ message: "Password updated successfully. You can now log in." });
+  } catch (error) { next(error); }
+};
+
+// ── Send Verification Email ────────────────────────────────────────────────────
+
+export const sendVerification = async (
+  req: AuthRequest, res: Response, next: NextFunction
+): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!user) return next(createError("User not found", 404));
+
+    if ((user as typeof user & { emailVerified: boolean }).emailVerified) {
+      res.json({ message: "Email is already verified." });
+      return;
+    }
+
+    const token = crypto.randomBytes(32).toString("hex");
+    await storeToken(`verify:${token}`, String(user.id), 24 * 60 * 60); // 24 hours
+    await sendEmailVerificationEmail(user.email, user.username, token);
+
+    res.json({ message: "Verification email sent." });
+  } catch (error) { next(error); }
+};
+
+// ── Verify Email ───────────────────────────────────────────────────────────────
+
+export const verifyEmail = async (
+  req: Request, res: Response, next: NextFunction
+): Promise<void> => {
+  try {
+    const { token } = req.query as { token?: string };
+    if (!token) return next(createError("Verification token is required", 400));
+
+    const userIdStr = await consumeToken(`verify:${token}`);
+    if (!userIdStr) return next(createError("Verification link is invalid or has expired", 400));
+
+    // @ts-expect-error — run 'npx prisma generate' after adding emailVerified to schema
+    await prisma.user.update({ where: { id: Number(userIdStr) }, data: { emailVerified: true } });
+
+    logger.info(`Email verified for user ${userIdStr}`);
+    res.json({ message: "Email verified successfully." });
   } catch (error) { next(error); }
 };

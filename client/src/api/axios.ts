@@ -71,7 +71,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        clearSession();
+        clearSession(true); // session expired — show banner on /login
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -82,11 +82,11 @@ api.interceptors.response.use(
   }
 );
 
-function clearSession() {
+function clearSession(expired = false) {
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("user");
-  window.location.href = "/login";
+  window.location.href = expired ? "/login?sessionExpired=1" : "/login";
 }
 
 export default api;

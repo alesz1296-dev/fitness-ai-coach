@@ -5,7 +5,8 @@ import {
   CartesianGrid, LineChart, Line, Legend, ComposedChart, Bar,
   ReferenceLine, ReferenceArea,
 } from "recharts";
-import { weightApi, workoutsApi, predictionsApi } from "../../api";
+import { weightApi, workoutsApi, predictionsApi, analyticsApi } from "../../api";
+import type { AnalyticsData } from "../../api";
 import type { WeightLog, WeightStats, ExerciseProgression } from "../../types";
 import { useAuthStore } from "../../store/authStore";
 import GoalsPage from "../goals/GoalsPage";
@@ -802,9 +803,196 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Analytics Tab — calorie history, macros, workout frequency, calorie balance
+// ─────────────────────────────────────────────────────────────────────────────
+
+function StatBadge({ label, value, sub, color = "text-gray-900 dark:text-white" }: {
+  label: string; value: string; sub?: string; color?: string;
+}) {
+  return (
+    <div className="bg-gray-50 dark:bg-gray-700 rounded-xl px-4 py-3 text-center">
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{label}</p>
+      <p className={`text-xl font-bold ${color}`}>{value}</p>
+      {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+function AnalyticsTab() {
+  const isDark      = useIsDark();
+  const chartGrid   = isDark ? "#374151" : "#f0f0f0";
+  const chartTick   = isDark ? "#9ca3af" : "#9ca3af";
+  const chartBg     = isDark ? "#1f2937" : "#ffffff";
+  const chartBorder = isDark ? "#374151" : "#e5e7eb";
+  const chartText   = isDark ? "#f3f4f6" : "#111827";
+
+  const [days,    setDays]    = useState(90);
+  const [data,    setData]    = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await analyticsApi.get(days);
+      setData(res.data);
+    } finally { setLoading(false); }
+  }, [days]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const summary = data?.summary;
+  const daily   = data?.dailySeries ?? [];
+  const weekly  = data?.workoutTrend ?? [];
+
+  // Thin out x-axis labels for readability depending on range
+  const tickInterval = days <= 14 ? 1 : days <= 30 ? 3 : days <= 90 ? 6 : 14;
+
+  return (
+    <div className="space-y-6">
+      {/* Range selector */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {daily.length} days of data · {weekly.length} week{weekly.length !== 1 ? "s" : ""} of workouts
+        </p>
+        <select
+          value={days}
+          onChange={(e) => setDays(Number(e.target.value))}
+          className="border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+        >
+          <option value={14}>14 days</option>
+          <option value={30}>30 days</option>
+          <option value={90}>90 days</option>
+          <option value={180}>6 months</option>
+          <option value={365}>1 year</option>
+        </select>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-24">
+          <div className="animate-spin w-9 h-9 border-4 border-brand-500 border-t-transparent rounded-full" />
+        </div>
+      ) : !data || daily.length === 0 ? (
+        <Card className="text-center py-16">
+          <div className="text-4xl mb-3">📊</div>
+          <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">No data yet</p>
+          <p className="text-sm text-gray-400 max-w-xs mx-auto">Start logging food and workouts to see your analytics here.</p>
+        </Card>
+      ) : (
+        <>
+          {/* Summary stat row */}
+          {summary && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <StatBadge label="Avg Calories"  value={`${summary.avgCalories.toLocaleString()} kcal`} sub="tracked days" color="text-orange-600" />
+              <StatBadge label="Avg Protein"   value={`${summary.avgProtein}g`} sub="per day" color="text-blue-600" />
+              <StatBadge label="Total Workouts" value={String(summary.totalWorkouts)} sub={`last ${days}d`} color="text-brand-700 dark:text-brand-400" />
+              <StatBadge label="Total Burned"  value={`${summary.totalBurned.toLocaleString()} kcal`} sub="from workouts" color="text-red-500" />
+            </div>
+          )}
+
+          {/* Calorie intake + 7-day rolling avg */}
+          <Card>
+            <CardHeader title="Calorie Intake Over Time" subtitle="Daily total (bars) and 7-day rolling average (line)" />
+            <ResponsiveContainer width="100%" height={220}>
+              <ComposedChart data={daily} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="calGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#f97316" stopOpacity={0.5} />
+                    <stop offset="95%" stopColor="#f97316" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} interval={tickInterval} />
+                <YAxis tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} />
+                <Tooltip
+                  contentStyle={{ fontSize: 12, borderRadius: 10, border: `1px solid ${chartBorder}`, backgroundColor: chartBg, color: chartText }}
+                  formatter={(v: number, n: string) => [
+                    `${v.toLocaleString()} kcal`,
+                    n === "calories" ? "Calories" : "7-day avg",
+                  ]}
+                />
+                <Area type="monotone" dataKey="calories" fill="url(#calGrad)" stroke="#f97316" strokeWidth={0} dot={false} />
+                <Line type="monotone" dataKey="avg7" stroke="#f97316" strokeWidth={2.5} dot={false} name="avg7" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Macro breakdown — stacked bar */}
+          <Card>
+            <CardHeader title="Macro Breakdown" subtitle="Protein · Carbs · Fats (g/day)" />
+            <ResponsiveContainer width="100%" height={200}>
+              <ComposedChart data={daily} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} interval={tickInterval} />
+                <YAxis tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} />
+                <Tooltip
+                  contentStyle={{ fontSize: 12, borderRadius: 10, border: `1px solid ${chartBorder}`, backgroundColor: chartBg, color: chartText }}
+                  formatter={(v: number, n: string) => [`${v}g`, n]}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                <Bar dataKey="protein" name="Protein" stackId="m" fill="#3b82f6" maxBarSize={8} />
+                <Bar dataKey="carbs"   name="Carbs"   stackId="m" fill="#f59e0b" maxBarSize={8} />
+                <Bar dataKey="fats"    name="Fats"    stackId="m" fill="#ec4899" maxBarSize={8} radius={[2,2,0,0]} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Calorie balance — intake vs burned */}
+          {daily.some((d) => d.burned > 0) && (
+            <Card>
+              <CardHeader title="Calorie Balance" subtitle="Intake vs workout calories burned — green = deficit, red = surplus" />
+              <ResponsiveContainer width="100%" height={200}>
+                <ComposedChart data={daily} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} interval={tickInterval} />
+                  <YAxis tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ fontSize: 12, borderRadius: 10, border: `1px solid ${chartBorder}`, backgroundColor: chartBg, color: chartText }}
+                    formatter={(v: number, n: string) => [`${v.toLocaleString()} kcal`, n === "net" ? "Net (intake − burned)" : n === "calories" ? "Intake" : "Burned"]}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                  <Bar dataKey="calories" name="Intake"  stackId="a" fill="#f97316" maxBarSize={8} />
+                  <Bar dataKey="burned"   name="Burned"  stackId="a" fill="#ef4444" maxBarSize={8} radius={[2,2,0,0]} />
+                  <Line type="monotone" dataKey="net" name="net" stroke="#10b981" strokeWidth={2} dot={false} connectNulls />
+                  <ReferenceLine y={0} stroke={chartGrid} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </Card>
+          )}
+
+          {/* Workout frequency — weekly bar */}
+          {weekly.length > 0 && (
+            <Card>
+              <CardHeader title="Workout Frequency" subtitle="Sessions and calories burned per week" />
+              <ResponsiveContainer width="100%" height={200}>
+                <ComposedChart data={weekly} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="left"  tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}kcal`} />
+                  <Tooltip
+                    contentStyle={{ fontSize: 12, borderRadius: 10, border: `1px solid ${chartBorder}`, backgroundColor: chartBg, color: chartText }}
+                    formatter={(v: number, n: string) => [
+                      n === "burned" ? `${v.toLocaleString()} kcal` : n === "count" ? `${v} sessions` : `${v} min`,
+                      n === "burned" ? "Burned" : n === "count" ? "Sessions" : "Duration",
+                    ]}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                  <Bar yAxisId="left"  dataKey="count"         name="count"   fill="#6366f1" radius={[4,4,0,0]} maxBarSize={32} />
+                  <Line yAxisId="right" type="monotone" dataKey="burned" name="burned" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </Card>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Main Progress page
 // ─────────────────────────────────────────────────────────────────────────────
-type TabId = "body" | "strength" | "predictions" | "goals";
+type TabId = "body" | "strength" | "predictions" | "analytics" | "goals";
 
 export default function ProgressPage() {
   const { user }                   = useAuthStore();
@@ -860,9 +1048,10 @@ export default function ProgressPage() {
 
   const TABS: { id: TabId; label: string; icon: string }[] = [
     { id: "body",        label: "Body & Weight",       icon: "⚖️" },
-    { id: "strength",    label: "Exercise Progression", icon: "🏋️" },
-    { id: "predictions", label: "Predictions",          icon: "🔮" },
-    { id: "goals",       label: "Goals",                icon: "🎯" },
+    { id: "strength",    label: "Strength",            icon: "🏋️" },
+    { id: "analytics",   label: "Analytics",           icon: "📈" },
+    { id: "predictions", label: "Predictions",         icon: "🔮" },
+    { id: "goals",       label: "Goals",               icon: "🎯" },
   ];
 
   return (
@@ -957,7 +1146,11 @@ export default function ProgressPage() {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="text-center py-10 text-gray-400 text-sm">No weight data for this period</div>
+              <div className="text-center py-12">
+                <div className="text-4xl mb-3">⚖️</div>
+                <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">No weight logged yet</p>
+                <p className="text-sm text-gray-400 max-w-xs mx-auto">Tap "+ Log Weight" to add your first entry. Your trend chart will appear once you have data.</p>
+              </div>
             )}
           </Card>
 
@@ -1024,6 +1217,9 @@ export default function ProgressPage() {
 
       {/* ── Exercise Progression tab ───────────────────────────────────────── */}
       {tab === "strength" && <ExerciseProgressionSection />}
+
+      {/* ── Analytics tab ─────────────────────────────────────────────────── */}
+      {tab === "analytics" && <AnalyticsTab />}
 
       {/* ── Predictions tab ───────────────────────────────────────────────── */}
       {tab === "predictions" && <PredictionCard data={predData} loading={predLoading} />}

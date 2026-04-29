@@ -187,6 +187,54 @@ export const changePassword = async (
   }
 };
 
+// GET /api/users/export — full data dump (GDPR-friendly)
+export const exportData = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+
+    const [user, workouts, foodLogs, weightLogs, goals, calorieGoals] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true, email: true, username: true,
+          firstName: true, lastName: true, age: true,
+          weight: true, height: true, sex: true,
+          activityLevel: true, fitnessLevel: true, goal: true,
+          createdAt: true,
+        },
+      }),
+      prisma.workout.findMany({
+        where: { userId },
+        include: { exercises: true },
+        orderBy: { date: "desc" },
+      }),
+      prisma.foodLog.findMany({
+        where: { userId },
+        orderBy: { date: "desc" },
+      }),
+      prisma.weightLog.findMany({
+        where: { userId },
+        orderBy: { date: "desc" },
+      }),
+      prisma.goal.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
+      prisma.calorieGoal.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
+    ]);
+
+    const exportedAt = new Date().toISOString();
+    logger.info(`Data export for user ${userId}`);
+
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Disposition", `attachment; filename="fitai-export-${exportedAt.slice(0,10)}.json"`);
+    res.json({ exportedAt, user, workouts, foodLogs, weightLogs, goals, calorieGoals });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // DELETE /api/users/account
 export const deleteAccount = async (
   req: AuthRequest,

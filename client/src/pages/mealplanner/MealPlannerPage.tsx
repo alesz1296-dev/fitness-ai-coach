@@ -359,7 +359,12 @@ function PlanList({
       {loading ? (
         <div className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-400">Loading…</div>
       ) : plans.length === 0 ? (
-        <div className="text-sm text-gray-400 italic">No plans yet. Create your first!</div>
+        <div className="rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 text-center py-8 px-4">
+          <div className="text-3xl mb-2">🥘</div>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">No meal plans yet</p>
+          <p className="text-xs text-gray-400 mb-3">Create a weekly meal plan or ask the AI Coach to generate one for you.</p>
+          <Button size="sm" onClick={onCreate}>+ Create first plan</Button>
+        </div>
       ) : (
         plans.map((p) => (
           <div

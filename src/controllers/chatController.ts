@@ -1,4 +1,5 @@
 import { Response, NextFunction } from "express";
+import { Prisma } from "@prisma/client";
 import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
@@ -13,7 +14,46 @@ import { calculateCalorieGoal } from "../lib/calorieCalculator.js";
 import logger from "../lib/logger.js";
 
 const VALID_AGENTS: AgentType[] = ["coach", "nutritionist", "general"];
-const db = prisma as any;
+
+// ── Local types ───────────────────────────────────────────────────────────────
+
+interface MealItem {
+  foodName: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fats?: number;
+  quantity?: number;
+  unit?: string;
+}
+
+interface MealBlock { meal: string; items?: MealItem[] }
+interface DayBlock   { dayIndex: number; meals?: MealBlock[] }
+
+interface MealPlanPayload {
+  days?:  DayBlock[];
+  meals?: MealBlock[];
+}
+
+interface EntryRow {
+  meal: string;
+  foodName: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  quantity: number;
+  unit: string;
+}
+
+interface ChatExercise {
+  exerciseName: string;
+  sets: number;
+  reps: string | number;
+  restSeconds?: number;
+  notes?: string;
+  order?: number;
+}
 
 const parseMondayDate = (date = new Date()): string => {
   const d = new Date(date);
@@ -29,10 +69,10 @@ const mondayDayIndex = (date = new Date()): number => {
 };
 
 const normalizeMealPlanDays = (
-  payload: any,
-): Array<{ dayIndex: number; meals: any[] }> => {
+  payload: MealPlanPayload,
+): Array<{ dayIndex: number; meals: MealBlock[] }> => {
   if (Array.isArray(payload.days) && payload.days.length > 0) {
-    return payload.days.map((day: any) => ({
+    return payload.days.map((day) => ({
       dayIndex: Number(day.dayIndex),
       meals: Array.isArray(day.meals) ? day.meals : [],
     }));
@@ -160,19 +200,19 @@ export const sendMessage = async (
       ...(suggestedPlan && { suggestedPlan }),
       ...(suggestedMealPlan && { suggestedMealPlan }),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // User-facing errors thrown by the agent's classifyOpenAIError helper
-    if (error?.userFacing) {
-      const status = error.statusCode ?? 502;
+    if (error instanceof Error && (error as Error & { userFacing?: boolean }).userFacing) {
+      const status = (error as Error & { statusCode?: number }).statusCode ?? 502;
       return next(createError(error.message, status));
     }
     // Legacy OpenAI SDK status checks (belt-and-suspenders)
-    if (error?.status === 401) {
+    if (error instanceof Error && (error as Error & { status?: number }).status === 401) {
       return next(
         createError("OpenAI API key is invalid or not configured", 503),
       );
     }
-    if (error?.status === 429) {
+    if (error instanceof Error && (error as Error & { status?: number }).status === 429) {
       return next(
         createError(
           "AI service is currently rate limited, please try again shortly",
@@ -195,7 +235,7 @@ export const getHistory = async (
     const limit = Number(req.query.limit) || 20;
     const page = Number(req.query.page) || 1;
 
-    const where: any = { userId: req.user!.id };
+    const where: Prisma.ConversationWhereInput = { userId: req.user!.id };
     if (agentType && VALID_AGENTS.includes(agentType as AgentType)) {
       where.agentType = agentType;
     }
@@ -244,7 +284,7 @@ export const clearHistory = async (
 ): Promise<void> => {
   try {
     const agentType = req.query.agentType as string | undefined;
-    const where: any = { userId: req.user!.id };
+    const where: Prisma.ConversationWhereInput = { userId: req.user!.id };
 
     if (agentType && VALID_AGENTS.includes(agentType as AgentType)) {
       where.agentType = agentType;
@@ -306,7 +346,7 @@ export const saveWorkoutFromChat = async (
       return next(createError("name and exercises array are required", 400));
     }
 
-    const exerciseCreates = exercises.map((ex: any, i: number) => ({
+    const exerciseCreates = exercises.map((ex: ChatExercise, i: number) => ({
       exerciseName: ex.exerciseName,
       sets: Number(ex.sets),
       reps: String(ex.reps),
@@ -508,11 +548,11 @@ export const saveMealPlanFromChat = async (
       return next(createError("At least one meal-plan day is required", 400));
     }
 
-    const entriesByDay = new Map<number, any[]>();
+    const entriesByDay = new Map<number, EntryRow[]>();
     for (const day of normalizedDays) {
       const dayIndex = Number(day.dayIndex);
-      const entries = (day.meals ?? []).flatMap((meal: any) =>
-        (meal.items ?? []).map((item: any) => ({
+      const entries = (day.meals ?? []).flatMap((meal: MealBlock) =>
+        (meal.items ?? []).map((item: MealItem): EntryRow => ({
           meal: meal.meal,
           foodName: item.foodName,
           calories: Number(item.calories ?? 0),
@@ -536,7 +576,7 @@ export const saveMealPlanFromChat = async (
         );
       }
 
-      const existing = await db.mealPlan.findFirst({
+      const existing = await prisma.mealPlan.findFirst({
         where: { id: Number(targetPlanId), userId: req.user!.id },
         include: { days: true },
       });
@@ -544,10 +584,10 @@ export const saveMealPlanFromChat = async (
 
       const plan = await prisma.$transaction(async (tx) => {
         if (mode === "replace") {
-          await (tx as any).mealPlanEntry.deleteMany({
+          await tx.mealPlanEntry.deleteMany({
             where: { day: { planId: Number(targetPlanId) } },
           });
-          await (tx as any).mealPlan.update({
+          await tx.mealPlan.update({
             where: { id: Number(targetPlanId) },
             data: { ...(name && { name }) },
           });
@@ -556,8 +596,8 @@ export const saveMealPlanFromChat = async (
         for (const day of existing.days) {
           const entries = entriesByDay.get(day.dayIndex) ?? [];
           if (entries.length > 0) {
-            await (tx as any).mealPlanEntry.createMany({
-              data: entries.map((entry: any, i: number) => ({
+            await tx.mealPlanEntry.createMany({
+              data: entries.map((entry: EntryRow, i: number) => ({
                 ...entry,
                 dayId: day.id,
                 order: i,
@@ -566,7 +606,7 @@ export const saveMealPlanFromChat = async (
           }
         }
 
-        return (tx as any).mealPlan.findFirst({
+        return tx.mealPlan.findFirst({
           where: { id: Number(targetPlanId), userId: req.user!.id },
           include: {
             days: {
@@ -589,7 +629,7 @@ export const saveMealPlanFromChat = async (
       return;
     }
 
-    const plan = await db.mealPlan.create({
+    const plan = await prisma.mealPlan.create({
       data: {
         userId: req.user!.id,
         name: name || "AI Suggested Meal Plan",
@@ -599,7 +639,7 @@ export const saveMealPlanFromChat = async (
             dayIndex,
             entries: {
               create: (entriesByDay.get(dayIndex) ?? []).map(
-                (entry: any, i: number) => ({
+                (entry: EntryRow, i: number) => ({
                   ...entry,
                   order: i,
                 }),

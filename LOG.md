@@ -4,6 +4,43 @@ Most recent session first.
 
 ---
 
+## 2026-04-26 — Session: 🔴 Critical security fixes (A–E)
+
+### #60 — Zod env validation (`src/config/env.ts`)
+Rewrote from manual array check to full Zod schema:
+- `z.object({...}).safeParse(process.env)` — fails fast on startup with clear per-field error messages
+- `REFRESH_SECRET` added as required (was missing entirely from the old validator)
+- `CLIENT_URL` validated as a URL when present
+- Exports a typed `env` object — no more `process.env.X` scattered across the codebase
+- Both `authController.ts` and `auth.ts` middleware now import from `env.ts` instead of reading `process.env` directly
+
+### #61 — Hardcoded secret fallbacks removed
+`src/controllers/authController.ts` + `src/middleware/auth.ts`:
+- Removed `|| "secret-key"` and `|| "refresh-secret-key"` fallbacks from all JWT signing/verification
+- All secret reads now go through the validated `env` object — missing secrets cause a startup exit, not a silent insecure default
+
+### #62 — CORS wildcard removed (`src/server.ts`)
+- Replaced `origin: process.env.CLIENT_URL || "*"` with an explicit origin callback
+- `ALLOWED_ORIGINS` = `[env.CLIENT_URL]` in production, dev localhost list when `CLIENT_URL` is unset
+- Requests with no origin (mobile apps, curl) still pass — only unknown browser origins are blocked
+
+### #63 — JSON body limit reduced (`src/server.ts`)
+- `express.json({ limit: "10mb" })` → `{ limit: "100kb" }` (same for `urlencoded`)
+- 10mb was 100× the largest payload this app can produce
+
+### #64 — Deep health check (`src/server.ts` `/api/health`)
+- Now probes Postgres (`prisma.$queryRaw\`SELECT 1\``) and Redis (`redisClient.ping()`) with a 2s timeout each
+- Returns HTTP 200 + `{ status: "OK" }` only when both pass
+- Returns HTTP 503 + `{ status: "DEGRADED", checks: { postgres, redis } }` on any failure
+- Docker/orchestrator healthchecks will now correctly restart the container when the DB is down
+
+### #65 — `authController_clean.ts` (pending manual delete)
+File confirmed as a 180-line stale duplicate with insecure fallback secrets.
+**Action required**: `Remove-Item src\controllers\authController_clean.ts` in your terminal.
+TypeScript already passes with 0 errors across all backend files.
+
+---
+
 ## 2026-04-26 — Session: Security incident + pre-production audit
 
 ### GitGuardian incident — POSTGRES_PASSWORD exposed in git history

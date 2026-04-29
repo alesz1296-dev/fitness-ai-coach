@@ -740,6 +740,36 @@ export default function SettingsPage() {
       <InjuryForm />
       {user?.sex === "female" && <CycleTrackingForm />}
       <PasswordForm />
+
+      {/* Data export */}
+      <Card>
+        <CardHeader title="Your Data" subtitle="Download a complete copy of your fitness data" />
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Exports workouts, food logs, weight history, and goals as a JSON file.
+          </p>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const token = localStorage.getItem("accessToken");
+              const a = document.createElement("a");
+              a.href = `/api/users/export`;
+              // Use fetch to pass auth header, then trigger download
+              fetch("/api/users/export", { headers: { Authorization: `Bearer ${token}` } })
+                .then((r) => r.blob())
+                .then((blob) => {
+                  const url = URL.createObjectURL(blob);
+                  a.href = url;
+                  a.download = `fitai-export-${new Date().toISOString().slice(0,10)}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                });
+            }}
+          >
+            ⬇ Download my data
+          </Button>
+        </div>
+      </Card>
     </div>
   );
 }

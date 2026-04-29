@@ -89,7 +89,7 @@ export const authApi = {
     firstName?: string;
     lastName?: string;
   }) => api.post<AuthResponse>("/auth/register", data),
-  login: (data: { email: string; password: string }) =>
+  login: (data: { email: string; password: string; rememberMe?: boolean }) =>
     api.post<AuthResponse>("/auth/login", data),
   refresh: (refreshToken: string) =>
     api.post<{ accessToken: string; refreshToken: string }>("/auth/refresh", {
@@ -404,6 +404,46 @@ export const mealPlansApi = {
     api.delete(`/meal-plans/${planId}/entries/${entryId}`),
   updateDayNotes: (planId: number, dayId: number, notes: string) =>
     api.put(`/meal-plans/${planId}/days/${dayId}/notes`, { notes }),
+};
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+
+export interface AnalyticsDayPoint {
+  date: string;
+  label: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  burned: number;
+  net: number;
+  avg7: number;
+}
+
+export interface AnalyticsWeekPoint {
+  label: string;
+  count: number;
+  totalDuration: number;
+  burned: number;
+}
+
+export interface AnalyticsSummary {
+  avgCalories: number;
+  avgProtein: number;
+  totalWorkouts: number;
+  totalBurned: number;
+}
+
+export interface AnalyticsData {
+  days: number;
+  dailySeries: AnalyticsDayPoint[];
+  workoutTrend: AnalyticsWeekPoint[];
+  summary: AnalyticsSummary;
+}
+
+export const analyticsApi = {
+  get: (days = 90) =>
+    api.get<AnalyticsData>(`/analytics?days=${days}`),
 };
 
 // ── Workout Calendar ──────────────────────────────────────────────────────────

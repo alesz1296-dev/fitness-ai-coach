@@ -164,6 +164,8 @@ const MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
     sql: `ALTER TABLE "User" ADD COLUMN "cycleLength" INTEGER` },
   { table: "User", column: "waterTargetMl",
     sql: `ALTER TABLE "User" ADD COLUMN "waterTargetMl" DOUBLE PRECISION NOT NULL DEFAULT 2000` },
+  { table: "User", column: "emailVerified",
+    sql: `ALTER TABLE "User" ADD COLUMN "emailVerified" BOOLEAN NOT NULL DEFAULT FALSE` },
   { table: "FoodLog", column: "isCheatMeal",
     sql: `ALTER TABLE "FoodLog" ADD COLUMN "isCheatMeal" BOOLEAN NOT NULL DEFAULT FALSE` },
   { table: "Workout", column: "trainingType",
