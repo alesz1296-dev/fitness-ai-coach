@@ -4,7 +4,8 @@ dist
 .env.local
 prisma/*.db
 prisma/*.db-journal
-client
+client/node_modules
+client/dist
 mobile
 *.md
 .git
