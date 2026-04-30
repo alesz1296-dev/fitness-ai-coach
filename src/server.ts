@@ -121,6 +121,20 @@ app.use("/api/meal-plans",  mealPlanRoutes);
 app.use("/api/calendar",    calendarRoutes);
 app.use("/api/analytics",   analyticsRoutes);
 
+// ── Serve React frontend (production) ───────────────────────────────────────
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const clientDist = path.join(__dirname, "../client-dist");
+
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.get("*", (_req: Request, res: Response) => {
+    res.sendFile(path.join(clientDist, "index.html"));
+  });
+}
+
 // ── 404 & Error Handlers ─────────────────────────────────────────────────────
 app.use(notFound);
 app.use(errorHandler);
