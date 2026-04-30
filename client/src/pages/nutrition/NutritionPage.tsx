@@ -271,7 +271,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
           className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
             activeTag === ""
               ? "bg-brand-600 text-white border-brand-600"
-              : "bg-white text-gray-600 dark:text-gray-300 border-gray-200 hover:border-brand-400 hover:text-brand-600"
+              : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"
           }`}
         >
           🍽️ All
@@ -282,7 +282,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
           <div className="flex flex-wrap gap-1.5">
             {CUISINE_TAGS.map(({ tag, label, emoji }) => (
               <button key={tag} type="button" onClick={() => handleTagClick(tag)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-600 dark:text-gray-300 border-gray-200 hover:border-brand-400 hover:text-brand-600"}`}>
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
                 {emoji} {label}
               </button>
             ))}
@@ -294,7 +294,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
           <div className="flex flex-wrap gap-1.5">
             {DIETARY_TAGS.map(({ tag, label, emoji }) => (
               <button key={tag} type="button" onClick={() => handleTagClick(tag)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-600 dark:text-gray-300 border-gray-200 hover:border-brand-400 hover:text-brand-600"}`}>
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
                 {emoji} {label}
               </button>
             ))}
@@ -306,7 +306,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
           <div className="flex flex-wrap gap-1.5">
             {FOOD_TYPE_TAGS.map(({ tag, label, emoji }) => (
               <button key={tag} type="button" onClick={() => handleTagClick(tag)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white text-gray-600 dark:text-gray-300 border-gray-200 hover:border-brand-400 hover:text-brand-600"}`}>
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
                 {emoji} {label}
               </button>
             ))}
@@ -343,7 +343,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
                     {visibleTags.length > 0 && (
                       <div className="flex gap-1 flex-shrink-0 flex-wrap justify-end">
                         {visibleTags.map((tag: string) => (
-                          <span key={tag} className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${TAG_COLORS[tag] ?? "bg-gray-100 text-gray-500"}`}>
+                          <span key={tag} className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${TAG_COLORS[tag] ?? "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300"}`}>
                             {tag}
                           </span>
                         ))}
