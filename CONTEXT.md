@@ -525,4 +525,38 @@ New-NetFirewallRule -DisplayName "Expo Metro" -Direction Inbound -Protocol TCP -
 
 # EAS cloud builds
 cd mobile
-eas 
+eas
+
+---
+
+## Session — Railway Deploy Hardening (2026-04-30)
+
+**Goal:** Get the codebase into a clean, deployable state for Railway with no startup crashes.
+
+### Bugs Fixed
+
+- **`prisma` CLI was devDep** — `npx prisma db push` and `npx prisma generate` in the production container (`npm ci --omit=dev`) would crash. Moved `prisma` → `dependencies`.
+- **`tsx` was devDep** — `npx tsx prisma/seed.ts` in entrypoint would crash in production. Moved `tsx` → `dependencies`.
+- **`expo` and `ngrok` in prod deps** — these are dev/mobile tools with no runtime use. Moved to `devDependencies`.
+- **`@types/nodemailer` in prod deps** — type-only package. Moved to `devDependencies`.
+- **Winston file transports in production** — `logs/error.log` and `logs/combined.log` would crash if `/app/logs/` doesn't exist in the container (Railway has no persistent FS). Fixed: file transports only added when `NODE_ENV !== production`; production logs to stdout only (Railway captures stdout).
+- **`package-lock.json` stale** — regenerated with `npm install --package-lock-only` after package.json changes.
+
+### Files Added
+
+- `railway.toml` — Railway build config (DOCKERFILE builder, healthcheck at `/api/health`, restart policy)
+- `docs/railway-deploy.md` — Step-by-step Railway deploy guide (PostgreSQL plugin, Redis plugin, env vars, first-deploy seed, custom domain, rollback)
+- `.github/workflows/ci.yml` — GitHub Actions CI (backend typecheck + build, frontend lint + typecheck + build, Docker smoke-test on push to main)
+- `package.json` scripts: added `typecheck` and `lint:client`
+
+### Verified Clean
+
+- `npx tsc --noEmit` passes (backend)
+- `npx tsc --noEmit` passes (frontend/client)
+- All routes registered in server.ts, all controller files present
+- API `baseURL: "/api"` is relative — works same-origin in production
+- Redis is optional (graceful fallback when `REDIS_URL` not set)
+- CORS correctly uses `CLIENT_URL` env var in production
+- `entrypoint.sh`: `prisma db push` → optional seed → `node dist/server.js`
+- Static file path: `dist/server.js` → `../client-dist` = `/app/client-dist` ✓
+- `.env` and `.env.production` confirmed gitignored (not tracked)

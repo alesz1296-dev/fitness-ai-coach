@@ -1220,3 +1220,20 @@ Added `calendarApi` with methods: `getMonth`, `populate`, `updateDay`, `deleteDa
 
 ### Remaining
 - #81 CI/CD, #82 Deploy, #83 AI providers, #84 RAG, #85 env validation, #71 weight prediction graph
+
+---
+
+## 2026-04-30 — Railway Deploy Hardening
+
+**Fixed 5 bugs that would crash the production container:**
+1. `prisma` CLI in devDeps → moved to deps (needed by `entrypoint.sh`: `prisma db push`)
+2. `tsx` in devDeps → moved to deps (needed by `entrypoint.sh`: `tsx prisma/seed.ts`)
+3. `expo` + `ngrok` in prod deps → moved to devDeps (zero runtime use)
+4. `@types/nodemailer` in prod deps → moved to devDeps
+5. Winston file transports always ran → now dev-only; production logs to stdout (Railway captures stdout)
+
+**Regenerated** `package-lock.json` after dep changes.
+
+**Added:** `railway.toml`, `docs/railway-deploy.md`, `.github/workflows/ci.yml`
+
+**Verified:** backend tsc clean, frontend tsc clean, all routes present, CORS correct, static path correct, .env files gitignored.
