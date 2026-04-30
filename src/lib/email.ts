@@ -16,7 +16,6 @@
  *   SMTP_FROM   – e.g. "FitAI Coach <noreply@fitai.example.com>"
  */
 
-// @ts-expect-error — run: npm install nodemailer @types/nodemailer
 import nodemailer from "nodemailer";
 import { env } from "../config/env.js";
 import logger from "./logger.js";

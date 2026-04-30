@@ -178,7 +178,6 @@ export const getMe = async (
         fitnessLevel: true, goal: true,
         profileComplete: true, proteinMultiplier: true,
         trainingDaysPerWeek: true, trainingHoursPerDay: true,
-        // @ts-expect-error — run 'npx prisma generate' after adding emailVerified to schema
         emailVerified: true,
         createdAt: true,
       },
