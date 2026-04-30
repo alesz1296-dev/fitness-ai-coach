@@ -26,8 +26,9 @@ COPY package*.json ./
 COPY prisma ./prisma
 RUN npm ci --omit=dev && npx prisma generate
 
-# Copy compiled output
+# Copy compiled output + source data files needed by seed
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src/data ./src/data
 
 # Startup script
 COPY entrypoint.sh ./entrypoint.sh
