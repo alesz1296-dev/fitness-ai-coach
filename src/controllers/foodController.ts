@@ -104,20 +104,21 @@ export const updateFoodLog = async (
       return next(createError("Food log entry not found", 404));
     }
 
-    const { foodName, calories, protein, carbs, fats, quantity, unit, meal, date } = req.body;
+    const { foodName, calories, protein, carbs, fats, quantity, unit, meal, date, isCheatMeal } = req.body;
 
     const updated = await prisma.foodLog.update({
       where: { id: logId },
       data: {
-        ...(foodName  !== undefined && { foodName }),
-        ...(calories  !== undefined && { calories:  Number(calories) }),
-        ...(protein   !== undefined && { protein:   Number(protein) }),
-        ...(carbs     !== undefined && { carbs:     Number(carbs) }),
-        ...(fats      !== undefined && { fats:      Number(fats) }),
-        ...(quantity  !== undefined && { quantity:  Number(quantity) }),
-        ...(unit      !== undefined && { unit }),
-        ...(meal      !== undefined && { meal }),
-        ...(date      !== undefined && { date: new Date(date) }),
+        ...(foodName    !== undefined && { foodName }),
+        ...(calories    !== undefined && { calories:    Number(calories) }),
+        ...(protein     !== undefined && { protein:     Number(protein) }),
+        ...(carbs       !== undefined && { carbs:       Number(carbs) }),
+        ...(fats        !== undefined && { fats:        Number(fats) }),
+        ...(quantity    !== undefined && { quantity:    Number(quantity) }),
+        ...(unit        !== undefined && { unit }),
+        ...(meal        !== undefined && { meal }),
+        ...(date        !== undefined && { date: new Date(date) }),
+        ...(isCheatMeal !== undefined && { isCheatMeal }),
       },
     });
 

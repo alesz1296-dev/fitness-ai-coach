@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi } from "../../api";
+import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi, customFoodsApi } from "../../api";
 import { useAuthStore } from "../../store/authStore";
-import type { FoodLog, FoodTotals, CalorieGoal, WaterLog } from "../../types";
+import type { FoodLog, FoodTotals, CalorieGoal, WaterLog, CustomFood } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -236,135 +236,421 @@ const TAG_COLORS: Record<string, string> = {
 };
 
 // ── Food search combobox ──────────────────────────────────────────────────────
+// ── Custom food create/edit modal ─────────────────────────────────────────────
+function CustomFoodModal({
+  initial,
+  onSave,
+  onClose,
+}: {
+  initial?: CustomFood | null;
+  onSave: (food: CustomFood) => void;
+  onClose: () => void;
+}) {
+  const [name,        setName]        = useState(initial?.name        ?? "");
+  const [calories,    setCalories]    = useState(String(initial?.calories    ?? ""));
+  const [protein,     setProtein]     = useState(String(initial?.protein     ?? ""));
+  const [carbs,       setCarbs]       = useState(String(initial?.carbs       ?? ""));
+  const [fats,        setFats]        = useState(String(initial?.fats        ?? ""));
+  const [defaultQty,  setDefaultQty]  = useState(String(initial?.defaultQty  ?? "100"));
+  const [defaultUnit, setDefaultUnit] = useState(initial?.defaultUnit ?? "g");
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState("");
+
+  // "Clone from DB" mini-search
+  const [cloneQuery,   setCloneQuery]   = useState("");
+  const [cloneResults, setCloneResults] = useState<any[]>([]);
+  const [cloneOpen,    setCloneOpen]    = useState(false);
+
+  useEffect(() => {
+    const q = cloneQuery.trim();
+    if (!q) { setCloneResults([]); setCloneOpen(false); return; }
+    const t = setTimeout(() => {
+      searchApi.foods(q, 10).then((r) => {
+        setCloneResults(r.data.results);
+        setCloneOpen(true);
+      }).catch(() => {});
+    }, 200);
+    return () => clearTimeout(t);
+  }, [cloneQuery]);
+
+  const applyClone = (f: any) => {
+    setName(f.name);
+    setCalories(String(f.calories));
+    setProtein(String(f.protein ?? ""));
+    setCarbs(String(f.carbs ?? ""));
+    setFats(String(f.fats ?? ""));
+    setDefaultQty(String(f.defaultQty));
+    setDefaultUnit(f.defaultUnit);
+    setCloneQuery("");
+    setCloneOpen(false);
+  };
+
+  const handleSave = async () => {
+    if (!name.trim())                         { setError("Name is required"); return; }
+    if (!calories || isNaN(Number(calories))) { setError("Calories are required"); return; }
+    if (Number(calories) < 0)                 { setError("Calories must be 0 or more"); return; }
+    if (!defaultQty || Number(defaultQty) <= 0) { setError("Default quantity must be positive"); return; }
+    if (!defaultUnit.trim())                  { setError("Default unit is required"); return; }
+
+    setLoading(true); setError("");
+    try {
+      const payload = {
+        name:        name.trim(),
+        calories:    Math.round(Number(calories)),
+        protein:     Number(protein  || 0),
+        carbs:       Number(carbs    || 0),
+        fats:        Number(fats     || 0),
+        defaultQty:  Number(defaultQty),
+        defaultUnit: defaultUnit.trim(),
+        tags:        [] as string[],
+      };
+      let saved: CustomFood;
+      if (initial) {
+        const r = await customFoodsApi.update(initial.id, payload);
+        saved = r.data.food;
+      } else {
+        const r = await customFoodsApi.create(payload);
+        saved = r.data.food;
+      }
+      onSave(saved);
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Failed to save custom food");
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      {!initial && (
+        <div className="relative">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+            Start from a food in the database (optional)
+          </p>
+          <Input
+            value={cloneQuery}
+            onChange={(e) => setCloneQuery(e.target.value)}
+            onBlur={() => setTimeout(() => setCloneOpen(false), 150)}
+            placeholder="Search e.g. chicken breast..."
+          />
+          {cloneOpen && cloneResults.length > 0 && (
+            <ul className="absolute z-30 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+              {cloneResults.map((f: any) => (
+                <li
+                  key={f.id}
+                  onMouseDown={() => applyClone(f)}
+                  className="px-4 py-2 hover:bg-brand-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-50 dark:border-gray-700 last:border-0"
+                >
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{f.name}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    {f.calories} kcal &middot; {f.defaultQty}{f.defaultUnit}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-2 border-b border-gray-100 dark:border-gray-700" />
+        </div>
+      )}
+
+      {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">{error}</p>}
+
+      <Input label="Food Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. My Protein Shake" />
+
+      <div className="grid grid-cols-2 gap-3">
+        <Input label="Default Qty" type="number" min="0.1" step="any" value={defaultQty} onChange={(e) => setDefaultQty(e.target.value)} />
+        <Input label="Default Unit" value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} placeholder="g, ml, serving..." />
+      </div>
+
+      <p className="text-xs text-gray-400 dark:text-gray-500">Macros per serving (default qty above)</p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Input label="Calories (kcal)" type="number" min="0" step="1" value={calories} onChange={(e) => setCalories(e.target.value)} />
+        <Input label="Protein (g)" type="number" min="0" step="0.1" value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="0" />
+        <Input label="Carbs (g)" type="number" min="0" step="0.1" value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="0" />
+        <Input label="Fats (g)" type="number" min="0" step="0.1" value={fats} onChange={(e) => setFats(e.target.value)} placeholder="0" />
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+        <Button onClick={handleSave} loading={loading} className="flex-1">
+          {initial ? "Save changes" : "Create food"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Food search (global DB + My Foods tab) ────────────────────────────────────
 function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
+  const [tab,       setTab]       = useState<"all" | "mine">("all");
   const [query,     setQuery]     = useState("");
-  const [activeTag, setActiveTag] = useState("");
+  const [activeTags, setActiveTags] = useState<string[]>([]);
   const [results,   setResults]   = useState<any[]>([]);
   const [open,      setOpen]      = useState(false);
 
-  // Fetch whenever query or tag changes; if no query but tag active, show top tag foods
+  const [myFoods,       setMyFoods]       = useState<CustomFood[]>([]);
+  const [myFoodsQuery,  setMyFoodsQuery]  = useState("");
+  const [myFoodsLoaded, setMyFoodsLoaded] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingFood,     setEditingFood]     = useState<CustomFood | null>(null);
+
   useEffect(() => {
+    if (tab !== "mine" || myFoodsLoaded) return;
+    customFoodsApi.list().then((r: any) => {
+      setMyFoods(r.data.foods);
+      setMyFoodsLoaded(true);
+    }).catch(() => {});
+  }, [tab, myFoodsLoaded]);
+
+  const reloadMyFoods = () => {
+    customFoodsApi.list().then((r: any) => setMyFoods(r.data.foods)).catch(() => {});
+  };
+
+  useEffect(() => {
+    if (tab !== "all") return;
     const q = query.trim();
-    if (!q && !activeTag) { setResults([]); setOpen(false); return; }
+    if (!q && activeTags.length === 0) { setResults([]); setOpen(false); return; }
     const t = setTimeout(() => {
-      searchApi.foods(q, 20, activeTag || undefined).then((r) => {
+      searchApi.foods(q, 20, activeTags.length > 0 ? activeTags : undefined).then((r) => {
         setResults(r.data.results);
         setOpen(true);
       }).catch(() => {});
     }, q ? 200 : 0);
     return () => clearTimeout(t);
-  }, [query, activeTag]);
+  }, [query, activeTags, tab]);
 
   const handleTagClick = (tag: string) => {
-    setActiveTag(tag);
+    setActiveTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
     if (!query.trim()) setOpen(true);
   };
 
+  const handleDeleteMyFood = async (id: number) => {
+    if (!confirm("Delete this custom food?")) return;
+    await customFoodsApi.delete(id);
+    setMyFoods((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const filteredMyFoods = myFoods.filter((f) =>
+    !myFoodsQuery.trim() || f.name.toLowerCase().includes(myFoodsQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-2">
-      {/* Tag filter chips — grouped */}
-      <div className="space-y-1.5">
-        {/* All button */}
+      {/* Tab switcher */}
+      <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => handleTagClick("")}
-          className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-            activeTag === ""
+          onClick={() => setTab("all")}
+          className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+            tab === "all"
               ? "bg-brand-600 text-white border-brand-600"
-              : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"
+              : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400"
           }`}
         >
-          🍽️ All
+          Food Database
         </button>
-        {/* Cuisine */}
-        <div>
-          <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Cuisine</p>
-          <div className="flex flex-wrap gap-1.5">
-            {CUISINE_TAGS.map(({ tag, label, emoji }) => (
-              <button key={tag} type="button" onClick={() => handleTagClick(tag)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
-                {emoji} {label}
-              </button>
-            ))}
-          </div>
-        </div>
-        {/* Dietary Category */}
-        <div>
-          <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Dietary Category</p>
-          <div className="flex flex-wrap gap-1.5">
-            {DIETARY_TAGS.map(({ tag, label, emoji }) => (
-              <button key={tag} type="button" onClick={() => handleTagClick(tag)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
-                {emoji} {label}
-              </button>
-            ))}
-          </div>
-        </div>
-        {/* Food Type */}
-        <div>
-          <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Food Type</p>
-          <div className="flex flex-wrap gap-1.5">
-            {FOOD_TYPE_TAGS.map(({ tag, label, emoji }) => (
-              <button key={tag} type="button" onClick={() => handleTagClick(tag)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTag === tag ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
-                {emoji} {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setTab("mine")}
+          className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+            tab === "mine"
+              ? "bg-amber-500 text-white border-amber-500"
+              : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-amber-400"
+          }`}
+        >
+          My Foods {myFoods.length > 0 && `(${myFoods.length})`}
+        </button>
+        <button
+          type="button"
+          onClick={() => { setEditingFood(null); setShowCreateModal(true); }}
+          className="ml-auto px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 hover:bg-green-100 transition-all"
+        >
+          + New food
+        </button>
       </div>
 
-      {/* Search input */}
-      <div className="relative">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => (query || activeTag) && results.length > 0 && setOpen(true)}
-          onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder="Search food (e.g. chicken breast, oats)…"
-          label="Search Food Database"
-        />
-        {open && results.length > 0 && (
-          <ul className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-64 overflow-y-auto">
-            {results.map((f) => {
-              const displayCal = calcMacro(f.calories, f.defaultQty, f.defaultUnit, f.defaultQty);
-              const displayP   = calcMacro(f.protein,  f.defaultQty, f.defaultUnit, f.defaultQty);
-              const displayC   = calcMacro(f.carbs,    f.defaultQty, f.defaultUnit, f.defaultQty);
-              const displayF   = calcMacro(f.fats,     f.defaultQty, f.defaultUnit, f.defaultQty);
-              const visibleTags = (f.tags ?? []).slice(0, 3);
-              return (
+      {/* All Foods (global DB) */}
+      {tab === "all" && (
+        <>
+          <div className="space-y-1.5">
+            <button
+              type="button"
+              onClick={() => { setActiveTags([]); if (!query.trim()) setOpen(true); }}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                activeTags.length === 0
+                  ? "bg-brand-600 text-white border-brand-600"
+                  : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"
+              }`}
+            >
+              All
+            </button>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Cuisine</p>
+              <div className="flex flex-wrap gap-1.5">
+                {CUISINE_TAGS.map(({ tag, label, emoji }) => (
+                  <button key={tag} type="button" onClick={() => handleTagClick(tag)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTags.includes(tag) ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
+                    {emoji} {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Dietary Category</p>
+              <div className="flex flex-wrap gap-1.5">
+                {DIETARY_TAGS.map(({ tag, label, emoji }) => (
+                  <button key={tag} type="button" onClick={() => handleTagClick(tag)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTags.includes(tag) ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
+                    {emoji} {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Food Type</p>
+              <div className="flex flex-wrap gap-1.5">
+                {FOOD_TYPE_TAGS.map(({ tag, label, emoji }) => (
+                  <button key={tag} type="button" onClick={() => handleTagClick(tag)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTags.includes(tag) ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
+                    {emoji} {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="relative">
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => (query || activeTags.length > 0) && results.length > 0 && setOpen(true)}
+              onBlur={() => setTimeout(() => setOpen(false), 150)}
+              placeholder="Search food (e.g. chicken breast, oats)..."
+              label="Search Food Database"
+            />
+            {open && results.length > 0 && (
+              <ul className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                {results.map((f) => {
+                  const displayCal = calcMacro(f.calories, f.defaultQty, f.defaultUnit, f.defaultQty);
+                  const displayP   = calcMacro(f.protein,  f.defaultQty, f.defaultUnit, f.defaultQty);
+                  const displayC   = calcMacro(f.carbs,    f.defaultQty, f.defaultUnit, f.defaultQty);
+                  const displayF   = calcMacro(f.fats,     f.defaultQty, f.defaultUnit, f.defaultQty);
+                  const visibleTags = (f.tags ?? []).slice(0, 3);
+                  return (
+                    <li
+                      key={f.id}
+                      onMouseDown={() => { onSelect(f); setQuery(""); setOpen(false); }}
+                      className="px-4 py-2.5 hover:bg-brand-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-50 dark:border-gray-700 last:border-0"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{f.name}</p>
+                        {visibleTags.length > 0 && (
+                          <div className="flex gap-1 flex-shrink-0 flex-wrap justify-end">
+                            {visibleTags.map((tag: string) => (
+                              <span key={tag} className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${TAG_COLORS[tag] ?? "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300"}`}>
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        {displayCal} kcal &middot; {f.defaultQty} {f.defaultUnit} &nbsp;|&nbsp;
+                        P: {displayP}g &nbsp;C: {displayC}g &nbsp;F: {displayF}g
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {open && results.length === 0 && (query.trim().length > 1 || activeTags.length > 0) && (
+              <div className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-400 dark:text-gray-500">
+                No results -- enter details manually below
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* My Foods */}
+      {tab === "mine" && (
+        <div className="space-y-2">
+          <Input
+            value={myFoodsQuery}
+            onChange={(e) => setMyFoodsQuery(e.target.value)}
+            placeholder="Filter my foods..."
+            label="Search My Foods"
+          />
+          {filteredMyFoods.length === 0 ? (
+            <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500">
+              {myFoods.length === 0
+                ? "No custom foods yet. Hit + New food to create your first one."
+                : "No foods match your filter."}
+            </div>
+          ) : (
+            <ul className="space-y-1 max-h-56 overflow-y-auto pr-1">
+              {filteredMyFoods.map((f) => (
                 <li
                   key={f.id}
-                  onMouseDown={() => { onSelect(f); setQuery(""); setOpen(false); }}
-                  className="px-4 py-2.5 hover:bg-brand-50 cursor-pointer border-b border-gray-50 last:border-0"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-600 group transition-all"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100 dark:text-gray-100">{f.name}</p>
-                    {visibleTags.length > 0 && (
-                      <div className="flex gap-1 flex-shrink-0 flex-wrap justify-end">
-                        {visibleTags.map((tag: string) => (
-                          <span key={tag} className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${TAG_COLORS[tag] ?? "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300"}`}>
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {displayCal} kcal · {f.defaultQty} {f.defaultUnit} &nbsp;|&nbsp;
-                    P: {displayP}g &nbsp;C: {displayC}g &nbsp;F: {displayF}g
-                  </p>
+                  <button
+                    type="button"
+                    className="flex-1 text-left"
+                    onMouseDown={() => onSelect({ ...f, id: "custom-" + f.id })}
+                  >
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                      {f.name}
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                      {f.calories} kcal &middot; {f.defaultQty} {f.defaultUnit} &nbsp;|&nbsp;
+                      P: {f.protein}g &nbsp;C: {f.carbs}g &nbsp;F: {f.fats}g
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingFood(f); setShowCreateModal(true); }}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-brand-600 transition-all text-sm"
+                    title="Edit"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteMyFood(f.id)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 transition-all text-sm"
+                    title="Delete"
+                  >
+                    Del
+                  </button>
                 </li>
-              );
-            })}
-          </ul>
-        )}
-        {open && results.length === 0 && (query.trim().length > 1 || activeTag) && (
-          <div className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-400 dark:text-gray-500 dark:text-gray-500">
-            No results — enter details manually below
-          </div>
-        )}
-      </div>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {showCreateModal && (
+        <Modal
+          open
+          onClose={() => { setShowCreateModal(false); setEditingFood(null); }}
+          title={editingFood ? "Edit custom food" : "Create custom food"}
+        >
+          <CustomFoodModal
+            initial={editingFood}
+            onSave={(saved) => {
+              setShowCreateModal(false);
+              setEditingFood(null);
+              if (editingFood) {
+                setMyFoods((prev) => prev.map((f) => f.id === saved.id ? saved : f));
+              } else {
+                setMyFoods((prev) => [...prev, saved]);
+                setMyFoodsLoaded(true);
+              }
+              reloadMyFoods();
+            }}
+            onClose={() => { setShowCreateModal(false); setEditingFood(null); }}
+          />
+        </Modal>
+      )}
     </div>
   );
 }
@@ -658,7 +944,7 @@ function MacroRing({ label, value, total, color, goal }: {
 
   const over        = goal != null && rawGoalPct > 100;
   const met         = goal != null && rawGoalPct >= 100;
-  const strokeColor = met  ? "#22c55e" : over ? "#ef4444" : color;
+  const strokeColor = over ? "#ef4444" : met ? "#22c55e" : color;
   const glowFilter  =
     over ? "drop-shadow(0 0 6px rgba(239,68,68,0.60))"
     : met ? "drop-shadow(0 0 5px rgba(34,197,94,0.65))"
@@ -946,9 +1232,11 @@ function MacroGoalBar({ label, consumed, target, color, bgColor }: {
   const diff   = Math.abs(Math.round(target - consumed));
 
   // Glow: blue at >=70%, green at >=100%
-  const fillColor = pct >= 100 ? "#22c55e" : color;
+  const fillColor = over ? "#ef4444" : pct >= 100 ? "#22c55e" : color;
   const glowStyle: React.CSSProperties =
-    pct >= 100
+    over
+      ? { boxShadow: "0 0 8px 2px rgba(239,68,68,0.50)" }
+      : pct >= 100
       ? { boxShadow: "0 0 8px 2px rgba(34,197,94,0.45)" }
       : pct >= 70
       ? { boxShadow: "0 0 8px 2px rgba(59,130,246,0.40)" }
@@ -1523,7 +1811,21 @@ function formatFastingDuration(ms: number): string {
 export default function NutritionPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [date,     setDate]     = useState(new Date().toISOString().split("T")[0]);
+  const [date,     setDate]     = useState(() => sessionStorage.getItem("nutrition_date") ?? new Date().toISOString().split("T")[0]);
+  const setDatePersist = (d: string) => { sessionStorage.setItem("nutrition_date", d); setDate(d); };
+
+  // TASK 2: Reset date if saved date is more than 7 days in the past
+  useEffect(() => {
+    const saved = sessionStorage.getItem("nutrition_date");
+    if (saved) {
+      const diff = Math.abs(new Date().getTime() - new Date(saved).getTime());
+      if (diff > 7 * 24 * 3600 * 1000) {
+        const today = new Date().toISOString().split("T")[0];
+        sessionStorage.setItem("nutrition_date", today);
+        setDate(today);
+      }
+    }
+  }, []);
   const [logs,     setLogs]     = useState<FoodLog[]>([]);
   const [totals,   setTotals]   = useState<FoodTotals>({ calories: 0, protein: 0, carbs: 0, fats: 0 });
   const [loading,  setLoading]  = useState(true);
@@ -1533,7 +1835,8 @@ export default function NutritionPage() {
   const [showMealPlan, setShowMealPlan] = useState(false);
   const [showDish,     setShowDish]     = useState(false);
   const [activeGoal,  setActiveGoal]  = useState<CalorieGoal | null>(null);
-  const [macroView,   setMacroView]   = useState<"distribution" | "breakdown" | "by-meal" | "by-food" | "goals">("distribution");
+  const [macroView,   setMacroView]   = useState<"distribution" | "breakdown" | "by-meal" | "by-food" | "goals">(() => (sessionStorage.getItem("macro_view") as any) ?? "distribution");
+  const setMacroViewPersist = (v: "distribution" | "breakdown" | "by-meal" | "by-food" | "goals") => { sessionStorage.setItem("macro_view", v); setMacroView(v); };
 
   // ── Supplements ──────────────────────────────────────────────────────────────
   const SUPPLEMENT_DEFS = {
@@ -1750,6 +2053,8 @@ export default function NutritionPage() {
           fats:     prev.fats     - (removed.fats    ?? 0),
         };
       });
+    } catch (e: any) {
+      alert(e.response?.data?.error || "Failed to delete entry. Please try again.");
     } finally { setDeleting(null); }
   };
 
@@ -1777,6 +2082,26 @@ export default function NutritionPage() {
   // ── Quick re-log (frequent foods) ───────────────────────────────────────────
   type FrequentFood = { foodName: string; calories: number; protein: number | null; carbs: number | null; fats: number | null; quantity: number; unit: string; meal: string | null; timesLogged: number };
   const [frequentFoods, setFrequentFoods] = useState<FrequentFood[]>([]);
+
+  // ── Favourites (localStorage) ────────────────────────────────────────────
+  const FAVS_KEY = "fitai_fav_foods";
+  const loadFavs = (): FoodLog[] => { try { return JSON.parse(localStorage.getItem(FAVS_KEY) ?? "[]"); } catch { return []; } };
+  const [favFoods, setFavFoods] = useState<FoodLog[]>(loadFavs);
+  const toggleFav = (log: FoodLog) => {
+    setFavFoods((prev) => {
+      const exists = prev.some((f) => f.foodName === log.foodName);
+      const next   = exists ? prev.filter((f) => f.foodName !== log.foodName) : [log, ...prev].slice(0, 20);
+      localStorage.setItem(FAVS_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+  const isFav = (name: string) => favFoods.some((f) => f.foodName === name);
+  const relogFav = async (fav: FoodLog) => {
+    try {
+      await foodApi.log({ foodName: fav.foodName, calories: fav.calories, protein: fav.protein ?? undefined, carbs: fav.carbs ?? undefined, fats: fav.fats ?? undefined, quantity: fav.quantity, unit: fav.unit, date });
+      await load();
+    } catch { /* silent */ }
+  };
   const [relogging,     setRelogging]     = useState<string | null>(null);
 
   useEffect(() => {
@@ -1813,17 +2138,17 @@ export default function NutritionPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="secondary" size="sm"
-            onClick={() => setDate(subDays(parseISO(date), 1).toISOString().split("T")[0])}>←</Button>
+            onClick={() => setDatePersist(subDays(parseISO(date), 1).toISOString().split("T")[0])}>←</Button>
           <input
             type="date"
             value={date}
             max={new Date().toISOString().split("T")[0]}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => setDatePersist(e.target.value)}
             className="border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
           <Button variant="secondary" size="sm"
             disabled={isToday}
-            onClick={() => setDate(addDays(parseISO(date), 1).toISOString().split("T")[0])}>→</Button>
+            onClick={() => setDatePersist(addDays(parseISO(date), 1).toISOString().split("T")[0])}>→</Button>
           <Button
             variant="secondary"
             size="sm"
@@ -1861,6 +2186,170 @@ export default function NutritionPage() {
         </div>
       </div>
 
+      {/* Daily summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* ── Calories card ── */}
+        <Card className="lg:col-span-1">
+          <CardHeader title="Calories" />
+          <div className="text-center py-2">
+            <p className="text-4xl font-bold text-gray-900 dark:text-white dark:text-white">{Math.round(effectiveTotals.calories)}</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">kcal consumed{suppMacros.calories > 0 ? <span className="text-purple-600"> (incl. supps)</span> : ""}</p>
+            {hasGoal && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5">
+                Goal: <span className="font-semibold text-gray-700 dark:text-gray-200 dark:text-gray-200">{Math.round(activeGoal!.dailyCalories)} kcal</span>
+              </p>
+            )}
+          </div>
+
+          {/* Progress bar — only shown when there's a goal */}
+          {hasGoal && effectiveTotals.calories > 0 && (
+            <CalorieProgress consumed={effectiveTotals.calories} target={activeGoal!.dailyCalories} />
+          )}
+
+          {/* Deficit/surplus banner — only shown when goal exists and food logged */}
+          {hasGoal && effectiveTotals.calories > 0 && (
+            <DeficitSurplusBanner
+              consumed={effectiveTotals.calories}
+              target={activeGoal!.dailyCalories}
+              goalType={activeGoal!.type}
+            />
+          )}
+
+          {/* No goal nudge */}
+          {!hasGoal && (
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-2">
+              <button
+                onClick={() => navigate("/goals")}
+                className="text-brand-600 hover:underline"
+              >Set a calorie goal</button> to track limits & deficit/surplus
+            </p>
+          )}
+
+          <div className="flex justify-around pt-4 border-t border-gray-100 dark:border-gray-700 text-center mt-3">
+            <div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">Entries</p>
+              <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{logs.length}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">Meals</p>
+              <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{Object.keys(grouped).length}</p>
+            </div>
+            {hasGoal && (
+              <div>
+                <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">TDEE</p>
+                <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{Math.round(activeGoal!.tdee ?? 0)}</p>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* ── Macronutrients card ── */}
+        <Card className="lg:col-span-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+            <h3 className="font-semibold text-gray-900 dark:text-white dark:text-white">Macronutrients</h3>
+
+            {/* View toggle — always visible; "vs Goals" only when a goal exists */}
+            <div className="flex flex-wrap gap-0.5 bg-gray-100 rounded-lg p-0.5 text-xs overflow-x-auto">
+              {([
+                { key: "distribution", label: "🍩 Rings"      },
+                { key: "breakdown",    label: "📊 Breakdown"  },
+                { key: "by-meal",      label: "🍽️ Meals"     },
+                { key: "by-food",      label: "🔍 Foods"     },
+                ...(hasGoal ? [{ key: "goals", label: "🎯 Goals" }] : []),
+              ] as { key: typeof macroView; label: string }[]).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setMacroViewPersist(key)}
+                  className={`px-2 py-1 rounded-md font-medium transition-all whitespace-nowrap ${
+                    macroView === key
+                      ? "bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white"
+                      : "text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {totalMacroG > 0 ? (
+            <>
+              {/* 🍩 Distribution — macro rings showing % of total grams */}
+              {macroView === "distribution" && (
+                <div className="flex items-center justify-around">
+                  <MacroRing label="Protein" value={effectiveTotals.protein} total={totalMacroG} color="#3b82f6" goal={activeGoal?.proteinGrams} />
+                  <MacroRing label="Carbs"   value={effectiveTotals.carbs}   total={totalMacroG} color="#f59e0b" goal={activeGoal?.carbsGrams} />
+                  <MacroRing label="Fats"    value={effectiveTotals.fats}    total={totalMacroG} color="#ef4444" goal={activeGoal?.fatsGrams} />
+                  <div className="text-center">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Calories from macros</p>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white">
+                      {Math.round(effectiveTotals.protein * 4 + effectiveTotals.carbs * 4 + effectiveTotals.fats * 9)}
+                    </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">kcal</p>
+                  </div>
+                </div>
+              )}
+
+              {/* 📊 Breakdown — stacked calorie bar + gram/kcal/% table */}
+              {macroView === "breakdown" && (
+                <MacroBreakdown
+                  protein={effectiveTotals.protein}
+                  carbs={effectiveTotals.carbs}
+                  fats={effectiveTotals.fats}
+                />
+              )}
+
+              {/* 🍽️ By Meal — per-meal stacked bars */}
+              {macroView === "by-meal" && (
+                <MacroByMeal grouped={grouped} mealOrder={mealOrder} />
+              )}
+
+              {/* 🔍 By Food — per-food macro source table */}
+              {macroView === "by-food" && (
+                <MacroByFood logs={logs} />
+              )}
+
+              {/* 🎯 vs Goals — progress bars against calorie goal targets */}
+              {macroView === "goals" && hasGoal && (
+                <div className="space-y-4 pt-1">
+                  <MacroGoalBar
+                    label="🥩 Protein"
+                    consumed={effectiveTotals.protein}
+                    target={activeGoal!.proteinGrams}
+                    color="#3b82f6"
+                    bgColor="bg-blue-100"
+                  />
+                  <MacroGoalBar
+                    label="🍞 Carbohydrates"
+                    consumed={effectiveTotals.carbs}
+                    target={activeGoal!.carbsGrams}
+                    color="#f59e0b"
+                    bgColor="bg-amber-100"
+                  />
+                  <MacroGoalBar
+                    label="🥑 Fats"
+                    consumed={effectiveTotals.fats}
+                    target={activeGoal!.fatsGrams}
+                    color="#ef4444"
+                    bgColor="bg-red-100"
+                  />
+                  <div className="text-xs text-gray-400 dark:text-gray-500 text-right pt-1">
+                    From goal: {activeGoal!.name ?? activeGoal!.type}
+                    {" · "}{Math.round(activeGoal!.dailyCalories)} kcal / day
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <p className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-500">Log food to see macro breakdown</p>
+              <Button size="sm" onClick={() => setShowForm(true)}>Log First Meal</Button>
+            </div>
+          )}
+        </Card>
+      </div>
+
       {/* Hormonal cycle phase banner — shown for female users with periodStart set */}
       {user?.sex === "female" && user.periodStart && (
         <CyclePhaseBanner periodStart={user.periodStart} cycleLength={user.cycleLength} />
@@ -1895,6 +2384,31 @@ export default function NutritionPage() {
             {fastingElapsed >= 24 * 3600000 && (
               <p>🏆 Full 24-hour fast complete!</p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Favourites ─────────────────────────────────────────────────────────── */}
+      {favFoods.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-2xl px-4 py-3">
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-2">Favourites</p>
+          <div className="flex gap-2 flex-wrap">
+            {favFoods.map((fav) => (
+              <button
+                key={fav.foodName}
+                onClick={() => relogFav(fav)}
+                className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 hover:border-amber-400 text-gray-700 dark:text-gray-200 text-xs font-medium px-3 py-1.5 rounded-xl transition-colors"
+                title={`${fav.quantity} ${fav.unit}`}
+              >
+                <span className="truncate max-w-[120px]">{fav.foodName}</span>
+                <span className="text-amber-600 dark:text-amber-400 font-semibold flex-shrink-0">{fav.calories} kcal</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleFav(fav); }}
+                  className="text-amber-300 hover:text-red-400 font-bold leading-none ml-0.5"
+                  title="Remove from favourites"
+                >×</button>
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -2096,170 +2610,6 @@ export default function NutritionPage() {
         <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">Click to toggle · ✏️ edits macros per unit · preferences saved automatically</p>
       </Card>
 
-      {/* Daily summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* ── Calories card ── */}
-        <Card className="lg:col-span-1">
-          <CardHeader title="Calories" />
-          <div className="text-center py-2">
-            <p className="text-4xl font-bold text-gray-900 dark:text-white dark:text-white">{Math.round(effectiveTotals.calories)}</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">kcal consumed{suppMacros.calories > 0 ? <span className="text-purple-600"> (incl. supps)</span> : ""}</p>
-            {hasGoal && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5">
-                Goal: <span className="font-semibold text-gray-700 dark:text-gray-200 dark:text-gray-200">{Math.round(activeGoal!.dailyCalories)} kcal</span>
-              </p>
-            )}
-          </div>
-
-          {/* Progress bar — only shown when there's a goal */}
-          {hasGoal && effectiveTotals.calories > 0 && (
-            <CalorieProgress consumed={effectiveTotals.calories} target={activeGoal!.dailyCalories} />
-          )}
-
-          {/* Deficit/surplus banner — only shown when goal exists and food logged */}
-          {hasGoal && effectiveTotals.calories > 0 && (
-            <DeficitSurplusBanner
-              consumed={effectiveTotals.calories}
-              target={activeGoal!.dailyCalories}
-              goalType={activeGoal!.type}
-            />
-          )}
-
-          {/* No goal nudge */}
-          {!hasGoal && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-2">
-              <button
-                onClick={() => navigate("/goals")}
-                className="text-brand-600 hover:underline"
-              >Set a calorie goal</button> to track limits & deficit/surplus
-            </p>
-          )}
-
-          <div className="flex justify-around pt-4 border-t border-gray-100 dark:border-gray-700 text-center mt-3">
-            <div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">Entries</p>
-              <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{logs.length}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">Meals</p>
-              <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{Object.keys(grouped).length}</p>
-            </div>
-            {hasGoal && (
-              <div>
-                <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">TDEE</p>
-                <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{Math.round(activeGoal!.tdee ?? 0)}</p>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* ── Macronutrients card ── */}
-        <Card className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h3 className="font-semibold text-gray-900 dark:text-white dark:text-white">Macronutrients</h3>
-
-            {/* View toggle — always visible; "vs Goals" only when a goal exists */}
-            <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5 text-xs">
-              {([
-                { key: "distribution", label: "🍩 Rings"      },
-                { key: "breakdown",    label: "📊 Breakdown"  },
-                { key: "by-meal",      label: "🍽️ By Meal"   },
-                { key: "by-food",      label: "🔍 By Food"   },
-                ...(hasGoal ? [{ key: "goals", label: "🎯 vs Goals" }] : []),
-              ] as { key: typeof macroView; label: string }[]).map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setMacroView(key)}
-                  className={`px-2.5 py-1 rounded-md font-medium transition-all whitespace-nowrap ${
-                    macroView === key
-                      ? "bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white"
-                      : "text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {totalMacroG > 0 ? (
-            <>
-              {/* 🍩 Distribution — macro rings showing % of total grams */}
-              {macroView === "distribution" && (
-                <div className="flex items-center justify-around">
-                  <MacroRing label="Protein" value={effectiveTotals.protein} total={totalMacroG} color="#3b82f6" goal={activeGoal?.proteinGrams} />
-                  <MacroRing label="Carbs"   value={effectiveTotals.carbs}   total={totalMacroG} color="#f59e0b" goal={activeGoal?.carbsGrams} />
-                  <MacroRing label="Fats"    value={effectiveTotals.fats}    total={totalMacroG} color="#ef4444" goal={activeGoal?.fatsGrams} />
-                  <div className="text-center">
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Calories from macros</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white">
-                      {Math.round(effectiveTotals.protein * 4 + effectiveTotals.carbs * 4 + effectiveTotals.fats * 9)}
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">kcal</p>
-                  </div>
-                </div>
-              )}
-
-              {/* 📊 Breakdown — stacked calorie bar + gram/kcal/% table */}
-              {macroView === "breakdown" && (
-                <MacroBreakdown
-                  protein={effectiveTotals.protein}
-                  carbs={effectiveTotals.carbs}
-                  fats={effectiveTotals.fats}
-                />
-              )}
-
-              {/* 🍽️ By Meal — per-meal stacked bars */}
-              {macroView === "by-meal" && (
-                <MacroByMeal grouped={grouped} mealOrder={mealOrder} />
-              )}
-
-              {/* 🔍 By Food — per-food macro source table */}
-              {macroView === "by-food" && (
-                <MacroByFood logs={logs} />
-              )}
-
-              {/* 🎯 vs Goals — progress bars against calorie goal targets */}
-              {macroView === "goals" && hasGoal && (
-                <div className="space-y-4 pt-1">
-                  <MacroGoalBar
-                    label="🥩 Protein"
-                    consumed={effectiveTotals.protein}
-                    target={activeGoal!.proteinGrams}
-                    color="#3b82f6"
-                    bgColor="bg-blue-100"
-                  />
-                  <MacroGoalBar
-                    label="🍞 Carbohydrates"
-                    consumed={effectiveTotals.carbs}
-                    target={activeGoal!.carbsGrams}
-                    color="#f59e0b"
-                    bgColor="bg-amber-100"
-                  />
-                  <MacroGoalBar
-                    label="🥑 Fats"
-                    consumed={effectiveTotals.fats}
-                    target={activeGoal!.fatsGrams}
-                    color="#ef4444"
-                    bgColor="bg-red-100"
-                  />
-                  <div className="text-xs text-gray-400 dark:text-gray-500 text-right pt-1">
-                    From goal: {activeGoal!.name ?? activeGoal!.type}
-                    {" · "}{Math.round(activeGoal!.dailyCalories)} kcal / day
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-8 gap-2">
-              <p className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-500">Log food to see macro breakdown</p>
-              <Button size="sm" onClick={() => setShowForm(true)}>Log First Meal</Button>
-            </div>
-          )}
-        </Card>
-      </div>
-
       {/* Food log by meal */}
       {loading ? (
         <div className="flex justify-center py-12">
@@ -2340,6 +2690,11 @@ export default function NutritionPage() {
                             <td className="py-2.5 text-right text-red-500">{log.fats    != null ? Math.round(log.fats)    : "—"}</td>
                             <td className="py-2.5">
                               <div className="flex gap-1 justify-end">
+                                <button
+                                  onClick={() => toggleFav(log)}
+                                  className={`text-xs px-2 py-1 rounded-lg transition-colors ${isFav(log.foodName) ? "bg-amber-100 text-amber-500" : "bg-gray-100 hover:bg-gray-200 text-gray-400 dark:text-gray-500"}`}
+                                  title={isFav(log.foodName) ? "Remove from favourites" : "Add to favourites"}
+                                >⭐</button>
                                 <button
                                   onClick={() => { setEditItem(log); setShowForm(true); }}
                                   className="text-xs px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 dark:text-gray-300 transition-colors"

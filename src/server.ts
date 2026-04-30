@@ -33,6 +33,7 @@ import waterRoutes       from "./routes/water.js";
 import mealPlanRoutes    from "./routes/mealPlans.js";
 import calendarRoutes    from "./routes/calendar.js";
 import analyticsRoutes   from "./routes/analytics.js";
+import customFoodRoutes  from "./routes/customFoods.js";
 import { runMigrations } from "./lib/runMigrations.js";
 
 const app: Express = express();
@@ -120,6 +121,7 @@ app.use("/api/water",       waterRoutes);
 app.use("/api/meal-plans",  mealPlanRoutes);
 app.use("/api/calendar",    calendarRoutes);
 app.use("/api/analytics",   analyticsRoutes);
+app.use("/api/custom-foods", customFoodRoutes);
 
 // ── Serve React frontend (production) ───────────────────────────────────────
 import path from "path";

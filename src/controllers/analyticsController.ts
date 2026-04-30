@@ -29,7 +29,7 @@ export const getAnalytics = async (
     const since   = new Date();
     since.setDate(since.getDate() - days);
 
-    const [workouts, foodLogs] = await Promise.all([
+    const [workouts, foodLogs, weightLogs] = await Promise.all([
       prisma.workout.findMany({
         where:   { userId, date: { gte: since } },
         select:  { date: true, duration: true, caloriesBurned: true },
@@ -40,6 +40,11 @@ export const getAnalytics = async (
         select:  { date: true, calories: true, protein: true, carbs: true, fats: true },
         orderBy: { date: "asc" },
       }),
+      (prisma as any).weightLog ? (prisma as any).weightLog.findMany({
+        where:   { userId, date: { gte: since } },
+        select:  { date: true, weight: true },
+        orderBy: { date: "asc" },
+      }).catch(() => []) : Promise.resolve([]),
     ]);
 
     // ── Workout trend — grouped by calendar week ──────────────────────────────
@@ -110,10 +115,17 @@ export const getAnalytics = async (
     const totalWorkouts = workouts.length;
     const totalBurned   = workouts.reduce((s, w) => s + (w.caloriesBurned ?? 0), 0);
 
+    // Build weight series
+    const weightSeries = (weightLogs as any[]).map((w: any) => ({
+      label:  new Date(w.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      weight: Number(w.weight),
+    }));
+
     res.json({
       days,
       dailySeries:   withRolling,
       workoutTrend,
+      weightSeries,
       summary: { avgCalories, avgProtein, totalWorkouts, totalBurned: Math.round(totalBurned) },
     });
   } catch (error) { next(error); }

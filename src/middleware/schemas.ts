@@ -237,6 +237,7 @@ export const logFoodSchema = z.object({
   unit: z.string().trim().min(1, "Unit is required").max(50),
   meal: z.enum(["breakfast", "lunch", "dinner", "snack"]).optional(),
   date: dateString.optional(),
+  isCheatMeal: z.boolean().optional(),
 });
 
 // ── Weight Logs ───────────────────────────────────────────────────────────────

@@ -5,12 +5,12 @@
  * that was added after the initial schema is present in the live database.
  *
  * Uses information_schema and pg_indexes (PostgreSQL system catalog).
- * Safe to run on every boot — all checks are existence-gated.
+ * Safe to run on every boot -- all checks are existence-gated.
  */
 import prisma from "./prisma.js";
 import logger from "./logger.js";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// Helpers
 
 async function getColumns(table: string): Promise<Set<string>> {
   const rows = await prisma.$queryRawUnsafe<{ column_name: string }[]>(
@@ -42,7 +42,7 @@ async function indexExists(indexName: string): Promise<boolean> {
   return rows.length > 0;
 }
 
-// ── Table migrations ──────────────────────────────────────────────────────────
+// Table migrations
 
 const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
   {
@@ -124,6 +124,25 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
     )`,
   },
   {
+    table: "CustomFood",
+    sql: `CREATE TABLE IF NOT EXISTS "CustomFood" (
+      "id"          SERIAL PRIMARY KEY,
+      "userId"      INTEGER NOT NULL,
+      "name"        TEXT NOT NULL,
+      "calories"    DOUBLE PRECISION NOT NULL,
+      "protein"     DOUBLE PRECISION NOT NULL DEFAULT 0,
+      "carbs"       DOUBLE PRECISION NOT NULL DEFAULT 0,
+      "fats"        DOUBLE PRECISION NOT NULL DEFAULT 0,
+      "defaultQty"  DOUBLE PRECISION NOT NULL DEFAULT 100,
+      "defaultUnit" TEXT NOT NULL DEFAULT 'g',
+      "tags"        TEXT NOT NULL DEFAULT '[]',
+      "basedOnId"   TEXT,
+      "createdAt"   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "updatedAt"   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+    )`,
+  },
+  {
     table: "MealPlanEntry",
     sql: `CREATE TABLE IF NOT EXISTS "MealPlanEntry" (
       "id"        SERIAL PRIMARY KEY,
@@ -143,7 +162,7 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
   },
 ];
 
-// ── Column migrations ─────────────────────────────────────────────────────────
+// Column migrations
 
 const MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
   { table: "Conversation", column: "metadata",
@@ -190,7 +209,7 @@ const MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
     sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "restDayFats" DOUBLE PRECISION` },
 ];
 
-// ── Index migrations ──────────────────────────────────────────────────────────
+// Index migrations
 
 const INDEX_MIGRATIONS: Array<{ name: string; sql: string }> = [
   { name: "idx_waterlog_userid_date",
@@ -205,6 +224,10 @@ const INDEX_MIGRATIONS: Array<{ name: string; sql: string }> = [
     sql: `CREATE INDEX IF NOT EXISTS "idx_mealplan_userid_weekstart" ON "MealPlan" ("userId", "weekStart")` },
   { name: "idx_workoutcalendar_userid",
     sql: `CREATE INDEX IF NOT EXISTS "idx_workoutcalendar_userid" ON "WorkoutCalendarDay" ("userId")` },
+  { name: "idx_customfood_userid",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_customfood_userid" ON "CustomFood" ("userId")` },
+  { name: "idx_customfood_name",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_customfood_name" ON "CustomFood" ("name")` },
   { name: "idx_fooditem_name",
     sql: `CREATE INDEX IF NOT EXISTS "idx_fooditem_name" ON "FoodItem" ("name")` },
   { name: "idx_exerciseitem_name",
@@ -215,12 +238,12 @@ const INDEX_MIGRATIONS: Array<{ name: string; sql: string }> = [
     sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_equipment" ON "ExerciseItem" ("equipment")` },
 ];
 
-// ── Runner ────────────────────────────────────────────────────────────────────
+// Runner
 
 export async function runMigrations(): Promise<void> {
   let applied = 0;
 
-  // 1. Create new tables that don't exist yet
+  // 1. Create new tables that do not exist yet
   for (const { table, sql } of TABLE_MIGRATIONS) {
     const exists = await tableExists(table);
     if (!exists) {
@@ -241,7 +264,7 @@ export async function runMigrations(): Promise<void> {
     applied++;
   }
 
-  // 3. Create performance indexes if they don't exist
+  // 3. Create performance indexes if they do not exist
   for (const { name, sql } of INDEX_MIGRATIONS) {
     const exists = await indexExists(name);
     if (!exists) {

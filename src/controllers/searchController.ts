@@ -39,12 +39,13 @@ export const foodSearch = async (
 ): Promise<void> => {
   try {
     const q      = String(req.query.q     || "").trim();
-    const tag    = req.query.tag    ? String(req.query.tag)    : undefined;
+    const tagsParam = req.query.tags ? String(req.query.tags) : (req.query.tag ? String(req.query.tag) : undefined);
+    const tags   = tagsParam ? tagsParam.split(",").map((t) => t.trim()).filter(Boolean) : [];
     const limit  = Math.min(Number(req.query.limit  || 20), 50);
     const offset = Math.max(Number(req.query.offset ||  0),  0);
 
     // ── Redis cache — food search results are user-agnostic ──────────────────
-    const cacheKey = `search:food:${q}:${tag ?? ""}:${limit}:${offset}`;
+    const cacheKey = `search:food:${q}:${tags.join("|")}:${limit}:${offset}`;
     const cached   = await cacheGet(cacheKey);
     if (cached) {
       res.json(JSON.parse(cached));
@@ -58,7 +59,10 @@ export const foodSearch = async (
       const where: Record<string, any> = {};
 
       if (q)   where.name = { contains: q };
-      if (tag) where.tags = { contains: `"${tag}"` };
+      if (tags.length > 0) {
+        // AND logic: item must have ALL selected tags
+        where.AND = tags.map((t) => ({ tags: { contains: `"${t}"` } }));
+      }
 
       const [results, total] = await Promise.all([
         db.foodItem.findMany({ where, orderBy: { name: "asc" }, take: limit, skip: offset }),
@@ -87,7 +91,7 @@ export const foodSearch = async (
     }
 
     // ── Fallback: static array ────────────────────────────────────────────────
-    const results = searchFoods(q, limit, tag);
+    const results = searchFoods(q, limit, tags[0]);
     res.json({ results, total: FOOD_DB.length, source: "static" });
   } catch (e) {
     next(e);

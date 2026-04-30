@@ -983,6 +983,57 @@ function AnalyticsTab() {
               </ResponsiveContainer>
             </Card>
           )}
+
+          {/* Weight trend in analytics */}
+          {data.weightSeries && data.weightSeries.length > 1 && (
+            <Card>
+              <CardHeader title="Weight Trend" subtitle="Logged weight over the selected period" />
+              <ResponsiveContainer width="100%" height={180}>
+                <ComposedChart data={data.weightSeries} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} interval={Math.max(1, Math.floor(data.weightSeries.length / 8))} />
+                  <YAxis tick={{ fontSize: 10, fill: chartTick }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 10, border: `1px solid ${chartBorder}`, backgroundColor: chartBg, color: chartText }} formatter={(v: number) => [`${v} kg`, "Weight"]} />
+                  <Line type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 2, fill: "#8b5cf6" }} connectNulls />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </Card>
+          )}
+
+          {/* Nutrition adherence summary */}
+          {summary && (
+            <Card>
+              <CardHeader title="Nutrition Adherence" subtitle="How often you hit your daily targets" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 py-2">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-orange-600">{summary.avgCalories.toLocaleString()}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">avg kcal/day</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">{summary.avgProtein}g</p>
+                  <p className="text-xs text-gray-400 mt-0.5">avg protein/day</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-brand-600">{summary.totalWorkouts}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">workouts logged</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-red-500">{summary.totalBurned.toLocaleString()}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">kcal burned</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">{daily.filter((d) => d.calories > 0).length}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">days tracked</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600">
+                    {daily.length > 0 ? Math.round((daily.filter((d) => d.calories > 0).length / daily.length) * 100) : 0}%
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">logging rate</p>
+                </div>
+              </div>
+            </Card>
+          )}
         </>
       )}
     </div>
@@ -1057,12 +1108,12 @@ export default function ProgressPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Progress & Goals</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Body composition, weight trend, strength, and calorie goals</p>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex flex-wrap gap-2 shrink-0">
           {tab === "body" && (
             <select
               value={days}

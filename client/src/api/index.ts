@@ -22,6 +22,7 @@ import type {
   MealPlan,
   MealPlanEntry,
   WorkoutCalendarDay,
+  CustomFood,
 } from "../types";
 
 interface WorkoutExerciseCreateInput {
@@ -55,9 +56,10 @@ interface WorkoutExerciseUpdateInput {
 
 // ── Search ────────────────────────────────────────────────────────────────────
 export const searchApi = {
-  foods: (q: string, limit = 20, tag?: string) => {
+  foods: (q: string, limit = 20, tags?: string | string[]) => {
+    const tagsStr = Array.isArray(tags) ? tags.join(",") : (tags ?? "");
     const params = new URLSearchParams({ q, limit: String(limit) });
-    if (tag) params.set("tag", tag);
+    if (tagsStr) params.set("tags", tagsStr);
     return api.get<{ results: any[]; total: number }>(
       `/search/foods?${params.toString()}`,
     );
@@ -251,6 +253,17 @@ export const foodApi = {
   delete: (id: number) => api.delete(`/foods/${id}`),
 };
 
+// ── Custom Foods ────────────────────────────────────────────────────────────────────────────
+export const customFoodsApi = {
+  list: (q?: string) =>
+    api.get<{ foods: CustomFood[] }>(`/custom-foods${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  create: (data: Omit<CustomFood, "id" | "userId" | "createdAt" | "updatedAt">) =>
+    api.post<{ food: CustomFood }>("/custom-foods", data),
+  update: (id: number, data: Partial<Omit<CustomFood, "id" | "userId" | "createdAt" | "updatedAt">>) =>
+    api.put<{ food: CustomFood }>(`/custom-foods/${id}`, data),
+  delete: (id: number) => api.delete(`/custom-foods/${id}`),
+};
+
 // ── Weight ────────────────────────────────────────────────────────────────────
 export const weightApi = {
   getLogs: (days = 30) =>
@@ -439,6 +452,7 @@ export interface AnalyticsData {
   dailySeries: AnalyticsDayPoint[];
   workoutTrend: AnalyticsWeekPoint[];
   summary: AnalyticsSummary;
+  weightSeries?: Array<{ label: string; weight: number }>;
 }
 
 export const analyticsApi = {

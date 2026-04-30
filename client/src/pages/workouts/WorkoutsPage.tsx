@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import type { Dispatch, SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths } from "date-fns";
-import { workoutsApi, templatesApi, searchApi, foodApi, calorieGoalsApi, calendarApi, usersApi } from "../../api";
+import { workoutsApi, templatesApi, searchApi, foodApi, calorieGoalsApi, calendarApi, usersApi, chatApi } from "../../api";
 import type { Workout, WorkoutExercise, PRResult, WorkoutTemplate, WorkoutCalendarDay } from "../../types";
 import { useAuthStore } from "../../store/authStore";
-import { Card } from "../../components/ui/Card";
+import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
@@ -995,7 +995,7 @@ function WorkoutDetail({
   workout: Workout; onClose: () => void; onEdit: () => void;
   onDelete: () => void; onRefresh: () => void;
 }) {
-  type ExerciseEditData = Pick<WorkoutExercise, "sets" | "reps"> & { weight: number | null; rpe: number | null };
+  type ExerciseEditData = Pick<WorkoutExercise, "sets" | "reps"> & { exerciseName?: string; weight: number | null; rpe: number | null };
 
   const [exercises, setExercises] = useState<WorkoutExercise[]>(workout.exercises);
   const [editing, setEditing] = useState<number | null>(null);
@@ -1032,7 +1032,7 @@ function WorkoutDetail({
     if (!editData) return;
     setSaving(true);
     try {
-      await workoutsApi.updateExercise(id, editData);
+      await workoutsApi.updateExercise(id, { ...(editData.exerciseName && { exerciseName: editData.exerciseName }), sets: editData.sets, reps: editData.reps, weight: editData.weight ?? undefined, rpe: editData.rpe ?? undefined });
       setExercises((prev) => prev.map((e) => e.id === id ? { ...e, ...editData } : e));
       setEditing(null); setEditData(null);
       onRefresh();
@@ -1083,7 +1083,14 @@ function WorkoutDetail({
           <div key={ex.id} className="border border-gray-100 dark:border-gray-700 rounded-xl p-3">
             {editing === ex.id ? (
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 dark:text-gray-200">{ex.exerciseName}</p>
+                <div>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Exercise</p>
+                  <ExerciseSearch
+                    value={editData?.exerciseName ?? ex.exerciseName}
+                    onChange={(v) => updateEditData({ exerciseName: v } as any)}
+                    placeholder="Search exercise…"
+                  />
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     { label: "Sets",     defaultValue: ex.sets,        field: "sets"   as const },
@@ -1134,7 +1141,7 @@ function WorkoutDetail({
                       ✓ Set done
                     </button>
                     <button
-                      onClick={() => { setEditing(ex.id); setEditData({ sets: ex.sets, reps: ex.reps, weight: ex.weight ?? null, rpe: ex.rpe ?? null }); }}
+                      onClick={() => { setEditing(ex.id); setEditData({ exerciseName: ex.exerciseName, sets: ex.sets, reps: ex.reps, weight: ex.weight ?? null, rpe: ex.rpe ?? null }); }}
                       className="px-2.5 py-1 rounded-lg text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 dark:text-gray-300 transition-colors"
                     >
                       Edit
@@ -3143,9 +3150,148 @@ function EditCalendarDayModal({
 // ─────────────────────────────────────────────────────────────────────────────
 // Main page
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// AI Workout Builder
+// ─────────────────────────────────────────────────────────────────────────────
+function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) {
+  const { user } = useAuthStore();
+  const [muscles,  setMuscles]  = useState<string[]>([]);
+  const [type,     setType]     = useState("hypertrophy");
+  const [duration, setDuration] = useState(60);
+  const [loading,  setLoading]  = useState(false);
+  const [plan,     setPlan]     = useState<null | { name: string; exercises: Array<{ exerciseName: string; sets: number; reps: string; notes?: string }> }>(null);
+  const [saving,   setSaving]   = useState(false);
+  const [error,    setError]    = useState("");
+
+  const MUSCLE_OPTS = ["Chest","Back","Shoulders","Biceps","Triceps","Legs","Glutes","Core","Full Body"];
+  const TYPE_OPTS   = [
+    { value: "strength",    label: "Strength",    icon: "🏋️" },
+    { value: "hypertrophy", label: "Hypertrophy", icon: "📈" },
+    { value: "endurance",   label: "Endurance",   icon: "🏃" },
+    { value: "mobility",    label: "Mobility",    icon: "🧘" },
+  ];
+
+  const toggleMuscle = (m: string) => setMuscles((p) => p.includes(m) ? p.filter((x) => x !== m) : [...p, m]);
+
+  const generate = async () => {
+    if (muscles.length === 0) { setError("Pick at least one muscle group."); return; }
+    setError(""); setLoading(true); setPlan(null);
+    try {
+      const prompt = `Generate a ${type} workout targeting: ${muscles.join(", ")}. Duration: ~${duration} min. ${(user as any)?.injuries?.length ? `Avoid exercises for: ${(user as any).injuries.join(", ")}.` : ""} Return JSON only: { "name": "...", "exercises": [{ "exerciseName": "...", "sets": N, "reps": "N-N", "notes": "..." }] }`;
+      const res = await chatApi.send({ message: prompt, agentType: "coach" });
+      const text = (res.data as any).response ?? (res.data as any).message ?? "";
+      const match = text.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error("No JSON in response");
+      const parsed = JSON.parse(match[0]);
+      if (!parsed.exercises?.length) throw new Error("No exercises");
+      setPlan(parsed);
+    } catch (e: any) {
+      setError("AI could not generate a plan. Try again or adjust your selections.");
+    } finally { setLoading(false); }
+  };
+
+  const logWorkout = async () => {
+    if (!plan) return;
+    setSaving(true);
+    try {
+      await workoutsApi.create({
+        name: plan.name,
+        date: new Date().toISOString().split("T")[0],
+        duration,
+        trainingType: type,
+        exercises: plan.exercises.map((e, i) => ({
+          exerciseName: e.exerciseName,
+          sets: e.sets,
+          reps: parseInt(e.reps.split("-")[0]) || 10,
+          order: i,
+          notes: e.notes,
+        })),
+      });
+      onWorkoutLogged();
+    } catch { setError("Failed to save workout."); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="space-y-6 max-w-2xl mx-auto">
+      <Card>
+        <CardHeader title="AI Workout Builder" subtitle="Pick your targets and let AI design your session" />
+
+        {/* Muscle groups */}
+        <div className="mb-4">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Target muscle groups</p>
+          <div className="flex flex-wrap gap-2">
+            {MUSCLE_OPTS.map((m) => (
+              <button
+                key={m}
+                onClick={() => toggleMuscle(m)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${muscles.includes(m) ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-brand-400"}`}
+              >{m}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Training type */}
+        <div className="mb-4">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Training style</p>
+          <div className="flex gap-2 flex-wrap">
+            {TYPE_OPTS.map((t) => (
+              <button
+                key={t.value}
+                onClick={() => setType(t.value)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${type === t.value ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300"}`}
+              >{t.icon} {t.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Duration */}
+        <div className="mb-4">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Duration: {duration} min</p>
+          <input type="range" min={20} max={120} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="w-full" />
+        </div>
+
+        {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2 mb-3">{error}</p>}
+
+        <Button loading={loading} onClick={generate} className="w-full">
+          {loading ? "Generating..." : "Generate Workout"}
+        </Button>
+      </Card>
+
+      {/* Generated plan */}
+      {plan && (
+        <Card>
+          <CardHeader title={plan.name} subtitle={`${plan.exercises.length} exercises · ${type} · ${muscles.join(", ")}`} />
+          <div className="space-y-2 mb-4">
+            {plan.exercises.map((ex, i) => (
+              <div key={i} className="flex items-start gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i+1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{ex.exerciseName}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{ex.sets} sets × {ex.reps} reps{ex.notes ? ` · ${ex.notes}` : ""}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => { setPlan(null); generate(); }}>Regenerate</Button>
+            <Button loading={saving} className="flex-1" onClick={logWorkout}>Log This Workout</Button>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 export default function WorkoutsPage() {
   const { user, updateUser } = useAuthStore();
-  const [tab, setTab] = useState<"history" | "calendar" | "templates">("calendar");
+  const [tab, setTab] = useState<"history" | "calendar" | "templates" | "ai-build">(
+    () => (sessionStorage.getItem("workouts_tab") as "history" | "calendar" | "templates" | "ai-build") ?? "calendar"
+  );
+  const switchTab = (t: "history" | "calendar" | "templates" | "ai-build") => {
+    sessionStorage.setItem("workouts_tab", t);
+    setTab(t);
+  };
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [allWorkouts, setAllWorkouts] = useState<Workout[]>([]);
   const [total, setTotal] = useState(0);
@@ -3226,7 +3372,7 @@ export default function WorkoutsPage() {
   const onWorkoutStarted = useCallback(() => {
     load(1);
     loadAll();
-    setTab("history");
+    switchTab("history");
     toast.show("Workout logged from template!");
   }, [load, loadAll]);
 
@@ -3241,6 +3387,7 @@ export default function WorkoutsPage() {
           <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm mt-1">
             {tab === "history"   ? `${total} workout${total !== 1 ? "s" : ""} logged`
             : tab === "calendar" ? "Training calendar"
+            : tab === "ai-build" ? "AI-generated workouts"
             :                      "Pre-built and custom workout splits"}
           </p>
         </div>
@@ -3291,10 +3438,11 @@ export default function WorkoutsPage() {
           { key: "history",   label: "🏋️ History" },
           { key: "calendar",  label: "📅 Calendar" },
           { key: "templates", label: "📋 Templates" },
+          { key: "ai-build",  label: "🤖 AI Build" },
         ] as const).map(({ key, label }) => (
           <button
             key={key}
-            onClick={() => setTab(key)}
+            onClick={() => switchTab(key)}
             className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${tab === key ? "bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700"}`}
           >
             {label}
@@ -3322,7 +3470,7 @@ export default function WorkoutsPage() {
             <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Log your first workout to start tracking progress</p>
             <div className="flex gap-2 justify-center">
               <Button onClick={() => setShowForm(true)}>Log Your First Workout</Button>
-              <Button variant="secondary" onClick={() => setTab("templates")}>Browse Templates</Button>
+              <Button variant="secondary" onClick={() => switchTab("templates")}>Browse Templates</Button>
             </div>
           </Card>
         ) : (
@@ -3383,6 +3531,9 @@ export default function WorkoutsPage() {
 
       {/* Templates tab */}
       {tab === "templates" && <TemplatesTab onWorkoutStarted={onWorkoutStarted} trainingDays={trainingDays} />}
+
+      {/* AI Workout Builder tab */}
+      {tab === "ai-build" && <AIWorkoutBuilder onWorkoutLogged={() => { switchTab("history"); }} />}
 
       {/* Create modal */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Log Workout" size="lg">

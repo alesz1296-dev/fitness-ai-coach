@@ -443,6 +443,49 @@ Work top-to-bottom within each tier. Finish all P1s before starting P2s.
 
 ---
 
+
+## Session 2026-04-30 — Bug fixes + Profile bar + Macro color fix
+
+### New components
+- **ProfileSummaryBar** (`client/src/components/layout/ProfileSummaryBar.tsx`): Persistent compact icon strip at the top of every page (rendered in `Layout.tsx`). Shows active goal pill (type + kcal), estimated body fat % (from BMI formula using weight/height/age/sex), today's calories with % of goal, and today's macros (P/C/F grams). Each pill is clickable and navigates to `/progress` or `/nutrition`. Renders nothing if dashboard data hasn't loaded yet.
+
+### Bug fixes
+- **#74**: Moved daily calorie+macro summary cards to the TOP of Nutrition tab — above hormonal banner, fasting banner, quick re-log, water, supplements.
+- **#76**: `deleteLog` now has a `catch` block; errors show an `alert` instead of silently failing. Added `isCheatMeal` to `logFoodSchema` (schemas.ts) and to `updateFoodLog` destructuring + Prisma update (foodController.ts).
+- **#77**: Exercise name field in existing workout edit now uses `ExerciseSearch` autocomplete. `ExerciseEditData` type extended with optional `exerciseName`. `saveEdit` spreads `exerciseName` into the API call. `setEditData` init includes `exerciseName: ex.exerciseName`.
+- **#70**: ProgressPage header buttons div uses `flex-wrap` to prevent overflow on narrow screens; outer header div gets `pb-2`.
+- **#72**: MacroView toggle container uses `flex-wrap + overflow-x-auto`; labels shortened ("By Meal" → "Meals", "By Food" → "Foods", "vs Goals" → "Goals"); card header switches to `flex-col sm:flex-row` on mobile.
+
+### Visual improvements
+- **MacroRing**: `strokeColor` now checks `over` BEFORE `met` — exceeding 100% of goal shows red arc, not green.
+- **MacroGoalBar**: `fillColor` is red when over budget; `glowStyle` adds red glow when over.
+
+### Pending roadmap items (from image)
+- **CI/CD**: GitHub Actions pipeline (lint → typecheck → Prisma validate → build). Set up after Docker.
+- **Deploy**: Backend + Postgres + Redis on Railway/Render; frontend on Vercel/Railway; env vars, health checks.
+- **AI engineering**: Provider abstraction layer (DeepSeek as cheap default, OpenAI fallback). Embeddings/RAG for user history context.
+- **Backend hardening**: Env validation on startup (zod), auth session UX improvements (logout all devices), pagination for large result sets (food logs, workouts).
+
+## Session 2026-04-30 (cont.) — Polish sprint: 7 features
+
+### New features
+- **#78 AI Workout Builder**: New “🤖 AI Build” tab in Workouts. Pick muscle groups + training style + duration; AI generates full exercise plan (calls coach agent, parses JSON); one-click log as a real workout session.
+- **#73 Favourites**: Star button (⭐) on every food log row pins it to localStorage. “Favourites” panel appears above Quick Re-log for instant one-tap re-logging (max 20 items, remove via ×).
+- **#68/#62 Analytics enhanced**: Added Weight Trend line chart (from weight logs) and Nutrition Adherence stat grid (avg kcal, avg protein, workouts, kcal burned, days tracked, logging rate %) to the Analytics tab.
+
+### Fixes & polish
+- **#67 Multi-tag food filter**: Tag chips are now multi-select (AND logic). Backend accepts comma-separated `tags` param. Selecting Vegan + High-Protein returns foods tagged with both.
+- **#75 Nutrition date persists**: Date picker state saved to sessionStorage; restores last viewed day on return (auto-resets to today if > 7 days old).
+- **#79 Tab state persists**: Workouts active tab (history/calendar/templates/AI Build) and Nutrition macro view tab both survive navigation via sessionStorage.
+
+### Pending (next priorities)
+- **#81**: CI/CD — GitHub Actions
+- **#82**: Full Railway deploy
+- **#83**: AI provider abstraction (DeepSeek)
+- **#84**: RAG/embeddings for chat memory
+- **#85**: Backend env validation + pagination
+- **#71**: Editable weight prediction graph
+
 ## Running the Project
 
 ```bash

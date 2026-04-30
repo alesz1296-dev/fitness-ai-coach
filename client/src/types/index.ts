@@ -133,6 +133,24 @@ export interface FoodTotals {
   fats: number;
 }
 
+
+// ── Custom Foods ──────────────────────────────────────────────────────────────
+export interface CustomFood {
+  id: number;
+  userId: number;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  defaultQty: number;
+  defaultUnit: string;
+  tags: string[];
+  basedOnId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Weight ────────────────────────────────────────────────────────────────────
 export interface WeightLog {
   id: number;

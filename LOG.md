@@ -1182,3 +1182,41 @@ Added `calendarApi` with methods: `getMonth`, `populate`, `updateDay`, `deleteDa
 - **Auth error messages**: Register shows field-level Zod errors inline; login shows specific messages for 401, 429, and network errors.
 
 ---
+
+## Session — 2026-04-30 — Bug fixes + Profile bar + Macro color fix
+
+### Fixed
+- #74: Moved daily calorie+macro summary to the TOP of Nutrition tab (above supplements/water)
+- #76: Added catch block to deleteLog — errors now show alert instead of silently failing; added isCheatMeal to logFoodSchema + updateFoodLog controller
+- #77: Exercise name in existing workout exercise edit now has ExerciseSearch autocomplete
+- #70: ProgressPage header buttons use flex-wrap to avoid overflow on narrow mobile screens
+- #72: MacroView toggle uses flex-wrap + shorter labels on mobile, card header uses flex-col on mobile
+
+### New features
+- MacroRing + MacroGoalBar: exceeding 100% of goal now shows glowing RED instead of green
+- ProfileSummaryBar: persistent icon strip at top of all pages showing active goal, estimated BF%, today's calories + macros; each pill navigates to the relevant tab
+
+### Pending (image roadmap)
+- CI/CD: GitHub Actions pipeline
+- Deploy: Railway/Render full stack with health checks
+- AI: Provider abstraction (DeepSeek default, OpenAI fallback), RAG
+- Backend: env validation, pagination, auth UX
+
+---
+
+## Session 2026-04-30 — Polish sprint: 7 features + Railway verification
+
+### Deployment verified (no changes)
+- Dockerfile, entrypoint.sh, docker-compose.yml untouched — Railway safe
+- Exercise DB: 106 exercises, fallback static array in place
+
+### Fixed / implemented
+- #67: Food tag filtering now multi-select AND logic — click multiple chips to combine filters; backend accepts comma-separated `tags` param
+- #75: Nutrition date persisted in sessionStorage — restores last viewed day on return (auto-resets if >7 days old)
+- #79: Tab state persisted — Workouts tab and Nutrition macro view survive navigation via sessionStorage
+- #73: Favourites system — star any logged food; Favourites panel above Quick Re-log; localStorage, max 20 items
+- #68/#62: Analytics tab — added Weight Trend chart + Nutrition Adherence stats (logging rate, avg macros, totals)
+- #78: AI Workout Builder — new "AI Build" tab in Workouts; pick muscles + style + duration; AI generates plan; log directly
+
+### Remaining
+- #81 CI/CD, #82 Deploy, #83 AI providers, #84 RAG, #85 env validation, #71 weight prediction graph
