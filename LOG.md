@@ -4,6 +4,142 @@ Most recent session first.
 
 ---
 
+## 2026-04-29 — Session: Analytics tab + Issues 11–20 + PWA (iPhone)
+
+### Analytics backend + frontend
+
+**`src/routes/analytics.ts`** (new)
+- Simple authenticated router: `GET /` → `getAnalytics` controller.
+- Registered in `src/server.ts` as `app.use("/api/analytics", analyticsRoutes)`.
+
+**`client/src/api/index.ts`** (modified)
+- Added `AnalyticsDayPoint`, `AnalyticsWeekPoint`, `AnalyticsSummary`, `AnalyticsData` TypeScript interfaces.
+- Added `analyticsApi.get(days)` calling `GET /api/analytics?days=${days}`.
+- Updated `authApi.login` to accept optional `rememberMe?: boolean`.
+
+**`client/src/pages/progress/ProgressPage.tsx`** (modified)
+- Added `analyticsApi` import + `AnalyticsData` type.
+- Added `StatBadge` helper component.
+- Added `AnalyticsTab` component with 4 Recharts charts:
+  1. Calorie intake — `ComposedChart` with Area (daily) + Line (7-day rolling avg)
+  2. Macro breakdown — stacked Bar (protein/carbs/fat)
+  3. Calorie balance — Bar (in vs out) + net Line
+  4. Workout frequency — Bar + rolling avg Line
+- Added `{ id: "analytics", label: "Analytics", icon: "📈" }` to TABS.
+- Progress page now has 5 tabs (was 4).
+
+---
+
+### Issues 11–20 resolved
+
+**#11 — Pagination caps** (`goalController.ts`, `mealPlanController.ts`)
+- Added `take: 50` to all unbounded `findMany` calls in both controllers.
+
+**#13 — Empty states**
+- `MealPlannerPage.tsx` — dashed-border empty state card with icon, description, "Create first plan" button.
+- Chat, Nutrition, Weight pages — first-user empty state messages added.
+
+**#14 — Offline banner** (`client/src/components/OfflineBanner.tsx`) (new)
+- Listens to `window.addEventListener("offline"/"online")`.
+- Shows a dismissible dark bar when offline; shows a 3s green "Back online" flash on reconnect.
+- Rendered inside `<BrowserRouter>` at root in `App.tsx`.
+
+**#15 — Password strength** (`src/middleware/schemas.ts`)
+- `registerSchema` + `resetPasswordSchema` — added three `.regex()` validators:
+  - Must contain uppercase letter
+  - Must contain number
+  - Must contain special character
+
+**#16 — Session expiry UX** (`client/src/api/axios.ts`, `client/src/pages/auth/Login.tsx`)
+- `clearSession(expired = false)` — when `expired = true`, redirects to `/login?sessionExpired=1`.
+- Failed refresh now calls `clearSession(true)`.
+- `Login.tsx` — `useSearchParams` detects `?sessionExpired=1`; shows yellow banner "Your session has expired."
+- Login form also gained "Remember me (30 days)" checkbox + "Forgot password?" link.
+
+**#17 — Data export** (`src/controllers/userController.ts`, `src/routes/users.ts`)
+- New `exportData` handler: `Promise.all` fetches all user data (workouts, food logs, weight, goals, calorie goals).
+- Sets `Content-Disposition: attachment; filename="fitai-export-YYYY-MM-DD.json"`.
+- Registered as `GET /api/users/export`.
+- Settings page: "Your Data" card with "⬇ Download my data" button using fetch → Blob → anchor.click pattern.
+
+**#18 — Redis search cache** (`src/controllers/searchController.ts`)
+- `cacheGet(key)` + `cacheSet(key, value)` helpers wrapping `redisClient.get/setex`.
+- TTL = 600 seconds (10 minutes).
+- Both `foodSearch` and `exerciseSearch` check cache first; set cache after DB hit.
+- Cache keys include all query params for precision invalidation.
+
+**#19 — Streaming chat** — Deferred (major SSE refactor; lower priority than remaining items).
+
+**#20 — Remember me** (`src/controllers/authController.ts`, `client/src/pages/auth/Login.tsx`)
+- `signRefreshToken(userId, email, rememberMe)` — expiry `30d` when remembered, `24h` otherwise.
+- `login` destructures `rememberMe = true` from body and passes `Boolean(rememberMe)` to token signer.
+- Frontend login form passes `rememberMe` boolean to `authApi.login()`.
+
+---
+
+### PWA — iPhone installable
+
+**`client/public/manifest.json`** (new)
+- `name: "FitAI Coach"`, `short_name: "FitAI"`, `display: "standalone"`, `theme_color: "#6366f1"`, `background_color: "#111827"`, `start_url: "/dashboard"`.
+- Icons: 192×192 and 512×512 (`/icons/icon-192.png`, `/icons/icon-512.png`).
+- Shortcuts: Log Workout → /workouts, Log Food → /nutrition, AI Coach → /chat.
+
+**`client/public/sw.js`** (new)
+- Cache name `fitai-v1`. Precaches `/` and `/index.html` on install.
+- Activate: deletes old caches. Claim all clients.
+- Fetch strategy: network-first for `/api/` (503 JSON on offline); cache-first for static assets; SPA fallback to `/index.html`.
+
+**`client/public/icons/icon-192.png` + `icon-512.png`** (new)
+- Generated with pure Python stdlib (no Pillow) — circular purple `#6366f1` background, white "F" letterform.
+
+**`client/index.html`** (modified)
+- `<link rel="manifest" href="/manifest.json" />`
+- `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style: black-translucent`, `apple-mobile-web-app-title: FitAI`
+- `<link rel="apple-touch-icon" href="/icons/icon-192.png" />`
+- `<meta name="theme-color" content="#6366f1" />`
+- Viewport updated to `width=device-width, initial-scale=1.0, viewport-fit=cover`
+
+**`client/src/main.tsx`** (modified)
+- Added service worker registration: `navigator.serviceWorker.register("/sw.js")` on `window.load`.
+
+**`client/src/components/InstallPrompt.tsx`** (new)
+- Detects iOS via `navigator.userAgent` + `!window.MSStream`.
+- Detects standalone mode via `navigator.standalone` + `display-mode: standalone` media query.
+- iOS: shows a dismissible banner after 3s with Share → Add to Home Screen instructions.
+- Android: captures `beforeinstallprompt` event; shows "Install" button that calls `deferredPrompt.prompt()`.
+- Dismissed state stored in `localStorage("fitai_install_dismissed")`.
+
+**`client/src/App.tsx`** (modified)
+- Added `<OfflineBanner />` + `<InstallPrompt />` inside `<BrowserRouter>` at root.
+
+---
+
+### Commit messages (for git log)
+
+```
+feat(analytics): add analytics route, controller wire-up, and 4-chart Analytics tab in Progress page
+
+fix(pagination): add take:50 cap to goalController and mealPlanController findMany calls
+
+fix(ux): add empty states to MealPlanner, Chat, Nutrition, Weight pages
+
+feat(offline): add OfflineBanner component with online/offline detection and back-online flash
+
+fix(auth): enforce password complexity (uppercase + digit + special char) in registerSchema
+
+fix(auth): session expiry UX — redirect to /login?sessionExpired=1 on refresh failure + banner
+
+feat(export): add GET /api/users/export endpoint + Download my data button in Settings
+
+feat(cache): wire Redis 10-min TTL cache to food and exercise search endpoints
+
+fix(auth): remember me checkbox on login — 30d vs 24h refresh token expiry
+
+feat(pwa): add manifest.json, service worker, icons, install prompt (iOS + Android), offline banner
+```
+
+---
+
 ## 2026-04-26 — Session: 🔴 Critical security fixes (A–E)
 
 ### #60 — Zod env validation (`src/config/env.ts`)

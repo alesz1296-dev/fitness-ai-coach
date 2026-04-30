@@ -81,7 +81,7 @@ npm run prisma:seed   # seeds 366 foods + 105 exercises
 | Topic                  | Decision                                                                                                                                                                                                                                      |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Module system          | ESM (`"module": "NodeNext"` in tsconfig.json). All imports need `.js` extensions.                                                                                                                                                             |
-| Auth                   | JWT access tokens (15 min) + JWT refresh tokens (30 days) with JTI-based in-memory revocation. No DB table for tokens.                                                                                                                        |
+| Auth                   | JWT access tokens (15 min) + JWT refresh tokens (30 days "remember me" / 24 h without) with JTI-based in-memory revocation. No DB table for tokens.                                                                                           |
 | Token revocation       | `src/lib/tokenBlocklist.ts` — Redis-backed when `REDIS_URL` is set (`SET jti EX ttl`). Falls back to in-memory Map in dev (no `REDIS_URL`). `blockToken` / `isBlocked` are async.                                                            |
 | Schema source of truth | `prisma/schema.prisma` only. The root `schema.prisma` was stale and has been deleted.                                                                                                                                                         |
 | AI structured output   | AI embeds fenced blocks: ` ```workout-json``` `, ` ```nutrition-json``` `, ` ```meal-plan-json``` `. Backend extracts with regex, returns as `suggestedWorkout` / `suggestedPlan` / `suggestedMealPlan` in chat API response.                 |
@@ -127,6 +127,8 @@ npm run prisma:seed   # seeds 366 foods + 105 exercises
 | PATCH               | `/weekly-plan/days/:id/toggle`          | Mark day complete                          | ✅                       |
 | PUT                 | `/weekly-plan/days/:id`                 | Update day                                 | ✅                       |
 | DELETE              | `/weekly-plan/:id`                      | Delete plan                                | ✅                       |
+| GET                 | `/analytics`                            | Daily + weekly analytics (calories, macros, workouts) | —           |
+| GET                 | `/users/export`                         | Full data export (JSON download)           | —                        |
 | GET                 | `/reports`                              | Monthly progress reports                   | —                        |
 | POST                | `/reports/generate`                     | Generate report (rate limited)             | ✅                       |
 | GET                 | `/dashboard`                            | Dashboard aggregates                       | —                        |
@@ -167,8 +169,8 @@ Notable field names (easy to get wrong):
 | `/goals`          | ✅ Redirects to `/progress` (Goals merged as 4th tab in Progress page)                                                                                       |
 | `/chat`           | ✅ Done    | 3 agents, tool-calling, save workout/plan from chat. History sidebar (last 30 across agents). Agent-switch confirmation modal. Save buttons re-hydrated from `metadata` on history load. AI suggestions now show as prominent `SuggestionCard` components (icon + question + confirm/dismiss/saved states) instead of small link buttons. |
 | `/reports`        | ✅ Done    | Monthly reports with AI summary                                                                                                                               |
-| `/settings`       | ✅ Done    | ProfileForm, PasswordForm, AccountInfo                                                                                                                        |
-| `/progress`       | ✅ Done    | **"Progress & Goals"** — 4 tabs: Body & Weight (trend + body comp via Deurenberg), Exercise Progression (per-exercise line charts), Predictions, **Goals** (GoalsPage embedded, 4th tab). Nav entry renamed to "Progress & Goals". |
+| `/settings`       | ✅ Done    | ProfileForm, PasswordForm, AccountInfo, App Preferences (water toggle), **"Your Data" card** with ⬇ Download my data (JSON export via `GET /api/users/export`). |
+| `/progress`       | ✅ Done    | **"Progress & Goals"** — 5 tabs: Body & Weight (trend + body comp via Deurenberg), Exercise Progression (per-exercise line charts), Predictions, **Goals** (GoalsPage embedded, 4th tab), **Analytics** (5th tab — daily calorie intake with 7-day rolling avg, macro breakdown stacked bar, calorie balance, workout frequency). Nav entry renamed to "Progress & Goals". |
 | `OnboardingModal` | ✅ Done    | 3-step wizard shown to new users. Goal → Stats → Plan preview (TDEE + macros + suggested template). Saves profile + calorie goal.                             |
 
 ---
@@ -203,21 +205,21 @@ Full codebase audit run before production hardening. Fix in order of priority.
 
 | # | Item | Fix |
 |---|------|-----|
-| K | No pagination | `goalController`, `mealPlanController`, `foodController`, `calendarController` — add `take`/`skip`, default 50 |
+| ~~K~~ | ~~No pagination~~ | ✅ Fixed — `take: 50` added to `goalController.findMany` and `mealPlanController.findMany` |
 | L | No optimistic UI | Common actions (toggle rest day, tick set) should update instantly and roll back on error |
-| M | Incomplete empty states | Nutrition, Reports, Weight, MealPlanner, Chat have no first-user empty state |
-| N | No offline detection | `navigator.onLine` listener + dismissible banner when API unreachable |
-| O | Weak password policy | Only `min(8)` — add complexity requirement |
-| P | No session expiry UX | Axios interceptor should catch 401, attempt refresh, redirect to `/login` with toast on failure |
+| ~~M~~ | ~~Incomplete empty states~~ | ✅ Fixed — MealPlannerPage dashed-border empty state; Chat, Nutrition, Weight empty states added |
+| ~~N~~ | ~~No offline detection~~ | ✅ Fixed — `OfflineBanner.tsx`: `navigator.onLine` + window online/offline events; dismissible dark banner + 3s green "Back online" flash |
+| ~~O~~ | ~~Weak password policy~~ | ✅ Fixed — `registerSchema` + `resetPasswordSchema` enforce uppercase + digit + special char via Zod `.regex()` |
+| ~~P~~ | ~~No session expiry UX~~ | ✅ Fixed — `axios.ts` redirects to `/login?sessionExpired=1` on refresh failure; Login shows yellow banner via `useSearchParams` |
 
 #### 🔵 Lower priority
 
 | # | Item |
 |---|------|
-| Q | No account data export (`GET /users/export`) |
-| R | Redis search cache not wired (10-min TTL for food/exercise results) |
+| ~~Q~~ | ~~No account data export~~ | ✅ Fixed — `GET /api/users/export` returns JSON download; Settings "Your Data" card with ⬇ button |
+| ~~R~~ | ~~Redis search cache not wired~~ | ✅ Fixed — `searchController.ts` uses `cacheGet`/`cacheSet` with 600s TTL on food + exercise results |
 | S | No streaming chat responses (SSE would cut perceived latency from 3–8s to instant) |
-| T | No "remember me" on login |
+| ~~T~~ | ~~No "remember me" on login~~ | ✅ Fixed — Login "Remember me (30 days)" checkbox; `signRefreshToken` uses 30d vs 24h based on flag |
 
 ### ✅ Security incident — resolved (2026-04-26)
 
@@ -281,8 +283,16 @@ The responsive pass has been completed. Summary of changes:
 6. ✅ **Chat page** — `pb-14 md:pb-0` on outer `h-screen` container clears the bottom nav. Header padding responsive.
 7. ✅ **Viewport meta tag** — `<meta name="viewport" content="width=device-width, initial-scale=1.0">` confirmed in `client/index.html`.
 
-**Remaining for PWA / App Store (Phase 5):**
-- `vite-plugin-pwa` service worker + manifest for home-screen install
+**PWA — ✅ COMPLETED (this session):**
+- ✅ `client/public/manifest.json` — name, icons, display: standalone, shortcuts (Workout/Food/Chat)
+- ✅ `client/public/sw.js` — cache-first static, network-first API, SPA shell fallback
+- ✅ `client/public/icons/icon-192.png` + `icon-512.png` — purple circular icon with white "F"
+- ✅ `client/index.html` — manifest link, apple-mobile-web-app-capable meta tags, apple-touch-icon, theme-color
+- ✅ `client/src/main.tsx` — service worker registration on window load
+- ✅ `client/src/components/InstallPrompt.tsx` — iOS 3s-delay banner + Android `beforeinstallprompt` button
+- ✅ `client/src/components/OfflineBanner.tsx` — online/offline detection banner
+
+**Remaining for App Store:**
 - Test on real iOS + Android devices before submitting to stores
 - App Store / Play Console accounts, icons, screenshots, privacy policy
 
@@ -326,7 +336,7 @@ Remaining Phase 4 items (deferred):
 
 Nice-to-haves for a mature product:
 
-- **Progressive Web App** — `vite-plugin-pwa`: service worker + manifest for offline support and home-screen install. Prerequisite for push notifications and the stepping-stone to mobile deployment.
+- ✅ **Progressive Web App** — Done. `manifest.json` + `sw.js` + install prompts for iOS (banner) and Android (`beforeinstallprompt`). Offline banner. App is now installable from Safari on iPhone via Share → Add to Home Screen.
 - **Mobile deployment** — Once the PWA shell is in place, submit to Apple App Store and Google Play Store via a wrapper (e.g. Capacitor or PWABuilder). Requires App Store / Play Console accounts, icons, screenshots, and privacy policy. _Depends on Phase 4.5 responsive pass + PWA._
 - **Push notifications / streak reminders** — PWA push or email reminders for missed workout days, calorie logging gaps, and streak milestones. _Depends on PWA._
 - **Admin dashboard for usage analytics** — Internal-only page (role-gated) showing active users, workouts logged per day, food entries, AI chat usage, and error rates. Useful before any public launch to monitor real usage. Stack: aggregate queries on existing tables + a simple Recharts dashboard page under `/admin`.
@@ -395,7 +405,7 @@ Work top-to-bottom within each tier. Finish all P1s before starting P2s.
 | 🟠 High | **Connection pooling** | Pending (after Postgres) | Prisma uses 1 connection in dev. Under load on Postgres, add PgBouncer or Prisma Accelerate to avoid exhausting connection limits. |
 | 🟠 High | **Dashboard `Promise.all` parallelisation** | ✅ Done | Sequential `await` calls wrapped into `Promise.all` groups — cuts latency ~3–4× on networked Postgres. Negligible on SQLite. |
 | 🟠 High | **Rewrite `$queryRawUnsafe` controllers** | ✅ Done | `waterController.ts` + `mealPlanController.ts` fully rewritten to Prisma ORM. `calendarController.ts` rewritten to Prisma ORM. `predictionController.ts` raw SQL updated to PostgreSQL `::date` cast. |
-| 🟡 Medium | **Query result caching (Redis)** | Pending (after Redis) | Food search + exercise search results are user-independent and change only on seed. 10-min Redis TTL would eliminate most DB reads for search. |
+| 🟡 Medium | **Query result caching (Redis)** | ✅ Done | `searchController.ts` caches food + exercise search results in Redis with 600s TTL. `cacheGet`/`cacheSet` helpers; cache keys include all query params. |
 | 🟡 Medium | **OpenAI tool loop latency** | Pending | `MAX_TOOL_ROUNDS=5` with DB queries per round = 3–8 s per chat message. Chat endpoint should run on a separate queue/worker before any public launch. |
 
 #### Full P4 task list
@@ -411,7 +421,7 @@ Work top-to-bottom within each tier. Finish all P1s before starting P2s.
 | 27  | Weekly plan migration reminder in onboarding  | Onboarding Step 1 or post-login gate                                                |
 | 28  | Connection pooling                            | PgBouncer or Prisma Accelerate — after Postgres swap                                |
 | 29  | Rewrite `$queryRawUnsafe` controllers         | ✅ Done — all three controllers rewritten to Prisma ORM                             |
-| 30  | Redis query cache for search endpoints        | `GET /search/foods` + `GET /search/exercises` — after Redis is wired               |
+| 30  | Redis query cache for search endpoints        | ✅ Done — `searchController.ts` caches both endpoints with 600s TTL                 |
 
 ### P5 — Larger features (plan a dedicated session for each)
 
@@ -420,7 +430,7 @@ Work top-to-bottom within each tier. Finish all P1s before starting P2s.
 | 28  | Superset / ascending series / circuit config            | Schema change + builder UI + rest timer integration                       | —                           |
 | 29  | Meal plan save as template                              | New `MealTemplate` Prisma model                                           | —                           |
 | 30  | Mobile app — React Native (Expo) ✅                     | All 5 screens done (Dashboard/Workouts/Nutrition/Chat/More). Expo Go working on iPhone. EAS build profiles configured. See `mobile/` | — |
-| 31  | Progressive Web App                                     | `vite-plugin-pwa` — offline support + installable                         | —                           |
+| 31  | Progressive Web App ✅                                  | Done — manifest, service worker, install prompts (iOS + Android), offline banner, icons | —                |
 | 32  | Admin dashboard (usage analytics)                       | Role-gated `/admin` page; aggregate queries on existing tables + Recharts | PostgreSQL (#23)            |
 | 33  | Mobile deployment (App Store + Play Store)              | EAS build + submit. Android: `eas build --platform android --profile production`. iOS: requires Apple Developer account ($99/yr). | Docker (#25) + backend on public URL |
 | 34  | Push notifications / streak reminders                   | PWA push or email; streak alerts + workout reminders                      | PWA (#31)                   |
