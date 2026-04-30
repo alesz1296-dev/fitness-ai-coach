@@ -265,7 +265,6 @@ export const verifyEmail = async (
     const userIdStr = await consumeToken(`verify:${token}`);
     if (!userIdStr) return next(createError("Verification link is invalid or has expired", 400));
 
-    // @ts-expect-error — run 'npx prisma generate' after adding emailVerified to schema
     await prisma.user.update({ where: { id: Number(userIdStr) }, data: { emailVerified: true } });
 
     logger.info(`Email verified for user ${userIdStr}`);
