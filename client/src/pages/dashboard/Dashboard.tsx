@@ -800,3 +800,38 @@ export default function Dashboard() {
               <div className="text-center py-4">
                 <p className="text-sm text-gray-400">No active goal set</p>
                 <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate("/goals")}>
+                  Set a goal
+                </Button>
+              </div>
+            )}
+          </Card>
+
+          {/* Weekly Plan */}
+          <WeeklyPlanWidget />
+
+          {/* Quick actions */}
+          <Card>
+            <CardHeader title="Quick Actions" />
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Chat with AI Coach",  icon: "🤖", to: "/chat?agent=coach" },
+                { label: "Nutrition Advice",    icon: "🥗", to: "/chat?agent=nutritionist" },
+                { label: "Browse Templates",    icon: "📋", to: "/templates" },
+                { label: "Monthly Report",      icon: "📊", to: "/reports" },
+              ].map((a) => (
+                <button
+                  key={a.label}
+                  onClick={() => navigate(a.to)}
+                  className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-700 dark:hover:text-brand-400 transition-colors text-left text-sm font-medium text-gray-700 dark:text-gray-200"
+                >
+                  <span>{a.icon}</span>
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
