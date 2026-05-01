@@ -9,9 +9,4 @@ fi
 
 # Seed only when explicitly requested (e.g. first deploy)
 if [ "$SEED_DB" = "true" ]; then
-  echo "[entrypoint] Seeding database..."
-  npx tsx prisma/seed.ts || echo "[entrypoint] WARNING: seed failed — continuing."
-fi
-
-echo "[entrypoint] Starting server..."
-exec node dist/server.js
+  echo "[entryp
