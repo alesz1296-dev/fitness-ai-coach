@@ -544,14 +544,28 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
 
   const lastActual: number | null = histPoints.length > 0 ? histPoints[histPoints.length - 1].actual : null;
 
-  const projPoints = (data.projections ?? []).map((p: any) => ({
+  const projections = data.projections ?? [];
+  const projPoints = projections.map((p: any) => ({
     label:   p.week === 0 ? "Now" : `+${p.week}w`,
-    actual:  p.week === 0 ? lastActual : null,
+    // Only carry actual on week=0 if there is no histPoints (avoids duplicate dot)
+    actual:  p.week === 0 && histPoints.length === 0 ? lastActual : null,
     trend:   p.trendWeight as number | null,
     ideal:   p.idealWeight as number | null,
     bandLow: p.trendLow as number | null,
     bandHi:  p.trendHigh as number | null,
   }));
+
+  // Bridge: copy trend/ideal values from "Now" onto the last historical point so
+  // the dashed projection lines start exactly where the green actual line ends,
+  // not floating in empty space.
+  const week0Proj = projections.find((p: any) => p.week === 0);
+  if (histPoints.length > 0 && week0Proj) {
+    const last = histPoints[histPoints.length - 1];
+    last.trend   = week0Proj.trendWeight ?? null;
+    last.ideal   = week0Proj.idealWeight ?? null;
+    last.bandLow = week0Proj.trendLow    ?? null;
+    last.bandHi  = week0Proj.trendHigh   ?? null;
+  }
 
   const chartData = [...histPoints, ...projPoints];
 

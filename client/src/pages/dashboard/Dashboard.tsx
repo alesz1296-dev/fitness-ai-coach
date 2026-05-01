@@ -530,7 +530,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Weight FAB ────────────────────────────────────────────────────── */}
-      <div className="fixed bottom-24 right-4 z-50 flex flex-col items-end gap-3 md:bottom-8 md:right-8">
+      <div className="fixed bottom-28 right-4 z-50 flex flex-col items-end gap-3 md:bottom-8 md:right-8">
         {showWeightFab && (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">⚖️ Log Weight</p>

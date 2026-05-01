@@ -2082,33 +2082,44 @@ export default function NutritionPage() {
     }
   };
 
-  // ── Fasting mode ────────────────────────────────────────────────────────────
-  const [fastingActive, setFastingActive] = useState(false);
-  const [fastingStart,  setFastingStart]  = useState<Date | null>(null);
-  const [fastingElapsed, setFastingElapsed] = useState(0); // ms
+  // ── Fasting mode — persisted to localStorage so it survives tab changes ────
+  const FAST_KEY = "fitai_fasting_start_v1";
+  const initFastingStart = (): Date | null => {
+    try {
+      const s = localStorage.getItem(FAST_KEY);
+      return s ? new Date(Number(s)) : null;
+    } catch { return null; }
+  };
+  const [fastingStart,   setFastingStart]   = useState<Date | null>(initFastingStart);
+  const fastingActive = fastingStart !== null;
+  const [fastingElapsed, setFastingElapsed] = useState(() =>
+    fastingStart ? Date.now() - fastingStart.getTime() : 0
+  );
   const fastingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Tick every second so the counter is live
   useEffect(() => {
     if (fastingActive && fastingStart) {
+      // Compute immediately so the display isn't stale on mount
+      setFastingElapsed(Date.now() - fastingStart.getTime());
       fastingRef.current = setInterval(() => {
-        setFastingElapsed(Date.now() - fastingStart.getTime());
-      }, 10000); // update every 10s
-      setFastingElapsed(Date.now() - fastingStart.getTime()); // immediate
+        setFastingElapsed(Date.now() - fastingStart!.getTime());
+      }, 1000);
     } else {
-      if (fastingRef.current) clearInterval(fastingRef.current);
+      if (fastingRef.current) { clearInterval(fastingRef.current); fastingRef.current = null; }
+      setFastingElapsed(0);
     }
-    return () => { if (fastingRef.current) clearInterval(fastingRef.current); };
+    return () => { if (fastingRef.current) { clearInterval(fastingRef.current); fastingRef.current = null; } };
   }, [fastingActive, fastingStart]);
 
   const toggleFasting = () => {
     if (fastingActive) {
-      setFastingActive(false);
+      try { localStorage.removeItem(FAST_KEY); } catch { /* ignore */ }
       setFastingStart(null);
-      setFastingElapsed(0);
     } else {
-      setFastingActive(true);
-      setFastingStart(new Date());
-      setFastingElapsed(0);
+      const now = new Date();
+      try { localStorage.setItem(FAST_KEY, String(now.getTime())); } catch { /* ignore */ }
+      setFastingStart(now);
     }
   };
 
