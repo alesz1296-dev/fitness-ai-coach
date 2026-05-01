@@ -21,24 +21,18 @@ function StatCard({ label, value, sub, color, icon, onClick }: {
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
-      className={`rounded-2xl p-5 text-white ${color} w-full text-left${onClick ? " hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all duration-150 cursor-pointer" : ""}`}
+      className={`rounded-2xl p-5 text-white ${color} w-full text-left${onClick ? " hover:opacity-90 active:opacity-80 transition-opacity cursor-pointer" : ""}`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
+        <div>
           <p className="text-sm font-medium opacity-80">{label}</p>
           <p className="text-3xl font-bold mt-1">{value}</p>
           {sub && <p className="text-xs opacity-70 mt-1">{sub}</p>}
         </div>
-        <div className="flex flex-col items-end gap-1 ml-2">
-          <span className="text-2xl opacity-80">{icon}</span>
-          {onClick && (
-            <span className="bg-white/25 rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none mt-auto">
-              →
-            </span>
-          )}
-        </div>
+        <span className="text-2xl opacity-80">{icon}</span>
       </div>
+      {onClick && <p className="text-[11px] opacity-80 mt-2 text-right font-semibold">tap to view →</p>}
     </Tag>
   );
 }
@@ -335,10 +329,7 @@ export default function Dashboard() {
       {/* Streak + Water row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Workout streak */}
-        <button
-          onClick={() => navigate("/workouts")}
-          className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1 text-left hover:border-orange-300 dark:hover:border-orange-600 hover:shadow-sm transition-all cursor-pointer w-full"
-        >
+        <button onClick={() => navigate("/workouts")} className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1 text-left w-full hover:border-orange-300 dark:hover:border-orange-600 hover:shadow-sm transition-all">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-orange-500 font-bold text-lg">
               🔥 {streaks?.workout ?? 0}
@@ -353,10 +344,7 @@ export default function Dashboard() {
         </button>
 
         {/* Nutrition streak */}
-        <button
-          onClick={() => navigate("/nutrition")}
-          className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1 text-left hover:border-green-300 dark:hover:border-green-600 hover:shadow-sm transition-all cursor-pointer w-full"
-        >
+        <button onClick={() => navigate("/nutrition")} className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1 text-left w-full hover:border-green-300 dark:hover:border-green-600 hover:shadow-sm transition-all">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-green-600 font-bold text-lg">
               🥗 {streaks?.nutrition ?? 0}
@@ -371,10 +359,7 @@ export default function Dashboard() {
         </button>
 
         {/* Rest days */}
-        <button
-          onClick={() => navigate("/workouts")}
-          className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1 text-left hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-sm transition-all cursor-pointer w-full"
-        >
+        <button onClick={() => navigate("/workouts")} className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1 text-left w-full hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-sm transition-all">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-purple-600 font-bold text-lg">
               😴 {streaks?.restDays != null ? streaks!.restDays : "—"}
