@@ -1237,3 +1237,17 @@ Added `calendarApi` with methods: `getMonth`, `populate`, `updateDay`, `deleteDa
 **Added:** `railway.toml`, `docs/railway-deploy.md`, `.github/workflows/ci.yml`
 
 **Verified:** backend tsc clean, frontend tsc clean, all routes present, CORS correct, static path correct, .env files gitignored.
+
+---
+
+## 2026-04-30 — Table + Docs update
+
+**CONTEXT.md:** Updated pending section with current state of all remaining TODOs and categories.
+
+**Pending as of this session:**
+- #71 Weight prediction graph (P2, Feature)
+- #83 AI provider abstraction / DeepSeek (P2, AI/ML)
+- #84 RAG + embeddings for chat memory (P3, AI/ML)
+- #85 Pagination for food logs + workouts (P2, Infrastructure) — note: env validation already done via Zod in src/config/env.ts
+- Connection pooling (post-Railway-live, Infrastructure)
+- P5 backlog: superset/circuit, meal plan templates, admin dashboard, barcode scanner, push notifications

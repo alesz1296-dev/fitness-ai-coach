@@ -479,12 +479,12 @@ Work top-to-bottom within each tier. Finish all P1s before starting P2s.
 - **#79 Tab state persists**: Workouts active tab (history/calendar/templates/AI Build) and Nutrition macro view tab both survive navigation via sessionStorage.
 
 ### Pending (next priorities)
-- **#81**: CI/CD — GitHub Actions
-- **#82**: Full Railway deploy
-- **#83**: AI provider abstraction (DeepSeek)
-- **#84**: RAG/embeddings for chat memory
-- **#85**: Backend env validation + pagination
-- **#71**: Editable weight prediction graph
+- **#71**: Editable weight prediction graph (P2, Feature)
+- **#83**: AI provider abstraction — DeepSeek default, OpenAI fallback (P2, AI/ML)
+- **#84**: AI embeddings + RAG for user history context in chat (P3, AI/ML)
+- **#85**: Backend pagination for large result sets — food logs, workouts (P2, Infrastructure)
+- Connection pooling — PgBouncer or Prisma Accelerate after Railway live (P2, Infrastructure)
+- P5: Superset/circuit config, meal plan templates, admin dashboard, barcode scanner, push notifications
 
 ## Running the Project
 
@@ -525,7 +525,8 @@ New-NetFirewallRule -DisplayName "Expo Metro" -Direction Inbound -Protocol TCP -
 
 # EAS cloud builds
 cd mobile
-eas
+eas build --platform all --profile production
+```
 
 ---
 

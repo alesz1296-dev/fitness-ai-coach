@@ -19,7 +19,7 @@ function useToast() {
 function ToastBanner({ msg }: { msg: string | null }) {
   if (!msg) return null;
   return (
-    <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-xl flex items-center gap-2">
+    <div className="fixed bottom-20 right-4 z-50 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 md:bottom-6 md:right-6">
       <span className="text-green-400">✓</span>
       {msg}
     </div>

@@ -928,8 +928,8 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
 // When a goal is provided the arc fills toward that goal (and the % shown is
 // goal-progress, which can exceed 100%).  Without a goal the arc shows the
 // macro's share of total daily macros (distribution mode).
-function MacroRing({ label, value, total, color, goal }: {
-  label: string; value: number; total: number; color: string; goal?: number;
+function MacroRing({ label, value, total, color, goal, danger = false }: {
+  label: string; value: number; total: number; color: string; goal?: number; danger?: boolean;
 }) {
   // Raw progress toward goal (unbounded — can exceed 100)
   const rawGoalPct  = goal && goal > 0 ? (value / goal) * 100 : 0;
@@ -944,9 +944,12 @@ function MacroRing({ label, value, total, color, goal }: {
 
   const over        = goal != null && rawGoalPct > 100;
   const met         = goal != null && rawGoalPct >= 100;
+  // danger=true (fats): full ring turns red when over — not just the arc
   const strokeColor = over ? "#ef4444" : met ? "#22c55e" : color;
+  const trackColor  = danger && over ? "#fecaca" : "#f3f4f6";
   const glowFilter  =
-    over ? "drop-shadow(0 0 6px rgba(239,68,68,0.60))"
+    over && danger ? "drop-shadow(0 0 8px rgba(239,68,68,0.80))"
+    : over ? "drop-shadow(0 0 6px rgba(239,68,68,0.60))"
     : met ? "drop-shadow(0 0 5px rgba(34,197,94,0.65))"
     : rawGoalPct >= 70 && goal ? "drop-shadow(0 0 5px rgba(59,130,246,0.55))"
     : "none";
@@ -955,7 +958,7 @@ function MacroRing({ label, value, total, color, goal }: {
     <div className="text-center">
       <div className="relative w-16 h-16 mx-auto" style={{ filter: glowFilter }}>
         <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-          <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f3f4f6" strokeWidth="3" />
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke={trackColor} strokeWidth="3" />
           <circle cx="18" cy="18" r="15.9" fill="none" stroke={strokeColor} strokeWidth="3"
             strokeDasharray={`${arcPct} ${100 - arcPct}`} strokeLinecap="round" />
         </svg>
@@ -971,7 +974,7 @@ function MacroRing({ label, value, total, color, goal }: {
       }`}>
         {Math.round(value)}g{goal ? <span className="font-normal text-gray-400">/{Math.round(goal)}g</span> : null}
       </p>
-      {over && <p className="text-xs text-red-500 font-medium">Over goal</p>}
+      {over && <p className="text-xs text-red-500 font-medium">{danger ? "⚠ Over limit" : "Over goal"}</p>}
       {!over && met && <p className="text-xs text-green-500 font-medium">Goal met ✓</p>}
     </div>
   );
@@ -1224,8 +1227,8 @@ function MacroByFood({ logs }: { logs: import("../../types").FoodLog[] }) {
 }
 
 // ── Macro goal bar (vs goal view) ─────────────────────────────────────────────
-function MacroGoalBar({ label, consumed, target, color, bgColor }: {
-  label: string; consumed: number; target: number; color: string; bgColor: string;
+function MacroGoalBar({ label, consumed, target, color, bgColor, danger = false }: {
+  label: string; consumed: number; target: number; color: string; bgColor: string; danger?: boolean;
 }) {
   const pct    = target > 0 ? Math.min((consumed / target) * 100, 100) : 0;
   const over   = consumed > target;
@@ -1257,7 +1260,7 @@ function MacroGoalBar({ label, consumed, target, color, bgColor }: {
           }
         </span>
       </div>
-      <div className={`h-2.5 rounded-full overflow-hidden ${bgColor}`} style={glowStyle}>
+      <div className={`h-2.5 rounded-full overflow-hidden ${danger && over ? "bg-red-100 dark:bg-red-900/40" : bgColor}`} style={danger && over ? { boxShadow: "0 0 10px 3px rgba(239,68,68,0.55)" } : glowStyle}>
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{ width: `${pct}%`, backgroundColor: fillColor }}
@@ -1269,23 +1272,42 @@ function MacroGoalBar({ label, consumed, target, color, bgColor }: {
 
 // ── Calorie progress bar ──────────────────────────────────────────────────────
 function CalorieProgress({ consumed, target }: { consumed: number; target: number }) {
-  const pct       = Math.min((consumed / target) * 100, 100);
-  const remaining = target - consumed;
-  const over      = consumed > target;
+  const pct         = Math.min((consumed / target) * 100, 100);
+  const remaining   = target - consumed;
+  const over        = consumed > target;
+  // Deviation alert: >10% over OR >10% under goal
+  const tenPctOver  = target > 0 && consumed > target * 1.10;
+  const tenPctUnder = target > 0 && consumed < target * 0.90;
+  const devAlert    = tenPctOver || tenPctUnder;
+  const barColor    = tenPctOver ? "bg-red-500" : over ? "bg-red-400" : tenPctUnder ? "bg-red-400" : "bg-brand-500";
+  const glowStyle: React.CSSProperties = devAlert
+    ? { boxShadow: "0 0 0 2px rgba(239,68,68,0.25), inset 0 0 0 0 transparent" }
+    : {};
   return (
     <div className="mt-3">
-      <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+      <div className={`h-3 rounded-full overflow-hidden transition-all ${devAlert ? "bg-red-100 dark:bg-red-900/40" : "bg-gray-100 dark:bg-gray-700"}`} style={glowStyle}>
         <div
-          className={`h-full rounded-full transition-all duration-500 ${over ? "bg-red-400" : "bg-brand-500"}`}
+          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="flex justify-between mt-1.5 text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">
+      <div className="flex justify-between mt-1.5 text-xs text-gray-400 dark:text-gray-500">
         <span>{Math.round(consumed)} kcal consumed</span>
-        <span className={over ? "text-red-500 font-medium" : ""}>
-          {over ? `${Math.round(-remaining)} kcal over` : `${Math.round(remaining)} kcal left`}
+        <span className={devAlert || over ? "text-red-500 font-medium" : ""}>
+          {over
+            ? `${Math.round(-remaining)} kcal over`
+            : tenPctUnder
+            ? `${Math.round(remaining)} kcal under target`
+            : `${Math.round(remaining)} kcal left`}
         </span>
       </div>
+      {devAlert && (
+        <p className="text-xs text-red-500 font-medium mt-1">
+          {tenPctOver
+            ? `⚠ More than 10% over your ${Math.round(target)} kcal goal`
+            : `⚠ More than 10% under your ${Math.round(target)} kcal goal`}
+        </p>
+      )}
     </div>
   );
 }
@@ -1294,8 +1316,11 @@ function CalorieProgress({ consumed, target }: { consumed: number; target: numbe
 function DeficitSurplusBanner({ consumed, target, goalType }: {
   consumed: number; target: number; goalType?: string;
 }) {
-  const diff = consumed - target;
-  const absDiff = Math.abs(Math.round(diff));
+  const diff        = consumed - target;
+  const absDiff     = Math.abs(Math.round(diff));
+  const pctOff      = target > 0 ? Math.abs(diff) / target : 0;
+  const isLargeOver = diff > 0  && pctOff > 0.10;
+  const isLargeUnder= diff < 0  && pctOff > 0.10;
 
   // Within ±80 kcal → on target
   if (Math.abs(diff) <= 80) {
@@ -1308,8 +1333,21 @@ function DeficitSurplusBanner({ consumed, target, goalType }: {
   }
 
   if (diff > 0) {
-    // Surplus
     const isBuilding = goalType === "bulk";
+    // >10% over → red alert regardless of goal type
+    if (isLargeOver) {
+      return (
+        <div className="flex items-start gap-2 rounded-xl px-4 py-2.5 bg-red-50 border border-red-300 text-sm text-red-800 mt-3" style={{ boxShadow: "0 0 0 1px rgba(239,68,68,0.20)" }}>
+          <span className="mt-0.5">⚠️</span>
+          <p>
+            <span className="font-semibold">⚠ {Math.round(pctOff * 100)}% over your {Math.round(target)} kcal goal ({absDiff} kcal surplus).</span>{" "}
+            {isBuilding
+              ? "Even for a bulk, this surplus is large — excess may convert to fat."
+              : "This significantly exceeds your daily target and will impact your progress."}
+          </p>
+        </div>
+      );
+    }
     return (
       <div className="flex items-start gap-2 rounded-xl px-4 py-2.5 bg-orange-50 border border-orange-200 text-sm text-orange-800 mt-3">
         <span className="mt-0.5">📈</span>
@@ -1323,8 +1361,22 @@ function DeficitSurplusBanner({ consumed, target, goalType }: {
     );
   }
 
-  // Deficit
+  // Deficit side
   const isCutting = goalType === "cut";
+  // >10% under → red alert (too aggressive a cut, or missed meals)
+  if (isLargeUnder) {
+    return (
+      <div className="flex items-start gap-2 rounded-xl px-4 py-2.5 bg-red-50 border border-red-300 text-sm text-red-800 mt-3" style={{ boxShadow: "0 0 0 1px rgba(239,68,68,0.20)" }}>
+        <span className="mt-0.5">⚠️</span>
+        <p>
+          <span className="font-semibold">⚠ {Math.round(pctOff * 100)}% under your {Math.round(target)} kcal goal ({absDiff} kcal deficit).</span>{" "}
+          {isCutting
+            ? "This deficit is too aggressive — risks muscle loss and metabolic adaptation."
+            : "You're significantly under your target. Log missing meals or increase intake."}
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="flex items-start gap-2 rounded-xl px-4 py-2.5 bg-blue-50 border border-blue-200 text-sm text-blue-800 mt-3">
       <span className="mt-0.5">📉</span>
@@ -1830,6 +1882,15 @@ export default function NutritionPage() {
   const [totals,   setTotals]   = useState<FoodTotals>({ calories: 0, protein: 0, carbs: 0, fats: 0 });
   const [loading,  setLoading]  = useState(true);
   const [showForm,    setShowForm]    = useState(false);
+  const [showMyFoodsPanel, setShowMyFoodsPanel] = useState(false);
+  const [myFoodsPanelList, setMyFoodsPanelList] = useState<import("../../types").CustomFood[]>([]);
+  const [myFoodsPanelLoading, setMyFoodsPanelLoading] = useState(false);
+  const [myFoodsPanelEdit,    setMyFoodsPanelEdit]    = useState<import("../../types").CustomFood | null>(null);
+  const [showMyFoodsCreate,   setShowMyFoodsCreate]   = useState(false);
+  const loadMyFoodsPanel = () => {
+    setMyFoodsPanelLoading(true);
+    customFoodsApi.list().then((r: any) => { setMyFoodsPanelList(r.data.foods); }).catch(() => {}).finally(() => setMyFoodsPanelLoading(false));
+  };
   const [editItem,    setEditItem]    = useState<FoodLog | null>(null);
   const [deleting,    setDeleting]    = useState<number | null>(null);
   const [showMealPlan, setShowMealPlan] = useState(false);
@@ -1932,6 +1993,37 @@ export default function NutritionPage() {
         carbs:    acc.carbs    + m.c   * mult,
         fats:     acc.fats     + m.f   * mult,
       };
+    }, { calories: 0, protein: 0, carbs: 0, fats: 0 });
+
+  // ── Custom supplements (user-defined) ────────────────────────────────────
+  interface CustomSupp { id: string; name: string; emoji: string; unit: string; defaultQty: number; cal: number; p: number; c: number; f: number; enabled: boolean; qty: number; }
+  const CUSTOM_SUPP_KEY = "fitai_custom_supps_v1";
+  const loadCustomSupps = (): CustomSupp[] => { try { return JSON.parse(localStorage.getItem(CUSTOM_SUPP_KEY) ?? "[]"); } catch { return []; } };
+  const [customSupps, setCustomSupps] = useState<CustomSupp[]>(loadCustomSupps);
+  const saveCustomSupps = (next: CustomSupp[]) => {
+    setCustomSupps(next);
+    try { localStorage.setItem(CUSTOM_SUPP_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  };
+  const updateCustomSupp = (id: string, patch: Partial<CustomSupp>) => {
+    saveCustomSupps(customSupps.map((s) => s.id === id ? { ...s, ...patch } : s));
+  };
+  const removeCustomSupp = (id: string) => saveCustomSupps(customSupps.filter((s) => s.id !== id));
+  const [showAddCustomSupp, setShowAddCustomSupp] = useState(false);
+  const [newSuppDraft, setNewSuppDraft] = useState({ name: "", emoji: "💊", unit: "caps", defaultQty: 1, cal: 0, p: 0, c: 0, f: 0 });
+  const addCustomSupp = () => {
+    if (!newSuppDraft.name.trim()) return;
+    const entry: CustomSupp = { ...newSuppDraft, id: `cust_${Date.now()}`, enabled: false, qty: newSuppDraft.defaultQty };
+    saveCustomSupps([...customSupps, entry]);
+    setNewSuppDraft({ name: "", emoji: "💊", unit: "caps", defaultQty: 1, cal: 0, p: 0, c: 0, f: 0 });
+    setShowAddCustomSupp(false);
+  };
+
+  // Include custom supps in total macro count
+  const customSuppMacros = customSupps
+    .filter((s) => s.enabled && s.qty > 0)
+    .reduce((acc, s) => {
+      const mult = s.qty / (s.defaultQty || 1);
+      return { calories: acc.calories + s.cal * mult, protein: acc.protein + s.p * mult, carbs: acc.carbs + s.c * mult, fats: acc.fats + s.f * mult };
     }, { calories: 0, protein: 0, carbs: 0, fats: 0 });
 
   // ── Water tracking ───────────────────────────────────────────────────────────
@@ -2060,10 +2152,10 @@ export default function NutritionPage() {
 
   // Merge food log totals with active supplement macros
   const effectiveTotals = {
-    calories: totals.calories + suppMacros.calories,
-    protein:  totals.protein  + suppMacros.protein,
-    carbs:    totals.carbs    + suppMacros.carbs,
-    fats:     totals.fats     + suppMacros.fats,
+    calories: totals.calories + suppMacros.calories + customSuppMacros.calories,
+    protein:  totals.protein  + suppMacros.protein  + customSuppMacros.protein,
+    carbs:    totals.carbs    + suppMacros.carbs    + customSuppMacros.carbs,
+    fats:     totals.fats     + suppMacros.fats     + customSuppMacros.fats,
   };
 
   const totalMacroG = effectiveTotals.protein + effectiveTotals.carbs + effectiveTotals.fats;
@@ -2103,6 +2195,31 @@ export default function NutritionPage() {
     } catch { /* silent */ }
   };
   const [relogging,     setRelogging]     = useState<string | null>(null);
+
+  // ── Favourite-food search (add to favourites directly) ───────────────────
+  const [showFavSearch,  setShowFavSearch]  = useState(false);
+  const [favSearchQ,     setFavSearchQ]     = useState("");
+  const [favSearchRes,   setFavSearchRes]   = useState<any[]>([]);
+  useEffect(() => {
+    const q = favSearchQ.trim();
+    if (!q) { setFavSearchRes([]); return; }
+    const t = setTimeout(() => {
+      searchApi.foods(q, 8).then((r) => setFavSearchRes(r.data.results)).catch(() => {});
+    }, 220);
+    return () => clearTimeout(t);
+  }, [favSearchQ]);
+  const addFoodToFavs = (item: any) => {
+    const pseudo: FoodLog = {
+      id: 0, foodName: item.name, calories: item.calories,
+      protein: item.protein ?? null, carbs: item.carbs ?? null, fats: item.fats ?? null,
+      quantity: item.defaultQty, unit: item.defaultUnit, meal: "snack" as FoodLog["meal"],
+      date, userId: 0,
+    };
+    toggleFav(pseudo);
+    setFavSearchQ("");
+    setFavSearchRes([]);
+    setShowFavSearch(false);
+  };
 
   useEffect(() => {
     foodApi.frequent(5).then((r) => setFrequentFoods(r.data.frequent)).catch(() => {});
@@ -2182,6 +2299,14 @@ export default function NutritionPage() {
           >
             🥣 Build a Dish
           </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => { setShowMyFoodsPanel(true); loadMyFoodsPanel(); }}
+            title="View and manage your personal custom foods"
+          >
+            📋 My Foods
+          </Button>
           <Button onClick={() => { setEditItem(null); setShowForm(true); }}>+ Log Food</Button>
         </div>
       </div>
@@ -2194,7 +2319,7 @@ export default function NutritionPage() {
           <CardHeader title="Calories" />
           <div className="text-center py-2">
             <p className="text-4xl font-bold text-gray-900 dark:text-white dark:text-white">{Math.round(effectiveTotals.calories)}</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">kcal consumed{suppMacros.calories > 0 ? <span className="text-purple-600"> (incl. supps)</span> : ""}</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">kcal consumed{(suppMacros.calories + customSuppMacros.calories) > 0 ? <span className="text-purple-600"> (incl. supps)</span> : ""}</p>
             {hasGoal && (
               <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5">
                 Goal: <span className="font-semibold text-gray-700 dark:text-gray-200 dark:text-gray-200">{Math.round(activeGoal!.dailyCalories)} kcal</span>
@@ -2280,7 +2405,7 @@ export default function NutritionPage() {
                 <div className="flex items-center justify-around">
                   <MacroRing label="Protein" value={effectiveTotals.protein} total={totalMacroG} color="#3b82f6" goal={activeGoal?.proteinGrams} />
                   <MacroRing label="Carbs"   value={effectiveTotals.carbs}   total={totalMacroG} color="#f59e0b" goal={activeGoal?.carbsGrams} />
-                  <MacroRing label="Fats"    value={effectiveTotals.fats}    total={totalMacroG} color="#ef4444" goal={activeGoal?.fatsGrams} />
+                  <MacroRing label="Fats"    value={effectiveTotals.fats}    total={totalMacroG} color="#ef4444" goal={activeGoal?.fatsGrams} danger={true} />
                   <div className="text-center">
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Calories from macros</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white">
@@ -2333,6 +2458,7 @@ export default function NutritionPage() {
                     target={activeGoal!.fatsGrams}
                     color="#ef4444"
                     bgColor="bg-red-100"
+                    danger={true}
                   />
                   <div className="text-xs text-gray-400 dark:text-gray-500 text-right pt-1">
                     From goal: {activeGoal!.name ?? activeGoal!.type}
@@ -2388,226 +2514,101 @@ export default function NutritionPage() {
         </div>
       )}
 
-      {/* ── Favourites ─────────────────────────────────────────────────────────── */}
-      {favFoods.length > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-2xl px-4 py-3">
-          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-2">Favourites</p>
-          <div className="flex gap-2 flex-wrap">
-            {favFoods.map((fav) => (
+      {/* ── Quick Access: Favourites + Re-log ─────────────────────────────────── */}
+      <Card className="p-4">
+        <div className="space-y-4">
+          {/* ── Favourites ── */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">⭐ Favourites</p>
               <button
-                key={fav.foodName}
-                onClick={() => relogFav(fav)}
-                className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 hover:border-amber-400 text-gray-700 dark:text-gray-200 text-xs font-medium px-3 py-1.5 rounded-xl transition-colors"
-                title={`${fav.quantity} ${fav.unit}`}
+                onClick={() => setShowFavSearch((v) => !v)}
+                className="text-xs px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-100 font-medium transition-colors"
               >
-                <span className="truncate max-w-[120px]">{fav.foodName}</span>
-                <span className="text-amber-600 dark:text-amber-400 font-semibold flex-shrink-0">{fav.calories} kcal</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); toggleFav(fav); }}
-                  className="text-amber-300 hover:text-red-400 font-bold leading-none ml-0.5"
-                  title="Remove from favourites"
-                >×</button>
+                {showFavSearch ? "✕ Cancel" : "+ Add Food"}
               </button>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
 
-      {/* ── Quick Re-log ──────────────────────────────────────────────────── */}
-      {frequentFoods.length > 0 && (
-        <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3">
-          <p className="text-xs font-semibold text-amber-700 mb-2">⚡ Quick Re-log</p>
-          <div className="flex gap-2 flex-wrap">
-            {frequentFoods.map((food) => (
-              <button
-                key={food.foodName}
-                disabled={!!relogging}
-                onClick={() => handleQuickRelog(food)}
-                className="flex items-center gap-1.5 bg-white border border-amber-200 hover:border-amber-400 hover:bg-amber-50 text-gray-700 dark:text-gray-200 text-xs font-medium px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title={`${food.timesLogged}× logged · ${food.quantity} ${food.unit}`}
-              >
-                {relogging === food.foodName && (
-                  <span className="w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                )}
-                <span className="truncate max-w-[120px]">{food.foodName}</span>
-                <span className="text-amber-600 font-semibold flex-shrink-0">{food.calories} kcal</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Water tracking widget ─────────────────────────────────────────── */}
-      {trackWater && <Card className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">💧 Water Intake</h3>
-          <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">
-            <span className="font-bold text-blue-600">{Math.round(waterTotal / 100) / 10}L</span>
-            {" / "}
-            {Math.round(waterTarget / 100) / 10}L
-          </span>
-        </div>
-
-        {/* Progress bar */}
-        <div className="h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
-          <div
-            className="h-full rounded-full bg-blue-400 transition-all duration-500"
-            style={{ width: `${Math.min(100, (waterTotal / waterTarget) * 100)}%` }}
-          />
-        </div>
-
-        {/* Error banner */}
-        {waterError && (
-          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 mb-2">
-            ⚠️ {waterError}
-          </p>
-        )}
-
-        {/* Quick-add buttons */}
-        <div className="flex flex-wrap gap-2 items-center">
-          {[150, 200, 350, 500, 750, 1000].map((ml) => (
-            <button
-              key={ml}
-              onClick={() => handleAddWater(ml)}
-              disabled={addingWater}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              +{ml < 1000 ? `${ml}ml` : "1L"}
-            </button>
-          ))}
-          {addingWater && (
-            <span className="flex items-center gap-1.5 text-xs text-blue-500">
-              <span className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin inline-block" />
-              Adding…
-            </span>
-          )}
-        </div>
-
-        {/* Recent logs today */}
-        {waterLogs.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {waterLogs.map((w) => (
-              <span
-                key={w.id}
-                className="flex items-center gap-1 text-xs bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 border border-blue-100"
-              >
-                💧{w.amount}ml
-                <button
-                  onClick={() => handleDeleteWater(w.id)}
-                  className="text-blue-300 hover:text-red-400 font-bold leading-none"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-
-        {waterTotal >= waterTarget && (
-          <p className="mt-2 text-xs text-green-600 font-medium">✅ Daily target reached! Great job staying hydrated.</p>
-        )}
-      </Card>}
-
-      {/* Supplements widget */}
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-900 dark:text-white dark:text-white">💊 Supplements</h3>
-          {suppMacros.calories > 0 && (
-            <span className="text-xs text-purple-600 font-medium bg-purple-50 px-2 py-0.5 rounded-full">
-              +{Math.round(suppMacros.calories)} kcal · +{Math.round(suppMacros.protein)}g protein added
-            </span>
-          )}
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          {(Object.entries(SUPPLEMENT_DEFS) as [SuppId, typeof SUPPLEMENT_DEFS[SuppId]][]).map(([id, def]) => {
-            const s = supplements[id];
-            const m = getSuppMacros(id as SuppId);
-            const hasOverride = !!suppMacroOverrides[id as SuppId];
-            const macroLine = [
-              m.cal > 0 ? `${Math.round(m.cal * (s.qty / def.defaultQty))} kcal` : null,
-              m.p  > 0 ? `${Math.round(m.p  * (s.qty / def.defaultQty))}g P` : null,
-            ].filter(Boolean).join(" · ");
-            const isEditing = editingSupp === id;
-            return (
-              <div key={id} className="relative">
-                {/* Normal card */}
-                {!isEditing && (
-                  <div
-                    onClick={() => updateSupp(id as SuppId, { enabled: !s.enabled })}
-                    className={`relative cursor-pointer rounded-xl border p-2.5 text-center transition-all select-none ${
-                      s.enabled
-                        ? "border-purple-400 bg-purple-50 shadow-sm"
-                        : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500"
-                    }`}
-                  >
-                    {/* Edit macros button */}
-                    <button
-                      onClick={(e) => openSuppEdit(e, id as SuppId)}
-                      title="Edit macros per unit"
-                      className={`absolute top-1.5 left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-colors z-10 ${
-                        hasOverride
-                          ? "bg-amber-400 text-white"
-                          : "bg-gray-100 text-gray-400 dark:text-gray-500 hover:bg-gray-200 hover:text-gray-600"
-                      }`}
-                    >✏️</button>
-
-                    <div className="text-2xl mb-1">{def.emoji}</div>
-                    <p className={`text-xs font-semibold leading-tight ${s.enabled ? "text-purple-800" : "text-gray-700"}`}>{def.name}</p>
-                    {/* Qty editor */}
-                    <div className="flex items-center justify-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
+            {/* Inline search to add a food to favourites */}
+            {showFavSearch && (
+              <div className="mb-2">
+                <input
+                  autoFocus
+                  type="text"
+                  value={favSearchQ}
+                  onChange={(e) => setFavSearchQ(e.target.value)}
+                  placeholder="Search food to favourite…"
+                  className="w-full rounded-xl border border-amber-200 dark:border-amber-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                />
+                {favSearchRes.length > 0 && (
+                  <div className="mt-1 bg-white dark:bg-gray-800 border border-amber-100 dark:border-amber-700 rounded-xl shadow-md overflow-hidden">
+                    {favSearchRes.map((item) => (
                       <button
-                        onClick={() => updateSupp(id as SuppId, { qty: Math.max(0, s.qty - 1) })}
-                        className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200"
-                      >−</button>
-                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-100 w-6 text-center">{s.qty}</span>
-                      <button
-                        onClick={() => updateSupp(id as SuppId, { qty: s.qty + 1 })}
-                        className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200"
-                      >+</button>
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500 dark:text-gray-500">{def.unit}</span>
-                    </div>
-                    {s.enabled && macroLine && (
-                      <p className="text-[10px] text-purple-600 mt-1 font-medium">{macroLine}</p>
-                    )}
-                    {s.enabled && (
-                      <div className="absolute top-1.5 right-1.5 w-3 h-3 rounded-full bg-purple-500 flex items-center justify-center">
-                        <span className="text-[8px] text-white font-bold">✓</span>
-                      </div>
-                    )}
+                        key={item.id ?? item.name}
+                        onClick={() => addFoodToFavs(item)}
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-amber-50 dark:hover:bg-amber-900/30 flex justify-between items-center border-b border-gray-50 dark:border-gray-700 last:border-b-0"
+                      >
+                        <span className="font-medium text-gray-800 dark:text-gray-100">{item.name}</span>
+                        <span className="text-amber-600 dark:text-amber-400 font-semibold flex-shrink-0 ml-2">{item.calories} kcal</span>
+                      </button>
+                    ))}
                   </div>
                 )}
-
-                {/* Inline macro editor */}
-                {isEditing && (
-                  <div className="rounded-xl border border-amber-300 bg-amber-50 p-2.5 text-center">
-                    <p className="text-xs font-semibold text-amber-800 mb-2">{def.emoji} Macros / {def.defaultQty} {def.unit}</p>
-                    <div className="grid grid-cols-2 gap-1 mb-2">
-                      {(["cal", "p", "c", "f"] as const).map((key) => (
-                        <div key={key} className="text-left">
-                          <label className="text-[9px] text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase font-semibold">{key === "cal" ? "kcal" : key === "p" ? "prot" : key === "c" ? "carbs" : "fat"}</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            value={suppEditDraft[key]}
-                            onChange={(e) => setSuppEditDraft((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
-                            className="w-full rounded border border-gray-200 px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-1 justify-center">
-                      <button onClick={saveSuppEdit}    className="text-[10px] px-2 py-1 rounded-lg bg-amber-500 text-white font-semibold hover:bg-amber-600">Save</button>
-                      <button onClick={() => resetSuppEdit(id as SuppId)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 dark:text-gray-300 hover:bg-gray-200">Reset</button>
-                      <button onClick={() => setEditingSupp(null)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 dark:text-gray-300 hover:bg-gray-200">✕</button>
-                    </div>
-                  </div>
+                {favSearchQ.trim() && favSearchRes.length === 0 && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 px-1">No results — try a different name.</p>
                 )}
               </div>
-            );
-          })}
+            )}
+
+            {favFoods.length === 0 && !showFavSearch ? (
+              <p className="text-xs text-gray-400 dark:text-gray-500 italic">No favourites yet. Click "+ Add Food" or tap ♥ on any logged food.</p>
+            ) : (
+              <div className="flex gap-2 flex-wrap">
+                {favFoods.map((fav) => (
+                  <button
+                    key={fav.foodName}
+                    onClick={() => relogFav(fav)}
+                    className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 hover:border-amber-400 text-gray-700 dark:text-gray-200 text-xs font-medium px-3 py-1.5 rounded-xl transition-colors"
+                    title={`${fav.quantity} ${fav.unit} · tap to re-log`}
+                  >
+                    <span className="truncate max-w-[120px]">{fav.foodName}</span>
+                    <span className="text-amber-600 dark:text-amber-400 font-semibold flex-shrink-0">{fav.calories} kcal</span>
+                    <span
+                      onClick={(e) => { e.stopPropagation(); toggleFav(fav); }}
+                      role="button"
+                      className="text-amber-300 hover:text-red-400 font-bold leading-none ml-0.5 cursor-pointer"
+                      title="Remove from favourites"
+                    >×</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Quick Re-log ── */}
+          {frequentFoods.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-2">⚡ Quick Re-log</p>
+              <div className="flex gap-2 flex-wrap">
+                {frequentFoods.map((food) => (
+                  <button
+                    key={food.foodName}
+                    disabled={!!relogging}
+                    onClick={() => handleQuickRelog(food)}
+                    className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-gray-700 dark:text-gray-200 text-xs font-medium px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={`${food.timesLogged}× logged · ${food.quantity} ${food.unit}`}
+                  >
+                    {relogging === food.foodName && (
+                      <span className="w-3 h-3 border-2 border-amber-400 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                    )}
+                    <span className="truncate max-w-[120px]">{food.foodName}</span>
+                    <span className="text-amber-600 dark:text-amber-400 font-semibold flex-shrink-0">{food.calories} kcal</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-2">Click to toggle · ✏️ edits macros per unit · preferences saved automatically</p>
       </Card>
 
       {/* Food log by meal */}
@@ -2721,6 +2722,261 @@ export default function NutritionPage() {
         </div>
       )}
 
+      {/* ── Water tracking widget ─────────────────────────────────────────── */}
+      {trackWater && <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">💧 Water Intake</h3>
+          <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">
+            <span className="font-bold text-blue-600">{Math.round(waterTotal / 100) / 10}L</span>
+            {" / "}
+            {Math.round(waterTarget / 100) / 10}L
+          </span>
+        </div>
+
+        {/* Progress bar */}
+        <div className="h-3 bg-gray-100 rounded-full overflow-hidden mb-3">
+          <div
+            className="h-full rounded-full bg-blue-400 transition-all duration-500"
+            style={{ width: `${Math.min(100, (waterTotal / waterTarget) * 100)}%` }}
+          />
+        </div>
+
+        {/* Error banner */}
+        {waterError && (
+          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 mb-2">
+            ⚠️ {waterError}
+          </p>
+        )}
+
+        {/* Quick-add buttons */}
+        <div className="flex flex-wrap gap-2 items-center">
+          {[150, 200, 350, 500, 750, 1000].map((ml) => (
+            <button
+              key={ml}
+              onClick={() => handleAddWater(ml)}
+              disabled={addingWater}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              +{ml < 1000 ? `${ml}ml` : "1L"}
+            </button>
+          ))}
+          {addingWater && (
+            <span className="flex items-center gap-1.5 text-xs text-blue-500">
+              <span className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin inline-block" />
+              Adding…
+            </span>
+          )}
+        </div>
+
+        {/* Recent logs today */}
+        {waterLogs.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {waterLogs.map((w) => (
+              <span
+                key={w.id}
+                className="flex items-center gap-1 text-xs bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 border border-blue-100"
+              >
+                💧{w.amount}ml
+                <button
+                  onClick={() => handleDeleteWater(w.id)}
+                  className="text-blue-300 hover:text-red-400 font-bold leading-none"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {waterTotal >= waterTarget && (
+          <p className="mt-2 text-xs text-green-600 font-medium">✅ Daily target reached! Great job staying hydrated.</p>
+        )}
+      </Card>}
+
+      {/* Supplements widget */}
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white">💊 Supplements</h3>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">Click to toggle · ✏️ edits macros · preferences saved to your device</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {(suppMacros.calories + customSuppMacros.calories) > 0 && (
+              <span className="text-xs text-purple-600 font-medium bg-purple-50 dark:bg-purple-900/30 px-2 py-0.5 rounded-full">
+                +{Math.round(suppMacros.calories + customSuppMacros.calories)} kcal · +{Math.round(suppMacros.protein + customSuppMacros.protein)}g P
+              </span>
+            )}
+            <button
+              onClick={() => setShowAddCustomSupp((v) => !v)}
+              className="text-xs px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300 hover:bg-purple-100 font-medium transition-colors"
+            >{showAddCustomSupp ? "✕ Cancel" : "+ Custom"}</button>
+          </div>
+        </div>
+
+        {/* Add custom supplement form */}
+        {showAddCustomSupp && (
+          <div className="mb-4 p-3 rounded-xl border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 space-y-2">
+            <p className="text-xs font-semibold text-purple-800 dark:text-purple-200">Add Your Supplement</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="col-span-2 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Emoji (e.g. 🌿)"
+                  value={newSuppDraft.emoji}
+                  onChange={(e) => setNewSuppDraft((p) => ({ ...p, emoji: e.target.value }))}
+                  className="w-16 rounded-lg border border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-purple-300"
+                />
+                <input
+                  type="text"
+                  placeholder="Supplement name *"
+                  value={newSuppDraft.name}
+                  onChange={(e) => setNewSuppDraft((p) => ({ ...p, name: e.target.value }))}
+                  className="flex-1 rounded-lg border border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">Unit</label>
+                <input type="text" placeholder="caps / g / ml" value={newSuppDraft.unit}
+                  onChange={(e) => setNewSuppDraft((p) => ({ ...p, unit: e.target.value }))}
+                  className="w-full mt-0.5 rounded-lg border border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">Default qty</label>
+                <input type="number" min="1" value={newSuppDraft.defaultQty}
+                  onChange={(e) => setNewSuppDraft((p) => ({ ...p, defaultQty: Number(e.target.value) }))}
+                  className="w-full mt-0.5 rounded-lg border border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
+              </div>
+              {(["cal","p","c","f"] as const).map((key) => (
+                <div key={key}>
+                  <label className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">{key === "cal" ? "kcal" : key === "p" ? "Protein g" : key === "c" ? "Carbs g" : "Fat g"}</label>
+                  <input type="number" min="0" step="0.5" value={newSuppDraft[key]}
+                    onChange={(e) => setNewSuppDraft((p) => ({ ...p, [key]: Number(e.target.value) }))}
+                    className="w-full mt-0.5 rounded-lg border border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={addCustomSupp}
+              disabled={!newSuppDraft.name.trim()}
+              className="w-full py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >Add Supplement</button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {/* Built-in supplements */}
+          {(Object.entries(SUPPLEMENT_DEFS) as [SuppId, typeof SUPPLEMENT_DEFS[SuppId]][]).map(([id, def]) => {
+            const s = supplements[id];
+            const m = getSuppMacros(id as SuppId);
+            const hasOverride = !!suppMacroOverrides[id as SuppId];
+            const macroLine = [
+              m.cal > 0 ? `${Math.round(m.cal * (s.qty / def.defaultQty))} kcal` : null,
+              m.p  > 0 ? `${Math.round(m.p  * (s.qty / def.defaultQty))}g P` : null,
+            ].filter(Boolean).join(" · ");
+            const isEditing = editingSupp === id;
+            return (
+              <div key={id} className="relative">
+                {!isEditing && (
+                  <div
+                    onClick={() => updateSupp(id as SuppId, { enabled: !s.enabled })}
+                    className={`relative cursor-pointer rounded-xl border p-2.5 text-center transition-all select-none ${
+                      s.enabled
+                        ? "border-purple-400 bg-purple-50 dark:bg-purple-900/30 shadow-sm"
+                        : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500"
+                    }`}
+                  >
+                    <button
+                      onClick={(e) => openSuppEdit(e, id as SuppId)}
+                      title="Edit macros per unit"
+                      className={`absolute top-1.5 left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-colors z-10 ${
+                        hasOverride ? "bg-amber-400 text-white" : "bg-gray-100 text-gray-400 dark:text-gray-500 hover:bg-gray-200 hover:text-gray-600"
+                      }`}
+                    >✏️</button>
+                    <div className="text-2xl mb-1">{def.emoji}</div>
+                    <p className={`text-xs font-semibold leading-tight ${s.enabled ? "text-purple-800 dark:text-purple-200" : "text-gray-700 dark:text-gray-300"}`}>{def.name}</p>
+                    <div className="flex items-center justify-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => updateSupp(id as SuppId, { qty: Math.max(0, s.qty - 1) })} className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200">−</button>
+                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-100 w-6 text-center">{s.qty}</span>
+                      <button onClick={() => updateSupp(id as SuppId, { qty: s.qty + 1 })} className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200">+</button>
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500">{def.unit}</span>
+                    </div>
+                    {s.enabled && macroLine && <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-1 font-medium">{macroLine}</p>}
+                    {s.enabled && (
+                      <div className="absolute top-1.5 right-1.5 w-3 h-3 rounded-full bg-purple-500 flex items-center justify-center">
+                        <span className="text-[8px] text-white font-bold">✓</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {isEditing && (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-2.5 text-center">
+                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-2">{def.emoji} Macros / {def.defaultQty} {def.unit}</p>
+                    <div className="grid grid-cols-2 gap-1 mb-2">
+                      {(["cal", "p", "c", "f"] as const).map((key) => (
+                        <div key={key} className="text-left">
+                          <label className="text-[9px] text-gray-500 dark:text-gray-400 uppercase font-semibold">{key === "cal" ? "kcal" : key === "p" ? "prot" : key === "c" ? "carbs" : "fat"}</label>
+                          <input type="number" min="0" step="0.5" value={suppEditDraft[key]}
+                            onChange={(e) => setSuppEditDraft((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
+                            className="w-full rounded border border-gray-200 px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-1 justify-center">
+                      <button onClick={saveSuppEdit} className="text-[10px] px-2 py-1 rounded-lg bg-amber-500 text-white font-semibold hover:bg-amber-600">Save</button>
+                      <button onClick={() => resetSuppEdit(id as SuppId)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 dark:text-gray-300 hover:bg-gray-200">Reset</button>
+                      <button onClick={() => setEditingSupp(null)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 dark:text-gray-300 hover:bg-gray-200">✕</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Custom supplements */}
+          {customSupps.map((cs) => {
+            const macroLine = [
+              cs.cal > 0 ? `${Math.round(cs.cal * (cs.qty / (cs.defaultQty || 1)))} kcal` : null,
+              cs.p  > 0 ? `${Math.round(cs.p  * (cs.qty / (cs.defaultQty || 1)))}g P` : null,
+            ].filter(Boolean).join(" · ");
+            return (
+              <div key={cs.id} className="relative">
+                <div
+                  onClick={() => updateCustomSupp(cs.id, { enabled: !cs.enabled })}
+                  className={`relative cursor-pointer rounded-xl border p-2.5 text-center transition-all select-none ${
+                    cs.enabled
+                      ? "border-purple-400 bg-purple-50 dark:bg-purple-900/30 shadow-sm"
+                      : "border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500"
+                  }`}
+                >
+                  {/* Delete custom supp */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); removeCustomSupp(cs.id); }}
+                    title="Remove this supplement"
+                    className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] bg-gray-100 text-red-400 hover:bg-red-50 hover:text-red-500 z-10 font-bold transition-colors"
+                  >×</button>
+                  <div className="text-2xl mb-1">{cs.emoji || "💊"}</div>
+                  <p className={`text-xs font-semibold leading-tight ${cs.enabled ? "text-purple-800 dark:text-purple-200" : "text-gray-700 dark:text-gray-300"}`}>{cs.name}</p>
+                  <div className="flex items-center justify-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => updateCustomSupp(cs.id, { qty: Math.max(0, cs.qty - 1) })} className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200">−</button>
+                    <span className="text-xs font-semibold text-gray-800 dark:text-gray-100 w-6 text-center">{cs.qty}</span>
+                    <button onClick={() => updateCustomSupp(cs.id, { qty: cs.qty + 1 })} className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200">+</button>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{cs.unit}</span>
+                  </div>
+                  {cs.enabled && macroLine && <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-1 font-medium">{macroLine}</p>}
+                  {cs.enabled && (
+                    <div className="absolute top-1.5 right-1.5 w-3 h-3 rounded-full bg-purple-500 flex items-center justify-center">
+                      <span className="text-[8px] text-white font-bold">✓</span>
+                    </div>
+                  )}
+                  <span className="absolute bottom-1.5 right-1.5 text-[8px] text-purple-400 font-semibold uppercase">custom</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+
       {/* Log / Edit modal */}
       <Modal
         open={showForm}
@@ -2751,6 +3007,94 @@ export default function NutritionPage() {
         selectedDate={date}
         onSaved={() => { setShowDish(false); load(); }}
       />
+
+      {/* ── My Foods panel ─────────────────────────────────────────────────── */}
+      {showMyFoodsPanel && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowMyFoodsPanel(false)} />
+          <div className="relative bg-white dark:bg-gray-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+              <div>
+                <h2 className="font-bold text-gray-900 dark:text-white text-lg">📋 My Foods</h2>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Your personal food library — only visible to you</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setMyFoodsPanelEdit(null); setShowMyFoodsCreate(true); }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-green-500 text-white hover:bg-green-600 transition-colors"
+                >+ New Food</button>
+                <button onClick={() => setShowMyFoodsPanel(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 text-lg font-bold">×</button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="overflow-y-auto flex-1 p-4">
+              {myFoodsPanelLoading ? (
+                <div className="flex justify-center py-10">
+                  <div className="w-7 h-7 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : myFoodsPanelList.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-5xl mb-3">🍽️</div>
+                  <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">No custom foods yet</p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Create foods with your own macros — they'll appear here and in the food search.</p>
+                  <button
+                    onClick={() => { setMyFoodsPanelEdit(null); setShowMyFoodsCreate(true); }}
+                    className="px-4 py-2 rounded-xl bg-green-500 text-white text-sm font-semibold hover:bg-green-600 transition-colors"
+                  >Create First Food</button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {myFoodsPanelList.map((food) => (
+                    <div key={food.id} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-brand-200 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 dark:text-gray-100 text-sm truncate">{food.name}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                          {food.calories} kcal · {food.defaultQty}{food.defaultUnit}
+                          {food.protein ? ` · P ${food.protein}g` : ""}
+                          {food.carbs   ? ` · C ${food.carbs}g`   : ""}
+                          {food.fats    ? ` · F ${food.fats}g`    : ""}
+                        </p>
+                      </div>
+                      <div className="flex gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={() => { setMyFoodsPanelEdit(food); setShowMyFoodsCreate(true); }}
+                          className="px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 hover:bg-amber-100 transition-colors"
+                        >Edit</button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Delete "${food.name}"?`)) return;
+                            await customFoodsApi.delete(food.id);
+                            loadMyFoodsPanel();
+                          }}
+                          className="px-2.5 py-1 rounded-lg text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-100 transition-colors"
+                        >Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Create / edit custom food (from My Foods panel) ─────────────────── */}
+      {showMyFoodsCreate && (
+        <Modal
+          open={showMyFoodsCreate}
+          onClose={() => { setShowMyFoodsCreate(false); setMyFoodsPanelEdit(null); }}
+          title={myFoodsPanelEdit ? "Edit Custom Food" : "Create Custom Food"}
+          size="md"
+        >
+          <CustomFoodModal
+            initial={myFoodsPanelEdit}
+            onSave={(_food) => { setShowMyFoodsCreate(false); setMyFoodsPanelEdit(null); loadMyFoodsPanel(); }}
+            onClose={() => { setShowMyFoodsCreate(false); setMyFoodsPanelEdit(null); }}
+          />
+        </Modal>
+      )}
     </div>
   );
 }
