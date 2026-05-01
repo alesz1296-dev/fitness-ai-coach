@@ -92,7 +92,7 @@ export const foodSearch = async (
     }
 
     // ── Fallback: static array ────────────────────────────────────────────────
-    const results = searchFoods(q, limit, tags[0]);
+    const results = searchFoods(q, limit, tags);
     res.json({ results, total: FOOD_DB.length, source: "static" });
   } catch (e) {
     next(e);

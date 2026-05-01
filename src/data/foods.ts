@@ -459,13 +459,15 @@ export const FOOD_DB: FoodItem[] = [
  * Optionally filter by tag (e.g. "keto", "fit", "high-protein", "vegan").
  * Returns up to `limit` results sorted by relevance (prefix match ranked higher).
  */
-export function searchFoods(query: string, limit = 20, tag?: string): FoodItem[] {
-  const q   = query.toLowerCase().trim();
-  const tag_ = tag?.toLowerCase().trim();
+export function searchFoods(query: string, limit = 20, tags?: string | string[]): FoodItem[] {
+  const q    = query.toLowerCase().trim();
+  const tagList: string[] = Array.isArray(tags)
+    ? tags.map((t) => t.toLowerCase().trim()).filter(Boolean)
+    : tags ? [tags.toLowerCase().trim()] : [];
 
-  // Start from full DB or tag-filtered subset
-  let pool = tag_
-    ? FOOD_DB.filter((f) => f.tags?.includes(tag_))
+  // AND logic: item must have ALL selected tags
+  let pool = tagList.length > 0
+    ? FOOD_DB.filter((f) => tagList.every((t) => f.tags?.includes(t)))
     : FOOD_DB;
 
   if (!q) return pool.slice(0, limit);

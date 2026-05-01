@@ -100,7 +100,7 @@ export const login = async (
       message: "Login successful",
       accessToken,
       refreshToken,
-      user: { id: user.id, email: user.email, username: user.username, firstName: user.firstName, lastName: user.lastName, profileComplete: user.profileComplete },
+      user: { id: user.id, email: user.email, username: user.username, firstName: user.firstName, lastName: user.lastName },
     });
   } catch (error) { next(error); }
 };

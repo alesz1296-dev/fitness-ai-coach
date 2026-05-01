@@ -419,9 +419,16 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
     return () => clearTimeout(t);
   }, [query, activeTags, tab]);
 
-  const handleTagClick = (tag: string) => {
-    setActiveTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
+  const handleTagClick = (tag: string, e: React.MouseEvent) => {
+    // Ignore the 2nd click of a double-click sequence (e.detail === 2);
+    // the onDoubleClick handler will do the deselect instead.
+    if (e.detail > 1) return;
+    setActiveTags((prev) => prev.includes(tag) ? prev : [...prev, tag]);
     if (!query.trim()) setOpen(true);
+  };
+
+  const handleTagDeselect = (tag: string) => {
+    setActiveTags((prev) => prev.filter((t) => t !== tag));
   };
 
   const handleDeleteMyFood = async (id: number) => {
@@ -488,9 +495,11 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Cuisine</p>
               <div className="flex flex-wrap gap-1.5">
                 {CUISINE_TAGS.map(({ tag, label, emoji }) => (
-                  <button key={tag} type="button" onClick={() => handleTagClick(tag)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTags.includes(tag) ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
-                    {emoji} {label}
+                  <button key={tag} type="button"
+                    onClick={(e) => handleTagClick(tag, e)}
+                    onDoubleClick={() => handleTagDeselect(tag)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all select-none ${activeTags.includes(tag) ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
+                    {emoji} {label}{activeTags.includes(tag) ? " ×" : ""}
                   </button>
                 ))}
               </div>
@@ -499,9 +508,11 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Dietary Category</p>
               <div className="flex flex-wrap gap-1.5">
                 {DIETARY_TAGS.map(({ tag, label, emoji }) => (
-                  <button key={tag} type="button" onClick={() => handleTagClick(tag)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTags.includes(tag) ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
-                    {emoji} {label}
+                  <button key={tag} type="button"
+                    onClick={(e) => handleTagClick(tag, e)}
+                    onDoubleClick={() => handleTagDeselect(tag)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all select-none ${activeTags.includes(tag) ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
+                    {emoji} {label}{activeTags.includes(tag) ? " ×" : ""}
                   </button>
                 ))}
               </div>
@@ -510,14 +521,41 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Food Type</p>
               <div className="flex flex-wrap gap-1.5">
                 {FOOD_TYPE_TAGS.map(({ tag, label, emoji }) => (
-                  <button key={tag} type="button" onClick={() => handleTagClick(tag)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${activeTags.includes(tag) ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
-                    {emoji} {label}
+                  <button key={tag} type="button"
+                    onClick={(e) => handleTagClick(tag, e)}
+                    onDoubleClick={() => handleTagDeselect(tag)}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all select-none ${activeTags.includes(tag) ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400 hover:text-brand-600"}`}>
+                    {emoji} {label}{activeTags.includes(tag) ? " ×" : ""}
                   </button>
                 ))}
               </div>
             </div>
           </div>
+
+          {/* Active filter summary — shown only when ≥1 tag selected */}
+          {activeTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 px-0.5">
+              <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Filtering:</span>
+              {activeTags.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => handleTagDeselect(t)}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-brand-600 text-white border border-brand-600 hover:bg-brand-700 transition-all"
+                >
+                  {t} <span className="font-bold">×</span>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setActiveTags([])}
+                className="px-2 py-0.5 rounded-full text-xs font-medium text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:border-red-400 hover:text-red-500 transition-all"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+
           <div className="relative">
             <Input
               value={query}
