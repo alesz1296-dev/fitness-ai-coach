@@ -439,6 +439,7 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f535", name: "Egg & Spinach Salad",                             calories: 190, protein: 14, carbs: 5,  fats: 13,  defaultQty: 200, defaultUnit: "g",      tags: ["vegetarian","fit","keto","low-carb","mix","salad"] },
   { id: "f536", name: "Sweet Potato & Black Bean Salad",                 calories: 290, protein: 9,  carbs: 48, fats: 7,   defaultQty: 250, defaultUnit: "g",      tags: ["vegan","vegetarian","fit","legume","mix","salad"] },
   { id: "f537", name: "Thai Peanut Noodle Salad",                        calories: 340, protein: 12, carbs: 44, fats: 14,  defaultQty: 250, defaultUnit: "g",      tags: ["vegan","vegetarian","mix","salad"] },
+  { id: "f538", name: "Tortilla (small / mini)",                         calories: 30,  protein: 0,  carbs: 6,  fats: 0.5, defaultQty: 1,   defaultUnit: "unit",   tags: ["vegan","vegetarian","mexican","snack"] },
 
   // ── Korean Cuisine ───────────────────────────────────────────────────────────
   { id: "f400", name: "Bibimbap (rice bowl)",           calories: 490, protein: 22,  carbs: 70, fats: 12,  defaultQty: 1,   defaultUnit: "bowl",   tags: ["korean","high-protein","mix"] },
