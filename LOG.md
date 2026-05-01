@@ -1251,3 +1251,58 @@ Added `calendarApi` with methods: `getMonth`, `populate`, `updateDay`, `deleteDa
 - #85 Pagination for food logs + workouts (P2, Infrastructure) — note: env validation already done via Zod in src/config/env.ts
 - Connection pooling (post-Railway-live, Infrastructure)
 - P5 backlog: superset/circuit, meal plan templates, admin dashboard, barcode scanner, push notifications
+
+---
+
+## 2026-04-30 — UX Polish Sprint: Exercise Search, Nutrition Layout, Dark Mode, Favourites, Fasting
+
+### Root causes diagnosed and fixed (7 issues)
+
+**#91 — Exercise search dropdown invisible (P1 · UX · WorkoutsPage)**
+- Root cause: Modal content div has `overflow-y-auto`; `position:absolute` dropdowns are clipped by any ancestor with non-`visible` overflow — even after removing inner `max-h-80 overflow-y-auto` from ExerciseRows.
+- Fix: Rewrote `ExerciseSearch` to use `position:fixed` + `getBoundingClientRect()` on the input ref. Dropdown renders at exact screen coordinates, bypassing all parent overflow contexts. Added `useRef<HTMLInputElement>` + `calcPos()` helper.
+
+**#92 — Per-row muscle group selector (P2 · Feature · WorkoutsPage)**
+- Added `muscle: string` field to `ExRow` interface and `newRow()`.
+- Each exercise row now has a compact `<select>` (Any muscle / Chest / Back / …) rendered above the search input.
+- Per-row muscle filter overrides the global chip; both systems coexist.
+
+**#93 — Save workout: trainingType silently dropped + Modal dark mode (P1 · Bug)**
+- `createWorkoutSchema` (Zod) didn't include `trainingType` → Zod stripped it before the controller ran; training type was never saved. Added `trainingType: z.string().max(50).optional()`.
+- `Modal.tsx` had hardcoded `bg-white` with no dark variants → form content invisible/inverted in dark mode. Added `dark:bg-gray-800`, `dark:border-gray-700`, `dark:text-white`, `dark:hover:bg-gray-700` to panel, header, title, close button.
+
+**#94 / Textarea dark mode (P1 · Bug · WorkoutsPage)**
+- `Textarea.tsx` component had zero dark-mode CSS classes — the Notes field in WorkoutForm rendered white in dark mode, making the entire form appear inverted.
+- Added full dark mode parity: `dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder:text-gray-500` matching the `Input` component.
+
+**Nutrition layout — calories/macros at top (P1 · UX · NutritionPage)**
+- 7 action buttons were crammed into the same flex row as the date nav, wrapping on mobile and pushing calories/macros off-screen.
+- Fixed: Split header into two rows. Row 1: title + `← date →` only. Row 2: action buttons (`+ Log Food`, fasting timer, My Foods, Build Dish, AI Plan, Ask AI). Calories + macro cards render immediately after row 1 — first content seen on the page.
+- Shortened button labels (`✨ AI Plan`, `🥗 Ask AI`, `🥣 Build Dish`) to prevent wrapping on mobile.
+
+**Fasting timer not visible / "not working" (P1 · UX · NutritionPage)**
+- Timer elapsed display was only in a banner below the macro cards — user had to scroll to see it was running.
+- Fixed: The "Start Fast" button now shows the live counter inline (`⏸ 2h 14m`) using `formatFastingDuration(fastingElapsed)` in the button label. Timer is visible from the top of the page at all times.
+- Button tooltip updated: `End fast · 2h 14m elapsed`.
+
+**Macros not updating after logging food (P1 · Bug · ProfileSummaryBar)**
+- `ProfileSummaryBar` (persistent top bar across all pages) fetched `dashboardApi.get()` once on mount and never re-fetched — showed stale macro numbers regardless of what was logged.
+- Fix: Introduced `fitai:food-logged` custom DOM event. Dispatched from every food logging path: `LogFoodForm.onSave`, `BuildDishModal.onSaved`, `relogFav`, `handleQuickRelog`. `ProfileSummaryBar` listens via `window.addEventListener("fitai:food-logged", fetchData)` and re-fetches immediately on any log action.
+
+**Favourites `addFoodToFavs` null quantity (P2 · Bug · NutritionPage)**
+- When adding a food to favourites via search, `item.defaultQty` and `item.defaultUnit` could be `null` from the API response. Stored `null` in localStorage, causing silent failures on re-log.
+- Fix: Safe fallback chain: `item.defaultQty ?? item.servingSize ?? 100` and `item.defaultUnit ?? item.servingUnit ?? "g"`. Same fix applied to `relogFav` quantity/unit defaults.
+
+### Files modified
+| File | Change |
+|------|--------|
+| `client/src/components/ui/Textarea.tsx` | Full dark mode class parity |
+| `client/src/components/layout/ProfileSummaryBar.tsx` | `fetchData` refactored to `useCallback`; `fitai:food-logged` event listener |
+| `client/src/components/ui/Modal.tsx` | Dark mode: panel, header border, title, close button |
+| `client/src/pages/nutrition/NutritionPage.tsx` | Header restructure; fasting button shows live timer; `fitai:food-logged` dispatch ×4; `addFoodToFavs` null-safe defaults |
+| `client/src/pages/workouts/WorkoutsPage.tsx` | `ExerciseSearch` → `position:fixed` dropdown; `ExRow` + `newRow` muscle field; per-row `<select>` in `ExerciseRows`; `globalMuscle` replaces `activeMuscle` |
+| `src/middleware/schemas.ts` | `trainingType` added to `createWorkoutSchema` |
+
+### TypeScript
+- `npx tsc --noEmit` — 0 errors (backend)
+- `npx tsc --noEmit` — 0 errors (frontend)

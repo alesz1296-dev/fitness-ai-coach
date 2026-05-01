@@ -561,3 +561,25 @@ eas build --platform all --profile production
 - `entrypoint.sh`: `prisma db push` → optional seed → `node dist/server.js`
 - Static file path: `dist/server.js` → `../client-dist` = `/app/client-dist` ✓
 - `.env` and `.env.production` confirmed gitignored (not tracked)
+
+---
+
+## Session 2026-04-30 — UX Polish Sprint
+
+### Completed this session
+- **Exercise search** (`WorkoutsPage.tsx`): Dropdown now uses `position:fixed` + `getBoundingClientRect` — escapes all parent `overflow` contexts. Per-row muscle group `<select>` added to `ExerciseRows`; `ExRow` type extended with `muscle: string`.
+- **Save workout** (`schemas.ts`): `trainingType` added to `createWorkoutSchema` — was previously stripped by Zod before reaching the controller.
+- **Modal dark mode** (`Modal.tsx`): `dark:bg-gray-800` + dark variants on panel, title, border, close button.
+- **Textarea dark mode** (`Textarea.tsx`): Full dark parity — `dark:bg-gray-700 dark:border-gray-600 dark:text-white`.
+- **Nutrition layout** (`NutritionPage.tsx`): Header split into 2 rows — date nav only on row 1, action buttons on row 2. Calories+macros now render immediately after the title — first visible content on page.
+- **Fasting timer** (`NutritionPage.tsx`): Live counter shown inline on the button (`⏸ 2h 14m`) — no longer requires scrolling to see the timer is running.
+- **Macros live update** (`ProfileSummaryBar.tsx` + `NutritionPage.tsx`): `fitai:food-logged` custom event dispatched from all 4 food-logging paths; `ProfileSummaryBar` re-fetches on each event via `useCallback` + `addEventListener`.
+- **Favourites null-safe** (`NutritionPage.tsx`): `addFoodToFavs` and `relogFav` use safe fallback chains for `defaultQty`/`defaultUnit` — no more null stored in localStorage.
+
+### Pending / backlog
+- **#71** Weight prediction graph — editable target line on ProgressPage (P2, Feature)
+- **#83** AI provider abstraction — DeepSeek default, OpenAI fallback (P2, AI/ML)
+- **#84** RAG + embeddings for chat memory (P3, AI/ML)
+- **#85** Pagination — food logs + workouts (P2, Infrastructure)
+- Connection pooling — PgBouncer or Prisma Accelerate (post-live, Infrastructure)
+- P5 backlog: superset/circuit, meal plan templates, admin dashboard, barcode scanner, push notifications

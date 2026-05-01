@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { Dispatch, SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths } from "date-fns";
@@ -132,9 +133,9 @@ function CalorieCalculator({
   }
 
   return (
-    <div className="rounded-xl border border-brand-100 bg-brand-50 p-3 space-y-2.5">
+    <div className="rounded-xl border border-brand-100 bg-brand-50 dark:bg-gray-700/60 dark:border-gray-600 p-3 space-y-2.5">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-brand-700 uppercase tracking-wide">🔥 Calorie Calculator</p>
+        <p className="text-xs font-semibold text-brand-700 dark:text-brand-300 uppercase tracking-wide">🔥 Calorie Calculator</p>
         <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 dark:text-gray-300">✕ close</button>
       </div>
 
@@ -416,7 +417,7 @@ function ExerciseSuggestPanel({
   };
 
   return (
-    <div className="rounded-xl border border-brand-200 bg-brand-50 p-3 space-y-3">
+    <div className="rounded-xl border border-brand-200 bg-brand-50 dark:bg-gray-700/60 dark:border-gray-600 p-3 space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-brand-700">💡 Exercise Suggestions</p>
         <button type="button" onClick={onClose} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300 dark:text-gray-300">✕ close</button>
@@ -519,11 +520,29 @@ function ExerciseSearch({
     if (!query.trim()) { setResults([]); setOpen(false); return; }
     const t = setTimeout(() => {
       searchApi.exercises(query, muscle ? { muscle } : {}, 10)
-        .then((r) => { setResults(r.data.results); calcPos(); setOpen(true); })
-        .catch(() => {});
+        .then((r) => {
+          if (r.data.results.length > 0 || query.trim()) {
+            setResults(r.data.results);
+            calcPos();
+            setOpen(true);
+          }
+        })
+        .catch((_err) => { console.error("Exercise search failed:", _err); });
     }, 200);
     return () => clearTimeout(t);
   }, [query, muscle]);
+
+  // Recalculate portal position on scroll/resize so it tracks the input
+  useEffect(() => {
+    if (!open) return;
+    const update = () => calcPos();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [open]);
 
   return (
     <div className="relative">
@@ -536,26 +555,29 @@ function ExerciseSearch({
         placeholder={placeholder}
         className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
       />
-      {open && (
+      {open && createPortal(
         <div
-          style={{ position: "fixed", top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 9999 }}
+          style={{ position: "fixed", top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 99999 }}
           className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-h-52 overflow-y-auto"
         >
           {results.length > 0 ? (
             results.map((ex) => (
               <div
-                key={ex.id}
+                key={ex.id ?? ex.name}
                 onMouseDown={() => { setQuery(ex.name); onChange(ex.name, ex); setOpen(false); }}
                 className="px-3 py-2 text-sm hover:bg-brand-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 cursor-pointer"
               >
                 <span className="font-medium">{ex.name}</span>
-                <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{ex.primaryMuscle} · {ex.equipment}</span>
+                {(ex.primaryMuscle || ex.equipment) && (
+                  <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{ex.primaryMuscle}{ex.primaryMuscle && ex.equipment ? " · " : ""}{ex.equipment}</span>
+                )}
               </div>
             ))
           ) : (
             <p className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">No exercises found — try a different name or muscle filter.</p>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -735,7 +757,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
 
   return (
     <div className="space-y-4">
-      {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">{error}</p>}
       <div className="grid grid-cols-2 gap-3">
         <Input label="Workout Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Push Day" className="col-span-2" />
         <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -831,7 +853,7 @@ function EditWorkoutForm({ workout, onSave, onClose }: { workout: Workout; onSav
 
   return (
     <div className="space-y-4">
-      {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">{error}</p>}
       <div className="grid grid-cols-2 gap-3">
         <Input label="Workout Name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-2" />
         <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -1564,7 +1586,7 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
 
       {/* System template fork notice */}
       {template.isSystem && onFork && (
-        <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+        <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-sm text-blue-800 dark:text-blue-300">
           <span>🔧</span>
           <div className="flex-1">
             <p className="font-medium">Want to customise this plan?</p>
@@ -3279,7 +3301,7 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
           <input type="range" min={20} max={120} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="w-full" />
         </div>
 
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2 mb-3">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2 mb-3">{error}</p>}
 
         <Button loading={loading} onClick={generate} className="w-full">
           {loading ? "Generating..." : "Generate Workout"}
@@ -3422,7 +3444,7 @@ export default function WorkoutsPage() {
         <div className="flex items-center gap-2 flex-wrap">
           {/* Training days per week — clearly editable */}
           {editingDays ? (
-            <div className="flex items-center gap-2 bg-brand-50 border border-brand-300 rounded-xl px-3 py-1.5">
+            <div className="flex items-center gap-2 bg-brand-50 dark:bg-gray-700/60 border border-brand-300 dark:border-gray-600 rounded-xl px-3 py-1.5">
               <span className="text-sm text-brand-700 font-medium">🗓️ Days/week:</span>
               <input
                 type="number" min={1} max={7}

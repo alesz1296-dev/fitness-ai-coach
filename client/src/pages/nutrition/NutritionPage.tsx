@@ -436,35 +436,35 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
   return (
     <div className="space-y-2">
       {/* Tab switcher */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           type="button"
           onClick={() => setTab("all")}
-          className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
             tab === "all"
               ? "bg-brand-600 text-white border-brand-600"
               : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400"
           }`}
         >
-          Food Database
+          🌐 Food Database
         </button>
         <button
           type="button"
           onClick={() => setTab("mine")}
-          className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${
+          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
             tab === "mine"
               ? "bg-amber-500 text-white border-amber-500"
-              : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-amber-400"
+              : "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 hover:bg-amber-100"
           }`}
         >
-          My Foods {myFoods.length > 0 && `(${myFoods.length})`}
+          ⭐ My Foods {myFoods.length > 0 ? `(${myFoods.length})` : "— your custom foods"}
         </button>
         <button
           type="button"
           onClick={() => { setEditingFood(null); setShowCreateModal(true); }}
-          className="ml-auto px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 hover:bg-green-100 transition-all"
+          className="ml-auto px-2.5 py-1.5 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/30 transition-all font-semibold"
         >
-          + New food
+          + Create New Food
         </button>
       </div>
 
@@ -761,7 +761,14 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   return (
     <div className="space-y-4">
       {/* Search — only shown when adding new, not when editing */}
-      {!editItem && <FoodSearch onSelect={fillFromSearch} />}
+      {!editItem && (
+        <>
+          <FoodSearch onSelect={fillFromSearch} />
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 -mt-1">
+            💡 Have custom foods? Switch to the <span className="text-amber-600 dark:text-amber-400 font-medium">⭐ My Foods</span> tab above.
+          </p>
+        </>
+      )}
 
       {error && (
         <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>
@@ -2122,16 +2129,20 @@ export default function NutritionPage() {
     return () => { if (fastingRef.current) { clearInterval(fastingRef.current); fastingRef.current = null; } };
   }, [fastingActive, fastingStart]);
 
-  const toggleFasting = () => {
-    if (fastingActive) {
-      try { localStorage.removeItem(FAST_KEY); } catch { /* ignore */ }
-      setFastingStart(null);
-    } else {
-      const now = new Date();
-      try { localStorage.setItem(FAST_KEY, String(now.getTime())); } catch { /* ignore */ }
-      setFastingStart(now);
-    }
-  };
+  const toggleFasting = useCallback(() => {
+    setFastingStart((prev) => {
+      if (prev !== null) {
+        // Ending fast
+        try { localStorage.removeItem(FAST_KEY); } catch { /* ignore */ }
+        return null;
+      } else {
+        // Starting fast
+        const now = new Date();
+        try { localStorage.setItem(FAST_KEY, String(now.getTime())); } catch { /* ignore */ }
+        return now;
+      }
+    });
+  }, [FAST_KEY]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -2155,17 +2166,9 @@ export default function NutritionPage() {
     setDeleting(id);
     try {
       await foodApi.delete(id);
-      setLogs((prev) => prev.filter((l) => l.id !== id));
-      setTotals((prev) => {
-        const removed = logs.find((l) => l.id === id);
-        if (!removed) return prev;
-        return {
-          calories: prev.calories - removed.calories,
-          protein:  prev.protein  - (removed.protein ?? 0),
-          carbs:    prev.carbs    - (removed.carbs   ?? 0),
-          fats:     prev.fats     - (removed.fats    ?? 0),
-        };
-      });
+      // Re-fetch from server so totals are always accurate
+      await load();
+      window.dispatchEvent(new Event("fitai:food-logged"));
     } catch (e: any) {
       alert(e.response?.data?.error || "Failed to delete entry. Please try again.");
     } finally { setDeleting(null); }
@@ -2271,76 +2274,29 @@ export default function NutritionPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
-      {/* Header: title + date nav on one row, action buttons below */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Nutrition</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{format(parseISO(date), "EEEE, MMMM d")}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm"
-              onClick={() => setDatePersist(subDays(parseISO(date), 1).toISOString().split("T")[0])}>←</Button>
-            <input
-              type="date"
-              value={date}
-              max={new Date().toISOString().split("T")[0]}
-              onChange={(e) => setDatePersist(e.target.value)}
-              className="border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
-            <Button variant="secondary" size="sm"
-              disabled={isToday}
-              onClick={() => setDatePersist(addDays(parseISO(date), 1).toISOString().split("T")[0])}>→</Button>
-          </div>
+      {/* Header: title + date nav */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Nutrition</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{format(parseISO(date), "EEEE, MMMM d")}</p>
         </div>
-        {/* Action buttons row — kept BELOW the date so macros render first */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button onClick={() => { setEditItem(null); setShowForm(true); }}>+ Log Food</Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={toggleFasting}
-            style={fastingActive ? { borderColor: "#a78bfa", color: "#6d28d9", backgroundColor: "#f5f3ff" } : {}}
-            title={fastingActive ? `End fast · ${formatFastingDuration(fastingElapsed)} elapsed` : "Start fasting timer"}
-          >
-            {fastingActive ? `⏸ ${formatFastingDuration(fastingElapsed)}` : "⏱ Start Fast"}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => { setShowMyFoodsPanel(true); loadMyFoodsPanel(); }}
-            title="View and manage your personal custom foods"
-          >
-            📋 My Foods
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowDish(true)}
-            title="Build a dish or bowl from multiple ingredients"
-          >
-            🥣 Build Dish
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowMealPlan(true)}
-            title="Get an AI-generated meal plan for today"
-          >
-            ✨ AI Plan
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate("/chat?agent=nutritionist")}
-            title="Chat with your AI nutritionist"
-          >
-            🥗 Ask AI
-          </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" size="sm"
+            onClick={() => setDatePersist(subDays(parseISO(date), 1).toISOString().split("T")[0])}>←</Button>
+          <input
+            type="date"
+            value={date}
+            max={new Date().toISOString().split("T")[0]}
+            onChange={(e) => setDatePersist(e.target.value)}
+            className="border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          <Button variant="secondary" size="sm"
+            disabled={isToday}
+            onClick={() => setDatePersist(addDays(parseISO(date), 1).toISOString().split("T")[0])}>→</Button>
         </div>
       </div>
 
-      {/* Daily summary */}
+      {/* Daily summary — calories + macros always at top */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* ── Calories card ── */}
@@ -2505,6 +2461,52 @@ export default function NutritionPage() {
         </Card>
       </div>
 
+      {/* Action buttons — below macros for immediate access */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button onClick={() => { setEditItem(null); setShowForm(true); }}>+ Log Food</Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={toggleFasting}
+          className={fastingActive ? "border-violet-400 dark:border-violet-600 text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/30 hover:bg-violet-100 dark:hover:bg-violet-900/50 font-medium tabular-nums" : ""}
+          title={fastingActive ? `End fast · ${formatFastingDuration(fastingElapsed)} elapsed` : "Start fasting timer"}
+        >
+          {fastingActive ? `⏸ ${formatFastingDuration(fastingElapsed)}` : "⏱ Start Fast"}
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => { setShowMyFoodsPanel(true); loadMyFoodsPanel(); }}
+          title="Create and manage your personal custom foods (also accessible in Log Food)"
+        >
+          ⭐ My Foods
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setShowDish(true)}
+          title="Build a dish or bowl from multiple ingredients"
+        >
+          🥣 Build Dish
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setShowMealPlan(true)}
+          title="Get an AI-generated meal plan for today"
+        >
+          ✨ AI Plan
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => navigate("/chat?agent=nutritionist")}
+          title="Chat with your AI nutritionist"
+        >
+          🥗 Ask AI
+        </Button>
+      </div>
+
       {/* Hormonal cycle phase banner — shown for female users with periodStart set */}
       {user?.sex === "female" && user.periodStart && (
         <CyclePhaseBanner periodStart={user.periodStart} cycleLength={user.cycleLength} />
@@ -2549,12 +2551,17 @@ export default function NutritionPage() {
           {/* ── Favourites ── */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">⭐ Favourites</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">⭐ Favourites</p>
+                {favFoods.length > 0 && (
+                  <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full px-1.5 py-0.5">{favFoods.length}</span>
+                )}
+              </div>
               <button
                 onClick={() => setShowFavSearch((v) => !v)}
                 className="text-xs px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-100 font-medium transition-colors"
               >
-                {showFavSearch ? "✕ Cancel" : "+ Add Food"}
+                {showFavSearch ? "✕ Cancel" : "+ Add to Favourites"}
               </button>
             </div>
 
@@ -2590,7 +2597,10 @@ export default function NutritionPage() {
             )}
 
             {favFoods.length === 0 && !showFavSearch ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 italic">No favourites yet — click "+ Add Food" above, or tap ⭐ on any logged meal to pin it here.</p>
+              <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-xl px-3 py-2">
+                <span className="text-base">⭐</span>
+                <p className="text-xs text-amber-700 dark:text-amber-400">Pin your favourite foods here — tap <strong>"+ Add to Favourites"</strong> above, or tap ⭐ next to any logged meal.</p>
+              </div>
             ) : (
               <div className="flex gap-2 flex-wrap">
                 {favFoods.map((fav) => (
@@ -3026,7 +3036,7 @@ export default function NutritionPage() {
         open={showMealPlan}
         onClose={() => setShowMealPlan(false)}
         selectedDate={date}
-        onLogged={() => load()}
+        onLogged={() => { load(); window.dispatchEvent(new Event("fitai:food-logged")); }}
       />
 
       {/* Bowl / dish builder modal */}
