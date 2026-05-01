@@ -2582,7 +2582,7 @@ export default function NutritionPage() {
             )}
 
             {favFoods.length === 0 && !showFavSearch ? (
-              <p className="text-xs text-gray-400 dark:text-gray-500 italic">No favourites yet. Click "+ Add Food" or tap ♥ on any logged food.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 italic">No favourites yet — click "+ Add Food" above, or tap ⭐ on any logged meal to pin it here.</p>
             ) : (
               <div className="flex gap-2 flex-wrap">
                 {favFoods.map((fav) => (

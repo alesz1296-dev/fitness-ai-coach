@@ -145,6 +145,7 @@ export const createWorkoutSchema = z.object({
   notes: optionalString,
   date: dateString.optional(),
   templateId: positiveInt.optional(),
+  trainingType: z.string().max(50).optional(),
   exercises: z.array(exerciseEntrySchema).optional().default([]),
 });
 

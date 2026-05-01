@@ -311,7 +311,7 @@ function ToastBanner({ msg }: { msg: string | null }) {
 // ─────────────────────────────────────────────────────────────────────────────
 interface ExRow {
   key: string; exerciseName: string; sets: string;
-  reps: string; weight: string; rpe: string; notes: string;
+  reps: string; weight: string; rpe: string; notes: string; muscle: string;
 }
 interface WorkoutExerciseInput {
   exerciseName: string; sets: number; reps: number; order: number;
@@ -319,11 +319,11 @@ interface WorkoutExerciseInput {
 }
 interface WorkoutCreateInput {
   name: string; date: string; duration: number;
-  caloriesBurned?: number; notes?: string; exercises: WorkoutExerciseInput[];
+  caloriesBurned?: number; notes?: string; trainingType?: string; exercises: WorkoutExerciseInput[];
 }
 
 function newRow(): ExRow {
-  return { key: Math.random().toString(36).slice(2), exerciseName: "", sets: "3", reps: "10", weight: "", rpe: "", notes: "" };
+  return { key: Math.random().toString(36).slice(2), exerciseName: "", sets: "3", reps: "10", weight: "", rpe: "", notes: "", muscle: "" };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -510,7 +510,8 @@ function ExerciseSearch({
     if (!query.trim()) { setResults([]); return; }
     const t = setTimeout(() => {
       searchApi.exercises(query, muscle ? { muscle } : {}, 10)
-        .then((r) => { setResults(r.data.results); setOpen(true); });
+        .then((r) => { setResults(r.data.results); setOpen(true); })
+        .catch(() => {});
     }, 200);
     return () => clearTimeout(t);
   }, [query, muscle]);
@@ -526,18 +527,23 @@ function ExerciseSearch({
         className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
       />
       {open && results.length > 0 && (
-        <ul className="absolute z-30 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+        <ul className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
           {results.map((ex) => (
             <li
               key={ex.id}
               onMouseDown={() => { setQuery(ex.name); onChange(ex.name, ex); setOpen(false); }}
-              className="px-3 py-2 text-sm hover:bg-brand-50 cursor-pointer"
+              className="px-3 py-2 text-sm hover:bg-brand-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 cursor-pointer"
             >
               <span className="font-medium">{ex.name}</span>
-              <span className="ml-2 text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{ex.primaryMuscle} · {ex.equipment}</span>
+              <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{ex.primaryMuscle} · {ex.equipment}</span>
             </li>
           ))}
         </ul>
+      )}
+      {open && query.trim() && results.length === 0 && (
+        <p className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md px-3 py-2 text-xs text-gray-400 dark:text-gray-500">
+          No exercises found — try a different name or muscle filter.
+        </p>
       )}
     </div>
   );
@@ -571,8 +577,8 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
     setRows((prev) => prev.map((r) => r.key === key ? { ...r, [field]: val } : r));
   const removeRow = (key: string) => setRows((prev) => prev.filter((r) => r.key !== key));
 
-  // The muscle passed from WorkoutForm filters all ExerciseSearch dropdowns
-  const activeMuscle = defaultMuscle && defaultMuscle !== "Any" ? defaultMuscle : undefined;
+  // Per-row muscle overrides the global filter chip
+  const globalMuscle = defaultMuscle && defaultMuscle !== "Any" ? defaultMuscle : undefined;
 
   return (
     <div className="space-y-1">
@@ -580,16 +586,26 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
         <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 dark:text-gray-200">Exercises</p>
         <Button size="sm" variant="secondary" onClick={() => setRows((p) => [...p, newRow()])}>+ Add</Button>
       </div>
-      <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+      <div className="space-y-3 pr-1">
         {rows.map((r) => {
           const banned = r.exerciseName ? isContraindicated(r.exerciseName, injuries) : false;
           return (
             <div key={r.key} className="space-y-1">
               <div className="grid grid-cols-12 gap-1.5 items-start">
                 <div className="col-span-4">
+                  <select
+                    value={r.muscle}
+                    onChange={(e) => updateRow(r.key, "muscle", e.target.value)}
+                    className="w-full mb-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400"
+                  >
+                    <option value="">Any muscle</option>
+                    {BUILDER_MUSCLE_GROUPS.filter(m => m !== "Any").map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
                   <ExerciseSearch
                     value={r.exerciseName}
-                    muscle={activeMuscle}
+                    muscle={r.muscle || globalMuscle}
                     onChange={(v) => updateRow(r.key, "exerciseName", v)}
                   />
                   {banned && (
