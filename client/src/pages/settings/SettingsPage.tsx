@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { applyDark, readDarkPref } from "../../hooks/useDarkMode";
+import { useTranslation, LANG_LABELS } from "../../i18n";
+import type { SupportedLang } from "../../i18n";
 import { usersApi, calorieGoalsApi } from "../../api";
 import { useAuthStore } from "../../store/authStore";
 import type { User } from "../../types";
@@ -584,6 +586,36 @@ function CycleTrackingForm() {
   );
 }
 
+// ── Language Picker ──────────────────────────────────────────────────────────
+function LanguagePicker() {
+  const { i18n } = useTranslation();
+
+  return (
+    <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
+      <div>
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🌐 Language</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">Choose the display language for the app</p>
+      </div>
+      <div className="flex gap-1.5">
+        {(Object.entries(LANG_LABELS) as [SupportedLang, string][]).map(([code, label]) => (
+          <button
+            key={code}
+            type="button"
+            onClick={() => i18n.changeLanguage(code)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+              i18n.language === code
+                ? "bg-brand-600 text-white border-brand-600"
+                : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-brand-400"
+            }`}
+          >
+            {code === "en" ? "🇬🇧" : "🇪🇸"} {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── App Preferences ───────────────────────────────────────────────────────────
 type AppPrefs = { trackWater: boolean; darkMode: boolean };
 
@@ -635,6 +667,9 @@ function AppPreferencesForm() {
           </div>
           <Toggle on={prefs.darkMode} onClick={() => toggle("darkMode")} />
         </div>
+
+        {/* Language picker */}
+        <LanguagePicker />
 
         {/* Water tracking */}
         <div className="flex items-center justify-between py-3">

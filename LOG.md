@@ -1381,3 +1381,225 @@ Added `calendarApi` with methods: `getMonth`, `populate`, `updateDay`, `deleteDa
 ### TypeScript
 - `npx tsc --noEmit` — 0 errors (backend)
 - `npx tsc --noEmit` — 0 errors (frontend)
+
+---
+
+## 2026-05-01 — Roadmap planning: Pagination + Goals Overhaul
+
+### New tasks registered
+
+| # | Title | Priority | Category | Status |
+|---|-------|----------|----------|--------|
+| 106 | Pagination — food log history (backend + frontend) | P2 | Infrastructure/UX | pending |
+| 107 | Pagination — workout history (backend + frontend) | P2 | Infrastructure/UX | pending |
+| 108 | Goals page visual overhaul — active goal card + layout redesign | P1 | UX | pending |
+| 109 | Goals — dynamic real-time projection chart in EditGoalModal | P1 | Feature | pending |
+| 110 | Goals — realistic goal validator with instant inline warnings | P1 | Feature/Safety | pending |
+| 111 | Goals — calorie & macro impact panel (current vs new plan comparison) | P1 | Feature | pending |
+| 112 | Goals — AI goal advisor with scientific sources + disclaimers | P2 | AI/ML | pending |
+| 113 | Goals — goal creation wizard (from scratch, multi-step) | P1 | Feature | pending |
+
+### Goals overhaul scope notes
+
+**Projection chart (#109):**
+- Built with Recharts `ComposedChart` (Line + Area)
+- Three series: actual logged weight trend, old plan line, new proposed plan line
+- Computed fully client-side via TDEE + deficit math (Mifflin-St Jeor for BMR)
+- Updates on every input change with ~150ms debounce — no API round-trips needed
+- X-axis: today → target date. Y-axis: weight (kg or lbs per user preference)
+
+**Validator (#110) — evidence-based thresholds:**
+- Weight loss > 1% body weight/week → aggressive warning
+- Calorie intake < BMR → unsustainable warning (blocks save unless overridden)
+- Implied rate > 1.5 kg/week → unrealistic timeline + suggested extension in weeks
+- Daily deficit > 1000 kcal → extreme deficit warning
+- Weight gain > 0.5 kg/week → aggressive bulk note
+
+**AI advisor (#112) — required output format:**
+- Inline medical disclaimer on every response
+- Source footnotes: ACSM, WHO, PubMed-linked studies (Mifflin-St Jeor, ISSN protein guidelines, etc.)
+- Flags contradictions between suggestion and actual logged behaviour
+- Uses existing `/api/chat` coach agent endpoint
+
+**Pagination (#106, #107) — API contract:**
+- Query: `?page=1&limit=20`
+- Response envelope: `{ data: [...], total: number, page: number, totalPages: number }`
+- Frontend: "Load more" button pattern (not infinite scroll) to keep scroll position predictable
+
+---
+
+## 2026-05-01 — Advanced AI system: planning + task registration
+
+### Architecture layers
+
+**Layer 1 — Foundation**
+- `buildUserContext(userId)` service (src/services/userContext.ts): structured snapshot of profile, goal, 7-day averages, today's remaining macros, weight trajectory, muscle group frequency, top foods. Injected as system block into every AI call.
+- AI function calling tools (src/services/aiTools.ts): `get_today_nutrition()`, `get_weight_trend(days)`, `get_recent_workouts(days)`, `get_goal_progress()`, `suggest_foods(macros_remaining)`. Wired into agent.ts tool-use loop.
+
+**Layer 2 — Specialist agents**
+- Nutrition agent (src/agents/nutritionAgent.ts): dietetics system prompt + context injection + suggest_foods tool calls.
+- Workout agent (src/agents/workoutAgent.ts): exercise science system prompt + get_recent_workouts tool + progressive overload / recovery analysis.
+- Goal advisor upgrade (#118): extends existing goal advisor to use context builder + function tools + science citations.
+
+**Layer 3 — Proactive engine**
+- AINotification Prisma model: type enum (daily_checkin, evening_nudge, weekly_digest, goal_milestone, streak_alert, rest_day_warning, overtraining_alert), title, body, ctaRoute, isRead.
+- Scheduler jobs: 10am check-in, 6pm evening nudge, Monday digest, goal milestone triggers (25/50/75%), 3-day streak praise, consecutive-workout rest warning.
+
+**Layer 4 — UI surfaces**
+- Bell icon + unread badge in ProfileSummaryBar. Slide-in notification panel.
+- Dashboard "Coach says…" card — most recent unread notification with Reply CTA.
+- AI Coach tab redesign — 3 tabs (Nutrition / Workouts / Goals) each routing to specialist agent, with auto-injected context starter.
+- Inline nudges: NutritionPage remaining macro banner + one-tap food suggestions; WorkoutsPage muscle group gap chip.
+
+### New tasks registered
+
+| # | Title | Category | Pri | Depends on | Status |
+|---|-------|----------|-----|------------|--------|
+| 114 | User context builder — `buildUserContext(userId)` | Infra/AI | P1 | — | pending |
+| 115 | AI function calling tools — live DB access mid-conversation | AI/Tools | P1 | 114 | pending |
+| 116 | Nutrition specialist agent | AI/ML | P1 | 114, 115 | pending |
+| 117 | Workout specialist agent | AI/ML | P1 | 114, 115 | pending |
+| 118 | AINotification Prisma model + CRUD backend | Infra | P1 | 114 | pending |
+| 119 | Proactive AI scheduler — daily/weekly analysis jobs | AI/Scheduler | P1 | 114, 115, 118 | pending |
+| 120 | Notification center UI — bell icon, badge, slide-in panel | UX | P1 | 118 | pending |
+| 121 | Dashboard "Coach insight" card | UX | P1 | 118, 119 | pending |
+| 122 | AI Coach page redesign — 3 specialist tabs | UX | P2 | 116, 117 | pending |
+| 123 | Inline smart suggestions on Nutrition + Workout pages | UX | P2 | 115, 116, 117 | pending |
+
+### Implementation order
+
+114 → 115 → (116 + 117 in parallel) → 118 → 119 → (120 + 121 in parallel) → 122 → 123
+
+
+---
+
+## 2026-05-01 — Design review: corrections and new tasks
+
+### Design decisions revised
+
+| Decision | Before | After | Reason |
+|----------|--------|-------|--------|
+| AI tab selection | User picks Nutrition/Workouts/Goals tab before asking | Silent routing — AI classifies intent, tab just shows which expert answered | Forcing categorisation adds friction when user is confused or struggling |
+| RAG / embeddings (#84) | Planned for v1 | Deferred post-v1 | Context injection + function tools + last-20-message memory covers 95% of cases without vector DB |
+| Provider abstraction (#124) | Nice-to-have | Hard blocker on function tools (#115) | OpenAI and Anthropic use incompatible tool schemas — writing tools first means a full rewrite when abstraction is added |
+| Shared goal components | Build inside modal, duplicate in wizard | Extract ProjectionChart, GoalValidator, ImpactPanel as standalone components first (#126) | #109/#110/#111 and #113 share ~80% of the same logic |
+| Dashboard coach card (#121) | Always visible, full-height card | Collapsed to one line by default, expand on tap; fully expanded only when time-sensitive | Prevents burying real dashboard data under AI banner (banner blindness) |
+| Food log pagination (#106) | Standard page/offset | Date-cursor (before=DATE) | Page-number splits days across pages with no clean fix at render layer |
+| Proactive AI (#119, #125) | On by default | Opt-in per type, all off by default | Unsolicited daily notifications are the fastest way to get an app uninstalled |
+| Custom exercise discovery (#127) | Only appears on search no-results | Visible "+ Custom" button as primary entry, no-results remains as shortcut | Feature invisible to users who haven't searched for something obscure |
+| Scheduler timezone | Implicit UTC | User timezone stored in profile, all cron times converted to UTC before registration | Railway runs UTC; 6pm nudge fires at 1pm for NYC users without this |
+
+### New tasks registered from design review
+
+| # | Title | Category | Pri | Blocks | Status |
+|---|-------|----------|-----|--------|--------|
+| 124 | AI provider abstraction (ProviderAdapter interface, OpenAI/Anthropic/DeepSeek impls) | AI/Infra | P1 | #115 | pending |
+| 125 | Proactive notification preferences — per-type toggles + timezone in settings | UX/Infra | P1 | #119 | pending |
+| 126 | Extract shared goal UI components (ProjectionChart, GoalValidator, ImpactPanel) | Infra/UX | P1 | #109,#110,#111,#113 | pending |
+| 127 | Add visible "+ Custom exercise" entry point in WorkoutsPage | UX | P2 | — | pending |
+
+---
+
+## 2026-05-01 — Critical bug: daily reset + calories burned
+
+### Root causes
+
+**Daily data never resetting:**
+Every "today" boundary in every controller used UTC midnight (`setHours(0,0,0,0)` / `T00:00:00.000Z`) with no user timezone awareness. For a user in UTC+5:30, "today" on the server started 5.5 hours before their actual midnight. No 4am rollover existed anywhere. Water, food logs, supplements, and calorie totals were all affected.
+
+**Calories burned never shown:**
+`caloriesBurned` column existed on the Workout model and was already rendered on workout cards, but was never auto-calculated — only populated if the user manually typed a number into the optional field. In practice, nobody filled it in, so it was always null/hidden.
+
+### Fixes implemented
+
+**`src/utils/dayBounds.ts`** (new file)
+- `getDayBounds(tz, rolloverHour=4)` — computes UTC `{ start, end, dateStr }` for the user's current "day" with a 4am local rollover
+- Uses `Intl.DateTimeFormat` + timezone offset via the noon-UTC trick (avoids DST edge cases — DST transitions happen at ~2am, not noon)
+- If local hour < 4 → effective date = yesterday. Day window = 04:00 local → 03:59:59 next morning.
+- `tzFromRequest(headers)` — reads `X-Timezone` header, validates it, falls back to `"UTC"` on invalid IANA string
+- Falls back gracefully to UTC if timezone is missing or unrecognisable
+
+**`client/src/api/axios.ts`**
+- Added `X-Timezone: Intl.DateTimeFormat().resolvedOptions().timeZone` to every outgoing request via the existing request interceptor
+
+**`src/controllers/dashboardController.ts`**
+- Reads `X-Timezone` header via `tzFromRequest()`
+- `startOfToday` / `endOfToday` replaced with `getDayBounds(tz)` — feeds all food log, water, and workout queries
+- `todayHasWorkout` now compares against `todayStr` (effective date) instead of `now.toISOString().split("T")[0]` (UTC date)
+- Added parallel fetch: `prisma.workout.findMany` for today's workouts → sums `caloriesBurned`
+- `today.caloriesBurned` added to dashboard response
+
+**`src/controllers/foodController.ts`**
+- Reads timezone header; when no `date` param, uses `getDayBounds(tz)` for "today"
+- Historical date browsing (explicit `date` param) still uses plain UTC midnight — correct for browsing past days
+- `getFoodLogs` now also queries today's workout `caloriesBurned` and returns it: `{ logs, totals, caloriesBurned, date }`
+
+**`src/controllers/waterController.ts`**
+- `logWater`: when no `date` in body, uses `getDayBounds(tz).dateStr` as the effective date
+- `getToday`: when no `date` query param, uses `getDayBounds(tz)` bounds
+
+**`src/controllers/workoutController.ts`**
+- MET lookup table: strength 5.0, cardio 8.0, HIIT 10.0, endurance 7.0, yoga/flexibility 2.5, crossfit 8.5
+- `estimateCaloriesBurned(durationMin, weightKg, trainingType)` → `MET × weight × (min/60)`, rounded
+- `createWorkout`: if `caloriesBurned` not in request body, fetches user weight and auto-estimates; stored on Workout row
+- New export: `getCaloriesBurned(req)` — `GET /api/workouts/calories-burned?date=YYYY-MM-DD`; returns `{ date, totalBurned, workouts[] }`
+
+**`src/routes/workouts.ts`**
+- `GET /api/workouts/calories-burned` registered (before `/:id` to avoid param clash)
+
+**`client/src/api/index.ts`**
+- `workoutsApi.getCaloriesBurned(date?)` added
+
+**`client/src/pages/nutrition/NutritionPage.tsx`**
+- `getEffectiveToday()` helper: if `getHours() < 4` returns yesterday's date string, otherwise today's
+- Date state init uses `getEffectiveToday()` instead of raw `new Date().toISOString()`
+- `isToday` and date picker `max` also use `getEffectiveToday()`
+- `load()` now also calls `workoutsApi.getCaloriesBurned(date)` in the parallel fetch
+- `caloriesBurned` state displayed in the Calories card: "-X kcal burned" in orange + "Net: Y kcal" in muted text
+
+### Files modified
+| File | Change |
+|------|--------|
+| `src/utils/dayBounds.ts` | NEW — `getDayBounds()` + `tzFromRequest()` |
+| `client/src/api/axios.ts` | `X-Timezone` header on every request |
+| `src/controllers/dashboardController.ts` | `getDayBounds()` for all "today" boundaries; `caloriesBurned` in response |
+| `src/controllers/foodController.ts` | `getDayBounds()` for default date; returns `caloriesBurned` |
+| `src/controllers/waterController.ts` | `getDayBounds()` in logWater + getToday |
+| `src/controllers/workoutController.ts` | MET table; auto-estimate on create; `getCaloriesBurned` endpoint |
+| `src/routes/workouts.ts` | `GET /calories-burned` registered |
+| `client/src/api/index.ts` | `workoutsApi.getCaloriesBurned()` |
+| `client/src/pages/nutrition/NutritionPage.tsx` | 4am rollover date default; burned/net display in Calories card |
+
+### TypeScript
+- `npx tsc --noEmit` — 0 errors (backend)
+- `npx tsc --noEmit` — 0 errors (frontend)
+
+## 2026-05-01 — Session (continued)
+
+| # | Task | Status |
+|---|------|--------|
+| 131 | Calories burned — prominent display + inline edit in WorkoutsPage | ✅ |
+| 130 | i18n — Spanish language support + language picker in Profile | ✅ |
+| 133 | Exercise library expansion (Brachialis, extended Glutes/Traps, Push/Pull/Upper/Lower groupings) | ✅ |
+
+**Calories burned UX (#131):**
+- `quickEstimateKcal()` auto-fills WorkoutForm calories field live (MET × weight × hours); `caloriesIsAuto` flag, reset link if manually overridden
+- WorkoutDetail: orange `🔥 X kcal burned` pill → click → inline number input → save without reopening modal; `kcalValue` state updated immediately
+- NutritionPage: burned total is clickable, expands to per-workout breakdown
+
+**i18n (#130):**
+- Zero-dependency custom system (npm blocked in sandbox), mirrors react-i18next API
+- `Translation` interface typed in `en.ts`; `es.ts` implements same interface
+- `I18nProvider` wraps app; `useTranslation()` hook used in Sidebar + BottomNav
+- Language picker (🇬🇧/🇪🇸 toggle) in Profile → App Preferences section
+- `X-Language` header sent on every axios request; `chatController` reads it and injects into `UserContext.language`; AI system prompt instructs full Spanish response (exercise names stay in English)
+
+**Exercise library (#133):**
+- Brachialis: 6 exercises (Hammer Curl primary, Cross-Body Hammer, Reverse Curl, Zottman, Cable + Rope variations)
+- Glutes extended: 8 exercises (Abduction Machine, Banded Side Walk, Cable Hip Abduction, Step-Up, Clamshell, Nordic Curl, Reverse Hyper, Lateral Band Walk)
+- Traps extended: 4 exercises (Snatch-Grip DL, Trap Bar Shrug, Meadows Row, High Pull)
+- `COMPOUND_GROUP_MAP` in exercises.ts: Push/Pull/Upper Body/Lower Body → array of primaryMuscle values
+- searchController DB path + custom exercise filter both expanded to use compound map
+- All muscle group chip arrays updated in WorkoutsPage (compound chips at top)
+
+**TypeScript:** 0 errors front + back after all changes.

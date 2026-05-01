@@ -3,7 +3,7 @@ import { AuthRequest } from "../middleware/auth.js";
 import prisma from "../lib/prisma.js";
 import redisClient from "../lib/redis.js";
 import { searchFoods, FOOD_DB }              from "../data/foods.js";
-import { searchExercises, EXERCISE_DB, MUSCLE_GROUPS, EQUIPMENT_TYPES } from "../data/exercises.js";
+import { searchExercises, EXERCISE_DB, MUSCLE_GROUPS, EQUIPMENT_TYPES, COMPOUND_GROUP_MAP } from "../data/exercises.js";
 
 // Cast to any so new models (FoodItem, ExerciseItem) work before `npx prisma generate` is run
 const db = prisma as any;
@@ -139,8 +139,11 @@ export const exerciseSearch = async (
       }
 
       if (muscle) {
+        const compoundMuscles = COMPOUND_GROUP_MAP[muscle];
         where.primaryMuscle = muscle === "Legs"
           ? { in: LEG_MUSCLES }
+          : compoundMuscles
+          ? { in: compoundMuscles }
           : { equals: muscle };
       }
 
@@ -165,7 +168,12 @@ export const exerciseSearch = async (
       if (userId) {
         const customWhere: any = { userId };
         if (q) customWhere.name = { contains: q };
-        if (muscle) customWhere.primaryMuscle = muscle === "Legs" ? { in: LEG_MUSCLES } : { equals: muscle };
+        if (muscle) {
+          const compoundMuscles = COMPOUND_GROUP_MAP[muscle];
+          customWhere.primaryMuscle = muscle === "Legs"
+            ? { in: LEG_MUSCLES }
+            : compoundMuscles ? { in: compoundMuscles } : { equals: muscle };
+        }
         customResults = await db.customExercise.findMany({ where: customWhere, orderBy: { name: "asc" } }).catch(() => []);
       }
 

@@ -623,3 +623,141 @@ eas build --platform all --profile production
 - **#83**: AI provider abstraction — DeepSeek default, OpenAI fallback (P2, AI/ML)
 - **#84**: AI embeddings + RAG for user history context in chat (P3, AI/ML)
 - **#85**: Backend pagination for large result sets — food logs, workouts (P2, Infrastructure)
+
+---
+
+## Session 2026-05-01 — Architecture planning: Advanced AI + Design review
+
+### Advanced AI system plan (tasks #114–#127)
+
+**Build order (strict):**
+1. `#124` Provider abstraction (ProviderAdapter interface, OpenAI/Anthropic/DeepSeek) — hard blocker on all AI work
+2. `#114` User context builder (`buildUserContext(userId)`) + AgentMessage conversation memory model
+3. `#115` AI function calling tools (`get_today_nutrition`, `get_weight_trend`, `get_recent_workouts`, `get_goal_progress`, `suggest_foods`)
+4. `#116` + `#117` Nutrition agent + Workout agent (parallel)
+5. `#118` AINotification Prisma model + CRUD backend
+6. `#119` Proactive scheduler (opt-in, per-type, timezone-aware) — requires #125 (user timezone) first
+7. `#125` Proactive notification preferences UI (Settings page, all off by default)
+8. `#120` + `#121` Notification center UI + Dashboard coach card (collapsed by default)
+9. `#122` AI Coach page redesign (silent query routing, 3 specialist tabs, remove general chat)
+10. `#123` Inline smart suggestions (Nutrition + Workouts pages)
+
+**Goals overhaul build order:**
+1. `#126` Extract shared components (ProjectionChart, GoalValidator, ImpactPanel) — blocks all below
+2. `#108` Goals page visual redesign
+3. `#109` + `#110` + `#111` Real-time projection chart + validator + impact panel (parallel, all use #126 components)
+4. `#113` Goal creation wizard (also uses #126 components)
+5. `#112` AI goal advisor (requires #114, #115)
+
+### Design decisions locked in
+
+- **No general AI chat** — deleted. AI Coach has 3 specialist tabs: Nutrition / Workouts / Goals
+- **Silent query routing** — user types freely, backend router classifies intent and forwards to correct specialist agent. Tab lights up to show which expert answered. No user-facing "which tab?" prompt.
+- **Context injection + function tools + memory (no RAG)** — `buildUserContext()` snapshot injected at call start; function tools fetch live data mid-conversation; last 20 AgentMessage rows re-injected as history per agent thread. RAG/embeddings deferred post-v1.
+- **Proactive AI is opt-in** — all notification types off by default. User enables per type in Settings > AI Coach section. Timezone stored in profile, all cron times converted to UTC.
+- **Date-cursor pagination for food logs** — `?before=DATE&limit=7days` keeps date groups intact. Workout history uses standard offset pagination.
+- **Shared goal components first** — ProjectionChart, GoalValidator, ImpactPanel extracted before EditGoalModal or wizard work begins. Single source of truth for TDEE/projection math.
+- **Dashboard coach card collapsed** — single line by default, expand on tap. Only auto-expanded when time-sensitive (< 3h left in day, milestone just crossed).
+- **Custom exercise visible entry** — "+ Custom" button in WorkoutsPage as primary entry point. No-results shortcut stays as acceleration.
+- **Goals page vs AI Coach Goals tab** — distinct purposes: Goals page = data view (rings, charts, editing targets). AI Coach Goals tab = conversation with goal advisor. Labels and empty states must make this split explicit.
+- **Bottom nav frozen at 5 items** — no new primary nav items. Next consolidation candidates: Goals inside AI Coach (freeing one slot).
+
+### Pending (next session priorities)
+- `#124` Provider abstraction — start here, everything AI depends on it
+- `#126` Shared goal components — start here for Goals overhaul
+- `#106` / `#107` Pagination (food log date-cursor, workout offset)
+- `#127` Custom exercise visible entry point (quick win)
+
+---
+
+## Session 2026-05-01 — Daily reset fix + Calories burned + i18n planning
+
+### Daily reset bug (#128) — fixed
+
+**Root cause:** All "today" boundaries used UTC midnight with no timezone awareness. A user in any non-UTC timezone would see stale data after UTC midnight but before their local midnight, and there was no 4am rollover.
+
+**Fix architecture:**
+- `src/utils/dayBounds.ts` — new utility. `getDayBounds(tz, rolloverHour=4)` returns UTC `{ start, end, dateStr }` for the user's effective day. Uses noon-UTC trick to compute timezone offset (avoids DST edge cases). `tzFromRequest(headers)` reads `X-Timezone` header with IANA validation + UTC fallback.
+- `client/src/api/axios.ts` — `X-Timezone` header injected on every request via existing interceptor.
+- `dashboardController`, `foodController`, `waterController` — all converted to `getDayBounds(tz)`. Historical date browsing (explicit date param) still uses UTC midnight — intentional, correct for past-day browsing.
+- `NutritionPage.tsx` — `getEffectiveToday()` client helper for date state init, `isToday`, date picker max.
+
+**Supplements reset correctly** because they're stored in localStorage keyed by date string and cleared when `getEffectiveToday()` changes — no backend change needed.
+
+### Calories burned (#129) — implemented
+
+**Backend:**
+- MET lookup table in `workoutController.ts`: strength 5.0, cardio 8.0, HIIT 10.0, endurance 7.0, yoga 2.5, crossfit 8.5, etc.
+- `estimateCaloriesBurned(durationMin, weightKg, trainingType)` → `MET × weight × hours`
+- `createWorkout`: auto-estimates if client doesn't supply `caloriesBurned`; stores result on Workout row
+- New endpoint `GET /api/workouts/calories-burned?date=YYYY-MM-DD` returns `{ date, totalBurned, workouts[] }`
+
+**Frontend:**
+- `workoutsApi.getCaloriesBurned(date?)` in api/index.ts
+- NutritionPage Calories card: "−X kcal burned" (orange) + "Net: Y kcal" shown when burned > 0
+- WorkoutsPage already rendered `caloriesBurned` on workout cards — now always populated
+
+**Later:** Apple Watch / Health kit integration will replace MET estimates with actual HR-derived calorie burn.
+
+### i18n (#130) — planned
+
+**Tech stack:** react-i18next + i18next. All UI strings extracted to `client/src/i18n/en.json` and `client/src/i18n/es.json`. Language stored in `localStorage` + user profile (`language` column on User). AI agents receive locale in system prompt so responses are in user's language.
+
+**Pending (next session priorities):**
+- `#128` ✅ Daily reset + 4am rollover
+- `#129` ✅ Calories burned estimation + display
+- `#130` i18n — Spanish (pending, next sprint)
+- `#126` Shared goal components (blocks Goals overhaul)
+- `#124` Provider abstraction (blocks AI agents)
+
+## Session 2026-05-01 (continued) — Calories burned UX + i18n + Exercise library
+
+### Calories burned prominent display + inline edit (#131) — completed
+
+**WorkoutsPage:**
+- `quickEstimateKcal(trainingType, durationMin, weightKg)` helper mirrors backend MET table; auto-fills calories field live as duration/type change. `caloriesIsAuto` flag tracks whether user has manually overridden — shows "↩ reset estimate" link if so.
+- `WorkoutDetail` meta row: replaced `· X kcal` span with an orange flame pill button. Clicking it opens inline editor (number input + Save/✕). State: `kcalValue`, `kcalDraft`, `editingKcal`, `savingKcal`. Saves via `workoutsApi.update(id, { caloriesBurned })`.
+- History cards: Badge replaced with `🔥 X kcal` orange pill (bg-orange-100, border-orange-200).
+- NutritionPage Calories card: Burned total is now a clickable button that expands into per-workout breakdown list (`burnedWorkouts[]`). Tap to collapse.
+
+### i18n — Spanish (#130) — completed
+
+**Architecture:** Custom zero-dependency i18n (avoids npm registry issues). Mirrors react-i18next API surface for easy future swap.
+
+**Files:**
+- `client/src/i18n/index.tsx` — `I18nProvider`, `useTranslation()` hook, `changeLanguage()`, `getInitialLang()` (reads localStorage `lang` key or browser navigator.language)
+- `client/src/i18n/locales/en.ts` — English strings (~250 keys across 9 namespaces), typed via `Translation` interface
+- `client/src/i18n/locales/es.ts` — Spanish strings implementing same interface. Exercise names stay in English.
+- `client/src/main.tsx` — App wrapped in `<I18nProvider>`
+
+**Language picker:** `LanguagePicker` component in `SettingsPage.tsx` (🇬🇧 English / 🇪🇸 Español toggle buttons). Persists to `localStorage["lang"]`.
+
+**Navigation:** Sidebar and BottomNav both call `useTranslation()` and render nav labels through `t("nav.*")`.
+
+**AI locale injection:**
+- `client/src/api/axios.ts` — sends `X-Language: en|es` header on every request
+- `chatController.ts` — reads `x-language` header → `userWithLang = { ...user, language }`
+- `src/ai/prompts.ts` — `UserContext.language` field. When `"es"`: appends instruction to respond entirely in Spanish (exercise names remain in English)
+
+### Exercise library expansion (#133) — completed
+
+**New muscle groups:**
+- `Brachialis` — 6 exercises: Hammer Curl, Cross-Body Hammer Curl, Reverse Curl, Zottman Curl, Cable Hammer Curl, Rope Cable Curl (IDs e130–e135)
+- Extended `Glutes` — 8 new: Abduction Machine, Banded Side Walk, Cable Hip Abduction, Step-Up, Clamshell, Nordic Hamstring Curl, Reverse Hyperextension, Lateral Band Walk (IDs e140–e147)
+- Extended `Traps` — 4 new: Snatch-Grip Deadlift, Trap Bar Shrug, Meadows Row, High Pull (IDs e150–e153)
+
+**Compound filter groupings (`COMPOUND_GROUP_MAP`):**
+- `Push` → Chest, Shoulders, Triceps
+- `Pull` → Back, Biceps, Traps, Brachialis
+- `Upper Body` → Chest, Back, Shoulders, Biceps, Triceps, Forearms, Brachialis, Traps
+- `Lower Body` → Quads, Hamstrings, Glutes, Calves, Adductors, Abductors
+
+Map used in: `searchExercises()` (in-memory fallback), `searchController.ts` (DB query, both regular + custom exercises), `WorkoutsPage` muscle group chips.
+
+Compound chips appear at the top of all muscle group selectors (WorkoutForm builder, ExerciseRows per-row selector, AddExercisePanel).
+
+**Pending:**
+- `#126` Shared goal components (blocks Goals overhaul)
+- `#124` Provider abstraction (blocks AI function tools)
+- `#106` Food log date-cursor pagination
+- `#107` Workout history pagination

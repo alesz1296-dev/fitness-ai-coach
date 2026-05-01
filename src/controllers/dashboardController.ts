@@ -1,6 +1,7 @@
 import { Response, NextFunction } from "express";
 import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
+import { getDayBounds, tzFromRequest } from "../utils/dayBounds.js";
 
 const db = prisma as any;
 
@@ -154,23 +155,18 @@ export const getDashboard = async (
   try {
     const userId = req.user!.id;
     const now    = new Date();
+    const tz     = tzFromRequest(req.headers as Record<string, string | string[] | undefined>);
 
-    // ── Date helpers ────────────────────────────────────────────────────────
-    const startOfToday = new Date(now);
-    startOfToday.setHours(0, 0, 0, 0);
+    // ── Date helpers (timezone-aware, 4am rollover) ──────────────────────────
+    const { start: startOfToday, end: endOfToday, dateStr: todayStr } = getDayBounds(tz);
 
-    const endOfToday = new Date(now);
-    endOfToday.setHours(23, 59, 59, 999);
+    const startOf14Days = new Date(startOfToday);
+    startOf14Days.setDate(startOfToday.getDate() - 14);
 
-    const startOf14Days = new Date(now);
-    startOf14Days.setDate(now.getDate() - 14);
-    startOf14Days.setHours(0, 0, 0, 0);
-
-    // Start of the current week (Monday)
-    const startOfWeek = new Date(now);
-    const dayOfWeek   = (now.getDay() + 6) % 7;
-    startOfWeek.setDate(now.getDate() - dayOfWeek);
-    startOfWeek.setHours(0, 0, 0, 0);
+    // Start of the current week (Monday) relative to user's effective today
+    const startOfWeek = new Date(startOfToday);
+    const dayOfWeek   = (startOfToday.getDay() + 6) % 7;
+    startOfWeek.setDate(startOfToday.getDate() - dayOfWeek);
 
     // Start of this week for cheat meal count
     const startOfWeekForCheats = new Date(startOfWeek);
@@ -185,6 +181,7 @@ export const getDashboard = async (
       activeGoal,
       waterToday,
       cheatMealsThisWeek,
+      todayBurnedWorkouts,
     ] = await Promise.all([
       (prisma.user as any).findUnique({
         where: { id: userId },
@@ -244,6 +241,12 @@ export const getDashboard = async (
           date: { gte: startOfWeekForCheats },
         },
       }),
+
+      // Calories burned from workouts today
+      prisma.workout.findMany({
+        where: { userId, date: { gte: startOfToday, lte: endOfToday } },
+        select: { caloriesBurned: true },
+      }),
     ]);
 
     // ── Aggregate food totals ────────────────────────────────────────────────
@@ -263,6 +266,12 @@ export const getDashboard = async (
       injuries: user.injuries ? JSON.parse(user.injuries) : [],
     } : null;
 
+    // Calories burned today
+    const caloriesBurnedToday = (todayBurnedWorkouts as any[]).reduce(
+      (sum: number, w: any) => sum + (w.caloriesBurned ?? 0),
+      0,
+    );
+
     // Water summary
     const waterTotalMl = (waterToday as any[]).reduce((s: number, w: any) => s + w.amount, 0);
     const waterTargetMl = user?.waterTargetMl ?? 2000;
@@ -270,7 +279,7 @@ export const getDashboard = async (
     // Determine calorie target (macro cycling aware)
     const todayHasWorkout = (recentWorkouts as any[]).some((w: any) => {
       const d = new Date(w.date).toISOString().split("T")[0];
-      return d === now.toISOString().split("T")[0];
+      return d === todayStr;
     });
 
     let effectiveCalorieTarget = (activeGoal as any)?.dailyCalories ?? null;
@@ -297,8 +306,9 @@ export const getDashboard = async (
       today: {
         logs:   todayFoodLogs,
         totals: foodTotals,
-        date:   now.toISOString().split("T")[0],
+        date:   todayStr,
         hasWorkout: todayHasWorkout,
+        caloriesBurned: caloriesBurnedToday,
       },
       weightLogs,
       recentWorkouts,

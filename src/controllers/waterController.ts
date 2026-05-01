@@ -2,6 +2,7 @@ import { Response, NextFunction } from "express";
 import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
+import { getDayBounds, tzFromRequest } from "../utils/dayBounds.js";
 
 // Cast for new models not yet in generated client
 const db = prisma as any;
@@ -18,9 +19,10 @@ export const logWater = async (
       return next(createError("amount (ml) is required and must be positive", 400));
     }
 
+    const tz = tzFromRequest(req.headers as Record<string, string | string[] | undefined>);
     const dateStr = date
       ? (date as string).split("T")[0]
-      : new Date().toISOString().split("T")[0];
+      : getDayBounds(tz).dateStr;
     const logDate = new Date(`${dateStr}T00:00:00.000Z`);
 
     const log = await db.waterLog.create({
@@ -46,12 +48,15 @@ export const getToday = async (
   try {
     const userId    = req.user!.id;
     const dateParam = req.query.date as string | undefined;
-    const dateStr   = dateParam
-      ? (dateParam as string).split("T")[0]
-      : new Date().toISOString().split("T")[0];
-
-    const start = new Date(`${dateStr}T00:00:00.000Z`);
-    const end   = new Date(`${dateStr}T23:59:59.999Z`);
+    let start: Date, end: Date, dateStr: string;
+    if (dateParam) {
+      dateStr = (dateParam as string).split("T")[0];
+      start   = new Date(`${dateStr}T00:00:00.000Z`);
+      end     = new Date(`${dateStr}T23:59:59.999Z`);
+    } else {
+      const tz = tzFromRequest(req.headers as Record<string, string | string[] | undefined>);
+      ({ start, end, dateStr } = getDayBounds(tz));
+    }
 
     const logs = await db.waterLog.findMany({
       where:   { userId, date: { gte: start, lte: end } },

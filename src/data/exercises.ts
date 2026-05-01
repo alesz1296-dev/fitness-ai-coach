@@ -115,6 +115,30 @@ export const EXERCISE_DB: ExerciseItem[] = [
   { id: "e117", name: "Rack Pull",               primaryMuscle: "Traps",     secondaryMuscles: ["Back","Glutes","Forearms"], equipment: "Barbell", difficulty: "intermediate", instructions: "Set bar at knee height on rack, pull to full hip extension — great for upper back and traps overload." },
   { id: "e118", name: "Cable Shrug",             primaryMuscle: "Traps",     secondaryMuscles: [],                       equipment: "Cable",      difficulty: "beginner",     instructions: "Low pulley, arms straight, shrug shoulders up with constant cable tension." },
 
+  // ── Brachialis ───────────────────────────────────────────────────────────
+  { id: "e130", name: "Hammer Curl",              primaryMuscle: "Brachialis", secondaryMuscles: ["Biceps","Forearms"],    equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Neutral grip (palms facing each other), curl to shoulder height. Peak contraction stresses brachialis." },
+  { id: "e131", name: "Cross-Body Hammer Curl",   primaryMuscle: "Brachialis", secondaryMuscles: ["Biceps"],              equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Curl dumbbell across body toward opposite shoulder. Great brachialis isolation." },
+  { id: "e132", name: "Reverse Curl",             primaryMuscle: "Brachialis", secondaryMuscles: ["Forearms","Biceps"],   equipment: "Barbell",    difficulty: "beginner",     instructions: "Overhand (pronated) grip, curl barbell to shoulder height. Strongly activates brachialis and brachioradialis." },
+  { id: "e133", name: "Zottman Curl",             primaryMuscle: "Brachialis", secondaryMuscles: ["Biceps","Forearms"],   equipment: "Dumbbell",   difficulty: "intermediate", instructions: "Curl up with supinated grip, rotate to pronated at top, lower with overhand grip. Trains brachialis and forearm extensors." },
+  { id: "e134", name: "Cable Hammer Curl",        primaryMuscle: "Brachialis", secondaryMuscles: ["Biceps"],              equipment: "Cable",      difficulty: "beginner",     instructions: "Rope attachment, low pulley, neutral grip curl to shoulder with constant cable tension." },
+  { id: "e135", name: "Rope Cable Curl",          primaryMuscle: "Brachialis", secondaryMuscles: ["Biceps","Forearms"],   equipment: "Cable",      difficulty: "beginner",     instructions: "Use rope on low pulley, keep palms facing each other throughout the full curl." },
+
+  // ── Glutes — Extended ─────────────────────────────────────────────────────
+  { id: "e140", name: "Abduction Machine",        primaryMuscle: "Glutes",    secondaryMuscles: ["Abductors"],            equipment: "Machine",    difficulty: "beginner",     instructions: "Sit on machine, push knees outward against resistance. Targets glute med and hip abductors." },
+  { id: "e141", name: "Banded Side Walk",         primaryMuscle: "Glutes",    secondaryMuscles: ["Abductors"],            equipment: "Bodyweight", difficulty: "beginner",     instructions: "Loop resistance band above knees, squat slightly, step laterally keeping tension on band throughout." },
+  { id: "e142", name: "Cable Hip Abduction",      primaryMuscle: "Glutes",    secondaryMuscles: ["Abductors"],            equipment: "Cable",      difficulty: "beginner",     instructions: "Ankle cuff on low pulley, stand side-on, swing leg away from cable stack. Glute med focus." },
+  { id: "e143", name: "Step-Up",                  primaryMuscle: "Glutes",    secondaryMuscles: ["Quads","Hamstrings"],   equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Step onto bench or box, drive through heel to stand, controlled return. Add dumbbells for load." },
+  { id: "e144", name: "Clamshell",                primaryMuscle: "Glutes",    secondaryMuscles: ["Abductors"],            equipment: "Bodyweight", difficulty: "beginner",     instructions: "Lie on side, knees bent, rotate top knee up like a clamshell. Add band for resistance." },
+  { id: "e145", name: "Nordic Hamstring Curl",    primaryMuscle: "Hamstrings", secondaryMuscles: ["Glutes"],              equipment: "Bodyweight", difficulty: "advanced",     instructions: "Kneel with feet anchored, lower body slowly using hamstrings only. One of the highest hamstring activation exercises." },
+  { id: "e146", name: "Reverse Hyperextension",   primaryMuscle: "Glutes",    secondaryMuscles: ["Hamstrings","Lower Back"], equipment: "Machine", difficulty: "beginner",     instructions: "Lie face down, swing legs up to parallel using glute contraction. Decompress the lumbar spine while training posterior chain." },
+  { id: "e147", name: "Lateral Band Walk",        primaryMuscle: "Glutes",    secondaryMuscles: ["Abductors"],            equipment: "Bodyweight", difficulty: "beginner",     instructions: "Band above ankles, slight squat, walk sideways maintaining tension. Warm-up and glute activation staple." },
+
+  // ── Traps — Extended ─────────────────────────────────────────────────────
+  { id: "e150", name: "Snatch-Grip Deadlift",     primaryMuscle: "Traps",     secondaryMuscles: ["Back","Glutes","Hamstrings"], equipment: "Barbell", difficulty: "advanced",     instructions: "Wide snatch grip deadlift — upper trap activation is significantly higher than conventional due to longer moment arm." },
+  { id: "e151", name: "Trap Bar Shrug",           primaryMuscle: "Traps",     secondaryMuscles: ["Forearms"],             equipment: "Machine",    difficulty: "beginner",     instructions: "Stand inside hex/trap bar, neutral grip, shrug straight up. Allows heavier load with less wrist strain than barbell." },
+  { id: "e152", name: "Meadows Row",              primaryMuscle: "Traps",     secondaryMuscles: ["Back","Rear Delts"],    equipment: "Barbell",    difficulty: "intermediate", instructions: "Perpendicular to landmine, row bar to hip with explosive pull. Heavy upper-mid trap and rhomboid activation." },
+  { id: "e153", name: "High Pull",                primaryMuscle: "Traps",     secondaryMuscles: ["Shoulders","Biceps"],   equipment: "Barbell",    difficulty: "intermediate", instructions: "Explosive pull from hang, elbows flare high — traps contract hard at top. Olympic movement variation." },
+
   // ── Core — Weighted Abs ────────────────────────────────────────────────────
   { id: "e099a", name: "Weighted Crunch",        primaryMuscle: "Core",      secondaryMuscles: [],                       equipment: "Plate",      difficulty: "intermediate", instructions: "Hold weight plate on chest, perform crunch with controlled tempo." },
   { id: "e099b", name: "Dragon Flag",            primaryMuscle: "Core",      secondaryMuscles: ["Shoulders","Lats"],     equipment: "Bodyweight", difficulty: "advanced",     instructions: "Grip bench behind head, raise body to vertical then lower slowly keeping body rigid." },
@@ -240,10 +264,19 @@ export const EXERCISE_DB: ExerciseItem[] = [
 
 // Unique muscle groups for filter UI
 export const MUSCLE_GROUPS = [
-  "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms",
+  // Specific muscle groups
+  "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms", "Brachialis",
   "Legs", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Traps",
   "Full Body", "Cardio", "Stretching", "Adductors", "Abductors",
 ];
+
+// Compound groupings — these map to multiple primaryMuscle values
+export const COMPOUND_GROUP_MAP: Record<string, string[]> = {
+  "Push":       ["Chest", "Shoulders", "Triceps"],
+  "Pull":       ["Back", "Biceps", "Traps", "Brachialis"],
+  "Upper Body": ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms", "Brachialis", "Traps"],
+  "Lower Body": ["Quads", "Hamstrings", "Glutes", "Calves", "Adductors", "Abductors"],
+};
 
 export const EQUIPMENT_TYPES = [
   "Barbell", "Dumbbell", "Cable", "Machine", "Bodyweight", "Kettlebell", "Ab Wheel", "Plate",
@@ -263,9 +296,11 @@ export function searchExercises(
     const matchesQuery = !q || e.name.toLowerCase().includes(q) ||
       e.primaryMuscle.toLowerCase().includes(q) ||
       e.secondaryMuscles.some((m) => m.toLowerCase().includes(q));
+    const compoundSet = options.muscle ? COMPOUND_GROUP_MAP[options.muscle] : undefined;
     const matchesMuscle = !options.muscle
       || e.primaryMuscle === options.muscle
-      || (options.muscle === "Legs" && LEG_MUSCLES.has(e.primaryMuscle));
+      || (options.muscle === "Legs" && LEG_MUSCLES.has(e.primaryMuscle))
+      || (compoundSet && compoundSet.includes(e.primaryMuscle));
     const matchesEquipment = !options.equipment || e.equipment === options.equipment;
     const matchesDifficulty= !options.difficulty|| e.difficulty === options.difficulty;
     // When no muscle filter is set, exclude Stretching from default results

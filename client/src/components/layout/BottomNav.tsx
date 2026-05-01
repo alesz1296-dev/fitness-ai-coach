@@ -2,31 +2,31 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { authApi } from "../../api";
-
-// Primary 5 items shown in the tab bar
-const PRIMARY_ITEMS = [
-  { to: "/dashboard",  icon: "⊞",  label: "Home" },
-  { to: "/workouts",   icon: "🏋️", label: "Workouts" },
-  { to: "/nutrition",  icon: "🥗", label: "Nutrition" },
-  { to: "/goals",      icon: "🎯", label: "Goals" },
-  { to: "/chat",       icon: "🤖", label: "AI Coach" },
-];
-
-// Overflow items shown in the "More" sheet
-const MORE_ITEMS = [
-  { to: "/meal-planner", icon: "📅", label: "Meal Planner" },
-  { to: "/progress",     icon: "📈", label: "Progress" },
-  { to: "/reports",      icon: "📊", label: "Reports" },
-  { to: "/settings",     icon: "⚙️", label: "Profile" },
-];
+import { useTranslation } from "../../i18n";
 
 // All routes that belong to "more" — used to highlight the More button when active
-const MORE_PATHS = MORE_ITEMS.map((i) => i.to);
+const MORE_PATHS = ["/meal-planner", "/progress", "/reports", "/settings"];
 
 export function BottomNav() {
   const [showMore, setShowMore] = useState(false);
   const { logout } = useAuthStore();
+  const { t, i18n } = useTranslation();
   const navigate   = useNavigate();
+
+  const PRIMARY_ITEMS = [
+    { to: "/dashboard",  icon: "⊞",  label: t("nav.dashboard") },
+    { to: "/workouts",   icon: "🏋️", label: t("nav.workouts") },
+    { to: "/nutrition",  icon: "🥗", label: t("nav.nutrition") },
+    { to: "/goals",      icon: "🎯", label: t("nav.goals") },
+    { to: "/chat",       icon: "🤖", label: "AI Coach" },
+  ];
+
+  const MORE_ITEMS = [
+    { to: "/meal-planner", icon: "📅", label: "Meal Planner" },
+    { to: "/progress",     icon: "📈", label: t("nav.progress") },
+    { to: "/reports",      icon: "📊", label: "Reports" },
+    { to: "/settings",     icon: "⚙️", label: t("nav.profile") },
+  ];
 
   const handleLogout = async () => {
     setShowMore(false);
@@ -37,6 +37,7 @@ export function BottomNav() {
   };
 
   const isMoreActive = MORE_PATHS.some((p) => location.pathname.startsWith(p));
+  const logoutLabel = i18n.language === "es" ? "Cerrar sesión" : "Logout";
 
   return (
     <>
@@ -67,7 +68,7 @@ export function BottomNav() {
             }`}
           >
             <span className="text-xl leading-none">⋯</span>
-            More
+            {t("nav.more")}
           </button>
         </div>
       </nav>
@@ -91,7 +92,7 @@ export function BottomNav() {
 
             {/* Header */}
             <div className="px-5 py-3 border-b border-gray-800">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">More</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("nav.more")}</p>
             </div>
 
             {/* Items */}
@@ -122,7 +123,7 @@ export function BottomNav() {
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
               >
                 <span className="text-lg">🚪</span>
-                Logout
+                {logoutLabel}
               </button>
             </div>
           </div>

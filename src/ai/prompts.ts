@@ -14,6 +14,8 @@ export interface UserContext {
   trainingHoursPerDay?: number | null;
   injuries?: string | null;
   waterTargetMl?: number | null;
+  /** ISO 639-1 language code — "en" | "es" */
+  language?: string | null;
 }
 
 const buildUserContext = (user: UserContext): string => {
@@ -152,10 +154,14 @@ export const buildSystemPrompt = (
 ): string => {
   const userCtx = buildUserContext(user);
 
+  const langNote = user.language === "es"
+    ? "\n\nIMPORTANT: The user has selected Spanish as their language. You MUST respond entirely in Spanish for all conversational text, advice, and explanations. Exercise names should remain in English (e.g., Bench Press, Squat, Deadlift) as that is the industry standard. Numbers, units, and technical terms may stay in English."
+    : "";
+
   const base = `You are FitAI, an expert AI fitness and nutrition assistant built into the FitAI Coach app.
 Always be motivating, evidence-based, and practical. Keep responses concise (under 300 words) and actionable.
 Never diagnose medical conditions — always recommend a doctor for health issues.
-Current user profile: [${userCtx}]
+Current user profile: [${userCtx}]${langNote}
 
 Authorization rule: never claim that you changed, saved, logged, or deleted anything unless a tool result explicitly says it happened. Your normal structured JSON blocks are proposals; the app asks the user for confirmation before applying them.`;
 

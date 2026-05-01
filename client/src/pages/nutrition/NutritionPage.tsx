@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import { useNavigate, useLocation } from "react-router-dom";
-import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi, customFoodsApi, weightApi,
+import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi, customFoodsApi, weightApi, workoutsApi,
 } from "../../api";
 import { useAuthStore } from "../../store/authStore";
 import type { FoodLog, FoodTotals, CalorieGoal, WaterLog, CustomFood } from "../../types";
@@ -1883,24 +1883,38 @@ export default function NutritionPage() {
     }
   }, [hash]);
   const { user } = useAuthStore();
-  const [date,     setDate]     = useState(() => sessionStorage.getItem("nutrition_date") ?? new Date().toISOString().split("T")[0]);
+  // 4am rollover: entries logged before 4am belong to the previous calendar day
+  const getEffectiveToday = () => {
+    const now = new Date();
+    if (now.getHours() < 4) {
+      const yesterday = new Date(now);
+      yesterday.setDate(yesterday.getDate() - 1);
+      return yesterday.toISOString().split("T")[0];
+    }
+    return now.toISOString().split("T")[0];
+  };
+
+  const [date,     setDate]     = useState(() => sessionStorage.getItem("nutrition_date") ?? getEffectiveToday());
   const setDatePersist = (d: string) => { sessionStorage.setItem("nutrition_date", d); setDate(d); };
 
-  // TASK 2: Reset date if saved date is more than 7 days in the past
+  // Reset date if saved date is more than 7 days in the past
   useEffect(() => {
     const saved = sessionStorage.getItem("nutrition_date");
     if (saved) {
       const diff = Math.abs(new Date().getTime() - new Date(saved).getTime());
       if (diff > 7 * 24 * 3600 * 1000) {
-        const today = new Date().toISOString().split("T")[0];
+        const today = getEffectiveToday();
         sessionStorage.setItem("nutrition_date", today);
         setDate(today);
       }
     }
   }, []);
-  const [logs,     setLogs]     = useState<FoodLog[]>([]);
-  const [totals,   setTotals]   = useState<FoodTotals>({ calories: 0, protein: 0, carbs: 0, fats: 0 });
-  const [loading,  setLoading]  = useState(true);
+  const [logs,          setLogs]          = useState<FoodLog[]>([]);
+  const [totals,        setTotals]        = useState<FoodTotals>({ calories: 0, protein: 0, carbs: 0, fats: 0 });
+  const [caloriesBurned, setCaloriesBurned] = useState(0);
+  const [burnedWorkouts, setBurnedWorkouts] = useState<{ id: number; name: string; caloriesBurned: number }[]>([]);
+  const [showBurnedBreakdown, setShowBurnedBreakdown] = useState(false);
+  const [loading,       setLoading]       = useState(true);
   const [showForm,    setShowForm]    = useState(false);
   const [showWeightFab,  setShowWeightFab]  = useState(false);
   const [weightVal,      setWeightVal]      = useState("");
@@ -2154,15 +2168,22 @@ export default function NutritionPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [foodRes, goalRes] = await Promise.all([
+      const [foodRes, goalRes, burnedRes] = await Promise.all([
         foodApi.getToday(date),
         calorieGoalsApi.getActive().catch(() => ({ data: { goal: null } })),
+        workoutsApi.getCaloriesBurned(date).catch(() => ({ data: { totalBurned: 0, workouts: [] } })),
       ]);
       setLogs(foodRes.data.logs);
       setTotals(foodRes.data.totals);
       setActiveGoal(goalRes.data.goal);
+      setCaloriesBurned(burnedRes.data.totalBurned ?? 0);
+      setBurnedWorkouts(
+        (burnedRes.data.workouts ?? [])
+          .filter((w: any) => w.caloriesBurned > 0)
+          .map((w: any) => ({ id: w.id as number, name: w.name as string, caloriesBurned: w.caloriesBurned as number }))
+      );
     } catch {
-      setLogs([]); setTotals({ calories: 0, protein: 0, carbs: 0, fats: 0 });
+      setLogs([]); setTotals({ calories: 0, protein: 0, carbs: 0, fats: 0 }); setCaloriesBurned(0); setBurnedWorkouts([]);
     } finally { setLoading(false); }
   }, [date]);
 
@@ -2200,7 +2221,7 @@ export default function NutritionPage() {
     grouped[key].push(log);
   }
   const mealOrder = ["breakfast", "lunch", "dinner", "snack", "other"];
-  const isToday   = date === new Date().toISOString().split("T")[0];
+  const isToday   = date === getEffectiveToday();
 
   // ── Quick re-log (frequent foods) ───────────────────────────────────────────
   type FrequentFood = { foodName: string; calories: number; protein: number | null; carbs: number | null; fats: number | null; quantity: number; unit: string; meal: string | null; timesLogged: number };
@@ -2306,7 +2327,7 @@ export default function NutritionPage() {
           <input
             type="date"
             value={date}
-            max={new Date().toISOString().split("T")[0]}
+            max={getEffectiveToday()}
             onChange={(e) => setDatePersist(e.target.value)}
             className="border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
@@ -2325,6 +2346,33 @@ export default function NutritionPage() {
           <div className="text-center py-2">
             <p className="text-4xl font-bold text-gray-900 dark:text-white dark:text-white">{Math.round(effectiveTotals.calories)}</p>
             <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">kcal consumed{(suppMacros.calories + customSuppMacros.calories) > 0 ? <span className="text-purple-600"> (incl. supps)</span> : ""}</p>
+            {caloriesBurned > 0 && (
+              <div className="mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => setShowBurnedBreakdown((v) => !v)}
+                  className="inline-flex items-center gap-1 text-sm text-orange-500 dark:text-orange-400 font-semibold hover:text-orange-600 dark:hover:text-orange-300 transition-colors"
+                >
+                  🔥 -{Math.round(caloriesBurned)} kcal burned
+                  {burnedWorkouts.length > 0 && (
+                    <span className="text-xs text-orange-400">{showBurnedBreakdown ? "▲" : "▼"}</span>
+                  )}
+                </button>
+                {showBurnedBreakdown && burnedWorkouts.length > 0 && (
+                  <div className="mt-1 space-y-0.5 text-left">
+                    {burnedWorkouts.map((w) => (
+                      <p key={w.id} className="text-xs text-gray-500 dark:text-gray-400 flex justify-between px-1">
+                        <span>{w.name}</span>
+                        <span className="text-orange-500 font-medium">{Math.round(w.caloriesBurned)} kcal</span>
+                      </p>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                  Net: <span className="font-semibold text-gray-700 dark:text-gray-200">{Math.round(effectiveTotals.calories - caloriesBurned)} kcal</span>
+                </p>
+              </div>
+            )}
             {hasGoal && (
               <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5">
                 Goal: <span className="font-semibold text-gray-700 dark:text-gray-200 dark:text-gray-200">{Math.round(activeGoal!.dailyCalories)} kcal</span>

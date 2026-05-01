@@ -87,6 +87,16 @@ function stepsToKcal(steps: number, weightKg = 75): number {
   return Math.round(steps * 0.04 * (weightKg / 70));
 }
 
+// MET quick-estimate for training type (mirrors backend workoutController.ts)
+const QUICK_MET: Record<string, number> = {
+  strength: 5.0, hypertrophy: 5.0, cardio: 8.0, endurance: 7.0, mobility: 2.5,
+  hiit: 10.0, crossfit: 8.5, yoga: 2.5, flexibility: 2.5,
+};
+function quickEstimateKcal(trainingType: string, durationMin: number, weightKg: number): number {
+  const met = QUICK_MET[trainingType.toLowerCase()] ?? 5.0;
+  return Math.max(0, Math.round(met * weightKg * (durationMin / 60)));
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MET Calorie Calculator sub-component (used inside WorkoutForm)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -388,7 +398,7 @@ function ExerciseSuggestPanel({
   const [loading, setLoading] = useState(false);
   const [filterMuscle, setFilterMuscle] = useState(muscle ?? "");
 
-  const MUSCLE_GROUPS = ["Chest","Back","Shoulders","Biceps","Triceps","Legs","Quads","Hamstrings","Glutes","Calves","Core","Full Body"];
+  const MUSCLE_GROUPS = ["Push","Pull","Upper Body","Lower Body","Chest","Back","Shoulders","Biceps","Triceps","Brachialis","Forearms","Traps","Quads","Hamstrings","Glutes","Calves","Core","Full Body"];
 
   const search = useCallback(async (q: string, m: string) => {
     setLoading(true);
@@ -699,8 +709,11 @@ function ExerciseSearch({
 // Exercise rows (reused in create & edit forms)
 // ─────────────────────────────────────────────────────────────────────────────
 const BUILDER_MUSCLE_GROUPS = [
-  "Any", "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms",
-  "Legs", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Traps",
+  // Compound groupings (shown first for quick filtering)
+  "Any", "Push", "Pull", "Upper Body", "Lower Body",
+  // Specific muscles
+  "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms", "Brachialis",
+  "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Traps",
 ];
 
 const TRAINING_TYPES: { value: string; label: string; icon: string; color: string }[] = [
@@ -829,6 +842,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [duration, setDuration] = useState("60");
   const [calories, setCalories] = useState("");
+  const [caloriesIsAuto, setCaloriesIsAuto] = useState(true);
   const [notes, setNotes] = useState("");
   const [rows, setRows] = useState<ExRow[]>([newRow()]);
   const [loading, setLoading] = useState(false);
@@ -838,6 +852,17 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
   const [trainingType, setTrainingType] = useState<string>("");
   const weightKg  = user?.weight ?? 75;
   const injuries  = user?.injuries ?? [];
+
+  // Auto-estimate calories when duration or training type changes
+  useEffect(() => {
+    if (!caloriesIsAuto) return;
+    const dur = Number(duration);
+    if (dur <= 0) return;
+    const estimate = trainingType
+      ? quickEstimateKcal(trainingType, dur, weightKg)
+      : Math.round(5.0 * weightKg * (dur / 60));
+    setCalories(String(estimate));
+  }, [duration, trainingType, weightKg, caloriesIsAuto]);
 
   const submit = async () => {
     if (!name.trim()) { setError("Workout name is required"); return; }
@@ -895,7 +920,32 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
         <Input label="Workout Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Push Day" className="col-span-2" />
         <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <Input label="Duration (min)" type="number" value={duration} onChange={(e) => setDuration(e.target.value)} />
-        <Input label="Calories Burned" type="number" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="optional — or use calculator ↓" className="col-span-2" />
+        <div className="col-span-2">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-medium text-gray-600 dark:text-gray-300">
+              🔥 Calories Burned
+            </label>
+            {caloriesIsAuto && trainingType && (
+              <span className="text-xs text-orange-500 font-medium">auto-estimated</span>
+            )}
+            {!caloriesIsAuto && (
+              <button
+                type="button"
+                className="text-xs text-brand-600 hover:text-brand-700"
+                onClick={() => { setCaloriesIsAuto(true); }}
+              >
+                ↩ reset estimate
+              </button>
+            )}
+          </div>
+          <input
+            type="number"
+            value={calories}
+            onChange={(e) => { setCalories(e.target.value); setCaloriesIsAuto(false); }}
+            placeholder={trainingType ? "auto-estimated from training type" : "optional — or use calculator ↓"}
+            className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+        </div>
         <Textarea label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="How did it go?" className="col-span-2" />
         <div className="col-span-2">
           <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1.5">Training type (optional)</p>
@@ -1025,8 +1075,11 @@ function EditWorkoutForm({ workout, onSave, onClose }: { workout: Workout; onSav
 // Add exercise panel — expanded muscle groups + full exercise list
 // ─────────────────────────────────────────────────────────────────────────────
 const MUSCLE_GROUPS = [
-  "Any", "Back", "Chest", "Biceps", "Triceps", "Forearms",
-  "Shoulders", "Legs", "Hamstrings", "Glutes", "Core",
+  // Compound
+  "Any", "Push", "Pull", "Upper Body", "Lower Body",
+  // Specific
+  "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Brachialis",
+  "Forearms", "Traps", "Quads", "Hamstrings", "Glutes", "Calves", "Core",
 ];
 
 interface ExerciseItem { name: string; muscleGroup?: string; equipment?: string }
@@ -1186,6 +1239,19 @@ function WorkoutDetail({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showAddPanel, setShowAddPanel] = useState(false);
+  const [editingKcal, setEditingKcal] = useState(false);
+  const [kcalDraft, setKcalDraft] = useState(workout.caloriesBurned ? String(Math.round(workout.caloriesBurned)) : "");
+  const [kcalValue, setKcalValue] = useState(workout.caloriesBurned ?? null);
+  const [savingKcal, setSavingKcal] = useState(false);
+
+  const saveKcal = async () => {
+    setSavingKcal(true);
+    try {
+      await workoutsApi.update(workout.id, { caloriesBurned: kcalDraft ? Number(kcalDraft) : undefined });
+      setKcalValue(kcalDraft ? Number(kcalDraft) : null);
+      setEditingKcal(false);
+    } finally { setSavingKcal(false); }
+  };
 
   // ── Rest timer ───────────────────────────────────────────────────────────────
   const REST_DEFAULT = 90; // seconds
@@ -1245,14 +1311,51 @@ function WorkoutDetail({
   return (
     <div className="space-y-4">
       {/* Meta row */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">
-          <span>{format(parseISO(workout.date), "EEEE, MMMM d, yyyy")}</span>
-          <span className="mx-2">·</span>
-          <span>{workout.duration} min</span>
-          {workout.caloriesBurned && <span className="mx-2">· {Math.round(workout.caloriesBurned)} kcal</span>}
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1.5">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            <span>{format(parseISO(workout.date), "EEEE, MMMM d, yyyy")}</span>
+            <span className="mx-2">·</span>
+            <span>{workout.duration} min</span>
+          </p>
+          {/* Calories burned — editable pill */}
+          {editingKcal ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm">🔥</span>
+              <input
+                type="number"
+                value={kcalDraft}
+                onChange={(e) => setKcalDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveKcal(); if (e.key === "Escape") setEditingKcal(false); }}
+                autoFocus
+                placeholder="kcal"
+                className="w-24 rounded-lg border border-orange-300 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-700 text-orange-800 dark:text-orange-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+              <button
+                type="button"
+                disabled={savingKcal}
+                onClick={saveKcal}
+                className="text-xs bg-orange-500 hover:bg-orange-600 text-white font-medium px-2 py-1 rounded-lg disabled:opacity-50"
+              >
+                {savingKcal ? "…" : "Save"}
+              </button>
+              <button type="button" onClick={() => setEditingKcal(false)} className="text-xs text-gray-400 hover:text-gray-600 px-1">✕</button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditingKcal(true)}
+              className="group inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors"
+            >
+              <span className="text-sm">🔥</span>
+              <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                {kcalValue ? `${Math.round(kcalValue)} kcal burned` : "Add calories burned"}
+              </span>
+              <span className="text-xs text-orange-400 dark:text-orange-500 group-hover:text-orange-600 dark:group-hover:text-orange-300 ml-0.5">✏️</span>
+            </button>
+          )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button size="sm" variant="secondary" onClick={onEdit}>✏️ Edit</Button>
           <Button size="sm" variant="danger" loading={deleting} onClick={handleDeleteWorkout}>🗑 Delete</Button>
         </div>
@@ -3691,7 +3794,11 @@ export default function WorkoutsPage() {
                           </span>
                         ) : null;
                       })()}
-                      {w.caloriesBurned && <Badge variant="warning">{Math.round(w.caloriesBurned)} kcal</Badge>}
+                      {w.caloriesBurned ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700 text-orange-700 dark:text-orange-300 text-xs font-semibold">
+                          🔥 {Math.round(w.caloriesBurned)} kcal
+                        </span>
+                      ) : null}
                       <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">
                         {w.exercises.reduce((s, e) => s + e.sets * e.reps * (e.weight ?? 0), 0).toLocaleString()} kg vol
                       </p>

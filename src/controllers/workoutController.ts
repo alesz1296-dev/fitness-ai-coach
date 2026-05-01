@@ -4,6 +4,38 @@ import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
 import { normalizeExerciseName } from "../lib/normalizeExercise.js";
 import logger from "../lib/logger.js";
+import { getDayBounds, tzFromRequest } from "../utils/dayBounds.js";
+
+// ── MET-based calorie estimation ───────────────────────────────────────────────
+const MET_BY_TYPE: Record<string, number> = {
+  strength:    5.0,
+  weights:     5.0,
+  cardio:      8.0,
+  running:     8.5,
+  hiit:       10.0,
+  endurance:   7.0,
+  yoga:        2.5,
+  flexibility: 2.5,
+  stretching:  2.5,
+  crossfit:    8.5,
+  cycling:     7.0,
+  swimming:    7.0,
+};
+
+/**
+ * Estimate calories burned using MET × weight × duration.
+ * durationMin: actual workout duration in minutes.
+ * weightKg:    user body weight (defaults to 75 kg if unknown).
+ * trainingType: workout category string (maps to MET table).
+ */
+function estimateCaloriesBurned(
+  durationMin: number,
+  weightKg: number,
+  trainingType?: string,
+): number {
+  const met = MET_BY_TYPE[(trainingType ?? "").toLowerCase()] ?? 5.0;
+  return Math.max(0, Math.round(met * weightKg * (durationMin / 60)));
+}
 
 // ── GET /api/workouts ─────────────────────────────────────────────────────────
 
@@ -130,12 +162,25 @@ export const createWorkout = async (
     // Detect PRs before saving (compare against history)
     const newPRs = await detectNewPRs(req.user!.id, normalisedExercises);
 
+    // Auto-estimate calories burned if not supplied by client
+    let resolvedCaloriesBurned: number | undefined;
+    if (caloriesBurned !== undefined) {
+      resolvedCaloriesBurned = Number(caloriesBurned);
+    } else if (duration) {
+      const profile = await (prisma.user as any).findUnique({
+        where: { id: req.user!.id },
+        select: { weight: true },
+      });
+      const weightKg = (profile?.weight ?? 75) as number;
+      resolvedCaloriesBurned = estimateCaloriesBurned(Number(duration), weightKg, trainingType);
+    }
+
     const workout = await prisma.workout.create({
       data: {
         userId: req.user!.id,
         name,
         duration: Number(duration),
-        ...(caloriesBurned !== undefined && { caloriesBurned: Number(caloriesBurned) }),
+        ...(resolvedCaloriesBurned !== undefined && { caloriesBurned: resolvedCaloriesBurned }),
         ...(notes        && { notes }),
         ...(date         && { date: new Date(date) }),
         ...(templateId   && { templateId: Number(templateId) }),
@@ -160,8 +205,46 @@ export const createWorkout = async (
     res.status(201).json({
       message: "Workout logged",
       workout,
-      newPRs: newPRs.length ? newPRs : undefined,
+      newPRs:          newPRs.length ? newPRs : undefined,
+      caloriesBurned:  resolvedCaloriesBurned,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ── GET /api/workouts/calories-burned ────────────────────────────────────────
+// Returns total calories burned from workouts on the user's effective "today"
+// (or a specific date if ?date=YYYY-MM-DD is provided).
+
+export const getCaloriesBurned = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId    = req.user!.id;
+    const dateParam = req.query.date as string | undefined;
+
+    let start: Date, end: Date, dateStr: string;
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      dateStr = dateParam;
+      start   = new Date(`${dateStr}T00:00:00.000Z`);
+      end     = new Date(`${dateStr}T23:59:59.999Z`);
+    } else {
+      const tz = tzFromRequest(req.headers as Record<string, string | string[] | undefined>);
+      ({ start, end, dateStr } = getDayBounds(tz));
+    }
+
+    const workouts = await prisma.workout.findMany({
+      where:  { userId, date: { gte: start, lte: end } },
+      select: { id: true, name: true, duration: true, caloriesBurned: true, trainingType: true },
+      orderBy: { date: "desc" },
+    });
+
+    const totalBurned = workouts.reduce((sum, w) => sum + (w.caloriesBurned ?? 0), 0);
+
+    res.json({ date: dateStr, totalBurned, workouts });
   } catch (error) {
     next(error);
   }

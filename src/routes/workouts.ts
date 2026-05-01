@@ -20,6 +20,7 @@ import {
   deleteExerciseEntry,
   addExerciseToWorkout,
   startFromTemplate,
+  getCaloriesBurned,
 } from "../controllers/workoutController.js";
 
 const router = Router();
@@ -49,6 +50,9 @@ router.delete(
 
 // POST   /api/workouts/start-from-template/:templateId
 router.post("/start-from-template/:templateId", validateIdParam("templateId"), validate(startFromTemplateSchema), startFromTemplate);
+
+// GET  /api/workouts/calories-burned
+router.get("/calories-burned", getCaloriesBurned);
 
 // ── Workout CRUD ──────────────────────────────────────────────────────────────
 // GET  /api/workouts

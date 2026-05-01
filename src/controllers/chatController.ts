@@ -112,6 +112,9 @@ export const sendMessage = async (
     }
 
     // Load user profile for context
+    const xLang = (req.headers["x-language"] as string | undefined) ?? null;
+    const language = xLang === "es" || xLang === "en" ? xLang : "en";
+
     const user = await prisma.user.findUnique({
       where: { id: req.user!.id },
       select: {
@@ -136,6 +139,9 @@ export const sendMessage = async (
       return next(createError("User not found", 404));
     }
 
+    // Inject language preference into user context for AI system prompt
+    const userWithLang = { ...user, language };
+
     // Load recent conversation history for context
     const recentHistory = await prisma.conversation.findMany({
       where: { userId: req.user!.id, agentType },
@@ -156,7 +162,7 @@ export const sendMessage = async (
     const { message: aiResponse, tokensUsed } = await chat(
       message.trim(),
       agentType as AgentType,
-      user,
+      userWithLang,
       history,
     );
 

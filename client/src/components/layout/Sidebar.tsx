@@ -1,22 +1,23 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { authApi } from "../../api";
-
-const navItems = [
-  { to: "/dashboard",    icon: "⊞",  label: "Dashboard" },
-  { to: "/workouts",     icon: "🏋️", label: "Workouts" },
-  { to: "/nutrition",    icon: "🥗", label: "Nutrition" },
-  { to: "/goals",        icon: "🎯", label: "Goals" },
-  { to: "/chat",         icon: "🤖", label: "AI Coach" },
-  { to: "/meal-planner", icon: "📅", label: "Meal Planner" },
-  { to: "/progress",     icon: "📈", label: "Progress" },
-  { to: "/reports",      icon: "📊", label: "Reports" },
-  { to: "/settings",     icon: "⚙️", label: "Profile" },
-];
+import { useTranslation } from "../../i18n";
 
 export function Sidebar() {
   const { user, logout } = useAuthStore();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const navItems = [
+    { to: "/dashboard",    icon: "⊞",  label: t("nav.dashboard") },
+    { to: "/workouts",     icon: "🏋️", label: t("nav.workouts") },
+    { to: "/nutrition",    icon: "🥗", label: t("nav.nutrition") },
+    { to: "/goals",        icon: "🎯", label: t("nav.goals") },
+    { to: "/chat",         icon: "🤖", label: "AI Coach" },
+    { to: "/meal-planner", icon: "📅", label: "Meal Planner" },
+    { to: "/progress",     icon: "📈", label: t("nav.progress") },
+    { to: "/reports",      icon: "📊", label: "Reports" },
+    { to: "/settings",     icon: "⚙️", label: t("nav.profile") },
+  ];
 
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem("refreshToken") ?? undefined;
@@ -75,7 +76,7 @@ export function Sidebar() {
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
         >
           <span className="text-base">🚪</span>
-          Logout
+          {i18n.language === "es" ? "Cerrar sesión" : "Logout"}
         </button>
       </div>
     </aside>

@@ -1,6 +1,7 @@
 import { Response, NextFunction } from "express";
 import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
+import { getDayBounds, tzFromRequest } from "../utils/dayBounds.js";
 import { createError } from "../middleware/errorHandler.js";
 import logger from "../lib/logger.js";
 
@@ -13,18 +14,21 @@ export const getFoodLogs = async (
   try {
     const dateStr = req.query.date as string;
 
-    // Always work in UTC to avoid timezone drift between client and server.
-    // The client sends a plain YYYY-MM-DD string; we treat it as UTC day boundaries.
+    // Use timezone-aware 4am rollover boundaries.
+    // Client sends X-Timezone header; if a specific date is requested use UTC
+    // day boundaries for that historical date (user is browsing, not "today").
     let startOfDay: Date;
     let endOfDay: Date;
+    let resolvedDateStr: string;
     if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      startOfDay = new Date(`${dateStr}T00:00:00.000Z`);
-      endOfDay   = new Date(`${dateStr}T23:59:59.999Z`);
+      // Historical date explicitly requested — plain UTC day boundaries are fine
+      startOfDay      = new Date(`${dateStr}T00:00:00.000Z`);
+      endOfDay        = new Date(`${dateStr}T23:59:59.999Z`);
+      resolvedDateStr = dateStr;
     } else {
-      const now = new Date();
-      const todayStr = now.toISOString().split("T")[0];
-      startOfDay = new Date(`${todayStr}T00:00:00.000Z`);
-      endOfDay   = new Date(`${todayStr}T23:59:59.999Z`);
+      // "Today" — use user's local timezone + 4am rollover
+      const tz = tzFromRequest(req.headers as Record<string, string | string[] | undefined>);
+      ({ start: startOfDay, end: endOfDay, dateStr: resolvedDateStr } = getDayBounds(tz));
     }
 
     const logs = await prisma.foodLog.findMany({
@@ -46,7 +50,16 @@ export const getFoodLogs = async (
       { calories: 0, protein: 0, carbs: 0, fats: 0 }
     );
 
-    res.json({ logs, totals, date: startOfDay.toISOString().split("T")[0] });
+    // Also return calories burned from workouts on this day
+    const burnedWorkouts = await prisma.workout.findMany({
+      where: { userId: req.user!.id, date: { gte: startOfDay, lte: endOfDay } },
+      select: { caloriesBurned: true },
+    });
+    const caloriesBurned = burnedWorkouts.reduce(
+      (sum, w) => sum + (w.caloriesBurned ?? 0), 0,
+    );
+
+    res.json({ logs, totals, caloriesBurned, date: resolvedDateStr });
   } catch (error) {
     next(error);
   }

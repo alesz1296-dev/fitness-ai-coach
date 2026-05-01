@@ -165,6 +165,12 @@ export const workoutsApi = {
   ) => api.put(`/workouts/exercises/${exerciseId}`, data),
   deleteExercise: (exerciseId: number) =>
     api.delete(`/workouts/exercises/${exerciseId}`),
+  getCaloriesBurned: (date?: string) =>
+    api.get<{
+      date: string;
+      totalBurned: number;
+      workouts: Array<{ id: number; name: string; duration: number; caloriesBurned?: number; trainingType?: string }>;
+    }>(`/workouts/calories-burned${date ? `?date=${date}` : ""}`),
   addExercise: (
     workoutId: number,
     data: {

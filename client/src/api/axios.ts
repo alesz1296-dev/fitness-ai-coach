@@ -9,6 +9,14 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("accessToken");
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  // Send browser timezone so the server can compute correct day boundaries
+  try {
+    config.headers["X-Timezone"] = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch { /* ignore */ }
+  try {
+    const lang = localStorage.getItem("lang");
+    if (lang) config.headers["X-Language"] = lang;
+  } catch { /* ignore */ }
   return config;
 });
 
