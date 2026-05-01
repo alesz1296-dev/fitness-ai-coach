@@ -272,6 +272,8 @@ export const weightApi = {
     ),
   log: (data: { weight: number; notes?: string; date?: string }) =>
     api.post<{ log: WeightLog }>("/weight", data),
+  update: (id: number, data: { weight?: number; notes?: string; date?: string }) =>
+    api.put<{ log: WeightLog }>(`/weight/${id}`, data),
   delete: (id: number) => api.delete(`/weight/${id}`),
 };
 

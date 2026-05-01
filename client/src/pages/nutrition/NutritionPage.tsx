@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi, customFoodsApi } from "../../api";
 import { useAuthStore } from "../../store/authStore";
 import type { FoodLog, FoodTotals, CalorieGoal, WaterLog, CustomFood } from "../../types";
@@ -1862,6 +1862,16 @@ function formatFastingDuration(ms: number): string {
 // ── Main Nutrition page ───────────────────────────────────────────────────────
 export default function NutritionPage() {
   const navigate = useNavigate();
+  const { hash } = useLocation();
+
+  // Scroll to water section when navigated with #water hash
+  useEffect(() => {
+    if (hash === "#water") {
+      setTimeout(() => {
+        document.getElementById("water-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 300);
+    }
+  }, [hash]);
   const { user } = useAuthStore();
   const [date,     setDate]     = useState(() => sessionStorage.getItem("nutrition_date") ?? new Date().toISOString().split("T")[0]);
   const setDatePersist = (d: string) => { sessionStorage.setItem("nutrition_date", d); setDate(d); };
@@ -2734,7 +2744,7 @@ export default function NutritionPage() {
       )}
 
       {/* ── Water tracking widget ─────────────────────────────────────────── */}
-      {trackWater && <Card className="p-4">
+      {trackWater && <Card id="water-section" className="p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">💧 Water Intake</h3>
           <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">

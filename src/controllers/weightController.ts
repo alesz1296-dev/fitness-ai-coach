@@ -78,6 +78,33 @@ export const logWeight = async (
   }
 };
 
+// PUT /api/weight/:id
+export const updateWeightLog = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const logId = Number(req.params.id);
+    const { weight, notes, date } = req.body;
+    const existing = await prisma.weightLog.findFirst({
+      where: { id: logId, userId: req.user!.id },
+    });
+    if (!existing) return next(createError("Weight log entry not found", 404));
+    const updated = await prisma.weightLog.update({
+      where: { id: logId },
+      data: {
+        ...(weight !== undefined && { weight: Number(weight) }),
+        ...(notes !== undefined && { notes }),
+        ...(date  !== undefined && { date: new Date(date) }),
+      },
+    });
+    res.json({ message: "Weight log updated", log: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // DELETE /api/weight/:id
 export const deleteWeightLog = async (
   req: AuthRequest,

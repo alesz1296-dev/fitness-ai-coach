@@ -14,11 +14,16 @@ import { useIsDark } from "../../hooks/useDarkMode";
 import type { DashboardData } from "../../types";
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, color, icon }: {
+function StatCard({ label, value, sub, color, icon, onClick }: {
   label: string; value: string | number; sub?: string; color: string; icon: string;
+  onClick?: () => void;
 }) {
+  const Tag = onClick ? "button" : "div";
   return (
-    <div className={`rounded-2xl p-5 text-white ${color}`}>
+    <Tag
+      className={`rounded-2xl p-5 text-white ${color} w-full text-left${onClick ? " hover:opacity-90 active:opacity-80 transition-opacity cursor-pointer" : ""}`}
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium opacity-80">{label}</p>
@@ -27,7 +32,8 @@ function StatCard({ label, value, sub, color, icon }: {
         </div>
         <span className="text-2xl opacity-80">{icon}</span>
       </div>
-    </div>
+      {onClick && <p className="text-[10px] opacity-50 mt-2 text-right">tap to view →</p>}
+    </Tag>
   );
 }
 
@@ -75,6 +81,31 @@ export default function Dashboard() {
   const [weightVal,      setWeightVal]      = useState("");
   const [savingWeight,   setSavingWeight]   = useState(false);
   const [weightSaved,    setWeightSaved]    = useState(false);
+
+  // ── Weight log manager (edit / delete past entries) ──────────────────────────
+  const [showWeightManager, setShowWeightManager] = useState(false);
+  const [editingLog, setEditingLog]   = useState<{ id: number; weight: number; date: string } | null>(null);
+  const [editVal,    setEditVal]      = useState("");
+  const [savingEdit, setSavingEdit]   = useState(false);
+
+  const refreshDash = () => dashboardApi.get().then((r) => setData(r.data)).catch(() => {});
+
+  const handleDeleteWeight = async (id: number) => {
+    if (!confirm("Delete this weight entry?")) return;
+    try { await weightApi.delete(id); refreshDash(); } catch { /* silent */ }
+  };
+  const handleEditWeight = async () => {
+    if (!editingLog) return;
+    const w = parseFloat(editVal);
+    if (isNaN(w) || w <= 0) return;
+    setSavingEdit(true);
+    try {
+      await weightApi.update(editingLog.id, { weight: w });
+      setEditingLog(null);
+      refreshDash();
+    } catch { /* silent */ }
+    finally { setSavingEdit(false); }
+  };
 
   // ── Dark mode (must be before any early return — Rules of Hooks) ─────────────
   const isDark = useIsDark();
@@ -267,6 +298,7 @@ export default function Dashboard() {
           sub={`of ${Math.round(calorieTarget)} kcal target`}
           color="bg-gradient-to-br from-orange-400 to-orange-600"
           icon="🔥"
+          onClick={() => navigate("/nutrition")}
         />
         <StatCard
           label="Protein Today"
@@ -274,6 +306,7 @@ export default function Dashboard() {
           sub={activeGoal ? `of ${Math.round(activeGoal.proteinGrams)}g target` : "today"}
           color="bg-gradient-to-br from-blue-500 to-blue-700"
           icon="💪"
+          onClick={() => navigate("/nutrition")}
         />
         <StatCard
           label="Current Weight"
@@ -281,6 +314,7 @@ export default function Dashboard() {
           sub={activeGoal ? `target: ${activeGoal.targetWeight}kg` : "log your weight"}
           color="bg-gradient-to-br from-purple-500 to-purple-700"
           icon="⚖️"
+          onClick={() => setShowWeightManager((v) => !v)}
         />
         <StatCard
           label="Workouts This Week"
@@ -288,6 +322,7 @@ export default function Dashboard() {
           sub="in the last 7 days"
           color="bg-gradient-to-br from-brand-500 to-brand-700"
           icon="🏋️"
+          onClick={() => navigate("/workouts")}
         />
       </div>
 
@@ -328,7 +363,10 @@ export default function Dashboard() {
         </div>
 
         {/* Water intake */}
-        <div className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-2">
+        <button
+          onClick={() => navigate("/nutrition#water")}
+          className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-2 text-left hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-sm transition-all cursor-pointer w-full"
+        >
           <div className="flex items-center justify-between">
             <span className="text-blue-600 font-bold text-lg">
               💧 {Math.round((water?.totalMl ?? 0) / 100) / 10}L
@@ -341,8 +379,8 @@ export default function Dashboard() {
               style={{ width: `${Math.min(100, ((water?.totalMl ?? 0) / (water?.targetMl ?? 2000)) * 100)}%` }}
             />
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500">Water today</p>
-        </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Water today · tap to log →</p>
+        </button>
       </div>
 
       {/* Middle row */}
@@ -516,6 +554,63 @@ export default function Dashboard() {
                   </span>
                 </div>
               )}
+
+              {/* ── Weight log history: edit / delete ── */}
+              <div className="mt-4 border-t border-gray-100 dark:border-gray-700 pt-3">
+                <button
+                  onClick={() => setShowWeightManager((v) => !v)}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors w-full justify-between"
+                >
+                  <span className="font-medium">📋 Weight Log History ({weightLogs.length} entries)</span>
+                  <span>{showWeightManager ? "▲ Hide" : "▼ Show"}</span>
+                </button>
+                {showWeightManager && (
+                  <div className="mt-2 space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                    {[...weightLogs].reverse().map((log) => {
+                      const isEditing = editingLog?.id === log.id;
+                      const dateStr   = typeof log.date === "string"
+                        ? log.date.split("T")[0]
+                        : new Date(log.date).toISOString().split("T")[0];
+                      return (
+                        <div key={log.id} className="flex items-center gap-2 rounded-xl px-3 py-2 bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700">
+                          <span className="text-xs text-gray-400 dark:text-gray-500 w-22 flex-shrink-0">{dateStr}</span>
+                          {isEditing ? (
+                            <>
+                              <input
+                                type="number" step="0.1" min="20" max="400"
+                                value={editVal}
+                                onChange={(e) => setEditVal(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter") handleEditWeight(); if (e.key === "Escape") setEditingLog(null); }}
+                                autoFocus
+                                className="flex-1 border border-brand-300 dark:border-brand-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-brand-400"
+                              />
+                              <span className="text-[10px] text-gray-400">kg</span>
+                              <button onClick={handleEditWeight} disabled={savingEdit} className="px-2 py-1 rounded-lg bg-brand-500 text-white text-[10px] font-semibold hover:bg-brand-600 disabled:opacity-50">
+                                {savingEdit ? "…" : "Save"}
+                              </button>
+                              <button onClick={() => setEditingLog(null)} className="px-2 py-1 rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-[10px] hover:bg-gray-300 dark:hover:bg-gray-500">
+                                ✕
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-100">{log.weight} kg</span>
+                              <button
+                                onClick={() => { setEditingLog({ id: log.id, weight: log.weight, date: dateStr }); setEditVal(String(log.weight)); setShowWeightManager(true); }}
+                                className="px-2 py-1 rounded-lg text-[10px] font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 hover:bg-amber-100 transition-colors"
+                              >Edit</button>
+                              <button
+                                onClick={() => handleDeleteWeight(log.id)}
+                                className="px-2 py-1 rounded-lg text-[10px] font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-100 transition-colors"
+                              >Delete</button>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <div className="h-52 flex flex-col items-center justify-center text-gray-400">

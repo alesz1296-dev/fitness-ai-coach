@@ -5,6 +5,7 @@ import { logWeightSchema } from "../middleware/schemas.js";
 import {
   getWeightLogs,
   logWeight,
+  updateWeightLog,
   deleteWeightLog,
 } from "../controllers/weightController.js";
 
@@ -17,6 +18,9 @@ router.get("/", getWeightLogs);
 
 // POST   /api/weight
 router.post("/", validate(logWeightSchema), logWeight);
+
+// PUT    /api/weight/:id
+router.put("/:id", validateIdParam(), updateWeightLog);
 
 // DELETE /api/weight/:id
 router.delete("/:id", validateIdParam(), deleteWeightLog);
