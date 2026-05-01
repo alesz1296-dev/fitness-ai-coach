@@ -21,18 +21,24 @@ function StatCard({ label, value, sub, color, icon, onClick }: {
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
-      className={`rounded-2xl p-5 text-white ${color} w-full text-left${onClick ? " hover:opacity-90 active:opacity-80 transition-opacity cursor-pointer" : ""}`}
+      className={`rounded-2xl p-5 text-white ${color} w-full text-left${onClick ? " hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] transition-all duration-150 cursor-pointer" : ""}`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between">
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="text-sm font-medium opacity-80">{label}</p>
           <p className="text-3xl font-bold mt-1">{value}</p>
           {sub && <p className="text-xs opacity-70 mt-1">{sub}</p>}
         </div>
-        <span className="text-2xl opacity-80">{icon}</span>
+        <div className="flex flex-col items-end gap-1 ml-2">
+          <span className="text-2xl opacity-80">{icon}</span>
+          {onClick && (
+            <span className="bg-white/25 rounded-full px-2 py-0.5 text-[11px] font-semibold leading-none mt-auto">
+              →
+            </span>
+          )}
+        </div>
       </div>
-      {onClick && <p className="text-[10px] opacity-50 mt-2 text-right">tap to view →</p>}
     </Tag>
   );
 }
@@ -329,38 +335,56 @@ export default function Dashboard() {
       {/* Streak + Water row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Workout streak */}
-        <div className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-orange-500 font-bold text-lg">
-            🔥 {streaks?.workout ?? 0}
-            <span className="text-sm font-normal text-gray-500 dark:text-gray-400">day streak</span>
+        <button
+          onClick={() => navigate("/workouts")}
+          className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1 text-left hover:border-orange-300 dark:hover:border-orange-600 hover:shadow-sm transition-all cursor-pointer w-full"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-orange-500 font-bold text-lg">
+              🔥 {streaks?.workout ?? 0}
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">day streak</span>
+            </div>
+            <span className="text-xs text-gray-400 dark:text-gray-500">→</span>
           </div>
           <p className="text-xs text-gray-400 dark:text-gray-500">Workout streak</p>
           {(streaks?.workoutBest ?? 0) > 0 && (
             <p className="text-xs text-gray-400 dark:text-gray-500">Best: {streaks!.workoutBest} days</p>
           )}
-        </div>
+        </button>
 
         {/* Nutrition streak */}
-        <div className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-green-600 font-bold text-lg">
-            🥗 {streaks?.nutrition ?? 0}
-            <span className="text-sm font-normal text-gray-500 dark:text-gray-400">day streak</span>
+        <button
+          onClick={() => navigate("/nutrition")}
+          className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1 text-left hover:border-green-300 dark:hover:border-green-600 hover:shadow-sm transition-all cursor-pointer w-full"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-green-600 font-bold text-lg">
+              🥗 {streaks?.nutrition ?? 0}
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">day streak</span>
+            </div>
+            <span className="text-xs text-gray-400 dark:text-gray-500">→</span>
           </div>
           <p className="text-xs text-gray-400 dark:text-gray-500">On-target nutrition</p>
           {(streaks?.cheatMealsThisWeek ?? 0) > 0 && (
             <p className="text-xs text-gray-400 dark:text-gray-500">🍕 {streaks!.cheatMealsThisWeek} cheat meal{streaks!.cheatMealsThisWeek > 1 ? "s" : ""} this week</p>
           )}
-        </div>
+        </button>
 
         {/* Rest days */}
-        <div className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-purple-600 font-bold text-lg">
-            😴 {streaks?.restDays != null ? streaks!.restDays : "—"}
-            <span className="text-sm font-normal text-gray-500 dark:text-gray-400">day{streaks?.restDays !== 1 ? "s" : ""} rest</span>
+        <button
+          onClick={() => navigate("/workouts")}
+          className="rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col gap-1 text-left hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-sm transition-all cursor-pointer w-full"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-purple-600 font-bold text-lg">
+              😴 {streaks?.restDays != null ? streaks!.restDays : "—"}
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">day{streaks?.restDays !== 1 ? "s" : ""} rest</span>
+            </div>
+            <span className="text-xs text-gray-400 dark:text-gray-500">→</span>
           </div>
           <p className="text-xs text-gray-400 dark:text-gray-500">Since last workout</p>
           {today.hasWorkout && <p className="text-xs text-green-600 font-medium">✅ Trained today</p>}
-        </div>
+        </button>
 
         {/* Water intake */}
         <button
@@ -776,38 +800,3 @@ export default function Dashboard() {
               <div className="text-center py-4">
                 <p className="text-sm text-gray-400">No active goal set</p>
                 <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate("/goals")}>
-                  Set a goal
-                </Button>
-              </div>
-            )}
-          </Card>
-
-          {/* Weekly Plan */}
-          <WeeklyPlanWidget />
-
-          {/* Quick actions */}
-          <Card>
-            <CardHeader title="Quick Actions" />
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: "Chat with AI Coach",  icon: "🤖", to: "/chat?agent=coach" },
-                { label: "Nutrition Advice",    icon: "🥗", to: "/chat?agent=nutritionist" },
-                { label: "Browse Templates",    icon: "📋", to: "/templates" },
-                { label: "Monthly Report",      icon: "📊", to: "/reports" },
-              ].map((a) => (
-                <button
-                  key={a.label}
-                  onClick={() => navigate(a.to)}
-                  className="flex items-center gap-2 p-3 rounded-xl bg-gray-50 dark:bg-gray-700 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-700 dark:hover:text-brand-400 transition-colors text-left text-sm font-medium text-gray-700 dark:text-gray-200"
-                >
-                  <span>{a.icon}</span>
-                  {a.label}
-                </button>
-              ))}
-            </div>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
-}
