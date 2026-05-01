@@ -1296,6 +1296,11 @@ export default function ProgressPage() {
         </div>
       )}
 
+      {/* ── Log Weight Modal ─────────────────────────────────────────────── */}
+      <Modal open={showForm} onClose={() => setShowForm(false)} title="Log Weight">
+        <LogWeightForm onSave={() => { setShowForm(false); load(); }} onClose={() => setShowForm(false)} />
+      </Modal>
+
     </div>
   );
 }

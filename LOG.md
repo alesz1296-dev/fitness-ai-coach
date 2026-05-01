@@ -1306,3 +1306,78 @@ Added `calendarApi` with methods: `getMonth`, `populate`, `updateDay`, `deleteDa
 ### TypeScript
 - `npx tsc --noEmit` — 0 errors (backend)
 - `npx tsc --noEmit` — 0 errors (frontend)
+
+---
+
+## 2026-05-01 — Goals Tab, Custom Exercises, Log Weight Fixes
+
+### Features & fixes delivered
+
+**#103 — Goals tab restored as standalone primary nav (P1 · Feature)**
+- `/goals` was `<Navigate to="/progress" replace />` — completely missing GoalsPage.
+- Restored proper `<Route path="/goals" element={<ErrorBoundary><GoalsPage /></ErrorBoundary>} />` in App.tsx.
+- Added Goals (🎯 /goals) as 4th item in BottomNav `PRIMARY_ITEMS` (Home / Workouts / Nutrition / Goals / AI Coach).
+- Added to Sidebar between Nutrition and AI Coach. Progress renamed from "Progress & Goals" → "Progress".
+- `ProfileSummaryBar` goal pill `onClick` → `navigate("/goals")` (was `/progress`).
+- `OnboardingModal` post-complete redirect → `navigate("/goals")` (was `/workouts?tab=templates`).
+
+**#104 — GoalsPage manual goal editing (P1 · Feature)**
+- Added `EditGoalModal` inside `GoalsPage.tsx`. Fields: name, current weight, target weight, target date, daily calories, protein, carbs, fats.
+- "Recalculate macros" button calls `calorieGoalsApi.preview()` to server-compute macro split.
+- Calorie sanity check warns if macro-derived cals differ from target by >50 kcal.
+- Save calls `calorieGoalsApi.update()` with all fields; auto-computes `type` (cut/bulk/maintain) from weight delta.
+- Backend `updateCalorieGoal` extended to accept and persist: `targetWeight`, `currentWeight`, `targetDate`, `dailyCalories`, `proteinGrams`, `carbsGrams`, `fatsGrams`, `weeklyChange`, `type`.
+
+**#105 — Log weight button in ProgressPage broken (P1 · Bug)**
+- Root cause: `showForm` state and `+ Log Weight` FAB existed, but `<Modal>` JSX was completely absent from render tree. Button set state to `true`, nothing rendered.
+- Fix: Added `<Modal open={showForm} onClose={() => setShowForm(false)} title="Log Weight"><LogWeightForm .../></Modal>` before closing `</div>` of the ProgressPage return.
+
+**#106 — Weight FAB missing from NutritionPage (P2 · Feature/Bug)**
+- NutritionPage had no way to log weight, and the import for `weightApi` was also corrupted (missing comma).
+- Fixed import corruption: `customFoodsApi   weightApi` → `customFoodsApi, weightApi`.
+- Added `weightApi` to imports from `../../api`.
+- Added state: `showWeightFab`, `weightVal`, `savingWeight`, `weightSaved`.
+- Added `handleLogWeight` function (calls `weightApi.log({ weight: w })`).
+- Added weight FAB (⚖️) at `bottom-32` — identical pattern to Dashboard FAB.
+
+**#107 — Exercise library expanded ~106 → ~175+ exercises (P2 · Feature)**
+- Added ~70 exercises (IDs e130–e228) across all muscle groups.
+- New muscle groups: `"Adductors"` (Hip Adductor Machine, Hip Abductor Machine, Lateral Band Walk, Sumo Walk), `"Abductors"` (Hip Abductor Machine, Lateral Band Walk, Sumo Walk, Banded Clamshell variation).
+- Additions per group: Chest (+6), Back (+8), Shoulders (+6), Biceps (+5), Triceps (+4), Quads (+6), Hamstrings (+4), Glutes (+4), Calves (+3), Core (+6), Cardio (+4), Adductors (+4), Abductors (+4), Full Body (+4).
+- `MUSCLE_GROUPS` array updated to include new groups.
+
+**#108 — Custom exercises full stack (P2 · Feature)**
+- Prisma model `CustomExercise` added (userId FK, name, primaryMuscle, secondaryMuscles `@default("[]")`, equipment, difficulty, instructions, timestamps, cascade delete). `User` model gets `customExercises CustomExercise[]` relation.
+- `prisma db push` will apply schema on next deploy (no migration files needed).
+- CRUD controller: `listCustomExercises` (q + muscle filter), `createCustomExercise` (validates name + primaryMuscle), `updateCustomExercise` (user-owned check), `deleteCustomExercise` (user-owned check). All return `isCustom: true` and `id: "custom_${e.id}"`.
+- Route file: `/api/custom-exercises` with `authenticate` middleware on all 4 routes. Registered in `server.ts`.
+- `searchController.ts` extended: after DB seed results, fetches user's `customExercise` rows and prepends them to results (custom exercises appear first). Total count includes custom count.
+- Client types: `CustomExercise` interface (id: string, dbId, name, primaryMuscle, secondaryMuscles, equipment, difficulty, instructions, isCustom: true) added to `client/src/types/index.ts`.
+- Client API: `customExercisesApi` (list/create/update/delete) added to `client/src/api/index.ts`.
+- WorkoutsPage UI: `CreateCustomExerciseModal` with name, primaryMuscle (select), equipment (select), difficulty (3-button toggle), instructions (textarea). ExerciseSearch no-results shows "+ Create 'X' as custom exercise" button → fires `onChange("__create_custom__:" + query)`. `ExerciseRows` catches `__create_custom__:` prefix → opens modal pre-filled. On success: row exercise name updated, modal closed.
+
+### Files modified
+| File | Change |
+|------|--------|
+| `client/src/App.tsx` | `/goals` route: `Navigate → GoalsPage` |
+| `client/src/components/layout/BottomNav.tsx` | Goals added as 4th PRIMARY_ITEM |
+| `client/src/components/layout/Sidebar.tsx` | Goals added between Nutrition and AI Coach |
+| `client/src/components/layout/ProfileSummaryBar.tsx` | Goal pill onClick → `/goals` |
+| `client/src/components/OnboardingModal.tsx` | Post-complete navigate → `/goals` |
+| `client/src/pages/goals/GoalsPage.tsx` | `EditGoalModal` component added; Edit button on active goal card |
+| `client/src/pages/progress/ProgressPage.tsx` | `<Modal>` + `<LogWeightForm>` JSX added (was missing) |
+| `client/src/pages/nutrition/NutritionPage.tsx` | Import comma fix; `weightApi` added; weight FAB added |
+| `client/src/pages/workouts/WorkoutsPage.tsx` | `CreateCustomExerciseModal`; ExerciseSearch "create" shortcut; ExerciseRows modal wiring |
+| `client/src/api/index.ts` | `customExercisesApi` (list/create/update/delete) |
+| `client/src/types/index.ts` | `CustomExercise` interface |
+| `prisma/schema.prisma` | `CustomExercise` model + `User.customExercises` relation |
+| `src/controllers/calorieGoalController.ts` | Extended `updateCalorieGoal` to accept all goal fields |
+| `src/controllers/customExerciseController.ts` | NEW — CRUD for custom exercises |
+| `src/controllers/searchController.ts` | Merges user custom exercises into exercise search results |
+| `src/routes/customExerciseRoutes.ts` | NEW — 4 routes + authenticate middleware |
+| `src/server.ts` | `customExerciseRoutes` registered at `/api/custom-exercises` |
+| `src/data/exercises.ts` | ~70 exercises added; MUSCLE_GROUPS updated |
+
+### TypeScript
+- `npx tsc --noEmit` — 0 errors (backend)
+- `npx tsc --noEmit` — 0 errors (frontend)

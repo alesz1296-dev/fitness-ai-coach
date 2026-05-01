@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import { useNavigate, useLocation } from "react-router-dom";
-import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi, customFoodsApi } from "../../api";
+import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi, customFoodsApi, weightApi,
+} from "../../api";
 import { useAuthStore } from "../../store/authStore";
 import type { FoodLog, FoodTotals, CalorieGoal, WaterLog, CustomFood } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
@@ -951,13 +952,12 @@ function MacroRing({ label, value, total, color, goal, danger = false }: {
 
   const over        = goal != null && rawGoalPct > 100;
   const met         = goal != null && rawGoalPct >= 100;
-  // danger=true (fats): full ring turns red when over — not just the arc
-  const strokeColor = over ? "#ef4444" : met ? "#22c55e" : color;
+  // danger=true (fats/carbs): ring turns red when over. Otherwise (protein): always green.
+  const strokeColor = over && danger ? "#ef4444" : (over || met) ? "#22c55e" : color;
   const trackColor  = danger && over ? "#fecaca" : "#f3f4f6";
   const glowFilter  =
     over && danger ? "drop-shadow(0 0 8px rgba(239,68,68,0.80))"
-    : over ? "drop-shadow(0 0 6px rgba(239,68,68,0.60))"
-    : met ? "drop-shadow(0 0 5px rgba(34,197,94,0.65))"
+    : (over || met) ? "drop-shadow(0 0 5px rgba(34,197,94,0.65))"
     : rawGoalPct >= 70 && goal ? "drop-shadow(0 0 5px rgba(59,130,246,0.55))"
     : "none";
 
@@ -970,18 +970,19 @@ function MacroRing({ label, value, total, color, goal, danger = false }: {
             strokeDasharray={`${arcPct} ${100 - arcPct}`} strokeLinecap="round" />
         </svg>
         <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
-          over ? "text-red-500" : met ? "text-green-500" : "text-gray-700 dark:text-gray-200"
+          over && danger ? "text-red-500" : (over || met) ? "text-green-500" : "text-gray-700 dark:text-gray-200"
         }`}>
           {displayPct}%
         </span>
       </div>
       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{label}</p>
       <p className={`text-sm font-semibold mt-0.5 ${
-        over ? "text-red-500" : met ? "text-green-500" : "text-gray-800 dark:text-gray-100"
+        over && danger ? "text-red-500" : (over || met) ? "text-green-500" : "text-gray-800 dark:text-gray-100"
       }`}>
         {Math.round(value)}g{goal ? <span className="font-normal text-gray-400">/{Math.round(goal)}g</span> : null}
       </p>
-      {over && <p className="text-xs text-red-500 font-medium">{danger ? "⚠ Over limit" : "Over goal"}</p>}
+      {over && danger && <p className="text-xs text-red-500 font-medium">⚠ Over limit</p>}
+      {over && !danger && <p className="text-xs text-green-500 font-medium">Goal exceeded ✓</p>}
       {!over && met && <p className="text-xs text-green-500 font-medium">Goal met ✓</p>}
     </div>
   );
@@ -1241,12 +1242,12 @@ function MacroGoalBar({ label, consumed, target, color, bgColor, danger = false 
   const over   = consumed > target;
   const diff   = Math.abs(Math.round(target - consumed));
 
-  // Glow: blue at >=70%, green at >=100%
-  const fillColor = over ? "#ef4444" : pct >= 100 ? "#22c55e" : color;
+  // Glow: blue at >=70%, green at >=100%. Red only for danger=true (fats/carbs).
+  const fillColor = (over && danger) ? "#ef4444" : (over || pct >= 100) ? "#22c55e" : color;
   const glowStyle: React.CSSProperties =
-    over
+    over && danger
       ? { boxShadow: "0 0 8px 2px rgba(239,68,68,0.50)" }
-      : pct >= 100
+      : over || pct >= 100
       ? { boxShadow: "0 0 8px 2px rgba(34,197,94,0.45)" }
       : pct >= 70
       ? { boxShadow: "0 0 8px 2px rgba(59,130,246,0.40)" }
@@ -1256,18 +1257,20 @@ function MacroGoalBar({ label, consumed, target, color, bgColor, danger = false 
     <div className="space-y-1">
       <div className="flex justify-between text-xs">
         <span className="font-medium text-gray-700 dark:text-gray-200">{label}</span>
-        <span className={over ? "text-red-500 font-semibold" : pct >= 100 ? "text-green-600 font-semibold" : "text-gray-500"}>
+        <span className={(over && danger) ? "text-red-500 font-semibold" : (over || pct >= 100) ? "text-green-600 font-semibold" : "text-gray-500"}>
           <span className="font-bold text-gray-800 dark:text-gray-100">{Math.round(consumed)}</span>
           {" / "}{Math.round(target)}g
-          {over
+          {over && danger
             ? <span className="ml-1 text-red-500">(+{diff}g)</span>
+            : over
+            ? <span className="ml-1 text-green-500">(+{diff}g ✓)</span>
             : pct >= 100
             ? <span className="ml-1 text-green-500">✓</span>
             : <span className="ml-1 text-gray-400 dark:text-gray-500">({diff}g left)</span>
           }
         </span>
       </div>
-      <div className={`h-2.5 rounded-full overflow-hidden ${danger && over ? "bg-red-100 dark:bg-red-900/40" : bgColor}`} style={danger && over ? { boxShadow: "0 0 10px 3px rgba(239,68,68,0.55)" } : glowStyle}>
+      <div className={`h-2.5 rounded-full overflow-hidden ${danger && over ? "bg-red-100 dark:bg-red-900/40" : over ? "bg-green-100 dark:bg-green-900/40" : bgColor}`} style={danger && over ? { boxShadow: "0 0 10px 3px rgba(239,68,68,0.55)" } : glowStyle}>
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{ width: `${pct}%`, backgroundColor: fillColor }}
@@ -1899,6 +1902,10 @@ export default function NutritionPage() {
   const [totals,   setTotals]   = useState<FoodTotals>({ calories: 0, protein: 0, carbs: 0, fats: 0 });
   const [loading,  setLoading]  = useState(true);
   const [showForm,    setShowForm]    = useState(false);
+  const [showWeightFab,  setShowWeightFab]  = useState(false);
+  const [weightVal,      setWeightVal]      = useState("");
+  const [savingWeight,   setSavingWeight]   = useState(false);
+  const [weightSaved,    setWeightSaved]    = useState(false);
   const [showMyFoodsPanel, setShowMyFoodsPanel] = useState(false);
   const [myFoodsPanelList, setMyFoodsPanelList] = useState<import("../../types").CustomFood[]>([]);
   const [myFoodsPanelLoading, setMyFoodsPanelLoading] = useState(false);
@@ -2223,6 +2230,19 @@ export default function NutritionPage() {
 
   // ── Favourite-food search (add to favourites directly) ───────────────────
   const [showFavSearch,  setShowFavSearch]  = useState(false);
+
+  const handleLogWeight = async () => {
+    const w = parseFloat(weightVal);
+    if (isNaN(w) || w < 20 || w > 400) return;
+    setSavingWeight(true);
+    try {
+      await weightApi.log({ weight: w });
+      setWeightSaved(true);
+      setWeightVal("");
+      setTimeout(() => { setShowWeightFab(false); setWeightSaved(false); }, 800);
+    } catch { /* ignore */ }
+    finally { setSavingWeight(false); }
+  };
   const [favSearchQ,     setFavSearchQ]     = useState("");
   const [favSearchRes,   setFavSearchRes]   = useState<any[]>([]);
   useEffect(() => {
@@ -2389,7 +2409,7 @@ export default function NutritionPage() {
               {macroView === "distribution" && (
                 <div className="flex items-center justify-around">
                   <MacroRing label="Protein" value={effectiveTotals.protein} total={totalMacroG} color="#3b82f6" goal={activeGoal?.proteinGrams} />
-                  <MacroRing label="Carbs"   value={effectiveTotals.carbs}   total={totalMacroG} color="#f59e0b" goal={activeGoal?.carbsGrams} />
+                  <MacroRing label="Carbs"   value={effectiveTotals.carbs}   total={totalMacroG} color="#f59e0b" goal={activeGoal?.carbsGrams} danger={true} />
                   <MacroRing label="Fats"    value={effectiveTotals.fats}    total={totalMacroG} color="#ef4444" goal={activeGoal?.fatsGrams} danger={true} />
                   <div className="text-center">
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Calories from macros</p>
@@ -2436,6 +2456,7 @@ export default function NutritionPage() {
                     target={activeGoal!.carbsGrams}
                     color="#f59e0b"
                     bgColor="bg-amber-100"
+                    danger={true}
                   />
                   <MacroGoalBar
                     label="🥑 Fats"
@@ -3134,6 +3155,44 @@ export default function NutritionPage() {
           />
         </Modal>
       )}
+
+      {/* ── Weight FAB ────────────────────────────────────────────────────── */}
+      <div className="fixed bottom-32 right-4 z-50 flex flex-col items-end gap-3 md:bottom-8 md:right-8">
+        {showWeightFab && (
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">&#9878;&#65039; Log Weight</p>
+            {weightSaved ? (
+              <p className="text-center text-green-600 font-medium text-sm py-1">&#x2705; Saved!</p>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number" step="0.1" min="20" max="400"
+                    placeholder="e.g. 80.5"
+                    value={weightVal}
+                    onChange={(e) => setWeightVal(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogWeight()}
+                    className="flex-1 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    autoFocus
+                  />
+                  <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">kg</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="secondary" className="flex-1" onClick={() => { setShowWeightFab(false); setWeightVal(""); }}>Cancel</Button>
+                  <Button size="sm" className="flex-1" loading={savingWeight} onClick={handleLogWeight}>Save</Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        <button
+          onClick={() => setShowWeightFab((v) => !v)}
+          className="w-14 h-14 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white rounded-full shadow-lg flex items-center justify-center text-2xl transition-colors"
+          title="Log today's weight"
+        >
+          &#9878;&#65039;
+        </button>
+      </div>
     </div>
   );
 }

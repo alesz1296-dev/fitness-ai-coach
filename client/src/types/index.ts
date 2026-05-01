@@ -372,3 +372,15 @@ export interface PaginatedResponse<T> {
   page: number;
   pages: number;
 }
+
+export interface CustomExercise {
+  id:               string;   // "custom_<dbId>"
+  dbId:             number;
+  name:             string;
+  primaryMuscle:    string;
+  secondaryMuscles: string[];
+  equipment:        string;
+  difficulty:       string;
+  instructions:     string;
+  isCustom:         true;
+}

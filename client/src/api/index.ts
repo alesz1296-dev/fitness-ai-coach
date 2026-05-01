@@ -23,6 +23,7 @@ import type {
   MealPlanEntry,
   WorkoutCalendarDay,
   CustomFood,
+  CustomExercise,
 } from "../types";
 
 interface WorkoutExerciseCreateInput {
@@ -254,6 +255,17 @@ export const foodApi = {
 };
 
 // ── Custom Foods ────────────────────────────────────────────────────────────────────────────
+export const customExercisesApi = {
+  list:   (q?: string, muscle?: string) =>
+    api.get<{ exercises: CustomExercise[] }>(`/custom-exercises${q || muscle ? `?${q ? `q=${encodeURIComponent(q)}` : ""}${q && muscle ? "&" : ""}${muscle ? `muscle=${encodeURIComponent(muscle)}` : ""}` : ""}`),
+  create: (data: Omit<CustomExercise, "id" | "dbId" | "isCustom">) =>
+    api.post<{ exercise: CustomExercise }>("/custom-exercises", data),
+  update: (dbId: number, data: Partial<Omit<CustomExercise, "id" | "dbId" | "isCustom">>) =>
+    api.put<{ exercise: CustomExercise }>(`/custom-exercises/${dbId}`, data),
+  delete: (dbId: number) =>
+    api.delete(`/custom-exercises/${dbId}`),
+};
+
 export const customFoodsApi = {
   list: (q?: string) =>
     api.get<{ foods: CustomFood[] }>(`/custom-foods${q ? `?q=${encodeURIComponent(q)}` : ""}`),

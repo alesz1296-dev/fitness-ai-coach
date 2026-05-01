@@ -8,13 +8,14 @@ const PRIMARY_ITEMS = [
   { to: "/dashboard",  icon: "⊞",  label: "Home" },
   { to: "/workouts",   icon: "🏋️", label: "Workouts" },
   { to: "/nutrition",  icon: "🥗", label: "Nutrition" },
+  { to: "/goals",      icon: "🎯", label: "Goals" },
   { to: "/chat",       icon: "🤖", label: "AI Coach" },
 ];
 
 // Overflow items shown in the "More" sheet
 const MORE_ITEMS = [
   { to: "/meal-planner", icon: "📅", label: "Meal Planner" },
-  { to: "/progress",     icon: "📈", label: "Progress & Goals" },
+  { to: "/progress",     icon: "📈", label: "Progress" },
   { to: "/reports",      icon: "📊", label: "Reports" },
   { to: "/settings",     icon: "⚙️", label: "Profile" },
 ];

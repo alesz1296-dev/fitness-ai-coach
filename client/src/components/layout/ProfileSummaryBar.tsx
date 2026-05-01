@@ -71,8 +71,8 @@ export function ProfileSummaryBar() {
         {/* Active goal pill → Progress tab */}
         {goalInfo && (
           <button
-            onClick={() => navigate("/progress")}
-            title="View your active goal in Progress & Goals"
+            onClick={() => navigate("/goals")}
+            title="View your active goal"
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-all hover:opacity-80 ${goalInfo.color}`}
           >
             <span>{goalInfo.emoji}</span>

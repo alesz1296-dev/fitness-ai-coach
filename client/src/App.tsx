@@ -38,7 +38,7 @@ export default function App() {
             <Route path="/templates" element={<Navigate to="/workouts" replace />} />
             <Route path="/nutrition" element={<ErrorBoundary><NutritionPage /></ErrorBoundary>} />
             <Route path="/progress"  element={<ErrorBoundary><ProgressPage /></ErrorBoundary>} />
-            <Route path="/goals"     element={<Navigate to="/progress" replace />} />
+            <Route path="/goals"     element={<ErrorBoundary><GoalsPage /></ErrorBoundary>} />
             <Route path="/chat"         element={<ErrorBoundary><ChatPage /></ErrorBoundary>} />
             <Route path="/meal-planner" element={<ErrorBoundary><MealPlannerPage /></ErrorBoundary>} />
             <Route path="/reports"      element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />

@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { AuthRequest } from "../middleware/auth.js";
 import prisma from "../lib/prisma.js";
 import redisClient from "../lib/redis.js";
 import { searchFoods, FOOD_DB }              from "../data/foods.js";
@@ -158,19 +159,42 @@ export const exerciseSearch = async (
         db.exerciseItem.count({ where }),
       ]);
 
+      // Merge user's custom exercises (no cache — user-specific)
+      const userId = (req as AuthRequest).user?.id;
+      let customResults: any[] = [];
+      if (userId) {
+        const customWhere: any = { userId };
+        if (q) customWhere.name = { contains: q };
+        if (muscle) customWhere.primaryMuscle = muscle === "Legs" ? { in: LEG_MUSCLES } : { equals: muscle };
+        customResults = await db.customExercise.findMany({ where: customWhere, orderBy: { name: "asc" } }).catch(() => []);
+      }
+
       const payload = {
-        results: results.map((e: any) => ({
-          id:               e.id,
-          name:             e.name,
-          primaryMuscle:    e.primaryMuscle,
-          secondaryMuscles: parseJsonArray(e.secondaryMuscles),
-          equipment:        e.equipment,
-          difficulty:       e.difficulty,
-          instructions:     e.instructions,
-        })),
+        results: [
+          ...customResults.map((e: any) => ({
+            id:               `custom_${e.id}`,
+            dbId:             e.id,
+            name:             e.name,
+            primaryMuscle:    e.primaryMuscle,
+            secondaryMuscles: parseJsonArray(e.secondaryMuscles),
+            equipment:        e.equipment,
+            difficulty:       e.difficulty,
+            instructions:     e.instructions ?? "",
+            isCustom:         true,
+          })),
+          ...results.map((e: any) => ({
+            id:               e.id,
+            name:             e.name,
+            primaryMuscle:    e.primaryMuscle,
+            secondaryMuscles: parseJsonArray(e.secondaryMuscles),
+            equipment:        e.equipment,
+            difficulty:       e.difficulty,
+            instructions:     e.instructions,
+          })),
+        ],
         muscleGroups: MUSCLE_GROUPS,
         equipment:    EQUIPMENT_TYPES,
-        total,
+        total:        total + customResults.length,
         source: "db",
       };
 

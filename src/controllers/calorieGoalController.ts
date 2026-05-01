@@ -236,6 +236,10 @@ export const updateCalorieGoal = async (
     const {
       name, notes, active,
       macrosCycling,
+      // Manual target overrides
+      targetWeight, currentWeight, targetDate,
+      dailyCalories, proteinGrams, carbsGrams, fatsGrams,
+      weeklyChange, type,
       trainDayCalories, trainDayProtein, trainDayCarbs, trainDayFats,
       restDayCalories,  restDayProtein,  restDayCarbs,  restDayFats,
     } = req.body;
@@ -251,9 +255,18 @@ export const updateCalorieGoal = async (
     const updated = await (prisma.calorieGoal as any).update({
       where: { id },
       data: {
-        ...(name !== undefined && { name }),
-        ...(notes !== undefined && { notes }),
-        ...(active !== undefined && { active: Boolean(active) }),
+        ...(name          !== undefined && { name }),
+        ...(notes         !== undefined && { notes }),
+        ...(active        !== undefined && { active: Boolean(active) }),
+        ...(type          !== undefined && { type }),
+        ...(targetWeight  !== undefined && { targetWeight:  Number(targetWeight) }),
+        ...(currentWeight !== undefined && { currentWeight: Number(currentWeight) }),
+        ...(targetDate    !== undefined && { targetDate: new Date(targetDate) }),
+        ...(dailyCalories !== undefined && { dailyCalories: Number(dailyCalories) }),
+        ...(proteinGrams  !== undefined && { proteinGrams:  Number(proteinGrams) }),
+        ...(carbsGrams    !== undefined && { carbsGrams:    Number(carbsGrams) }),
+        ...(fatsGrams     !== undefined && { fatsGrams:     Number(fatsGrams) }),
+        ...(weeklyChange  !== undefined && { weeklyChange:  Number(weeklyChange) }),
         ...(macrosCycling !== undefined && { macrosCycling: Boolean(macrosCycling) }),
         ...(trainDayCalories !== undefined && { trainDayCalories: trainDayCalories ? Number(trainDayCalories) : null }),
         ...(trainDayProtein  !== undefined && { trainDayProtein:  trainDayProtein  ? Number(trainDayProtein)  : null }),

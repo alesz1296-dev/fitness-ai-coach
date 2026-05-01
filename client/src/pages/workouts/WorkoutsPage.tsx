@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { Dispatch, SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths } from "date-fns";
-import { workoutsApi, templatesApi, searchApi, foodApi, calorieGoalsApi, calendarApi, usersApi, chatApi } from "../../api";
+import { workoutsApi, templatesApi, searchApi, foodApi, calorieGoalsApi, calendarApi, usersApi, chatApi, customExercisesApi } from "../../api";
 import type { Workout, WorkoutExercise, PRResult, WorkoutTemplate, WorkoutCalendarDay } from "../../types";
 import { useAuthStore } from "../../store/authStore";
 import { Card, CardHeader } from "../../components/ui/Card";
@@ -495,6 +495,110 @@ function ExerciseSuggestPanel({
 // ─────────────────────────────────────────────────────────────────────────────
 // Exercise search combobox (supports optional muscle-group filter)
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Create Custom Exercise Modal
+// ─────────────────────────────────────────────────────────────────────────────
+const MUSCLE_OPTIONS = [
+  "Chest","Back","Shoulders","Biceps","Triceps","Forearms",
+  "Quads","Hamstrings","Glutes","Calves","Core","Traps",
+  "Full Body","Cardio","Stretching","Adductors","Abductors",
+];
+const EQUIPMENT_OPTIONS = [
+  "Bodyweight","Barbell","Dumbbell","Cable","Machine","Kettlebell","Plate","Ab Wheel","Other",
+];
+
+function CreateCustomExerciseModal({
+  initialName = "",
+  onCreated,
+  onClose,
+}: {
+  initialName?: string;
+  onCreated: (ex: any) => void;
+  onClose: () => void;
+}) {
+  const [name,          setName]          = useState(initialName);
+  const [muscle,        setMuscle]        = useState("Chest");
+  const [equipment,     setEquipment]     = useState("Bodyweight");
+  const [difficulty,    setDifficulty]    = useState<"beginner"|"intermediate"|"advanced">("beginner");
+  const [instructions,  setInstructions]  = useState("");
+  const [saving,        setSaving]        = useState(false);
+  const [error,         setError]         = useState("");
+
+  const save = async () => {
+    if (!name.trim()) { setError("Name is required"); return; }
+    setSaving(true); setError("");
+    try {
+      const res = await customExercisesApi.create({
+        name: name.trim(), primaryMuscle: muscle, secondaryMuscles: [],
+        equipment, difficulty, instructions: instructions.trim(),
+      });
+      onCreated(res.data.exercise);
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Failed to create exercise");
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">{error}</p>}
+
+      <div>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Exercise Name *</label>
+        <input
+          value={name} onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Banded Pull-Apart"
+          className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Primary Muscle *</label>
+          <select value={muscle} onChange={(e) => setMuscle(e.target.value)}
+            className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+            {MUSCLE_OPTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Equipment</label>
+          <select value={equipment} onChange={(e) => setEquipment(e.target.value)}
+            className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+            {EQUIPMENT_OPTIONS.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Difficulty</label>
+        <div className="flex gap-2">
+          {(["beginner","intermediate","advanced"] as const).map((d) => (
+            <button key={d} onClick={() => setDifficulty(d)}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors capitalize ${
+                difficulty === d ? "bg-brand-600 text-white border-brand-600" : "border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-brand-400"
+              }`}
+            >{d}</button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Instructions (optional)</label>
+        <textarea
+          value={instructions} onChange={(e) => setInstructions(e.target.value)}
+          rows={3} placeholder="Describe how to perform this exercise…"
+          className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+        />
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Cancel</button>
+        <Button className="flex-1" loading={saving} onClick={save}>Create Exercise</Button>
+      </div>
+    </div>
+  );
+}
+
 function ExerciseSearch({
   value, onChange, muscle, placeholder = "Search exercise…",
 }: {
@@ -574,7 +678,15 @@ function ExerciseSearch({
               </div>
             ))
           ) : (
-            <p className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">No exercises found — try a different name or muscle filter.</p>
+            <div className="px-3 py-2">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">No exercises found.</p>
+              <button
+                onMouseDown={() => { setOpen(false); onChange("__create_custom__:" + query); }}
+                className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium"
+              >
+                + Create &quot;{query}&quot; as custom exercise
+              </button>
+            </div>
           )}
         </div>,
         document.body
@@ -605,11 +717,22 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
   injuries?: string[];
   defaultMuscle?: string;
 }) {
-  const [suggestKey, setSuggestKey] = useState<string | null>(null);
+  const [suggestKey,       setSuggestKey]       = useState<string | null>(null);
+  const [customCreateKey,  setCustomCreateKey]  = useState<string | null>(null);
+  const [customInitName,   setCustomInitName]   = useState("");
 
   const updateRow = (key: string, field: keyof ExRow, val: string) =>
     setRows((prev) => prev.map((r) => r.key === key ? { ...r, [field]: val } : r));
   const removeRow = (key: string) => setRows((prev) => prev.filter((r) => r.key !== key));
+
+  const handleExerciseChange = (rowKey: string, val: string) => {
+    if (val.startsWith("__create_custom__:")) {
+      setCustomInitName(val.replace("__create_custom__:", ""));
+      setCustomCreateKey(rowKey);
+    } else {
+      updateRow(rowKey, "exerciseName", val);
+    }
+  };
 
   // Per-row muscle overrides the global filter chip
   const globalMuscle = defaultMuscle && defaultMuscle !== "Any" ? defaultMuscle : undefined;
@@ -640,7 +763,7 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
                   <ExerciseSearch
                     value={r.exerciseName}
                     muscle={r.muscle || globalMuscle}
-                    onChange={(v) => updateRow(r.key, "exerciseName", v)}
+                    onChange={(v) => handleExerciseChange(r.key, v)}
                   />
                   {banned && (
                     <p className="text-[10px] text-red-500 mt-0.5">⚠️ May stress injured area</p>
@@ -683,6 +806,16 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
         <p className="col-span-2 text-xs text-gray-400 dark:text-gray-500 text-center">kg</p>
         <p className="col-span-1 text-xs text-gray-400 dark:text-gray-500 text-center">RPE</p>
       </div>
+
+      {customCreateKey && (
+        <Modal open={!!customCreateKey} onClose={() => setCustomCreateKey(null)} title="Create Custom Exercise" size="sm">
+          <CreateCustomExerciseModal
+            initialName={customInitName}
+            onCreated={(ex) => { updateRow(customCreateKey, "exerciseName", ex.name); setCustomCreateKey(null); }}
+            onClose={() => setCustomCreateKey(null)}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

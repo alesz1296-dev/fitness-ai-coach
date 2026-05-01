@@ -414,7 +414,7 @@ export function OnboardingModal({ open, onComplete, onSkip }: {
       updateUser(res.data.user);
     } catch { /* ignore */ }
     onComplete();
-    navigate("/workouts?tab=templates");
+    navigate("/goals");
   };
 
   if (!open) return null;

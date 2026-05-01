@@ -583,3 +583,43 @@ eas build --platform all --profile production
 - **#85** Pagination — food logs + workouts (P2, Infrastructure)
 - Connection pooling — PgBouncer or Prisma Accelerate (post-live, Infrastructure)
 - P5 backlog: superset/circuit, meal plan templates, admin dashboard, barcode scanner, push notifications
+
+---
+
+## Session 2026-05-01 — Goals Tab, Custom Exercises, Log Weight Fixes
+
+### Features added
+
+- **Goals tab restored as primary nav** (`BottomNav.tsx`, `Sidebar.tsx`, `App.tsx`): `/goals` was silently redirecting to `/progress`. Restored `GoalsPage` route. Added Goals (🎯) as 4th item in `PRIMARY_ITEMS` (Home / Workouts / Nutrition / Goals / AI Coach). Added to Sidebar between Nutrition and AI Coach. Updated `ProfileSummaryBar` goal pill and `OnboardingModal` post-complete redirect both now navigate to `/goals`.
+
+- **GoalsPage — manual goal editing** (`GoalsPage.tsx`, `calorieGoalController.ts`): Added `EditGoalModal` component inside `GoalsPage.tsx`. Fields: name, current weight, target weight, target date, daily calories, protein, carbs, fats. "Recalculate macros from these targets" button calls `calorieGoalsApi.preview()` to get server-computed macro split. Calorie sanity check: warns if `protein*4 + carbs*4 + fats*9` diverges from daily calorie target by more than 50 kcal. On save: calls `calorieGoalsApi.update()` with all fields including recalculated `type` (cut/bulk/maintain). Backend `updateCalorieGoal` extended to accept and persist: `targetWeight`, `currentWeight`, `targetDate`, `dailyCalories`, `proteinGrams`, `carbsGrams`, `fatsGrams`, `weeklyChange`, `type`.
+
+- **Log weight Modal fix** (`ProgressPage.tsx`): `showForm` state and `+ Log Weight` button existed but the `<Modal>` JSX was completely absent from the render tree — button had no effect. Added `<Modal open={showForm} onClose={() => setShowForm(false)} title="Log Weight">` wrapping `<LogWeightForm>`.
+
+- **Weight FAB on NutritionPage** (`NutritionPage.tsx`): Added floating action button (⚖️) at `bottom-32` — identical pattern to Dashboard FAB. Wired to `weightApi.log()`. State: `showWeightFab`, `weightVal`, `savingWeight`, `weightSaved`. Fixed mangled import (missing comma between `customFoodsApi` and `weightApi`).
+
+- **Exercise library expanded** (`src/data/exercises.ts`): Added ~70 new exercises (IDs e130–e228): Chest (Landmine Press, Svend Press, etc.), Back (Meadows Row, Pendlay Row, Good Morning, etc.), Shoulders (Cuban Press, Bradford Press, Y-T-W Raise, etc.), Biceps (Spider Curl, Drag Curl, 21s Curl, etc.), Triceps (JM Press, Kickback, etc.), Quads (Hack Squat, Sissy Squat, Box Jump, Pause Squat, etc.), Hamstrings (Nordic Curl, Swiss Ball Leg Curl, etc.), Glutes (Cable Pull-Through, Banded Clamshell, etc.), Calves (Donkey, Single-Leg, Leg Press varieties), Core (Bicycle Crunch, Dead Bug, Toes-to-Bar, etc.), Cardio (Battle Ropes, Sled Push, Sprint Intervals), Adductors, Abductors (4 exercises each), Full Body (Turkish Get-Up, Man Maker, Sandbag Carry, Bear Crawl). `MUSCLE_GROUPS` array updated with `"Adductors"` and `"Abductors"`. Total library: ~106 → ~175+ exercises.
+
+- **Custom exercises — full stack** (`prisma/schema.prisma`, `src/controllers/customExerciseController.ts`, `src/routes/customExerciseRoutes.ts`, `src/server.ts`, `src/controllers/searchController.ts`, `client/src/types/index.ts`, `client/src/api/index.ts`, `client/src/pages/workouts/WorkoutsPage.tsx`):
+  - Prisma: new `CustomExercise` model (userId FK, name, primaryMuscle, secondaryMuscles JSON, equipment, difficulty, instructions) with cascade delete.
+  - CRUD API at `/api/custom-exercises` (list with q+muscle filter, create, update, delete) — all routes authenticated, all user-owned checks enforced.
+  - `searchController.ts` merges user's custom exercises (prefix `custom_${id}`, `isCustom: true`) at the top of exercise search results.
+  - Client: `CustomExercise` interface in `types/index.ts`; `customExercisesApi` (list/create/update/delete) in `api/index.ts`.
+  - WorkoutsPage UI: `CreateCustomExerciseModal` with fields (name, primaryMuscle select, equipment select, difficulty 3-button toggle, instructions textarea). ExerciseSearch no-results state shows "+ Create 'X' as custom exercise" → fires `onChange("__create_custom__:" + query)`. `ExerciseRows` intercepts this signal, opens modal pre-filled with the query string. On creation success: row exercise name updates to new custom exercise.
+
+### Bugs fixed
+
+- **Log Weight button in ProgressPage silently broken**: `<Modal>` JSX was absent — state/button existed, rendering did not. Added the Modal wrapping `LogWeightForm`.
+- **Weight FAB missing from Nutrition and Home**: NutritionPage had no way to log weight. Added FAB. (Dashboard FAB was already present from a prior session.)
+- **NutritionPage import corruption**: `customFoodsApi   weightApi` (missing comma) caused lint error. Fixed with Python string replacement.
+- **WorkoutsPage modal insertion**: File contains Unicode em-dash characters (─) encoded as multi-byte sequences on CIFS mount; Python `str.replace()` failed on banner lines. Used line-number insertion (`lines[:N] + new_lines + lines[N:]`) instead of string matching.
+
+### TypeScript
+- `npx tsc --noEmit` — 0 errors (backend)
+- `npx tsc --noEmit` — 0 errors (frontend)
+
+### Pending (next priorities)
+- **#71 + dynamic goal graph**: Editable weight prediction graph in ProgressPage + live projection chart in EditGoalModal (drag/adjust target weight/date/deficit → see projected weight curve update in real time)
+- **#83**: AI provider abstraction — DeepSeek default, OpenAI fallback (P2, AI/ML)
+- **#84**: AI embeddings + RAG for user history context in chat (P3, AI/ML)
+- **#85**: Backend pagination for large result sets — food logs, workouts (P2, Infrastructure)

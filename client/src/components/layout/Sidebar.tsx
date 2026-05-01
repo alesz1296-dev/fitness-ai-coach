@@ -6,9 +6,10 @@ const navItems = [
   { to: "/dashboard",    icon: "⊞",  label: "Dashboard" },
   { to: "/workouts",     icon: "🏋️", label: "Workouts" },
   { to: "/nutrition",    icon: "🥗", label: "Nutrition" },
-  { to: "/meal-planner", icon: "📅", label: "Meal Planner" },
-  { to: "/progress",     icon: "📈", label: "Progress & Goals" },
+  { to: "/goals",        icon: "🎯", label: "Goals" },
   { to: "/chat",         icon: "🤖", label: "AI Coach" },
+  { to: "/meal-planner", icon: "📅", label: "Meal Planner" },
+  { to: "/progress",     icon: "📈", label: "Progress" },
   { to: "/reports",      icon: "📊", label: "Reports" },
   { to: "/settings",     icon: "⚙️", label: "Profile" },
 ];

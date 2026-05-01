@@ -314,11 +314,127 @@ function GoalProjectionChart({ goalId }: { goalId: number }) {
   );
 }
 
+
+// ── Edit Goal Modal ───────────────────────────────────────────────────────────
+function EditGoalModal({ goal, onSave, onClose }: { goal: CalorieGoal; onSave: () => void; onClose: () => void }) {
+  const { user } = useAuthStore();
+  const [name,          setName]          = useState(goal.name || "");
+  const [targetWeight,  setTargetWeight]  = useState(String(goal.targetWeight));
+  const [currentWeight, setCurrentWeight] = useState(String(goal.currentWeight));
+  const [targetDate,    setTargetDate]    = useState(goal.targetDate.split("T")[0]);
+  const [dailyCalories, setDailyCalories] = useState(String(Math.round(goal.dailyCalories)));
+  const [protein,       setProtein]       = useState(String(Math.round(goal.proteinGrams)));
+  const [carbs,         setCarbs]         = useState(String(Math.round(goal.carbsGrams)));
+  const [fats,          setFats]          = useState(String(Math.round(goal.fatsGrams)));
+  const [saving,        setSaving]        = useState(false);
+  const [recalcLoading, setRecalcLoading] = useState(false);
+  const [error,         setError]         = useState("");
+  const [mode,          setMode]          = useState<"manual" | "recalc">("manual");
+
+  const recalculate = async () => {
+    const cw = Number(currentWeight); const tw = Number(targetWeight);
+    if (!cw || !tw || !targetDate) { setError("Fill current weight, target weight and target date"); return; }
+    setRecalcLoading(true); setError("");
+    try {
+      const res = await calorieGoalsApi.preview({
+        currentWeight: cw, targetWeight: tw, targetDate,
+        macrosCycling: goal.macrosCycling,
+        trainingDaysPerWeek: user?.trainingDaysPerWeek,
+      });
+      const calc = res.data.calculation;
+      setDailyCalories(String(Math.round(calc.dailyCalories)));
+      setProtein(String(Math.round(calc.proteinGrams)));
+      setCarbs(String(Math.round(calc.carbsGrams)));
+      setFats(String(Math.round(calc.fatsGrams)));
+      setMode("manual");
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Recalculation failed");
+    } finally { setRecalcLoading(false); }
+  };
+
+  const save = async () => {
+    setSaving(true); setError("");
+    try {
+      const tw = Number(targetWeight);
+      const type = tw < goal.currentWeight ? "cut" : tw > goal.currentWeight ? "bulk" : "maintain";
+      await calorieGoalsApi.update(goal.id, {
+        name: name || undefined,
+        targetWeight:  Number(targetWeight),
+        currentWeight: Number(currentWeight),
+        targetDate,
+        dailyCalories: Number(dailyCalories),
+        proteinGrams:  Number(protein),
+        carbsGrams:    Number(carbs),
+        fatsGrams:     Number(fats),
+        type,
+      });
+      onSave();
+    } catch (e: any) {
+      setError(e.response?.data?.error || "Failed to save");
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">{error}</p>}
+
+      <Input label="Goal Name (optional)" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Summer cut" />
+
+      {/* Targets */}
+      <div className="space-y-3">
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Targets</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Current Weight (kg)" type="number" step="0.1" value={currentWeight}
+            onChange={(e) => setCurrentWeight(e.target.value)} />
+          <Input label="Target Weight (kg)" type="number" step="0.1" value={targetWeight}
+            onChange={(e) => setTargetWeight(e.target.value)} />
+        </div>
+        <Input label="Target Date" type="date" value={targetDate}
+          onChange={(e) => setTargetDate(e.target.value)}
+          min={new Date().toISOString().split("T")[0]} />
+        <button
+          onClick={recalculate}
+          disabled={recalcLoading}
+          className="w-full py-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-sm font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors disabled:opacity-50"
+        >
+          {recalcLoading ? "Recalculating…" : "🔄 Recalculate macros from these targets"}
+        </button>
+      </div>
+
+      {/* Manual macro override */}
+      <div className="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3">
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Daily Targets (edit manually)</p>
+        <Input label="Daily Calories (kcal)" type="number" value={dailyCalories}
+          onChange={(e) => setDailyCalories(e.target.value)} />
+        <div className="grid grid-cols-3 gap-2">
+          <Input label="Protein (g)" type="number" value={protein} onChange={(e) => setProtein(e.target.value)} />
+          <Input label="Carbs (g)"   type="number" value={carbs}   onChange={(e) => setCarbs(e.target.value)} />
+          <Input label="Fats (g)"    type="number" value={fats}    onChange={(e) => setFats(e.target.value)} />
+        </div>
+        {/* Calorie sanity check */}
+        {protein && carbs && fats && (
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
+            {Math.round(Number(protein) * 4 + Number(carbs) * 4 + Number(fats) * 9)} kcal from macros
+            {Math.abs(Number(protein) * 4 + Number(carbs) * 4 + Number(fats) * 9 - Number(dailyCalories)) > 50
+              ? " ⚠️ doesn't match calorie target" : " ✓"}
+          </p>
+        )}
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Cancel</button>
+        <Button className="flex-1" loading={saving} onClick={save}>Save Changes</Button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Goals page ───────────────────────────────────────────────────────────
 export default function GoalsPage({ embedded = false }: { embedded?: boolean } = {}) {
-  const [goals,    setGoals]    = useState<CalorieGoal[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [goals,       setGoals]       = useState<CalorieGoal[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [showForm,    setShowForm]    = useState(false);
+  const [editingGoal, setEditingGoal] = useState<CalorieGoal | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -402,6 +518,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
                   </p>
                 </div>
                 <div className="flex gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => setEditingGoal(activeGoal)}>Edit</Button>
                   <Button variant="secondary" size="sm" onClick={() => deactivate(activeGoal.id)}>Pause</Button>
                   <Button variant="danger"    size="sm" onClick={() => deleteGoal(activeGoal.id)}>Delete</Button>
                 </div>
@@ -454,6 +571,16 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Create Goal" size="md">
         <GoalForm onSave={() => { setShowForm(false); load(); }} onClose={() => setShowForm(false)} />
       </Modal>
+
+      {editingGoal && (
+        <Modal open={!!editingGoal} onClose={() => setEditingGoal(null)} title="Edit Goal" size="md">
+          <EditGoalModal
+            goal={editingGoal}
+            onSave={() => { setEditingGoal(null); load(); }}
+            onClose={() => setEditingGoal(null)}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

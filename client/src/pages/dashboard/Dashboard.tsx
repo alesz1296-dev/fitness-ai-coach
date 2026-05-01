@@ -214,9 +214,11 @@ export default function Dashboard() {
     }
 
     // Merge: sort chronologically by using original log order then projected future dates
-    const actualPoints = weightLogs.map((l) => {
-      const key = format(parseISO(l.date), "MMM d");
-      return { date: key, weight: l.weight, projected: projMap[key] ?? undefined };
+    const actualPoints = weightLogs.map((l, idx) => {
+      const key    = format(parseISO(l.date), "MMM d");
+      const isLast = idx === weightLogs.length - 1;
+      // Only bridge the last actual point into the projection; don't overlay historical dates
+      return { date: key, weight: l.weight, projected: isLast ? (projMap[key] ?? undefined) : undefined };
     });
 
     const actualKeys = new Set(actualPoints.map((p) => p.date));
@@ -524,10 +526,10 @@ export default function Dashboard() {
                       type="monotone"
                       dataKey="projected"
                       name="projected"
-                      stroke="#818cf8"
-                      strokeWidth={2}
-                      strokeDasharray="5 4"
-                      dot={false}
+                      stroke="#a78bfa"
+                      strokeWidth={3}
+                      strokeDasharray="6 3"
+                      dot={{ fill: "#a78bfa", r: 3 }}
                       connectNulls
                     />
                   )}
@@ -634,7 +636,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Weight FAB ────────────────────────────────────────────────────── */}
-      <div className="fixed bottom-28 right-4 z-50 flex flex-col items-end gap-3 md:bottom-8 md:right-8">
+      <div className="fixed bottom-32 right-4 z-50 flex flex-col items-end gap-3 md:bottom-8 md:right-8">
         {showWeightFab && (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">⚖️ Log Weight</p>

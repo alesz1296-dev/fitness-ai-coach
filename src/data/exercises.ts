@@ -146,13 +146,103 @@ export const EXERCISE_DB: ExerciseItem[] = [
   { id: "e112", name: "Rowing Machine",           primaryMuscle: "Cardio",   secondaryMuscles: ["Back","Biceps","Legs"],  equipment: "Machine",    difficulty: "intermediate", instructions: "Drive with legs first, then lean back, then pull arms." },
   { id: "e113", name: "Jump Rope",                primaryMuscle: "Cardio",   secondaryMuscles: ["Calves","Shoulders"],    equipment: "Bodyweight", difficulty: "beginner",     instructions: "Jump with both feet, rotate rope with wrists." },
   { id: "e114", name: "Stair Climber",            primaryMuscle: "Cardio",   secondaryMuscles: ["Glutes","Quads"],        equipment: "Machine",    difficulty: "beginner",     instructions: "Step fully onto each step, maintain upright posture." },
+
+  // ── Chest (extra) ─────────────────────────────────────────────────────────
+  { id: "e130", name: "Landmine Press",              primaryMuscle: "Chest",      secondaryMuscles: ["Shoulders","Triceps"],        equipment: "Barbell",    difficulty: "intermediate", instructions: "Fix barbell in landmine, press at 45-degree angle targeting upper chest and front delt." },
+  { id: "e131", name: "Chest Press Machine",         primaryMuscle: "Chest",      secondaryMuscles: ["Triceps","Front Delts"],      equipment: "Machine",    difficulty: "beginner",     instructions: "Adjust seat so handles are at chest height, press forward to full extension." },
+  { id: "e132", name: "Svend Press",                 primaryMuscle: "Chest",      secondaryMuscles: [],                             equipment: "Plate",      difficulty: "beginner",     instructions: "Squeeze a plate between palms and press forward at chest height. Constant pec tension." },
+  { id: "e133", name: "Incline Cable Fly",           primaryMuscle: "Chest",      secondaryMuscles: ["Front Delts"],                equipment: "Cable",      difficulty: "beginner",     instructions: "Set cables low, lie on incline bench, fly up to chest height emphasising upper chest." },
+  { id: "e134", name: "High-to-Low Cable Fly",       primaryMuscle: "Chest",      secondaryMuscles: [],                             equipment: "Cable",      difficulty: "beginner",     instructions: "Set cables high, pull down and in to hips. Targets lower chest." },
+  { id: "e135", name: "Wide Push-Up",                primaryMuscle: "Chest",      secondaryMuscles: ["Triceps"],                    equipment: "Bodyweight", difficulty: "beginner",     instructions: "Hands wider than shoulder-width to increase chest stretch at the bottom." },
+
+  // ── Back (extra) ──────────────────────────────────────────────────────────
+  { id: "e140", name: "Meadows Row",                 primaryMuscle: "Back",       secondaryMuscles: ["Biceps","Rear Delts"],        equipment: "Barbell",    difficulty: "intermediate", instructions: "Stand beside landmine, pull bar to hip with single arm, elbows flared for lat width." },
+  { id: "e141", name: "Pendlay Row",                 primaryMuscle: "Back",       secondaryMuscles: ["Biceps","Traps"],             equipment: "Barbell",    difficulty: "intermediate", instructions: "Bar starts on floor each rep, explosive pull to chest, strict horizontal torso." },
+  { id: "e142", name: "Chest-Supported Row",         primaryMuscle: "Back",       secondaryMuscles: ["Biceps","Rear Delts"],        equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Lie face-down on incline bench, row dumbbells to hips. No momentum, pure back contraction." },
+  { id: "e143", name: "Straight-Arm Pulldown",       primaryMuscle: "Back",       secondaryMuscles: ["Core"],                       equipment: "Cable",      difficulty: "beginner",     instructions: "Stand at cable, arms straight, push bar from eye level to thighs using lats only." },
+  { id: "e144", name: "Wide-Grip Cable Row",         primaryMuscle: "Back",       secondaryMuscles: ["Rear Delts","Traps"],         equipment: "Cable",      difficulty: "beginner",     instructions: "Use wide-grip bar, pull to upper chest rather than lower abdomen. Targets upper back." },
+  { id: "e145", name: "Good Morning",                primaryMuscle: "Back",       secondaryMuscles: ["Hamstrings","Glutes"],        equipment: "Barbell",    difficulty: "intermediate", instructions: "Bar on upper back, soft knee bend, hinge at hips until torso is near parallel to floor." },
+  { id: "e146", name: "Back Extension",              primaryMuscle: "Back",       secondaryMuscles: ["Glutes","Hamstrings"],        equipment: "Machine",    difficulty: "beginner",     instructions: "Hinge at hips on GHD or hyperextension bench, raise torso to neutral spine." },
+  { id: "e147", name: "Kelso Shrug",                 primaryMuscle: "Back",       secondaryMuscles: ["Traps"],                     equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Lie face-down on low incline, retract and depress scapula without moving arms." },
+
+  // ── Shoulders (extra) ─────────────────────────────────────────────────────
+  { id: "e150", name: "Lateral Raise Machine",       primaryMuscle: "Shoulders",  secondaryMuscles: [],                             equipment: "Machine",    difficulty: "beginner",     instructions: "Sit with arms against pads, raise laterally to shoulder height with constant resistance." },
+  { id: "e151", name: "Cuban Press",                 primaryMuscle: "Shoulders",  secondaryMuscles: ["Rear Delts","Traps"],         equipment: "Dumbbell",   difficulty: "beginner",     instructions: "External rotation then press: row to 90-degree elbow, rotate forearms up, press overhead." },
+  { id: "e152", name: "Plate Front Raise",           primaryMuscle: "Shoulders",  secondaryMuscles: ["Traps"],                     equipment: "Plate",      difficulty: "beginner",     instructions: "Hold plate with both hands, raise to eye level with straight arms." },
+  { id: "e153", name: "Bradford Press",              primaryMuscle: "Shoulders",  secondaryMuscles: ["Triceps","Traps"],            equipment: "Barbell",    difficulty: "intermediate", instructions: "Alternate pressing bar from front to back over head without fully locking out." },
+  { id: "e154", name: "Y-T-W Raise",                primaryMuscle: "Shoulders",  secondaryMuscles: ["Rear Delts","Traps"],         equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Lie prone on incline, raise arms in Y, T, then W shapes — great for rotator cuff health." },
+  { id: "e155", name: "Seated Dumbbell Press",       primaryMuscle: "Shoulders",  secondaryMuscles: ["Triceps"],                   equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Back supported at 90 degrees, press from ear level to full extension overhead." },
+
+  // ── Biceps (extra) ────────────────────────────────────────────────────────
+  { id: "e160", name: "Spider Curl",                 primaryMuscle: "Biceps",     secondaryMuscles: [],                             equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Lie chest-down on incline bench, curl dumbbells — eliminates momentum completely." },
+  { id: "e161", name: "Cable Hammer Curl",           primaryMuscle: "Biceps",     secondaryMuscles: ["Brachialis","Forearms"],     equipment: "Cable",      difficulty: "beginner",     instructions: "Rope attachment, neutral grip, curl from low pulley maintaining elbow position." },
+  { id: "e162", name: "Drag Curl",                   primaryMuscle: "Biceps",     secondaryMuscles: [],                             equipment: "Barbell",    difficulty: "beginner",     instructions: "Drag bar up the torso (elbows go back rather than staying still) for peak contraction." },
+  { id: "e163", name: "EZ Bar Curl",                 primaryMuscle: "Biceps",     secondaryMuscles: ["Forearms"],                  equipment: "Barbell",    difficulty: "beginner",     instructions: "Use angled EZ bar for reduced wrist strain. Curl to shoulder height, full range." },
+  { id: "e164", name: "21s Curl",                    primaryMuscle: "Biceps",     secondaryMuscles: [],                             equipment: "Barbell",    difficulty: "beginner",     instructions: "7 reps lower half, 7 reps upper half, 7 reps full range. Maximum time under tension." },
+
+  // ── Triceps (extra) ───────────────────────────────────────────────────────
+  { id: "e170", name: "JM Press",                    primaryMuscle: "Triceps",    secondaryMuscles: ["Chest"],                     equipment: "Barbell",    difficulty: "intermediate", instructions: "Hybrid between close-grip bench and skull crusher. Lower bar to neck/chin area." },
+  { id: "e171", name: "Cable Overhead Tricep Ext",  primaryMuscle: "Triceps",    secondaryMuscles: [],                             equipment: "Cable",      difficulty: "beginner",     instructions: "Rope at high pulley, face away, extend rope forward overhead for long-head emphasis." },
+  { id: "e172", name: "Dumbbell Kickback",           primaryMuscle: "Triceps",    secondaryMuscles: [],                             equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Hinge forward, upper arm parallel to floor, extend forearm back to lockout." },
+  { id: "e173", name: "Tricep Dip Machine",          primaryMuscle: "Triceps",    secondaryMuscles: ["Chest"],                     equipment: "Machine",    difficulty: "beginner",     instructions: "Grip handles with elbows tucked, press down to full elbow extension." },
+
+  // ── Quads (extra) ─────────────────────────────────────────────────────────
+  { id: "e180", name: "Hack Squat",                  primaryMuscle: "Quads",      secondaryMuscles: ["Glutes","Hamstrings"],        equipment: "Machine",    difficulty: "intermediate", instructions: "Feet shoulder-width on plate, lower sled to 90-degree knee angle." },
+  { id: "e181", name: "Smith Machine Squat",         primaryMuscle: "Quads",      secondaryMuscles: ["Glutes"],                    equipment: "Machine",    difficulty: "beginner",     instructions: "Position bar on upper back, feet slightly forward, squat to parallel." },
+  { id: "e182", name: "Step-Up",                     primaryMuscle: "Quads",      secondaryMuscles: ["Glutes","Hamstrings"],        equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Hold dumbbells, step onto box or bench, drive through heel to fully stand." },
+  { id: "e183", name: "Sissy Squat",                 primaryMuscle: "Quads",      secondaryMuscles: [],                             equipment: "Bodyweight", difficulty: "advanced",     instructions: "Hold fixed object, lean back and bend knees, raising heels. Extreme quad stretch." },
+  { id: "e184", name: "Box Jump",                    primaryMuscle: "Quads",      secondaryMuscles: ["Glutes","Calves","Core"],     equipment: "Bodyweight", difficulty: "intermediate", instructions: "Stand in front of box, dip and explosively jump onto it, land softly with bent knees." },
+  { id: "e185", name: "Pause Squat",                 primaryMuscle: "Quads",      secondaryMuscles: ["Glutes","Core"],             equipment: "Barbell",    difficulty: "intermediate", instructions: "Regular squat with 2-3 second pause at bottom. Builds strength out of hole." },
+
+  // ── Hamstrings (extra) ────────────────────────────────────────────────────
+  { id: "e190", name: "Nordic Hamstring Curl",       primaryMuscle: "Hamstrings", secondaryMuscles: ["Glutes"],                    equipment: "Bodyweight", difficulty: "advanced",     instructions: "Partner holds ankles, lower torso toward floor under control, push up." },
+  { id: "e191", name: "Standing Leg Curl",           primaryMuscle: "Hamstrings", secondaryMuscles: ["Glutes"],                    equipment: "Machine",    difficulty: "beginner",     instructions: "Single-leg curl standing up, better stretch than seated version." },
+  { id: "e192", name: "Dumbbell Romanian Deadlift",  primaryMuscle: "Hamstrings", secondaryMuscles: ["Glutes","Back"],             equipment: "Dumbbell",   difficulty: "intermediate", instructions: "Hold dumbbells, hinge at hips keeping back flat, feel hamstring stretch." },
+  { id: "e193", name: "Swiss Ball Leg Curl",         primaryMuscle: "Hamstrings", secondaryMuscles: ["Glutes","Core"],             equipment: "Bodyweight", difficulty: "intermediate", instructions: "Lie on back, heels on ball, drive hips up and curl ball toward glutes." },
+
+  // ── Glutes (extra) ────────────────────────────────────────────────────────
+  { id: "e196", name: "Cable Pull-Through",          primaryMuscle: "Glutes",     secondaryMuscles: ["Hamstrings"],                equipment: "Cable",      difficulty: "beginner",     instructions: "Face away from cable between legs, hinge at hips, squeeze glutes to stand." },
+  { id: "e197", name: "Single-Leg Romanian Deadlift",primaryMuscle: "Glutes",     secondaryMuscles: ["Hamstrings","Core"],         equipment: "Dumbbell",   difficulty: "intermediate", instructions: "Hinge at hip on one leg, opposite leg extends behind, feel glute and hamstring stretch." },
+  { id: "e198", name: "Banded Clamshell",            primaryMuscle: "Glutes",     secondaryMuscles: [],                             equipment: "Bodyweight", difficulty: "beginner",     instructions: "Lie on side with band above knees, rotate top knee up like a clamshell opening." },
+  { id: "e199", name: "Step-Up Knee Drive",          primaryMuscle: "Glutes",     secondaryMuscles: ["Quads","Core"],              equipment: "Dumbbell",   difficulty: "beginner",     instructions: "Step up onto box, drive opposite knee to chest at top for glute and core activation." },
+
+  // ── Calves (extra) ────────────────────────────────────────────────────────
+  { id: "e200", name: "Donkey Calf Raise",           primaryMuscle: "Calves",     secondaryMuscles: [],                             equipment: "Machine",    difficulty: "beginner",     instructions: "Lean forward at 90 degrees, raise heels high. Great for maximum gastrocnemius stretch." },
+  { id: "e201", name: "Single-Leg Calf Raise",       primaryMuscle: "Calves",     secondaryMuscles: [],                             equipment: "Bodyweight", difficulty: "beginner",     instructions: "Stand on one foot on a step edge, full range of motion. Harder than bilateral version." },
+  { id: "e202", name: "Leg Press Calf Raise",        primaryMuscle: "Calves",     secondaryMuscles: [],                             equipment: "Machine",    difficulty: "beginner",     instructions: "Use leg press machine, push sled with just the balls of your feet for calf raise." },
+
+  // ── Core (extra) ──────────────────────────────────────────────────────────
+  { id: "e205", name: "Bicycle Crunch",              primaryMuscle: "Core",       secondaryMuscles: ["Obliques"],                  equipment: "Bodyweight", difficulty: "beginner",     instructions: "Alternating elbow to opposite knee, rotate torso fully each rep." },
+  { id: "e206", name: "V-Up",                        primaryMuscle: "Core",       secondaryMuscles: ["Hip Flexors"],               equipment: "Bodyweight", difficulty: "intermediate", instructions: "Simultaneously raise legs and torso to meet in middle, balancing on tailbone." },
+  { id: "e207", name: "Hollow Body Hold",            primaryMuscle: "Core",       secondaryMuscles: ["Hip Flexors"],               equipment: "Bodyweight", difficulty: "intermediate", instructions: "Lower back pressed to floor, arms overhead, raise legs and shoulder blades slightly. Hold." },
+  { id: "e208", name: "Dead Bug",                    primaryMuscle: "Core",       secondaryMuscles: ["Hip Flexors"],               equipment: "Bodyweight", difficulty: "beginner",     instructions: "On back, arms up, opposite arm and leg extend toward floor maintaining lower-back contact." },
+  { id: "e209", name: "Copenhagen Plank",            primaryMuscle: "Core",       secondaryMuscles: ["Adductors"],                 equipment: "Bodyweight", difficulty: "advanced",     instructions: "Side plank with top foot on bench, lift bottom leg to meet it. Adductor and core challenge." },
+  { id: "e210", name: "Toes-to-Bar",                 primaryMuscle: "Core",       secondaryMuscles: ["Hip Flexors","Lats"],        equipment: "Bodyweight", difficulty: "advanced",     instructions: "Dead hang from pull-up bar, raise feet to touch bar controlling the swing." },
+
+  // ── Cardio (extra) ────────────────────────────────────────────────────────
+  { id: "e215", name: "Battle Ropes",                primaryMuscle: "Cardio",     secondaryMuscles: ["Shoulders","Core","Arms"],   equipment: "Machine",    difficulty: "intermediate", instructions: "Hold rope ends, alternate or simultaneous wave motion for 20-40 seconds." },
+  { id: "e216", name: "Sled Push",                   primaryMuscle: "Cardio",     secondaryMuscles: ["Quads","Glutes","Core"],     equipment: "Machine",    difficulty: "intermediate", instructions: "Drive sled forward with low body position, short powerful steps." },
+  { id: "e217", name: "Swimming",                    primaryMuscle: "Cardio",     secondaryMuscles: ["Back","Shoulders","Core"],   equipment: "Bodyweight", difficulty: "beginner",     instructions: "Freestyle or any stroke. Maintain steady breathing rhythm." },
+  { id: "e218", name: "Sprint Intervals",            primaryMuscle: "Cardio",     secondaryMuscles: ["Quads","Hamstrings","Calves"],equipment: "Bodyweight", difficulty: "advanced",     instructions: "All-out sprint for 20-30s, walk 60-90s recovery. Repeat 6-10 rounds." },
+
+  // ── Adductors / Abductors ─────────────────────────────────────────────────
+  { id: "e220", name: "Hip Adductor Machine",        primaryMuscle: "Adductors",  secondaryMuscles: [],                             equipment: "Machine",    difficulty: "beginner",     instructions: "Sit with legs on pads, squeeze legs together against resistance. Full range of motion." },
+  { id: "e221", name: "Hip Abductor Machine",        primaryMuscle: "Abductors",  secondaryMuscles: ["Glutes"],                    equipment: "Machine",    difficulty: "beginner",     instructions: "Sit with pads on outside of knees, push legs apart against resistance." },
+  { id: "e222", name: "Lateral Band Walk",           primaryMuscle: "Abductors",  secondaryMuscles: ["Glutes"],                    equipment: "Bodyweight", difficulty: "beginner",     instructions: "Resistance band above knees, squat slightly, sidestep maintaining band tension." },
+  { id: "e223", name: "Sumo Walk",                   primaryMuscle: "Adductors",  secondaryMuscles: ["Glutes","Quads"],            equipment: "Bodyweight", difficulty: "beginner",     instructions: "Wide stance, toes out, walk forward staying in squat position. Targets inner thighs." },
+
+  // ── Full Body (extra) ─────────────────────────────────────────────────────
+  { id: "e225", name: "Turkish Get-Up",              primaryMuscle: "Full Body",  secondaryMuscles: ["Core","Shoulders","Glutes"], equipment: "Kettlebell", difficulty: "advanced",     instructions: "From lying, press KB overhead and stand up in a controlled sequence. Reverse to start." },
+  { id: "e226", name: "Man Maker",                   primaryMuscle: "Full Body",  secondaryMuscles: [],                             equipment: "Dumbbell",   difficulty: "advanced",     instructions: "Dumbbell burpee: push-up, renegade row each side, clean, then press overhead." },
+  { id: "e227", name: "Sandbag Carry",               primaryMuscle: "Full Body",  secondaryMuscles: ["Core","Traps"],              equipment: "Bodyweight", difficulty: "intermediate", instructions: "Bear hug or shoulder carry a sandbag for distance or time. Total body stabilisation." },
+  { id: "e228", name: "Bear Crawl",                  primaryMuscle: "Full Body",  secondaryMuscles: ["Core","Shoulders"],          equipment: "Bodyweight", difficulty: "beginner",     instructions: "On hands and feet, move forward keeping knees 2 inches off the ground. Stay low." },
 ];
 
 // Unique muscle groups for filter UI
 export const MUSCLE_GROUPS = [
   "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Forearms",
   "Legs", "Quads", "Hamstrings", "Glutes", "Calves", "Core", "Traps",
-  "Full Body", "Cardio", "Stretching",
+  "Full Body", "Cardio", "Stretching", "Adductors", "Abductors",
 ];
 
 export const EQUIPMENT_TYPES = [
