@@ -503,14 +503,23 @@ function ExerciseSearch({
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dropPos, setDropPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
+
+  const calcPos = () => {
+    if (inputRef.current) {
+      const r = inputRef.current.getBoundingClientRect();
+      setDropPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+  };
 
   useEffect(() => { setQuery(value); }, [value]);
 
   useEffect(() => {
-    if (!query.trim()) { setResults([]); return; }
+    if (!query.trim()) { setResults([]); setOpen(false); return; }
     const t = setTimeout(() => {
       searchApi.exercises(query, muscle ? { muscle } : {}, 10)
-        .then((r) => { setResults(r.data.results); setOpen(true); })
+        .then((r) => { setResults(r.data.results); calcPos(); setOpen(true); })
         .catch(() => {});
     }, 200);
     return () => clearTimeout(t);
@@ -519,31 +528,34 @@ function ExerciseSearch({
   return (
     <div className="relative">
       <input
+        ref={inputRef}
         value={query}
         onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); }}
-        onFocus={() => query && setOpen(true)}
+        onFocus={() => { if (query && results.length > 0) { calcPos(); setOpen(true); } }}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}
         className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
       />
-      {open && results.length > 0 && (
-        <ul className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-          {results.map((ex) => (
-            <li
-              key={ex.id}
-              onMouseDown={() => { setQuery(ex.name); onChange(ex.name, ex); setOpen(false); }}
-              className="px-3 py-2 text-sm hover:bg-brand-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 cursor-pointer"
-            >
-              <span className="font-medium">{ex.name}</span>
-              <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{ex.primaryMuscle} · {ex.equipment}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {open && query.trim() && results.length === 0 && (
-        <p className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-md px-3 py-2 text-xs text-gray-400 dark:text-gray-500">
-          No exercises found — try a different name or muscle filter.
-        </p>
+      {open && (
+        <div
+          style={{ position: "fixed", top: dropPos.top, left: dropPos.left, width: dropPos.width, zIndex: 9999 }}
+          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-h-52 overflow-y-auto"
+        >
+          {results.length > 0 ? (
+            results.map((ex) => (
+              <div
+                key={ex.id}
+                onMouseDown={() => { setQuery(ex.name); onChange(ex.name, ex); setOpen(false); }}
+                className="px-3 py-2 text-sm hover:bg-brand-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 cursor-pointer"
+              >
+                <span className="font-medium">{ex.name}</span>
+                <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">{ex.primaryMuscle} · {ex.equipment}</span>
+              </div>
+            ))
+          ) : (
+            <p className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">No exercises found — try a different name or muscle filter.</p>
+          )}
+        </div>
       )}
     </div>
   );

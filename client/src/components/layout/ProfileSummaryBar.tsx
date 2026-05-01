@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { dashboardApi } from "../../api";
 import { useAuthStore } from "../../store/authStore";
@@ -18,12 +18,11 @@ export function ProfileSummaryBar() {
   const navigate  = useNavigate();
   const [data, setData] = useState<SummaryData | null>(null);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     if (!user) return;
     dashboardApi.get().then((r) => {
       const d = r.data;
       const goal = d.activeGoal;
-      // Estimate body fat from weight/height/age/sex if all available
       let bf: number | null = null;
       if (user.weight && user.height && user.age && user.sex) {
         const bmi = user.weight / ((user.height / 100) ** 2);
@@ -43,6 +42,13 @@ export function ProfileSummaryBar() {
       });
     }).catch(() => {});
   }, [user]);
+
+  useEffect(() => {
+    fetchData();
+    // Re-fetch whenever a food is logged anywhere in the app
+    window.addEventListener("fitai:food-logged", fetchData);
+    return () => window.removeEventListener("fitai:food-logged", fetchData);
+  }, [fetchData]);
 
   if (!data) return null;
 

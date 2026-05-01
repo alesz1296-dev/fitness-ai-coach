@@ -2211,8 +2211,9 @@ export default function NutritionPage() {
   const isFav = (name: string) => favFoods.some((f) => f.foodName === name);
   const relogFav = async (fav: FoodLog) => {
     try {
-      await foodApi.log({ foodName: fav.foodName, calories: fav.calories, protein: fav.protein ?? undefined, carbs: fav.carbs ?? undefined, fats: fav.fats ?? undefined, quantity: fav.quantity, unit: fav.unit, date });
+      await foodApi.log({ foodName: fav.foodName, calories: fav.calories, protein: fav.protein ?? undefined, carbs: fav.carbs ?? undefined, fats: fav.fats ?? undefined, quantity: fav.quantity ?? 1, unit: fav.unit ?? "serving", date });
       await load();
+      window.dispatchEvent(new Event("fitai:food-logged"));
     } catch { /* silent */ }
   };
   const [relogging,     setRelogging]     = useState<string | null>(null);
@@ -2233,7 +2234,8 @@ export default function NutritionPage() {
     const pseudo: FoodLog = {
       id: 0, foodName: item.name, calories: item.calories,
       protein: item.protein ?? null, carbs: item.carbs ?? null, fats: item.fats ?? null,
-      quantity: item.defaultQty, unit: item.defaultUnit, meal: "snack" as FoodLog["meal"],
+      quantity: item.defaultQty ?? item.servingSize ?? 100, unit: item.defaultUnit ?? item.servingUnit ?? "g",
+      meal: "snack" as FoodLog["meal"],
       date, userId: 0,
     };
     toggleFav(pseudo);
@@ -2262,63 +2264,46 @@ export default function NutritionPage() {
         date,
       });
       await load();
+      window.dispatchEvent(new Event("fitai:food-logged"));
     } catch { /* silent */ }
     finally { setRelogging(null); }
   };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
-      {/* Header + date nav */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white">Nutrition</h1>
-          <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm mt-1">{format(parseISO(date), "EEEE, MMMM d")}</p>
+      {/* Header: title + date nav on one row, action buttons below */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Nutrition</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{format(parseISO(date), "EEEE, MMMM d")}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm"
+              onClick={() => setDatePersist(subDays(parseISO(date), 1).toISOString().split("T")[0])}>←</Button>
+            <input
+              type="date"
+              value={date}
+              max={new Date().toISOString().split("T")[0]}
+              onChange={(e) => setDatePersist(e.target.value)}
+              className="border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <Button variant="secondary" size="sm"
+              disabled={isToday}
+              onClick={() => setDatePersist(addDays(parseISO(date), 1).toISOString().split("T")[0])}>→</Button>
+          </div>
         </div>
+        {/* Action buttons row — kept BELOW the date so macros render first */}
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="secondary" size="sm"
-            onClick={() => setDatePersist(subDays(parseISO(date), 1).toISOString().split("T")[0])}>←</Button>
-          <input
-            type="date"
-            value={date}
-            max={new Date().toISOString().split("T")[0]}
-            onChange={(e) => setDatePersist(e.target.value)}
-            className="border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-          />
-          <Button variant="secondary" size="sm"
-            disabled={isToday}
-            onClick={() => setDatePersist(addDays(parseISO(date), 1).toISOString().split("T")[0])}>→</Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowMealPlan(true)}
-            title="Get an AI-generated meal plan for today"
-          >
-            ✨ Suggest Plan
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate("/chat?agent=nutritionist")}
-            title="Chat with your AI nutritionist"
-          >
-            🥗 Ask Nutritionist
-          </Button>
+          <Button onClick={() => { setEditItem(null); setShowForm(true); }}>+ Log Food</Button>
           <Button
             variant="secondary"
             size="sm"
             onClick={toggleFasting}
-            className={fastingActive ? "border-violet-400 text-violet-700 bg-violet-50" : ""}
-            title={fastingActive ? "End fasting window" : "Start fasting timer"}
+            style={fastingActive ? { borderColor: "#a78bfa", color: "#6d28d9", backgroundColor: "#f5f3ff" } : {}}
+            title={fastingActive ? `End fast · ${formatFastingDuration(fastingElapsed)} elapsed` : "Start fasting timer"}
           >
-            {fastingActive ? "⏸ End Fast" : "⏱ Start Fast"}
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowDish(true)}
-            title="Build a dish or bowl from multiple ingredients"
-          >
-            🥣 Build a Dish
+            {fastingActive ? `⏸ ${formatFastingDuration(fastingElapsed)}` : "⏱ Start Fast"}
           </Button>
           <Button
             variant="secondary"
@@ -2328,7 +2313,30 @@ export default function NutritionPage() {
           >
             📋 My Foods
           </Button>
-          <Button onClick={() => { setEditItem(null); setShowForm(true); }}>+ Log Food</Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowDish(true)}
+            title="Build a dish or bowl from multiple ingredients"
+          >
+            🥣 Build Dish
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowMealPlan(true)}
+            title="Get an AI-generated meal plan for today"
+          >
+            ✨ AI Plan
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/chat?agent=nutritionist")}
+            title="Chat with your AI nutritionist"
+          >
+            🥗 Ask AI
+          </Button>
         </div>
       </div>
 
@@ -3008,7 +3016,7 @@ export default function NutritionPage() {
         <LogFoodForm
           selectedDate={date}
           editItem={editItem}
-          onSave={() => { setShowForm(false); setEditItem(null); load(); }}
+          onSave={() => { setShowForm(false); setEditItem(null); load(); window.dispatchEvent(new Event("fitai:food-logged")); }}
           onClose={() => { setShowForm(false); setEditItem(null); }}
         />
       </Modal>
@@ -3026,7 +3034,7 @@ export default function NutritionPage() {
         open={showDish}
         onClose={() => setShowDish(false)}
         selectedDate={date}
-        onSaved={() => { setShowDish(false); load(); }}
+        onSaved={() => { setShowDish(false); load(); window.dispatchEvent(new Event("fitai:food-logged")); }}
       />
 
       {/* ── My Foods panel ─────────────────────────────────────────────────── */}
