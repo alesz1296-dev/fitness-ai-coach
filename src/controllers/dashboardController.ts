@@ -160,8 +160,8 @@ export const getDashboard = async (
     // ── Date helpers (timezone-aware, 4am rollover) ──────────────────────────
     const { start: startOfToday, end: endOfToday, dateStr: todayStr } = getDayBounds(tz);
 
-    const startOf90Days = new Date(startOfToday);
-    startOf90Days.setDate(startOfToday.getDate() - 90);
+    const startOf14Days = new Date(startOfToday);
+    startOf14Days.setDate(startOfToday.getDate() - 14);
 
     // Start of the current week (Monday) relative to user's effective today
     const startOfWeek = new Date(startOfToday);
@@ -204,8 +204,9 @@ export const getDashboard = async (
       }),
 
       prisma.weightLog.findMany({
-        where: { userId, date: { gte: startOf90Days } },
+        where: { userId, date: { gte: startOf14Days } },
         orderBy: { date: "asc" },
+        take: 14,
       }),
 
       prisma.workout.findMany({

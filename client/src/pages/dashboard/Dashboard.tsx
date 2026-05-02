@@ -433,7 +433,28 @@ export default function Dashboard() {
         {/* Calorie progress */}
         <Card className="lg:col-span-1">
           <CardHeader title="Today's Calories" subtitle={format(new Date(), "MMMM d")} />
-          <div className="flex flex-col items-center py-4">
+
+          {/* Macros — at top so they're immediately visible */}
+          <div className="space-y-3 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700">
+            <MacroBar label="Protein" value={today.totals.protein ?? 0} target={activeGoal?.proteinGrams} color="bg-blue-500" />
+            <MacroBar label="Carbs"   value={today.totals.carbs   ?? 0} target={activeGoal?.carbsGrams}   color="bg-yellow-400" />
+            <MacroBar label="Fats"    value={today.totals.fats    ?? 0} target={activeGoal?.fatsGrams}    color="bg-red-400" />
+          </div>
+
+          {/* Macro cycling day type badge */}
+          {activeGoal?.macrosCycling && (
+            <div className="mb-3 flex justify-center">
+              <span className={`text-xs font-medium px-3 py-1 rounded-full ${
+                today.hasWorkout
+                  ? "bg-indigo-100 text-indigo-700"
+                  : "bg-slate-100 text-slate-600"
+              }`}>
+                {today.hasWorkout ? "🏋️ Training Day Macros" : "😴 Rest Day Macros"}
+              </span>
+            </div>
+          )}
+
+          <div className="flex flex-col items-center py-2">
             {/* Ring */}
             <div className="relative w-36 h-36">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -491,26 +512,6 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-
-          {/* Macros */}
-          <div className="space-y-3 mt-2 border-t border-gray-100 dark:border-gray-700 pt-4">
-            <MacroBar label="Protein" value={today.totals.protein ?? 0} target={activeGoal?.proteinGrams} color="bg-blue-500" />
-            <MacroBar label="Carbs"   value={today.totals.carbs   ?? 0} target={activeGoal?.carbsGrams}   color="bg-yellow-400" />
-            <MacroBar label="Fats"    value={today.totals.fats    ?? 0} target={activeGoal?.fatsGrams}    color="bg-red-400" />
-          </div>
-
-          {/* Macro cycling day type badge */}
-          {activeGoal?.macrosCycling && (
-            <div className="mt-3 flex justify-center">
-              <span className={`text-xs font-medium px-3 py-1 rounded-full ${
-                today.hasWorkout
-                  ? "bg-indigo-100 text-indigo-700"
-                  : "bg-slate-100 text-slate-600"
-              }`}>
-                {today.hasWorkout ? "🏋️ Training Day Macros" : "😴 Rest Day Macros"}
-              </span>
-            </div>
-          )}
         </Card>
 
         {/* Weight chart */}
@@ -670,7 +671,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Weight FAB ────────────────────────────────────────────────────── */}
-      <div className="fixed bottom-32 right-4 z-50 flex flex-col items-end gap-3 md:bottom-8 md:right-8">
+      <div className="fixed bottom-20 left-4 z-50 flex flex-col items-start gap-3 md:bottom-8 md:left-auto md:right-8 md:items-end">
         {showWeightFab && (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">⚖️ Log Weight</p>
@@ -849,10 +850,4 @@ export default function Dashboard() {
                   {a.label}
                 </button>
               ))}
-            </div>
-          </Card>
-        </div>
-      </div>
-    </div>
-  );
-}
+            <
