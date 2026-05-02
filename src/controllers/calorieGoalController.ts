@@ -183,19 +183,32 @@ export const getProjection = async (
     const msPerWeek = 7 * 24 * 60 * 60 * 1000;
     const weeksRemaining = Math.max(1, Math.ceil((goal.targetDate.getTime() - today.getTime()) / msPerWeek));
 
-    const projected = generateProjection(goal.currentWeight, goal.weeklyChange, weeksRemaining + 2);
+    // Fetch ALL weight logs (no date filter) so the projection always seeds from the
+    // true latest weight, even if logs predate the goal creation timestamp.
+    const [actualLogs, latestLog] = await Promise.all([
+      prisma.weightLog.findMany({
+        where:   { userId: req.user!.id },
+        orderBy: { date: "asc" },
+        select:  { date: true, weight: true },
+      }),
+      prisma.weightLog.findFirst({
+        where:   { userId: req.user!.id },
+        orderBy: { date: "desc" },
+        select:  { weight: true },
+      }),
+    ]);
 
-    // Get actual weight logs since goal creation
-    const actualLogs = await prisma.weightLog.findMany({
-      where: { userId: req.user!.id, date: { gte: goal.createdAt } },
-      orderBy: { date: "asc" },
-      select: { date: true, weight: true },
-    });
+    // Deduplicate by calendar date — keep latest reading per day
+    const byDate = new Map<string, { date: string; weight: number }>();
+    for (const l of actualLogs) {
+      const d = l.date.toISOString().split("T")[0];
+      byDate.set(d, { date: d, weight: l.weight }); // later entries overwrite
+    }
+    const actual = Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
 
-    const actual = actualLogs.map((l) => ({
-      date: l.date.toISOString().split("T")[0],
-      weight: l.weight,
-    }));
+    // Always seed from the most-recently logged weight
+    const latestWeight = latestLog?.weight ?? goal.currentWeight;
+    const projected = generateProjection(latestWeight, goal.weeklyChange, weeksRemaining + 2);
 
     res.json({
       goal,

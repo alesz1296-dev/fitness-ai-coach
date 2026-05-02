@@ -1106,6 +1106,33 @@ export default function ProgressPage() {
     load();
   };
 
+  // Edit weight log
+  const [editingLog,  setEditingLog]  = useState<WeightLog | null>(null);
+  const [editWeight,  setEditWeight]  = useState("");
+  const [editDate,    setEditDate]    = useState("");
+  const [editNotes,   setEditNotes]   = useState("");
+  const [savingEdit,  setSavingEdit]  = useState(false);
+
+  const openEdit = (log: WeightLog) => {
+    setEditingLog(log);
+    setEditWeight(String(log.weight));
+    setEditDate(log.date.split("T")[0]);
+    setEditNotes(log.notes ?? "");
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingLog) return;
+    const w = Number(editWeight);
+    if (!w || w < 20 || w > 500) return;
+    setSavingEdit(true);
+    try {
+      await weightApi.update(editingLog.id, { weight: w, date: editDate, notes: editNotes || undefined });
+      setEditingLog(null);
+      load();
+    } catch { /* silent */ }
+    finally { setSavingEdit(false); }
+  };
+
   const chartData = logs.map((l) => ({
     date:   format(parseISO(l.date), "MMM d"),
     weight: l.weight,
@@ -1267,7 +1294,18 @@ export default function ProgressPage() {
                           </td>
                           <td className="py-2.5 pl-4 text-gray-500 dark:text-gray-400 text-xs">{log.notes}</td>
                           <td className="py-2.5 text-right">
-                            <button onClick={() => deleteLog(log.id)} className="text-gray-300 hover:text-red-400 transition-colors text-xs px-2 py-1">✕</button>
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => openEdit(log)}
+                                className="text-gray-400 hover:text-brand-500 transition-colors text-xs px-2 py-1 rounded"
+                                title="Edit entry"
+                              >✏️</button>
+                              <button
+                                onClick={() => deleteLog(log.id)}
+                                className="text-gray-300 hover:text-red-400 transition-colors text-xs px-2 py-1 rounded"
+                                title="Delete entry"
+                              >✕</button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1299,6 +1337,36 @@ export default function ProgressPage() {
       {/* ── Log Weight Modal ─────────────────────────────────────────────── */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Log Weight">
         <LogWeightForm onSave={() => { setShowForm(false); load(); }} onClose={() => setShowForm(false)} />
+      </Modal>
+
+      {/* ── Edit Weight Log Modal ────────────────────────────────────────── */}
+      <Modal open={editingLog !== null} onClose={() => setEditingLog(null)} title="Edit Weight Entry">
+        <div className="space-y-4">
+          <Input
+            label="Weight (kg)"
+            type="number"
+            step="0.1"
+            value={editWeight}
+            onChange={(e) => setEditWeight(e.target.value)}
+            placeholder="75.5"
+          />
+          <Input
+            label="Date"
+            type="date"
+            value={editDate}
+            onChange={(e) => setEditDate(e.target.value)}
+          />
+          <Input
+            label="Notes (optional)"
+            value={editNotes}
+            onChange={(e) => setEditNotes(e.target.value)}
+            placeholder="Morning weight, after gym…"
+          />
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => setEditingLog(null)}>Cancel</Button>
+            <Button className="flex-1" loading={savingEdit} onClick={handleEditSubmit}>Save Changes</Button>
+          </div>
+        </div>
       </Modal>
 
     </div>

@@ -198,42 +198,22 @@ export default function Dashboard() {
 
   // Build merged chart data: actual weight logs + projection overlay
   const weightChartData = (() => {
-    // Map actual logs by date string for merging
-    const actualMap: Record<string, number> = {};
-    weightLogs.forEach((l) => {
-      const key = format(parseISO(l.date), "MMM d");
-      actualMap[key] = l.weight;
-    });
-
-    // Collect all date keys (actual + projected)
-    const allKeys = new Set<string>(Object.keys(actualMap));
-
-    if (projection?.projected?.length) {
-      // Project data has { week, date, projectedWeight } - show up to 8 weeks out
-      projection.projected.slice(0, 8).forEach((p: any) => {
-        // Accept both "date" field (ISO) and "week" offset
-        const d = p.date ? format(parseISO(p.date), "MMM d")
-                         : format(addWeeks(new Date(), p.week), "MMM d");
-        allKeys.add(d);
-      });
+    // Deduplicate logs by calendar date — keep the latest reading per day
+    // (multiple logs on same date cause duplicate x-axis labels)
+    const dedupMap = new Map<string, { date: string; weight: number }>();
+    for (const l of weightLogs) {
+      const iso = typeof l.date === "string" ? l.date : (l.date as Date).toISOString();
+      const dayKey = iso.split("T")[0];
+      dedupMap.set(dayKey, { date: iso, weight: l.weight }); // last write wins (logs are asc)
     }
+    const dedupedLogs = Array.from(dedupMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
-    // Build projection map
-    const projMap: Record<string, number> = {};
-    if (projection?.projected?.length) {
-      projection.projected.slice(0, 8).forEach((p: any) => {
-        const d = p.date ? format(parseISO(p.date), "MMM d")
-                         : format(addWeeks(new Date(), p.week), "MMM d");
-        projMap[d] = p.projectedWeight;
-      });
-    }
-
-    // week-0 projection seeds from the latest logged weight (always = today's position)
+    // week-0 projection = today's weight seed from backend (should equal latest actual weight)
     const proj0Weight = projection?.projected?.[0]?.projectedWeight;
     const todayKey    = format(new Date(), "MMM d");
 
-    // Merge: sort chronologically using original log order then projected future dates
-    const actualPoints = weightLogs.map((l) => ({
+    // Actual points from deduplicated logs
+    const actualPoints = dedupedLogs.map((l) => ({
       date: format(parseISO(l.date), "MMM d"),
       weight: l.weight,
       projected: undefined as number | undefined,
@@ -241,21 +221,20 @@ export default function Dashboard() {
 
     const actualKeys = new Set(actualPoints.map((p) => p.date));
 
-    // Bridge point at TODAY: keeps the purple line anchored to the present even if
-    // the last weight log was several days ago.  Without this, each day that passes
-    // without a new log creates a visible gap before the first future projection dot.
+    // Connect last actual point to the purple line:
+    // set its projected value = proj0Weight so the two series share a point
+    if (proj0Weight != null && actualPoints.length > 0) {
+      actualPoints[actualPoints.length - 1].projected = proj0Weight;
+    }
+
+    // Bridge point at TODAY when last log was before today:
+    // keeps the purple line visible even if the user hasn't logged today yet.
     const todayBridgePoint =
       proj0Weight != null && !actualKeys.has(todayKey)
         ? [{ date: todayKey, weight: undefined as number | undefined, projected: proj0Weight }]
         : [];
 
-    // Also set the projected value on the last actual point so the purple line
-    // connects backward from the bridge to the last real log.
-    if (proj0Weight != null && actualPoints.length > 0) {
-      actualPoints[actualPoints.length - 1].projected = proj0Weight;
-    }
-
-    // Future weekly projections — skip week-0 (already covered by bridge above)
+    // Future weekly projections — skip week-0 (already plotted on last actual / bridge)
     const futurePoints = projection?.projected
       ?.slice(1, 9)
       .map((p: any) => {
