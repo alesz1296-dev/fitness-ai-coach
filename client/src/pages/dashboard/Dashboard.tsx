@@ -88,7 +88,15 @@ export default function Dashboard() {
   const [editVal,    setEditVal]      = useState("");
   const [savingEdit, setSavingEdit]   = useState(false);
 
-  const refreshDash = () => dashboardApi.get().then((r) => setData(r.data)).catch(() => {});
+  const refreshDash = () => dashboardApi.get().then((r) => {
+    setData(r.data);
+    // Always re-fetch projection after any weight change — it seeds from latest weight
+    if (r.data.activeGoal) {
+      calorieGoalsApi.getProjection(r.data.activeGoal.id)
+        .then((pr) => setProjection({ projected: pr.data.projected, actual: pr.data.actual }))
+        .catch(() => {});
+    }
+  }).catch(() => {});
 
   const handleDeleteWeight = async (id: number) => {
     if (!confirm("Delete this weight entry?")) return;
@@ -128,8 +136,15 @@ export default function Dashboard() {
       setWeightSaved(true);
       setWeightVal("");
       setTimeout(() => { setShowWeightFab(false); setWeightSaved(false); }, 800);
-      // Refresh dashboard data
-      dashboardApi.get().then((r) => setData(r.data)).catch(() => {});
+      // Refresh dashboard AND projection — projection seeds from latest weight so must re-fetch
+      dashboardApi.get().then((r) => {
+        setData(r.data);
+        if (r.data.activeGoal) {
+          calorieGoalsApi.getProjection(r.data.activeGoal.id)
+            .then((pr) => setProjection({ projected: pr.data.projected, actual: pr.data.actual }))
+            .catch(() => {});
+        }
+      }).catch(() => {});
     } catch { /* silent */ }
     finally { setSavingWeight(false); }
   };
@@ -213,25 +228,44 @@ export default function Dashboard() {
       });
     }
 
-    // Merge: sort chronologically by using original log order then projected future dates
-    const actualPoints = weightLogs.map((l, idx) => {
-      const key    = format(parseISO(l.date), "MMM d");
-      const isLast = idx === weightLogs.length - 1;
-      // Only bridge the last actual point into the projection; don't overlay historical dates
-      return { date: key, weight: l.weight, projected: isLast ? (projMap[key] ?? undefined) : undefined };
-    });
+    // week-0 projection seeds from the latest logged weight (always = today's position)
+    const proj0Weight = projection?.projected?.[0]?.projectedWeight;
+    const todayKey    = format(new Date(), "MMM d");
+
+    // Merge: sort chronologically using original log order then projected future dates
+    const actualPoints = weightLogs.map((l) => ({
+      date: format(parseISO(l.date), "MMM d"),
+      weight: l.weight,
+      projected: undefined as number | undefined,
+    }));
 
     const actualKeys = new Set(actualPoints.map((p) => p.date));
+
+    // Bridge point at TODAY: keeps the purple line anchored to the present even if
+    // the last weight log was several days ago.  Without this, each day that passes
+    // without a new log creates a visible gap before the first future projection dot.
+    const todayBridgePoint =
+      proj0Weight != null && !actualKeys.has(todayKey)
+        ? [{ date: todayKey, weight: undefined as number | undefined, projected: proj0Weight }]
+        : [];
+
+    // Also set the projected value on the last actual point so the purple line
+    // connects backward from the bridge to the last real log.
+    if (proj0Weight != null && actualPoints.length > 0) {
+      actualPoints[actualPoints.length - 1].projected = proj0Weight;
+    }
+
+    // Future weekly projections — skip week-0 (already covered by bridge above)
     const futurePoints = projection?.projected
-      ?.slice(0, 8)
+      ?.slice(1, 9)
       .map((p: any) => {
         const key = p.date ? format(parseISO(p.date), "MMM d")
                            : format(addWeeks(new Date(), p.week), "MMM d");
-        return { date: key, projected: p.projectedWeight, weight: undefined };
+        return { date: key, projected: p.projectedWeight, weight: undefined as number | undefined };
       })
-      .filter((p) => !actualKeys.has(p.date)) ?? [];
+      .filter((p) => !actualKeys.has(p.date) && p.date !== todayKey) ?? [];
 
-    return [...actualPoints, ...futurePoints];
+    return [...actualPoints, ...todayBridgePoint, ...futurePoints];
   })();
 
   const hasProjection = projection?.projected && projection.projected.length > 0;
