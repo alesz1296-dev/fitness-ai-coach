@@ -662,9 +662,7 @@ export default function Dashboard() {
             <div className="h-52 flex flex-col items-center justify-center text-gray-400">
               <span className="text-4xl mb-3">⚖️</span>
               <p className="text-sm">{t("progress.noWeightData")}</p>
-              <Button variant="secondary" size="sm" className="mt-3" onClick={() => setShowWeightFab(true)}>
-                Log your weight
-              </Button>
+              <p className="text-xs mt-2 opacity-60">↘ {t("dashboard.logYourWeight")}</p>
             </div>
           )}
         </Card>
