@@ -221,28 +221,33 @@ export default function Dashboard() {
 
     const actualKeys = new Set(actualPoints.map((p) => p.date));
 
-    // Connect last actual point to the purple line:
-    // set its projected value = proj0Weight so the two series share a point
+    // Anchor: last actual point gets the projected value so the purple line
+    // starts exactly where the green line ends — no gap.
     if (proj0Weight != null && actualPoints.length > 0) {
       actualPoints[actualPoints.length - 1].projected = proj0Weight;
     }
 
-    // Bridge point at TODAY when last log was before today:
-    // keeps the purple line visible even if the user hasn't logged today yet.
+    // Bridge: if user hasn't logged today, add a today-anchor so the
+    // purple line is visible even on days without a weigh-in.
     const todayBridgePoint =
       proj0Weight != null && !actualKeys.has(todayKey)
         ? [{ date: todayKey, weight: undefined as number | undefined, projected: proj0Weight }]
         : [];
 
-    // Future weekly projections — skip week-0 (already plotted on last actual / bridge)
-    const futurePoints = projection?.projected
-      ?.slice(1, 9)
-      .map((p: any) => {
-        const key = p.date ? format(parseISO(p.date), "MMM d")
-                           : format(addWeeks(new Date(), p.week), "MMM d");
+    // Future weekly projections — dates generated CLIENT-SIDE from the last
+    // actual log date so server UTC timezone never causes a 1-day gap.
+    const lastLogDate = dedupedLogs.length > 0
+      ? parseISO(dedupedLogs[dedupedLogs.length - 1].date)
+      : new Date();
+
+    const futurePoints = (projection?.projected ?? [])
+      .slice(1, 9)
+      .map((p: any, idx: number) => {
+        // Week (idx+1) from the last actual log — timezone-independent
+        const key = format(addWeeks(lastLogDate, idx + 1), "MMM d");
         return { date: key, projected: p.projectedWeight, weight: undefined as number | undefined };
       })
-      .filter((p) => !actualKeys.has(p.date) && p.date !== todayKey) ?? [];
+      .filter((p) => !actualKeys.has(p.date) && p.date !== todayKey);
 
     return [...actualPoints, ...todayBridgePoint, ...futurePoints];
   })();
