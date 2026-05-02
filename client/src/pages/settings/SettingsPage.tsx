@@ -122,8 +122,16 @@ function ProfileForm() {
         trainingDaysPerWeek: newDays,
         trainingHoursPerDay: form.trainingHoursPerDay ? Number(form.trainingHoursPerDay) : null,
       };
+      const oldWeight = user?.weight ?? null;
+      const newWeight = payload.weight ?? null;
       const res = await usersApi.updateProfile(payload);
       updateUser(res.data.user);
+
+      // Notify other tabs/components that weight changed
+      if (newWeight && newWeight !== oldWeight) {
+        window.dispatchEvent(new CustomEvent("fitai:weight-logged", { detail: { weight: newWeight } }));
+        toast.show(`Weight updated to ${newWeight} kg ✓`);
+      }
 
       // If training days changed — sync to calorieGoal + show toast
       if (newDays && newDays !== oldDays) {
@@ -134,8 +142,8 @@ function ProfileForm() {
         }
         setPlanNudge(newDays);
         setTimeout(() => setPlanNudge(null), 8000);
-        toast.show(`Training days updated to ${newDays}! 💪`);
-      } else {
+        if (!newWeight || newWeight === oldWeight) toast.show(`Training days updated to ${newDays}! 💪`);
+      } else if (!newWeight || newWeight === oldWeight) {
         setSuccess("Profile saved!");
         setTimeout(() => setSuccess(""), 3000);
       }
@@ -761,7 +769,7 @@ function AccountInfo() {
           <div className="flex justify-between text-sm">
             <span className="text-gray-500 dark:text-gray-400">{t("settings.memberSince")}</span>
             <span className="font-medium text-gray-800 dark:text-gray-200">
-              {new Date(user.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              {new Date(user.createdAt).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
             </span>
           </div>
         )}

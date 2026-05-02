@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
+import { fmtMonthDay, fmtWeekdayLongDate } from "../../lib/dateFormat";
 import { useNavigate, useLocation } from "react-router-dom";
 import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi, customFoodsApi, weightApi, workoutsApi,
 } from "../../api";
@@ -296,7 +297,7 @@ function CustomFoodModal({
   onSave: (food: CustomFood) => void;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [name,        setName]        = useState(initial?.name        ?? "");
   const [calories,    setCalories]    = useState(String(initial?.calories    ?? ""));
   const [protein,     setProtein]     = useState(String(initial?.protein     ?? ""));
@@ -316,13 +317,13 @@ function CustomFoodModal({
     const q = cloneQuery.trim();
     if (!q) { setCloneResults([]); setCloneOpen(false); return; }
     const t = setTimeout(() => {
-      searchApi.foods(q, 10).then((r) => {
+      searchApi.foods(q, 10, undefined, i18n.language).then((r) => {
         setCloneResults(r.data.results);
         setCloneOpen(true);
       }).catch(() => {});
     }, 200);
     return () => clearTimeout(t);
-  }, [cloneQuery]);
+  }, [cloneQuery, i18n.language]);
 
   const applyClone = (f: any) => {
     setName(f.name);
@@ -432,7 +433,7 @@ function CustomFoodModal({
 
 // ── Food search (global DB + My Foods tab) ────────────────────────────────────
 function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [tab,       setTab]       = useState<"all" | "mine">("all");
   const [query,     setQuery]     = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
@@ -462,13 +463,13 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
     const q = query.trim();
     if (!q && activeTags.length === 0) { setResults([]); setOpen(false); return; }
     const t = setTimeout(() => {
-      searchApi.foods(q, 20, activeTags.length > 0 ? activeTags : undefined).then((r) => {
+      searchApi.foods(q, 20, activeTags.length > 0 ? activeTags : undefined, i18n.language).then((r) => {
         setResults(r.data.results);
         setOpen(true);
       }).catch(() => {});
     }, q ? 200 : 0);
     return () => clearTimeout(t);
-  }, [query, activeTags, tab]);
+  }, [query, activeTags, tab, i18n.language]);
 
   const handleTagClick = (tag: string, e: React.MouseEvent) => {
     // Ignore the 2nd click of a double-click sequence (e.detail === 2);
@@ -1527,7 +1528,7 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
   const fetchPlan = async () => {
     setStatus("fetching"); setError("");
     try {
-      const today = format(parseISO(selectedDate), "EEEE, MMMM d");
+      const today = fmtWeekdayLongDate(parseISO(selectedDate));
       const res = await chatApi.send({
         message: `Please suggest a complete daily meal plan for me for ${today}. Include breakfast, lunch, dinner and one snack, with specific foods and realistic portion sizes that fit my goals.`,
         agentType: "nutritionist",
@@ -1995,7 +1996,7 @@ function NutritionToastBanner({ msg }: { msg: string | null }) {
 
 // ── Main Nutrition page ───────────────────────────────────────────────────────
 export default function NutritionPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { hash } = useLocation();
   const toast = useNutritionToast();
@@ -2313,23 +2314,43 @@ export default function NutritionPage() {
     } finally { setLoading(false); }
   }, [date]);
 
+  // Silent version — same fetch but NO spinner. Used for all post-action refreshes so the
+  // food list stays visible and updates in place instead of flashing a loading state.
+  const silentLoad = useCallback(async () => {
+    try {
+      const [foodRes, goalRes, burnedRes] = await Promise.all([
+        foodApi.getToday(date),
+        calorieGoalsApi.getActive().catch(() => ({ data: { goal: null } })),
+        workoutsApi.getCaloriesBurned(date).catch(() => ({ data: { totalBurned: 0, workouts: [] } })),
+      ]);
+      setLogs(foodRes.data.logs);
+      setTotals(foodRes.data.totals);
+      setActiveGoal(goalRes.data.goal);
+      setCaloriesBurned(burnedRes.data.totalBurned ?? 0);
+      setBurnedWorkouts(
+        (burnedRes.data.workouts ?? [])
+          .filter((w: any) => w.caloriesBurned > 0)
+          .map((w: any) => ({ id: w.id as number, name: w.name as string, caloriesBurned: w.caloriesBurned as number }))
+      );
+    } catch { /* silent */ }
+  }, [date]);
+
   useEffect(() => { load(); }, [load]);
 
-  // Auto-refresh when AI chat or another component logs food
+  // Auto-refresh silently when AI chat or another component logs food
   useEffect(() => {
-    window.addEventListener("fitai:food-logged", load);
-    return () => window.removeEventListener("fitai:food-logged", load);
-  }, [load]);
+    window.addEventListener("fitai:food-logged", silentLoad);
+    return () => window.removeEventListener("fitai:food-logged", silentLoad);
+  }, [silentLoad]);
 
   const deleteLog = async (id: number) => {
     if (!confirm("Remove this entry?")) return;
     setDeleting(id);
     try {
       await foodApi.delete(id);
-      // Re-fetch from server so totals are always accurate
-      await load();
       window.dispatchEvent(new Event("fitai:food-logged"));
       toast.show("Entry removed");
+      await silentLoad();
     } catch (e: any) {
       alert(e.response?.data?.error || "Failed to delete entry. Please try again.");
     } finally { setDeleting(null); }
@@ -2376,9 +2397,9 @@ export default function NutritionPage() {
   const relogFav = async (fav: FoodLog) => {
     try {
       await foodApi.log({ foodName: fav.foodName, calories: fav.calories, protein: fav.protein ?? undefined, carbs: fav.carbs ?? undefined, fats: fav.fats ?? undefined, quantity: fav.quantity ?? 1, unit: fav.unit ?? "serving", date });
-      await load();
       window.dispatchEvent(new Event("fitai:food-logged"));
       toast.show(`${fav.foodName} logged ✓`);
+      await silentLoad();
     } catch { /* silent */ }
   };
   const [relogging,     setRelogging]     = useState<string | null>(null);
@@ -2395,6 +2416,8 @@ export default function NutritionPage() {
       setWeightSaved(true);
       setWeightVal("");
       setTimeout(() => { setShowWeightFab(false); setWeightSaved(false); }, 800);
+      window.dispatchEvent(new CustomEvent("fitai:weight-logged", { detail: { weight: w } }));
+      toast.show(`Weight logged: ${w} kg ✓`);
     } catch { /* ignore */ }
     finally { setSavingWeight(false); }
   };
@@ -2404,10 +2427,10 @@ export default function NutritionPage() {
     const q = favSearchQ.trim();
     if (!q) { setFavSearchRes([]); return; }
     const t = setTimeout(() => {
-      searchApi.foods(q, 8).then((r) => setFavSearchRes(r.data.results)).catch(() => {});
+      searchApi.foods(q, 8, undefined, i18n.language).then((r) => setFavSearchRes(r.data.results)).catch(() => {});
     }, 220);
     return () => clearTimeout(t);
-  }, [favSearchQ]);
+  }, [favSearchQ, i18n.language]);
   const addFoodToFavs = (item: any) => {
     const pseudo: FoodLog = {
       id: 0, foodName: item.name, calories: item.calories,
@@ -2441,9 +2464,9 @@ export default function NutritionPage() {
         ...(food.meal && { meal: food.meal as FoodLog["meal"] }),
         date,
       });
-      await load();
       window.dispatchEvent(new Event("fitai:food-logged"));
       toast.show(`${food.foodName} logged ✓`);
+      await silentLoad();
     } catch { /* silent */ }
     finally { setRelogging(null); }
   };
@@ -2454,7 +2477,7 @@ export default function NutritionPage() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("nutrition.title")}</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{format(parseISO(date), "EEEE, MMMM d")}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{fmtWeekdayLongDate(parseISO(date))}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm"
@@ -2866,7 +2889,7 @@ export default function NutritionPage() {
           <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">
             {isToday
               ? "Log your first meal to start tracking today's nutrition."
-              : `Nothing was logged on ${format(parseISO(date), "MMM d")}.`}
+              : `Nothing was logged on ${fmtMonthDay(parseISO(date))}.`}
           </p>
           <div className="flex gap-2 justify-center">
             <Button onClick={() => setShowForm(true)}>{t("nutrition.logFood")}</Button>
@@ -3230,7 +3253,7 @@ export default function NutritionPage() {
         <LogFoodForm
           selectedDate={date}
           editItem={editItem}
-          onSave={() => { setShowForm(false); setEditItem(null); load(); window.dispatchEvent(new Event("fitai:food-logged")); toast.show(editItem ? "Entry updated ✓" : "Food logged ✓"); }}
+          onSave={() => { const msg = editItem ? "Entry updated ✓" : "Food logged ✓"; setShowForm(false); setEditItem(null); toast.show(msg); window.dispatchEvent(new Event("fitai:food-logged")); silentLoad(); }}
           onClose={() => { setShowForm(false); setEditItem(null); }}
         />
       </Modal>
@@ -3240,7 +3263,7 @@ export default function NutritionPage() {
         open={showMealPlan}
         onClose={() => setShowMealPlan(false)}
         selectedDate={date}
-        onLogged={() => { load(); window.dispatchEvent(new Event("fitai:food-logged")); toast.show("Meal plan logged ✓"); }}
+        onLogged={() => { toast.show("Meal plan logged ✓"); window.dispatchEvent(new Event("fitai:food-logged")); silentLoad(); }}
       />
 
       {/* Bowl / dish builder modal */}
@@ -3248,7 +3271,7 @@ export default function NutritionPage() {
         open={showDish}
         onClose={() => setShowDish(false)}
         selectedDate={date}
-        onSaved={() => { setShowDish(false); load(); window.dispatchEvent(new Event("fitai:food-logged")); toast.show("Dish saved ✓"); }}
+        onSaved={() => { setShowDish(false); toast.show("Dish saved ✓"); window.dispatchEvent(new Event("fitai:food-logged")); silentLoad(); }}
       />
 
       {/* ── My Foods panel ─────────────────────────────────────────────────── */}
@@ -3344,40 +3367,4 @@ export default function NutritionPage() {
         {showWeightFab && (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">&#9878;&#65039; {t("nutrition.logWeight")}</p>
-            {weightSaved ? (
-              <p className="text-center text-green-600 font-medium text-sm py-1">&#x2705; {t("nutrition.savedConfirm")}</p>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number" step="0.1" min="20" max="400"
-                    placeholder="e.g. 80.5"
-                    value={weightVal}
-                    onChange={(e) => setWeightVal(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleLogWeight()}
-                    className="flex-1 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                    autoFocus
-                  />
-                  <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">kg</span>
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" className="flex-1" onClick={() => { setShowWeightFab(false); setWeightVal(""); }}>{t("common.cancel")}</Button>
-                  <Button size="sm" className="flex-1" loading={savingWeight} onClick={handleLogWeight}>{t("common.save")}</Button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-        <button
-          onClick={() => setShowWeightFab((v) => !v)}
-          className="w-14 h-14 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white rounded-full shadow-lg flex items-center justify-center text-2xl transition-colors"
-          title="Log today's weight"
-        >
-          &#9878;&#65039;
-        </button>
-      </div>
-
-      <NutritionToastBanner msg={toast.msg} />
-    </div>
-  );
-}
+          

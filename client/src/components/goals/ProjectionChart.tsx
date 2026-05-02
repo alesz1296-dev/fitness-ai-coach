@@ -4,6 +4,7 @@
  */
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from "recharts";
 import { format, parseISO } from "date-fns";
+import { fmtMonthDay } from "../../lib/dateFormat";
 import type { ProjectionPoint } from "./goalCalc";
 
 export interface ProjectionChartProps {
@@ -32,7 +33,7 @@ export function ProjectionChart({
   }));
 
   const formatDate = (v: string) => {
-    try { return format(parseISO(v), "MMM d"); }
+    try { return fmtMonthDay(parseISO(v)); }
     catch { return v; }
   };
 

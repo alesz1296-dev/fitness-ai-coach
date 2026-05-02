@@ -4,6 +4,7 @@ import prisma from "../lib/prisma.js";
 import redisClient from "../lib/redis.js";
 import { searchFoods, FOOD_DB }              from "../data/foods.js";
 import { searchExercises, EXERCISE_DB, MUSCLE_GROUPS, EQUIPMENT_TYPES, COMPOUND_GROUP_MAP } from "../data/exercises.js";
+import { getProvider } from "../ai/providers/index.js";
 
 // Cast to any so new models (FoodItem, ExerciseItem) work before `npx prisma generate` is run
 const db = prisma as any;
@@ -30,26 +31,123 @@ function parseJsonArray(raw: string | null | undefined): string[] {
   try { return JSON.parse(raw) as string[]; } catch { return []; }
 }
 
+// ─── AI translation helpers ───────────────────────────────────────────────────
+
+const LANG_CACHE_TTL = 3600; // 1 hour for translations
+
+/**
+ * Translate a search query from any language → English using the configured AI provider.
+ * Returns the original query on any error so search always works.
+ */
+async function translateQueryToEnglish(query: string, sourceLang: string): Promise<string> {
+  if (!query) return query;
+  const cacheKey = `translate:q:${sourceLang}:${query}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) return cached;
+  try {
+    const provider = getProvider();
+    const result = await provider.complete({
+      model: provider.defaultModel,
+      messages: [
+        {
+          role: "system",
+          content: "You are a food translation assistant. Translate the user's food search query to English. Respond with ONLY the translated text — no explanation, no punctuation, no extra words.",
+        },
+        { role: "user", content: `Translate this food search query from ${sourceLang} to English: "${query}"` },
+      ],
+      max_tokens: 60,
+      temperature: 0,
+    });
+    const translated = result.message.content?.trim() ?? query;
+    await cacheSet(cacheKey, translated);
+    // Override TTL to 1h for translations
+    if (redisClient) {
+      try { await redisClient.expire(cacheKey, LANG_CACHE_TTL); } catch { /* ignore */ }
+    }
+    return translated;
+  } catch {
+    return query;
+  }
+}
+
+/**
+ * Translate an array of food names from English → target language.
+ * Returns the original names on any error.
+ */
+async function translateFoodNames(
+  names: string[],
+  targetLang: string
+): Promise<string[]> {
+  if (!names.length) return names;
+  const cacheKey = `translate:names:${targetLang}:${names.join("|")}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    try { return JSON.parse(cached) as string[]; } catch { /* fall through */ }
+  }
+  try {
+    const provider = getProvider();
+    const result = await provider.complete({
+      model: provider.defaultModel,
+      messages: [
+        {
+          role: "system",
+          content: `You are a food translation assistant. Translate the food names from English to ${targetLang}. Return ONLY a JSON array of translated strings in the same order, nothing else. Example: ["pollo", "arroz", "manzana"]`,
+        },
+        { role: "user", content: JSON.stringify(names) },
+      ],
+      max_tokens: 400,
+      temperature: 0,
+    });
+    const raw = result.message.content?.trim() ?? "";
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (!match) return names;
+    const translated = JSON.parse(match[0]) as string[];
+    if (!Array.isArray(translated) || translated.length !== names.length) return names;
+    await cacheSet(cacheKey, JSON.stringify(translated));
+    if (redisClient) {
+      try { await redisClient.expire(cacheKey, LANG_CACHE_TTL); } catch { /* ignore */ }
+    }
+    return translated;
+  } catch {
+    return names;
+  }
+}
+
 // ─── Food search ─────────────────────────────────────────────────────────────
 
-// GET /api/search/foods?q=chicken&limit=20&tag=keto&offset=0
+// GET /api/search/foods?q=chicken&limit=20&tag=keto&offset=0&lang=es
 export const foodSearch = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const q      = String(req.query.q     || "").trim();
+    const rawQ   = String(req.query.q     || "").trim();
+    const lang   = String(req.query.lang  || "en").toLowerCase().slice(0, 5);
     const tagsParam = req.query.tags ? String(req.query.tags) : (req.query.tag ? String(req.query.tag) : undefined);
     const tags   = tagsParam ? tagsParam.split(",").map((t) => t.trim()).filter(Boolean) : [];
     const limit  = Math.min(Number(req.query.limit  || 20), 50);
     const offset = Math.max(Number(req.query.offset ||  0),  0);
 
-    // ── Redis cache — food search results are user-agnostic ──────────────────
+    // Translate query to English when user is searching in another language
+    const q = (lang !== "en" && rawQ) ? await translateQueryToEnglish(rawQ, lang) : rawQ;
+
+    // ── Redis cache — keyed by translated English query (lang-neutral) ──────
     const cacheKey = `search:food:${q}:${tags.join("|")}:${limit}:${offset}`;
     const cached   = await cacheGet(cacheKey);
+
+    // ── Helper: translate result names when lang !== "en" ────────────────────
+    async function applyTranslation(items: any[]): Promise<any[]> {
+      if (lang === "en" || !items.length) return items;
+      const names = items.map((f) => f.name as string);
+      const translated = await translateFoodNames(names, lang);
+      return items.map((f, i) => ({ ...f, name: translated[i] ?? f.name }));
+    }
+
     if (cached) {
-      res.json(JSON.parse(cached));
+      const parsed = JSON.parse(cached);
+      parsed.results = await applyTranslation(parsed.results);
+      res.json(parsed);
       return;
     }
 
@@ -70,30 +168,31 @@ export const foodSearch = async (
         db.foodItem.count({ where }),
       ]);
 
-      const payload = {
-        results: results.map((f: any) => ({
-          id:          f.id,
-          name:        f.name,
-          calories:    f.calories,
-          protein:     f.protein,
-          carbs:       f.carbs,
-          fats:        f.fats,
-          defaultQty:  f.defaultQty,
-          defaultUnit: f.defaultUnit,
-          tags:        parseJsonArray(f.tags),
-        })),
-        total,
-        source: "db",
-      };
+      const mapped = results.map((f: any) => ({
+        id:          f.id,
+        name:        f.name,
+        calories:    f.calories,
+        protein:     f.protein,
+        carbs:       f.carbs,
+        fats:        f.fats,
+        defaultQty:  f.defaultQty,
+        defaultUnit: f.defaultUnit,
+        tags:        parseJsonArray(f.tags),
+      }));
 
+      // Cache English results, translate on the way out
+      const payload = { results: mapped, total, source: "db" };
       await cacheSet(cacheKey, JSON.stringify(payload));
+
+      payload.results = await applyTranslation(mapped);
       res.json(payload);
       return;
     }
 
     // ── Fallback: static array ────────────────────────────────────────────────
-    const results = searchFoods(q, limit, tags);
-    res.json({ results, total: FOOD_DB.length, source: "static" });
+    const rawResults = searchFoods(q, limit, tags);
+    const translatedResults = await applyTranslation(rawResults);
+    res.json({ results: translatedResults, total: FOOD_DB.length, source: "static" });
   } catch (e) {
     next(e);
   }

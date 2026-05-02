@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
+import { fmtMonthDay, fmtMonthDayYear } from "../../lib/dateFormat";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip,
   CartesianGrid, LineChart, Line, Legend, ComposedChart, Bar,
@@ -168,6 +169,7 @@ function LogWeightForm({ onSave, onClose }: { onSave: () => void; onClose: () =>
     setLoading(true); setError("");
     try {
       await weightApi.log({ weight: w, notes: notes || undefined, date });
+      window.dispatchEvent(new CustomEvent("fitai:weight-logged", { detail: { weight: w } }));
       onSave();
     } catch (e: any) {
       setError(e.response?.data?.error || "Failed to log weight");
@@ -225,7 +227,7 @@ function BodyCompositionCard({
         .map((l) => {
           const f = calcBodyFat(l.weight, heightCm!, age!, sex!, formula);
           return f !== null
-            ? { date: format(parseISO(l.date), "MMM d"), fatPct: f, weight: l.weight }
+            ? { date: fmtMonthDay(parseISO(l.date)), fatPct: f, weight: l.weight }
             : null;
         })
         .filter(Boolean)
@@ -1096,6 +1098,12 @@ export default function ProgressPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Auto-refresh weight chart when weight is logged from any page
+  useEffect(() => {
+    window.addEventListener("fitai:weight-logged", load);
+    return () => window.removeEventListener("fitai:weight-logged", load);
+  }, [load]);
+
   // Load predictions when Predictions tab is opened (lazy — only fetched once per session)
   useEffect(() => {
     if (tab !== "predictions" || predData !== null) return;
@@ -1140,7 +1148,7 @@ export default function ProgressPage() {
   };
 
   const chartData = logs.map((l) => ({
-    date:   format(parseISO(l.date), "MMM d"),
+    date:   fmtMonthDay(parseISO(l.date)),
     weight: l.weight,
   }));
 
@@ -1286,7 +1294,7 @@ export default function ProgressPage() {
                         : null;
                       return (
                         <tr key={log.id} className="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                          <td className="py-2.5 text-gray-700 dark:text-gray-300">{format(parseISO(log.date), "MMM d, yyyy")}</td>
+                          <td className="py-2.5 text-gray-700 dark:text-gray-300">{fmtMonthDayYear(parseISO(log.date))}</td>
                           <td className="py-2.5 text-right font-semibold text-gray-800 dark:text-gray-100">{log.weight} kg</td>
                           <td className="py-2.5 text-right text-xs text-gray-500 dark:text-gray-400">
                             {fat !== null ? `${fat}%` : "—"}
@@ -1368,13 +1376,4 @@ export default function ProgressPage() {
             onChange={(e) => setEditNotes(e.target.value)}
             placeholder="Morning weight, after gym…"
           />
-          <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setEditingLog(null)}>{t("common.cancel")}</Button>
-            <Button className="flex-1" loading={savingEdit} onClick={handleEditSubmit}>{t("common.save")}</Button>
-          </div>
-        </div>
-      </Modal>
-
-    </div>
-  );
-}
+          <div c

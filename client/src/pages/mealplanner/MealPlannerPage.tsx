@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { format, addDays, startOfWeek, parseISO } from "date-fns";
+import { fmtMonthDay } from "../../lib/dateFormat";
 import { mealPlansApi, searchApi } from "../../api";
 import type { MealPlan, MealPlanDay, MealPlanEntry } from "../../types";
 import { Card } from "../../components/ui/Card";
@@ -307,7 +308,7 @@ function DayColumn({
           </span>
           {isToday && <span className="text-xs bg-brand-600 text-white px-1.5 py-0.5 rounded-full">{t("common.today")}</span>}
         </div>
-        <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">{format(date, "MMM d")}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">{fmtMonthDay(date)}</p>
       </div>
 
       {/* Meals */}
@@ -598,7 +599,7 @@ export default function MealPlannerPage() {
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">{activePlan.name}</h2>
                   <p className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-400">
-                    {format(parseISO(activePlan.weekStart), "MMM d")} — {format(addDays(parseISO(activePlan.weekStart), 6), "MMM d, yyyy")}
+                    {fmtMonthDay(parseISO(activePlan.weekStart))} — {fmtMonthDay(addDays(parseISO(activePlan.weekStart), 6))}
                   </p>
                 </div>
                 {weeklyTotals && weeklyTotals.calories > 0 && (

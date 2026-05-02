@@ -5,6 +5,7 @@ import {
   CartesianGrid, Legend,
 } from "recharts";
 import { format, parseISO, addWeeks } from "date-fns";
+import { fmtMonthDay, fmtMonthDayYear, fmtLongMonthDay, fmtWeekdayFullDate } from "../../lib/dateFormat";
 import { useAuthStore } from "../../store/authStore";
 import { useTranslation } from "../../i18n";
 import { dashboardApi, calorieGoalsApi, weightApi } from "../../api";
@@ -79,6 +80,10 @@ export default function Dashboard() {
   const [loading,    setLoading]    = useState(true);
   const [projection, setProjection] = useState<{ projected: any[]; actual: any[] } | null>(null);
 
+  // ── Toast ─────────────────────────────────────────────────────────────────────
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const showToast = (msg: string) => { setToastMsg(msg); setTimeout(() => setToastMsg(null), 3000); };
+
   // ── Weight FAB ───────────────────────────────────────────────────────────────
   const [showWeightFab,  setShowWeightFab]  = useState(false);
   const [weightVal,      setWeightVal]      = useState("");
@@ -139,6 +144,8 @@ export default function Dashboard() {
       setWeightSaved(true);
       setWeightVal("");
       setTimeout(() => { setShowWeightFab(false); setWeightSaved(false); }, 800);
+      showToast(`Weight logged: ${w} kg ✓`);
+      window.dispatchEvent(new CustomEvent("fitai:weight-logged", { detail: { weight: w } }));
       // Refresh dashboard AND projection — projection seeds from latest weight so must re-fetch
       dashboardApi.get().then((r) => {
         setData(r.data);
@@ -165,6 +172,15 @@ export default function Dashboard() {
       })
       .catch(() => { /* silently fail — show empty state */ })
       .finally(() => setLoading(false));
+  }, []);
+
+  // Re-fetch when weight is logged from any page (NutritionPage FAB, SettingsPage, ProgressPage)
+  useEffect(() => {
+    const handler = () => {
+      refreshDash();
+    };
+    window.addEventListener("fitai:weight-logged", handler);
+    return () => window.removeEventListener("fitai:weight-logged", handler);
   }, []);
 
   if (loading) {
@@ -213,11 +229,11 @@ export default function Dashboard() {
 
     // week-0 projection = today's weight seed from backend (should equal latest actual weight)
     const proj0Weight = projection?.projected?.[0]?.projectedWeight;
-    const todayKey    = format(new Date(), "MMM d");
+    const todayKey    = fmtMonthDay(new Date());
 
     // Actual points from deduplicated logs
     const actualPoints = dedupedLogs.map((l) => ({
-      date: format(parseISO(l.date), "MMM d"),
+      date: fmtMonthDay(parseISO(l.date)),
       weight: l.weight,
       projected: undefined as number | undefined,
     }));
@@ -247,7 +263,7 @@ export default function Dashboard() {
       .slice(1, 9)
       .map((p: any, idx: number) => {
         // Week (idx+1) from the last actual log — timezone-independent
-        const key = format(addWeeks(lastLogDate, idx + 1), "MMM d");
+        const key = fmtMonthDay(addWeeks(lastLogDate, idx + 1));
         return { date: key, projected: p.projectedWeight, weight: undefined as number | undefined };
       })
       .filter((p) => !actualKeys.has(p.date) && p.date !== todayKey);
@@ -301,7 +317,7 @@ export default function Dashboard() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             {greeting}, {displayName} 👋
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">{fmtWeekdayFullDate(new Date())}</p>
         </div>
         <div className="flex gap-2 sm:gap-3">
           <Button variant="secondary" size="sm" onClick={() => navigate("/nutrition")} className="flex-1 sm:flex-none">
@@ -419,7 +435,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calorie progress */}
         <Card className="lg:col-span-1">
-          <CardHeader title={t("dashboard.todaysCalories")} subtitle={format(new Date(), "MMMM d")} />
+          <CardHeader title={t("dashboard.todaysCalories")} subtitle={fmtLongMonthDay(new Date())} />
 
           {/* Macros — at top so they're immediately visible */}
           <div className="space-y-3 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700">
@@ -561,7 +577,7 @@ export default function Dashboard() {
                   </span>
                   <span>
                     by <span className="font-semibold text-gray-700 dark:text-gray-200">
-                      {format(parseISO(activeGoal.targetDate), "MMM d, yyyy")}
+                      {fmtMonthDayYear(parseISO(activeGoal.targetDate))}
                     </span>
                   </span>
                   {weightLogs.length > 0 && (
@@ -646,7 +662,7 @@ export default function Dashboard() {
             <div className="h-52 flex flex-col items-center justify-center text-gray-400">
               <span className="text-4xl mb-3">⚖️</span>
               <p className="text-sm">{t("progress.noWeightData")}</p>
-              <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate("/progress")}>
+              <Button variant="secondary" size="sm" className="mt-3" onClick={() => setShowWeightFab(true)}>
                 Log your weight
               </Button>
             </div>
@@ -726,7 +742,7 @@ export default function Dashboard() {
                     <div>
                       <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{w.name}</p>
                       <p className="text-xs text-gray-400 dark:text-gray-500">
-                        {format(parseISO(w.date), "MMM d")} · {w.duration}min · {w.exercises.length} exercises
+                        {fmtMonthDay(parseISO(w.date))} · {w.duration}min · {w.exercises.length} exercises
                       </p>
                     </div>
                   </div>
@@ -838,6 +854,13 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Toast banner */}
+      {toastMsg && (
+        <div className="fixed bottom-20 right-4 z-50 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 md:bottom-6 md:right-6">
+          <span className="text-green-400">✓</span>{toastMsg}
+        </div>
+      )}
     </div>
   );
 }

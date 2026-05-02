@@ -15,6 +15,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo } from
 import en from "./locales/en";
 import es from "./locales/es";
 import type { Translation } from "./locales/en";
+import { setDateFormatLang } from "../lib/dateFormat";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -112,11 +113,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = useState<SupportedLang>(() => {
     const l = getInitialLang();
     _activeLang = l;            // sync module-level on mount
+    setDateFormatLang(l);       // sync date formatter on mount
     return l;
   });
 
   const changeLanguage = useCallback((lang: SupportedLang) => {
     _activeLang = lang;                            // sync module-level cache
+    setDateFormatLang(lang);                       // sync date formatter
     setLanguage(lang);
     try { localStorage.setItem("lang", lang); } catch { /* ignore */ }
     document.documentElement.lang = lang;

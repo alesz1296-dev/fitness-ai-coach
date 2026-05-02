@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
+import { fmtMonthDayYear } from "../../lib/dateFormat";
 import { calorieGoalsApi } from "../../api";
 import { useTranslation, t as _t } from "../../i18n";
 import type { CalorieGoal } from "../../types";
@@ -538,7 +539,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {activeGoal.currentWeight}kg → {activeGoal.targetWeight}kg
                     {" "}by{" "}
-                    {format(parseISO(activeGoal.targetDate), "MMM d, yyyy")}
+                    {fmtMonthDayYear(parseISO(activeGoal.targetDate))}
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">

@@ -57,10 +57,11 @@ interface WorkoutExerciseUpdateInput {
 
 // ── Search ────────────────────────────────────────────────────────────────────
 export const searchApi = {
-  foods: (q: string, limit = 20, tags?: string | string[]) => {
+  foods: (q: string, limit = 20, tags?: string | string[], lang?: string) => {
     const tagsStr = Array.isArray(tags) ? tags.join(",") : (tags ?? "");
     const params = new URLSearchParams({ q, limit: String(limit) });
     if (tagsStr) params.set("tags", tagsStr);
+    if (lang && lang !== "en") params.set("lang", lang);
     return api.get<{ results: any[]; total: number }>(
       `/search/foods?${params.toString()}`,
     );

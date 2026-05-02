@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { startOfWeek, addDays, format, isToday, parseISO } from "date-fns";
+import { fmtMonthDay } from "../lib/dateFormat";
 import { weeklyPlanApi, usersApi, calendarApi, calorieGoalsApi } from "../api";
 import { useTranslation } from "../i18n";
 import { useAuthStore } from "../store/authStore";
@@ -835,7 +836,7 @@ export default function WeeklyPlanWidget() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-base font-semibold text-gray-900 dark:text-white">{t("dashboard.weeklyTrainingPlan")}</h2>
-          <p className="text-xs text-gray-400 mt-0.5">{t("mealPlanner.weekOf")} {format(parseISO(weekStart), "MMM d")}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{t("mealPlanner.weekOf")} {fmtMonthDay(parseISO(weekStart))}</p>
         </div>
         <div className="flex items-center gap-2">
           {plan && total > 0 && (

@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import type { Dispatch, SetStateAction } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths } from "date-fns";
+import { fmtMonthDay, fmtMonthDayYear, fmtMonthYear, fmtWeekdayFullDate, fmtWeekdayLongDate, fmtWeekdayShortDate } from "../../lib/dateFormat";
 import { workoutsApi, templatesApi, searchApi, foodApi, calorieGoalsApi, calendarApi, usersApi, chatApi, customExercisesApi } from "../../api";
 import type { Workout, WorkoutExercise, PRResult, WorkoutTemplate, WorkoutCalendarDay } from "../../types";
 import { useAuthStore } from "../../store/authStore";
@@ -1329,7 +1330,7 @@ function WorkoutDetail({
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1.5">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            <span>{format(parseISO(workout.date), "EEEE, MMMM d, yyyy")}</span>
+            <span>{fmtWeekdayFullDate(parseISO(workout.date))}</span>
             <span className="mx-2">·</span>
             <span>{workout.duration} min</span>
           </p>
@@ -2139,10 +2140,25 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
             <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">{t("workouts.seedDesc")}</p>
             <Button loading={seeding} onClick={seedTemplates}>{t("workouts.seedTemplates")}</Button>
           </Card>
-        ) : (
+        ) : (() => {
+          // Filter each group to only templates matching the user's training days.
+          // If that would leave a group empty, fall back to showing all templates in that group.
+          const filteredGrouped = Object.fromEntries(
+            Object.entries(grouped).map(([key, tpls]) => {
+              const matched = tpls.filter((tp) => tp.frequency === trainingDays);
+              return [key, matched.length > 0 ? matched : tpls];
+            })
+          );
+          const hasAnyMatch = Object.values(grouped).flat().some((tp) => tp.frequency === trainingDays);
+          return (
           <div className="space-y-8">
             <RecommendedBanner goal={user?.goal} />
-            {Object.entries(grouped).map(([groupKey, templates]) => (
+            {hasAnyMatch && (
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Showing plans for <span className="font-semibold text-brand-600">{trainingDays}×/week</span> — matching your profile setting.
+              </p>
+            )}
+            {Object.entries(filteredGrouped).map(([groupKey, templates]) => (
               <div key={groupKey}>
                 <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-4">{SPLIT_LABELS[groupKey] ?? groupKey}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -2158,7 +2174,8 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
               </div>
             ))}
           </div>
-        )
+          );
+        })()
       ) : (
         mine.length === 0 ? (
           <Card className="text-center py-14">
@@ -2250,7 +2267,8 @@ function PlanToCalendarModal({
   onClose: () => void;
   onApplied: (msg: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const weekdayLabels = getWeekdayLabels(i18n.language);
   const today = new Date();
   const thisMonth = format(today, "yyyy-MM");
   const nextMonth = format(new Date(today.getFullYear(), today.getMonth() + 1, 1), "yyyy-MM");
@@ -2396,10 +2414,17 @@ function PlanToCalendarModal({
 // ─────────────────────────────────────────────────────────────────────────────
 // Calendar view — full monthly planner
 // ─────────────────────────────────────────────────────────────────────────────
-const WEEKDAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+// Mon=0 … Sun=6, locale-aware (Jan 1 2024 was a Monday)
+function getWeekdayLabels(lang = "en"): string[] {
+  return Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(lang, { weekday: "short" }).format(new Date(2024, 0, 1 + i))
+  );
+}
+const WEEKDAY_LABELS = getWeekdayLabels(); // English fallback for non-hook contexts
 
 function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; trainingDays: number }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const weekdayLabels = getWeekdayLabels(i18n.language);
   const [month, setMonth] = useState(new Date());
   const [cheatDays, setCheatDays]         = useState<Set<string>>(new Set());
   const [calendarDays, setCalendarDays]   = useState<WorkoutCalendarDay[]>([]);
@@ -2506,7 +2531,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
 
   // ── Clear month ──────────────────────────────────────────────────────────────
   const handleClearMonth = async () => {
-    if (!confirm(`Clear all planned days for ${format(month, "MMMM yyyy")}?`)) return;
+    if (!confirm(`Clear all planned days for ${fmtMonthYear(month)}?`)) return;
     try {
       await calendarApi.clearMonth(monthKey);
       await loadCalendar();
@@ -2571,7 +2596,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
         <div className="flex items-center gap-2">
           <button onClick={() => { setMonth((m) => subMonths(m, 1)); setSelected(null); }}
             className="p-2 rounded-xl hover:bg-gray-100 text-gray-600 dark:text-gray-300 font-bold text-lg leading-none">‹</button>
-          <h3 className="font-bold text-gray-900 dark:text-white text-lg min-w-[160px] text-center">{format(month, "MMMM yyyy")}</h3>
+          <h3 className="font-bold text-gray-900 dark:text-white text-lg min-w-[160px] text-center">{fmtMonthYear(month)}</h3>
           <button onClick={() => { setMonth((m) => addMonths(m, 1)); setSelected(null); }}
             className="p-2 rounded-xl hover:bg-gray-100 text-gray-600 dark:text-gray-300 font-bold text-lg leading-none">›</button>
         </div>
@@ -2605,7 +2630,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
       {swapMode && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-sm text-amber-700 flex items-center gap-2">
           🔄 {swapFrom
-            ? `First day selected: ${format(new Date(swapFrom + "T12:00:00"), "MMM d")} — now click the day to swap it with`
+            ? `First day selected: ${fmtMonthDay(new Date(swapFrom + "T12:00:00"))} — now click the day to swap it with`
             : "Click a day to start swapping, then click another day"}
           <button onClick={() => { setSwapMode(false); setSwapFrom(null); }} className="ml-auto text-xs underline">{t("common.cancel")}</button>
         </div>
@@ -2613,7 +2638,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
 
       {/* Day-of-week headers */}
       <div className="grid grid-cols-7 gap-1">
-        {WEEKDAY_LABELS.map((d) => (
+        {weekdayLabels.map((d) => (
           <div key={d} className="text-center text-xs font-semibold text-gray-400 dark:text-gray-500 py-1">{d}</div>
         ))}
       </div>
@@ -2694,7 +2719,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
           {/* Header row */}
           <div className="flex items-center justify-between gap-2">
             <h4 className="font-bold text-gray-900 dark:text-white text-base">
-              {format(new Date(selected + "T12:00:00"), "EEEE, MMMM d")}
+              {fmtWeekdayLongDate(new Date(selected + "T12:00:00"))}
             </h4>
             <div className="flex items-center gap-1">
               <button
@@ -2770,7 +2795,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
                 if (!selected) return;
                 const rawDay = getDay(new Date(selected + "T12:00:00"));
                 const weekday = rawDay === 0 ? 6 : rawDay - 1;
-                const wd = WEEKDAY_LABELS[weekday];
+                const wd = weekdayLabels[weekday];
                 const isRest = inlineRest;
                 const name   = isRest ? "Rest" : (inlineName.trim() || "Workout");
                 setInlineSaving(true);
@@ -2788,7 +2813,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
               disabled={inlineSaving}
               className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-lg hover:border-brand-300 transition disabled:opacity-50"
             >
-              🔁 Apply to all {WEEKDAY_LABELS[(() => { const r = getDay(new Date((selected ?? "2000-01-01") + "T12:00:00")); return r === 0 ? 6 : r - 1; })()]}s
+              🔁 Apply to all {weekdayLabels[(() => { const r = getDay(new Date((selected ?? "2000-01-01") + "T12:00:00")); return r === 0 ? 6 : r - 1; })()]}s
             </button>
             {selectedCalDay && (
               <button
@@ -2806,7 +2831,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
       {!loadingCal && calendarDays.length === 0 && !swapMode && (
         <div className="border-2 border-dashed border-brand-200 dark:border-brand-800 rounded-2xl p-6 text-center space-y-3">
           <p className="text-2xl">🗓</p>
-          <p className="font-bold text-gray-700 dark:text-gray-200 text-base">No plan for {format(month, "MMMM yyyy")}</p>
+          <p className="font-bold text-gray-700 dark:text-gray-200 text-base">No plan for {fmtMonthYear(month)}</p>
           <p className="text-sm text-gray-500 dark:text-gray-400">Build a full monthly workout schedule in seconds — pick your workout days, rest days, and how many months to fill.</p>
           <button
             onClick={() => setShowBuilder(true)}
@@ -3016,7 +3041,7 @@ function MonthlyPlanBuilderModal({
                       : "bg-brand-600 text-white border-brand-600"}`}
                   title={t("workouts.clickToggle")}
                 >
-                  {WEEKDAY_LABELS[i]}
+                  {weekdayLabels[i]}
                 </button>
 
                 {d.isRest ? (
@@ -3093,7 +3118,8 @@ function ApplyTemplateModal({
   onClose: () => void;
   onApplied: (msg: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const weekdayLabels = getWeekdayLabels(i18n.language);
   const [assignments, setAssignments] = useState<TemplateAssignment[]>([
     { template: null, weekdays: new Set() },
   ]);
@@ -3149,7 +3175,7 @@ function ApplyTemplateModal({
     const dowCounts = new Map<number, number>();
     for (const p of payload) dowCounts.set(p.dayOfWeek, (dowCounts.get(p.dayOfWeek) ?? 0) + 1);
     for (const [dow, count] of dowCounts) {
-      if (count > 1) { setError(`${WEEKDAY_LABELS[dow]} is assigned more than once.`); return; }
+      if (count > 1) { setError(`${weekdayLabels[dow]} is assigned more than once.`); return; }
     }
 
     setSaving(true);
@@ -3235,7 +3261,7 @@ function ApplyTemplateModal({
             <div>
               <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block mb-1">{t("workouts.repeatWeekdays")}</label>
               <div className="flex gap-1.5 flex-wrap">
-                {WEEKDAY_LABELS.map((label, dow) => (
+                {weekdayLabels.map((label, dow) => (
                   <button
                     key={dow}
                     type="button"
@@ -3299,7 +3325,8 @@ function EditCalendarDayModal({
   onClose: () => void;
   onSaved: (msg: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const weekdayLabels = getWeekdayLabels(i18n.language);
   const [isRest, setIsRest]           = useState(current?.isRestDay ?? false);
   const [workoutName, setWorkoutName] = useState(current?.workoutName ?? "");
   const [selectedTpl, setSelectedTpl] = useState<number | "">(current?.templateId ?? "");
@@ -3310,7 +3337,7 @@ function EditCalendarDayModal({
   // Which ISO weekday (0=Mon…6=Sun) does this date fall on?
   const rawDay  = getDay(new Date(date + "T12:00:00")); // 0=Sun
   const weekday = rawDay === 0 ? 6 : rawDay - 1;        // 0=Mon…6=Sun
-  const weekdayLabel = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][weekday];
+  const weekdayLabel = weekdayLabels[weekday];
 
   const buildPayload = () => {
     const tpl = templates.find((t) => t.id === Number(selectedTpl));
@@ -3358,7 +3385,7 @@ function EditCalendarDayModal({
   };
 
   return (
-    <Modal open title={`Edit — ${format(new Date(date + "T12:00:00"), "EEE, MMM d")}`} onClose={onClose}>
+    <Modal open title={`Edit — ${fmtWeekdayShortDate(new Date(date + "T12:00:00"))}`} onClose={onClose}>
       <div className="space-y-4 p-1">
         {/* Rest toggle */}
         <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200 cursor-pointer">
@@ -3802,7 +3829,7 @@ export default function WorkoutsPage() {
                       <div>
                         <h3 className="font-semibold text-gray-900 dark:text-white dark:text-white">{w.name}</h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5">
-                          {format(parseISO(w.date), "MMM d, yyyy")} · {w.duration} min · {w.exercises.length} exercises
+                          {fmtMonthDayYear(parseISO(w.date))} · {w.duration} min · {w.exercises.length} exercises
                         </p>
                         {w.exercises.length > 0 && (
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
@@ -3847,45 +3874,4 @@ export default function WorkoutsPage() {
       )}
 
       {/* Templates tab */}
-      {tab === "templates" && <TemplatesTab onWorkoutStarted={onWorkoutStarted} trainingDays={trainingDays} />}
-
-      {/* AI Workout Builder tab */}
-      {tab === "ai-build" && <AIWorkoutBuilder onWorkoutLogged={() => { switchTab("history"); }} />}
-
-      {/* Create modal */}
-      <Modal open={showForm} onClose={() => setShowForm(false)} title={t("workouts.logWorkout")} size="lg">
-        <WorkoutForm
-          onSave={() => { setShowForm(false); load(1); loadAll(); toast.show("Workout logged!"); }}
-          onClose={() => setShowForm(false)}
-        />
-      </Modal>
-
-      {/* Detail modal */}
-      <Modal open={!!selected && !editing} onClose={() => setSelected(null)} title={selected?.name} size="lg">
-        {selected && (
-          <WorkoutDetail
-            workout={selected}
-            onClose={() => setSelected(null)}
-            onEdit={() => { setEditing(selected); setSelected(null); }}
-            onDelete={() => { setSelected(null); load(page > 1 && workouts.length === 1 ? page - 1 : page); toast.show("Workout deleted."); }}
-            onRefresh={() => load(page)}
-            onToast={toast.show}
-          />
-        )}
-      </Modal>
-
-      {/* Edit modal */}
-      <Modal open={!!editing} onClose={() => setEditing(null)} title={t("workouts.editWorkout")} size="md">
-        {editing && (
-          <EditWorkoutForm
-            workout={editing}
-            onSave={() => { setEditing(null); load(page); toast.show("Workout updated!"); }}
-            onClose={() => setEditing(null)}
-          />
-        )}
-      </Modal>
-
-      <ToastBanner msg={toast.msg} />
-    </div>
-  );
-}
+      {tab === "templates" && <TemplatesT
