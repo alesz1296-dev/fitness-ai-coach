@@ -3874,4 +3874,45 @@ export default function WorkoutsPage() {
       )}
 
       {/* Templates tab */}
-      {tab === "templates" && <TemplatesT
+      {tab === "templates" && <TemplatesTab onWorkoutStarted={onWorkoutStarted} trainingDays={trainingDays} />}
+
+      {/* AI Workout Builder tab */}
+      {tab === "ai-build" && <AIWorkoutBuilder onWorkoutLogged={() => { switchTab("history"); }} />}
+
+      {/* Create modal */}
+      <Modal open={showForm} onClose={() => setShowForm(false)} title={t("workouts.logWorkout")} size="lg">
+        <WorkoutForm
+          onSave={() => { setShowForm(false); load(1); loadAll(); toast.show("Workout logged!"); }}
+          onClose={() => setShowForm(false)}
+        />
+      </Modal>
+
+      {/* Detail modal */}
+      <Modal open={!!selected && !editing} onClose={() => setSelected(null)} title={selected?.name} size="lg">
+        {selected && (
+          <WorkoutDetail
+            workout={selected}
+            onClose={() => setSelected(null)}
+            onEdit={() => { setEditing(selected); setSelected(null); }}
+            onDelete={() => { setSelected(null); load(page > 1 && workouts.length === 1 ? page - 1 : page); toast.show("Workout deleted."); }}
+            onRefresh={() => load(page)}
+            onToast={toast.show}
+          />
+        )}
+      </Modal>
+
+      {/* Edit modal */}
+      <Modal open={!!editing} onClose={() => setEditing(null)} title={t("workouts.editWorkout")} size="md">
+        {editing && (
+          <EditWorkoutForm
+            workout={editing}
+            onSave={() => { setEditing(null); load(page); toast.show("Workout updated!"); }}
+            onClose={() => setEditing(null)}
+          />
+        )}
+      </Modal>
+
+      <ToastBanner msg={toast.msg} />
+    </div>
+  );
+}

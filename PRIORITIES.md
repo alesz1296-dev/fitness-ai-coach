@@ -1,6 +1,6 @@
 # FitAI Coach — Task Priorities
 
-_Last updated: 2026-05-02_
+_Last updated: 2026-05-02 (session 2)_
 
 > Format: **P1** = must-ship · **P2** = high value · **P3** = deferred/nice-to-have
 
@@ -30,6 +30,16 @@ _Last updated: 2026-05-02_
 | M11 | Agent write tools — `log_food` + `save_workout_template` | AI/Tools | P2 | ✅ Done |
 | M15 | Weight trend chart — extend history window + close projection gap | Dashboard | P2 | ✅ Done |
 | L1 | Quick re-log on Nutrition page (top-5 frequent foods) | Nutrition | P2 | ✅ Done |
+| — | Offline support — sw.js API caching, IndexedDB sync queue, Zustand offline store, `useOfflineSync` hook, axios interceptor, OfflineBanner with pending count | PWA/Infra | P1 | ✅ Done |
+| — | NutritionPage: toasts on every food/meal action + `silentLoad` (no spinner flash, immediate in-place refresh) | UX | P1 | ✅ Done |
+| — | WorkoutsPage: toasts on exercise add / edit / delete | UX | P1 | ✅ Done |
+| — | Foods database expansion — 521 items total: eggs, breads, pastas, rice varieties, beans/legumes, fruits, veg, sauces, light dairy, breakfast carbs | Data | P2 | ✅ Done |
+| — | Food AI-translation — `?lang=` param on `/api/search/foods`; query translated to English, results translated back via AI provider; Redis-cached per lang | i18n/AI | P2 | ✅ Done |
+| — | Locale-aware dates — `dateFormat.ts` utility (`Intl.DateTimeFormat`); replaces all `format(…,"MMM…")` date-fns calls across Dashboard, Progress, Nutrition, Workouts, Goals, MealPlanner, WeeklyPlanWidget, ProjectionChart | i18n | P2 | ✅ Done |
+| — | Weight sync across pages — `fitai:weight-logged` CustomEvent; Dashboard + Progress refresh on any weight log; toasts on Dashboard FAB, Nutrition FAB, Settings profile save, ProgressPage | UX | P1 | ✅ Done |
+| — | Goals weight trend chart live-updates when weight is logged from any page | Feature | P1 | ✅ Done |
+| — | Workout templates filtered by `trainingDaysPerWeek` — exact-match filter with all-templates fallback; info chip shown when match found | UX | P2 | ✅ Done |
+| — | Dashboard weight FAB: empty-state card button now opens FAB (not nav away); toast added; file truncation bug fixed | UX | P2 | ✅ Done |
 
 ---
 

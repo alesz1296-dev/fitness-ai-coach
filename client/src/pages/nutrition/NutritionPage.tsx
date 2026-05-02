@@ -3367,4 +3367,40 @@ export default function NutritionPage() {
         {showWeightFab && (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">&#9878;&#65039; {t("nutrition.logWeight")}</p>
-          
+            {weightSaved ? (
+              <p className="text-center text-green-600 font-medium text-sm py-1">&#x2705; {t("nutrition.savedConfirm")}</p>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number" step="0.1" min="20" max="400"
+                    placeholder="e.g. 80.5"
+                    value={weightVal}
+                    onChange={(e) => setWeightVal(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogWeight()}
+                    className="flex-1 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    autoFocus
+                  />
+                  <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">kg</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="secondary" className="flex-1" onClick={() => { setShowWeightFab(false); setWeightVal(""); }}>{t("common.cancel")}</Button>
+                  <Button size="sm" className="flex-1" loading={savingWeight} onClick={handleLogWeight}>{t("common.save")}</Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        <button
+          onClick={() => setShowWeightFab((v) => !v)}
+          className="w-14 h-14 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white rounded-full shadow-lg flex items-center justify-center text-2xl transition-colors"
+          title="Log today's weight"
+        >
+          &#9878;&#65039;
+        </button>
+      </div>
+
+      <NutritionToastBanner msg={toast.msg} />
+    </div>
+  );
+}

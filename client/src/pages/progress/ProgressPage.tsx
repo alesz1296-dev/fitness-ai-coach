@@ -1376,4 +1376,13 @@ export default function ProgressPage() {
             onChange={(e) => setEditNotes(e.target.value)}
             placeholder="Morning weight, after gym…"
           />
-          <div c
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => setEditingLog(null)}>{t("common.cancel")}</Button>
+            <Button className="flex-1" loading={savingEdit} onClick={handleEditSubmit}>{t("common.save")}</Button>
+          </div>
+        </div>
+      </Modal>
+
+    </div>
+  );
+}

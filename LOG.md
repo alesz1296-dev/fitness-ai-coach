@@ -1751,3 +1751,172 @@ Every "today" boundary in every controller used UTC midnight (`setHours(0,0,0,0)
 - All muscle group chip arrays updated in WorkoutsPage (compound chips at top)
 
 **TypeScript:** 0 errors front + back after all changes.
+
+## 2026-05-02 — Session 2
+
+| # | Task | Status |
+|---|------|--------|
+| — | Offline support (PWA) | ✅ |
+| — | NutritionPage toasts + silent refresh | ✅ |
+| — | WorkoutsPage toasts | ✅ |
+| — | Foods database: 409 → 521 items | ✅ |
+| — | Food AI-translation (`?lang=`) | ✅ |
+| — | Locale-aware dates (`dateFormat.ts`) | ✅ |
+| — | Weight sync + toasts across all pages | ✅ |
+| — | Workout template frequency filter | ✅ |
+| — | Dashboard FAB fixes + toast | ✅ |
+
+---
+
+### Offline support (PWA)
+
+**`public/sw.js`** — API caching with stale-while-revalidate strategy; GET `/api/*` responses cached in `api-cache-v1`; POST/PUT/DELETE requests queued in IndexedDB when offline.
+
+**`client/src/lib/idb.ts`** — IndexedDB sync queue (`fitai-offline-queue`); `enqueue(req)`, `dequeue()`, `getAll()`, `clear()`, `count()` helpers.
+
+**`client/src/store/offlineStore.ts`** — Zustand store tracking `isOnline`, `pendingCount`, `isSyncing`; `syncPending()` action replays queued requests.
+
+**`client/src/hooks/useOfflineSync.ts`** — Registers `online`/`offline` listeners, auto-syncs on reconnect, updates pending count on interval.
+
+**`client/src/api/index.ts`** — Axios interceptor: when offline, intercepts mutating requests and enqueues them instead of throwing; returns optimistic `{ queued: true }`.
+
+**`client/src/components/OfflineBanner.tsx`** — Shows pending count badge; "Sync now" button triggers `syncPending()`; hides when online + no pending.
+
+---
+
+### NutritionPage toasts + silent refresh
+
+**Problem:** Every post-action `load()` call set `setLoading(true)`, causing the food list to flash a spinner even for in-place updates.
+
+**Fix — `silentLoad`:** Added alongside `load()`; fetches all data but never sets `loading`, so the list stays visible and items appear in-place.
+
+**Toast system:** `useNutritionToast()` + `<NutritionToastBanner>` added above `export default`. All 6 action callbacks (log food, update entry, delete, relog fav, quick relog, meal plan, build dish) show toasts and call `silentLoad()`.
+
+**`fitai:food-logged` event:** Dispatched after every mutation; `silentLoad` listener in `useEffect` keeps the list fresh when other tabs/components mutate food data.
+
+**State capture bug fixed:** `const msg = editItem ? "Entry updated ✓" : "Food logged ✓"` captured before `setEditItem(null)` to avoid stale closure read.
+
+---
+
+### WorkoutsPage toasts
+
+Added `onToast?: (msg: string) => void` prop to `WorkoutDetail`; `saveEdit`, `deleteExercise`, `handleExerciseAdded` call `onToast?.("…")` on success. Call site passes `onToast={toast.show}`.
+
+---
+
+### Foods database: 409 → 521 items
+
+New categories added (IDs f600–f767):
+- Fruits: f600–f611 (mango, watermelon, pineapple, grapes, strawberries, blueberries, raspberries, peach, plum, kiwi, papaya, cantaloupe)
+- Vegetables: f620–f632 (spinach, kale, broccoli, cauliflower, bell pepper, cucumber, zucchini, tomato, carrot, sweet potato, asparagus, mushrooms, celery)
+- Grains: f640–f648 (quinoa, bulgur, farro, barley, amaranth, millet, buckwheat, spelt, oat bran)
+- Sauces/Condiments: f660–f678 (olive oil, coconut oil, soy sauce, hot sauce, mustard, ketchup, mayo, BBQ, hummus, guacamole, peanut butter, almond butter, tahini, honey, maple syrup, salsa, ranch, balsamic vinegar, tzatziki)
+- Light dairy: f690–f699 (Greek yogurt 0%, cottage cheese 1%, skim milk, ricotta part-skim, kefir, string cheese, provolone, Swiss, gouda, Parmesan)
+- Breads: f700–f708 (sourdough, rye, pumpernickel, multigrain, ciabatta, brioche, naan, pita, English muffin)
+- Pastas: f710–f723 (spaghetti, penne, fettuccine, rigatoni, farfalle, linguine, orzo, macaroni, rotini, angel hair, lasagna, tortellini, gnocchi, couscous)
+- Rice varieties: f730–f733 (brown rice, jasmine rice, basmati rice, wild rice)
+- Legumes: f740–f749 (lentils, black beans, kidney beans, chickpeas, navy beans, pinto beans, edamame, split peas, mung beans, adzuki beans)
+- Breakfast/snack carbs: f750–f767 (granola, muesli, corn flakes, bran flakes, Cheerios, Special K, shredded wheat, cream of wheat, grits, polenta, rice cakes, popcorn, pretzels, graham crackers, animal crackers, vanilla wafers, saltine crackers, wasa crispbread)
+
+**Bugs fixed:** Orphaned entries outside the array (after `];`) caused TS errors; fixed with Python slice-and-reattach.
+
+---
+
+### Food AI-translation (`?lang=`)
+
+**`src/controllers/searchController.ts`**
+- Added `translateQueryToEnglish(query, sourceLang)`: calls AI provider with a minimal system prompt; returns translated string (original on error); Redis-cached 1h.
+- Added `translateFoodNames(names[], targetLang)`: batches all result names in one AI call; parses JSON array response; Redis-cached 1h.
+- `foodSearch` handler now reads `req.query.lang`; translates query to English before search (cache key stays English so one cache serves all languages); applies `translateFoodNames` on the way out.
+- `getProvider()` imported from `ai/providers/index.js`.
+
+**`client/src/api/index.ts`**
+- `searchApi.foods(q, limit, tags, lang?)` — appends `&lang=xx` when `lang !== "en"`.
+
+**`client/src/pages/nutrition/NutritionPage.tsx`**
+- `FoodSearch`, `CustomFoodForm`, main `NutritionPage` all destructure `i18n` from `useTranslation()`.
+- All three `searchApi.foods()` call sites pass `i18n.language`; dependency arrays include `i18n.language`.
+
+---
+
+### Locale-aware dates (`dateFormat.ts`)
+
+**`client/src/lib/dateFormat.ts`** — NEW file. Module-level `_lang` kept in sync by `setDateFormatLang(lang)`. Exports:
+- `fmtMonthDay` — "Jan 5"
+- `fmtLongMonthDay` — "January 5"
+- `fmtMonthDayYear` — "Jan 5, 2025"
+- `fmtMonthYear` — "January 2025"
+- `fmtWeekdayFullDate` — "Saturday, January 5, 2025"
+- `fmtWeekdayLongDate` — "Saturday, January 5"
+- `fmtWeekdayShortDate` — "Sat, Jan 5"
+
+**`client/src/i18n/index.tsx`** — `I18nProvider` now calls `setDateFormatLang(l)` on mount and `setDateFormatLang(lang)` in `changeLanguage`.
+
+All `format(…, "MMM…")`, `format(…, "MMMM…")`, `format(…, "EEEE…")` calls replaced across: Dashboard, ProgressPage, NutritionPage, WorkoutsPage, GoalsPage, MealPlannerPage, WeeklyPlanWidget, ProjectionChart.
+
+---
+
+### Weight sync + toasts across all pages
+
+**`fitai:weight-logged` CustomEvent** — dispatched by: Dashboard FAB, NutritionPage FAB, ProgressPage LogWeightForm, SettingsPage profile save (when weight field changed).
+
+**Listeners:** Dashboard (`refreshDash()`), ProgressPage (`load()`).
+
+**Toasts:**
+- Dashboard FAB: `"Weight logged: X kg ✓"`
+- NutritionPage FAB: `"Weight logged: X kg ✓"`
+- SettingsPage: `"Weight updated to X kg ✓"` (only shown when weight value actually changed)
+
+**SettingsPage fix:** `toLocaleDateString("en-US", …)` → `toLocaleDateString(undefined, …)` (uses browser locale); detects weight change by comparing `user?.weight` before and after save.
+
+---
+
+### Workout template frequency filter
+
+**`client/src/pages/workouts/WorkoutsPage.tsx` — `TemplatesTab`**
+
+```tsx
+const filteredGrouped = Object.fromEntries(
+  Object.entries(grouped).map(([key, tpls]) => {
+    const matched = tpls.filter((tp) => tp.frequency === trainingDays);
+    return [key, matched.length > 0 ? matched : tpls]; // fallback: show all
+  })
+);
+```
+
+Info chip shown when a frequency match exists: "Showing plans for N×/week — matching your profile setting".
+
+---
+
+### Dashboard FAB fixes + toast
+
+- Empty-state "Log your weight" button in weight trend card now calls `setShowWeightFab(true)` instead of `navigate("/progress")` — eliminates the confusing left-side button.
+- `showToast()` + `<ToastBanner>` added to Dashboard component.
+- `handleLogWeight` calls `showToast(\`Weight logged: ${w} kg ✓\`)` before dispatching event.
+- File truncation bug: Dashboard.tsx was truncated at 44KB during editing; restored from `git show HEAD` + appended correct closing JSX.
+
+### TypeScript
+`npx tsc --noEmit` — 0 errors (frontend + backend) after all changes.
+
+### Files modified
+| File | Change |
+|------|--------|
+| `public/sw.js` | API cache + offline queue |
+| `client/src/lib/idb.ts` | NEW — IndexedDB sync queue |
+| `client/src/store/offlineStore.ts` | NEW — Zustand offline store |
+| `client/src/hooks/useOfflineSync.ts` | NEW — sync hook |
+| `client/src/lib/dateFormat.ts` | NEW — locale-aware date helpers |
+| `client/src/api/index.ts` | Offline interceptor; `searchApi.foods` lang param |
+| `client/src/i18n/index.tsx` | `setDateFormatLang` sync on mount + changeLanguage |
+| `client/src/components/OfflineBanner.tsx` | Pending count + sync button |
+| `client/src/pages/dashboard/Dashboard.tsx` | Toast, FAB fix, locale dates, weight event |
+| `client/src/pages/nutrition/NutritionPage.tsx` | silentLoad, toasts, food translation, locale dates |
+| `client/src/pages/progress/ProgressPage.tsx` | weight event listener, locale dates |
+| `client/src/pages/settings/SettingsPage.tsx` | weight event dispatch, toast, locale date |
+| `client/src/pages/workouts/WorkoutsPage.tsx` | toasts, template filter, locale dates |
+| `client/src/pages/goals/GoalsPage.tsx` | locale dates |
+| `client/src/pages/mealplanner/MealPlannerPage.tsx` | locale dates |
+| `client/src/components/WeeklyPlanWidget.tsx` | locale dates |
+| `client/src/components/goals/ProjectionChart.tsx` | locale dates |
+| `src/data/foods.ts` | 409 → 521 items |
+| `src/controllers/searchController.ts` | AI food translation, lang param |
