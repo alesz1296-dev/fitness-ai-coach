@@ -39,10 +39,10 @@ _These block the AI Agents, Proactive Engine, and Goals Overhaul sections below.
 
 | # | Task | Category | Pri | Status |
 |---|------|----------|-----|--------|
-| 124 | AI provider abstraction — ProviderAdapter interface, OpenAI / Anthropic / DeepSeek impls. _Blocks #115 — must be built first_ | AI/Infra | P1 | ⏳ Pending |
-| 114 | User context builder — `buildUserContext(userId)` + AgentMessage conversation memory (last 20 msgs per agent thread). _Blocks #115, #116, #117, #119_ | AI/Infra | P1 | ⏳ Pending |
-| 115 | AI function calling tools — `get_today_nutrition`, `get_weight_trend`, `get_recent_workouts`, `get_goal_progress`, `suggest_foods`. _Requires #124 + #114_ | AI/Tools | P1 | ⏳ Pending |
-| 126 | Extract shared goal UI components — ProjectionChart, GoalValidator, ImpactPanel (reused by modal + wizard). _Blocks #109, #110, #111, #113_ | Infra/UX | P1 | ⏳ Pending |
+| 124 | AI provider abstraction — ProviderAdapter interface, OpenAI / DeepSeek impls. | AI/Infra | P1 | ✅ Done |
+| 114 | User context builder — `buildUserContext(userId)` + AgentMessage conversation memory (last 20 msgs per agent thread). ⚠️ Run `prisma migrate deploy && prisma generate` | AI/Infra | P1 | ✅ Done |
+| 115 | AI function calling tools — `get_today_nutrition`, `get_weight_trend`, `get_recent_workouts`, `get_goal_progress`, `suggest_foods`. Write tools un-stubbed. | AI/Tools | P1 | ✅ Done |
+| 126 | Extract shared goal UI components — ProjectionChart, GoalValidator, ImpactPanel (reused by modal + wizard). | Infra/UX | P1 | ✅ Done |
 
 ---
 
@@ -146,10 +146,4 @@ _These block the AI Agents, Proactive Engine, and Goals Overhaul sections below.
 
 | Sprint | Items | Goal |
 |--------|-------|------|
-| 1 | #124 → #114 → #115 → #126 | Build all foundations (nothing else can ship without these) |
-| 2 | #116 + #117 → #122 | Specialist AI agents + new Chat UI |
-| 3 | #108 → #109 #110 #111 #113 | Goals overhaul (requires #126 from Sprint 1) |
-| 4 | #118 → #125 → #119 → #120 → #121 | Proactive engine + notification center |
-| 5 | #106, #107, #71, #127, #85 | Infra & UX polish |
-| 6 | B7 (Android APK), B4 (barcode), B5 (food DB API), B8 (exercise DB API), B6 (AI image food) | Platform + data expansion |
-| 7 | B3 (Samsung Health), B1 (Apple Health), B2 (Apple Watch) | Health platform integrations |
+| 1 | #124 → #114 → #

@@ -869,3 +869,81 @@ Frontend: Exercise cards show GIF thumbnail on hover (lazy-loaded, falls back to
 - `#126` Shared goal components — blocks Goals overhaul
 - `B5` Food DB API wiring (Open Food Facts + USDA) — architecture above is ready to implement
 - `B8` Exercise DB seeding (Wger bulk seed script) — straightforward once B5 pattern is established
+
+---
+
+## Session: 2026-05-02 — AI Sprint #124 → #114 → #115 + Dashboard FAB fix
+
+### #137 — Dashboard log weight FAB repositioned
+Moved the weight-logging FAB in `Dashboard.tsx` from `fixed bottom-20 left-4` (bottom-left) to `fixed bottom-32 right-4` (bottom-right), matching NutritionPage's FAB position exactly.
+
+### #138 — Provider abstraction (#124) — OpenAI + DeepSeek
+Created `src/ai/providers/` directory with:
+- `ProviderAdapter.ts` — `ProviderAdapter` interface with `complete()`, `classifyError()`, `isRateLimitError()`, `defaultModel`
+- `openai.ts` — `OpenAIAdapter` wrapping the OpenAI SDK
+- `deepseek.ts` — `DeepSeekAdapter` using OpenAI SDK with `baseURL: "https://api.deepseek.com"` and `deepseek-chat` model
+- `index.ts` — `getProvider()` factory that reads `AI_PROVIDER` env var (defaults to `"openai"`)
+
+Updated `src/config/env.ts`:
+- `OPENAI_API_KEY` changed to optional (either key can be set depending on provider)
+- Added `DEEPSEEK_API_KEY` (optional)
+- Added `AI_PROVIDER: z.enum(["openai", "deepseek"]).default("openai")`
+
+Updated `src/ai/agent.ts`:
+- Removed `const openai = new OpenAI(...)`, replaced with `const provider = getProvider()`
+- Removed standalone `classifyOpenAIError()` function (now on each adapter)
+- Replaced `openai.chat.completions.create()` with `provider.complete()`
+- Error handler now uses `provider.classifyError()` and `provider.isRateLimitError()`
+
+**To switch to DeepSeek:** set `AI_PROVIDER=deepseek` and `DEEPSEEK_API_KEY=sk-...` in `.env`. Zero code changes needed.
+
+### #139 — User context builder + AgentMessage memory (#114)
+Created `src/ai/context.ts` with:
+- `buildUserContext(userId, language)` — single DB query for user profile, reusable by chatController, proactive scheduler, goal advisor
+- `loadAgentHistory(userId, agentType)` — loads last 20 `AgentMessage` rows for a thread
+- `saveAgentExchange(userId, agentType, userMsg, assistantReply)` — writes 2 rows + trims to 20 on insert
+
+Added `AgentMessage` Prisma model to `schema.prisma`:
+```prisma
+model AgentMessage {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  agentType String
+  role      String   // "user" | "assistant"
+  content   String
+  createdAt DateTime @default(now())
+  @@index([userId, agentType, createdAt])
+}
+```
+Migration SQL written manually to `prisma/migrations/20260502000000_add_agent_messages/migration.sql`.
+
+**⚠️ Action needed:** Run `npx prisma migrate deploy` then `npx prisma generate` locally to apply the migration and regenerate the Prisma client. The `db = prisma as any` cast in `context.ts` can be removed after `prisma generate`.
+
+Updated `chatController.ts`:
+- Imports `buildUserContext`, `loadAgentHistory`, `saveAgentExchange` from `context.ts`
+- Inline user-loading block replaced with `buildUserContext()`
+- History loading replaced with `loadAgentHistory()`
+- After AI responds: writes to both `Conversation` (UI display) AND `AgentMessage` (agent memory) in parallel
+- `getAiStatus` updated to reflect active provider and its key
+
+### #140 — Function calling tools (#115)
+Added 3 new tool definitions to `TOOL_DEFINITIONS` in `agent.ts`:
+- `get_today_nutrition` — today-only food log with consumed vs target and remaining macros
+- `get_goal_progress` — active goal % complete, days elapsed/remaining, ahead/behind schedule
+- `suggest_foods` — reads today's remaining macros, returns context for AI to suggest foods
+
+Added 3 corresponding handlers: `handleGetTodayNutrition`, `handleGetGoalProgress`, `handleSuggestFoods`.
+
+**Un-stubbed write tools** — `log_food` and `save_workout_template` now call their real handlers (`handleLogFood`, `handleSaveWorkoutTemplate`) instead of returning safety stub strings.
+
+Updated `AGENT_TOOLS`:
+- `nutritionist`: now includes `get_today_nutrition`, `get_goal_progress`, `suggest_foods`, `log_food`
+- `coach`: now includes `get_today_nutrition`, `get_goal_progress`, `save_workout_template`
+
+### #126 — Shared goal UI components — already complete
+`ProjectionChart`, `ImpactPanel`, `GoalValidator` all exist in `client/src/components/goals/` and are already used by `GoalsPage.tsx`. No action needed.
+
+**Pending (next session):**
+- Sprint 2: `#116` (nutrition agent) + `#117` (workout agent) → `#122` (AI Coach page tabs)
+- Sprint 3: Goals overhaul `#108` → `#109` `#110` `#111` `#113`
+- `B5` Food DB API (Open Food Facts + USDA)

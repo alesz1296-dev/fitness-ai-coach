@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { AgentType, buildSystemPrompt, UserContext } from "./prompts.js";
 import prisma from "../lib/prisma.js";
 import logger from "../lib/logger.js";
+import { getProvider } from "./providers/index.js";
 
 // ── Typed argument interfaces for tool handlers ────────────────────────────────
 
@@ -48,7 +49,9 @@ interface MacroTotals { calories: number; protein: number; carbs: number; fats: 
 // Structured error type for upstream HTTP status propagation
 interface AppError extends Error { statusCode: number; userFacing: boolean }
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Provider is resolved once at startup from AI_PROVIDER env var.
+// Swap provider by changing that var — no code changes needed.
+const provider = getProvider();
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -373,6 +376,52 @@ const TOOL_DEFINITIONS: OpenAI.Chat.ChatCompletionTool[] = [
       },
     },
   },
+  // ── #115 additions ──────────────────────────────────────────────────────────
+  {
+    type: "function",
+    function: {
+      name: "get_today_nutrition",
+      description:
+        "Fetch the user\'s food log for today only — total calories consumed, macros eaten, " +
+        "and how much remains vs their daily target. Use this when the user asks what they\'ve " +
+        "eaten today, how many calories they have left, or whether they\'re on track today.",
+      parameters: { type: "object", properties: {}, required: [] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_goal_progress",
+      description:
+        "Fetch the user\'s active calorie/macro goal and calculate how close they are to " +
+        "their target weight — days elapsed, days remaining, expected vs actual progress, " +
+        "and whether they are ahead or behind schedule. Use when the user asks how their " +
+        "diet plan is going, if they are on track, or how far they are from their goal.",
+      parameters: { type: "object", properties: {}, required: [] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "suggest_foods",
+      description:
+        "Suggest specific foods to help the user hit their remaining macro targets for the day. " +
+        "Automatically fetches today\'s remaining macros and returns food ideas with amounts. " +
+        "Use when the user asks \'what should I eat\', \'what can I have\', or needs to hit a " +
+        "specific protein/calorie target for the rest of the day.",
+      parameters: {
+        type: "object",
+        properties: {
+          preference: {
+            type: "string",
+            description:
+              "Optional dietary preference e.g. \'high protein\', \'low carb\', \'vegetarian\', \'quick snack\'.",
+          },
+        },
+        required: [],
+      },
+    },
+  },
 ];
 
 // Each agent gets only the tools relevant to its role.
@@ -387,6 +436,9 @@ const READ_ONLY_TOOL_NAMES = [
   "get_meal_plans",
   "get_workout_templates",
   "get_personal_records",
+  "get_today_nutrition",
+  "get_goal_progress",
+  "suggest_foods",
 ];
 
 const AGENT_TOOLS: Record<AgentType, OpenAI.Chat.ChatCompletionTool[]> = {
@@ -399,6 +451,9 @@ const AGENT_TOOLS: Record<AgentType, OpenAI.Chat.ChatCompletionTool[]> = {
       "get_personal_records",
       "get_weight_trend",
       "get_active_calorie_goal",
+      "get_today_nutrition",
+      "get_goal_progress",
+      "save_workout_template",
     ].includes(t.function.name),
   ),
   nutritionist: TOOL_DEFINITIONS.filter((t) =>
@@ -409,6 +464,10 @@ const AGENT_TOOLS: Record<AgentType, OpenAI.Chat.ChatCompletionTool[]> = {
       "get_active_calorie_goal",
       "get_meal_plans",
       "get_weight_trend",
+      "get_today_nutrition",
+      "get_goal_progress",
+      "suggest_foods",
+      "log_food",
     ].includes(t.function.name),
   ),
   general: TOOL_DEFINITIONS.filter((t) =>
@@ -754,6 +813,180 @@ async function handleGetPersonalRecords(
   return `Personal records (best weight lifted):\n${lines.join("\n")}`;
 }
 
+// ── #115 NEW READ TOOL HANDLERS ───────────────────────────────────────────────
+
+async function handleGetTodayNutrition(userId: number): Promise<string> {
+  const today = new Date();
+  const start = new Date(today);
+  start.setUTCHours(0, 0, 0, 0);
+  const end = new Date(today);
+  end.setUTCHours(23, 59, 59, 999);
+
+  const [logs, goal] = await Promise.all([
+    prisma.foodLog.findMany({
+      where: { userId, date: { gte: start, lte: end } },
+      orderBy: { createdAt: "asc" },
+      select: { foodName: true, calories: true, protein: true, carbs: true, fats: true, meal: true },
+    }),
+    prisma.calorieGoal.findFirst({
+      where: { userId, active: true },
+      select: { dailyCalories: true, proteinGrams: true, carbsGrams: true, fatsGrams: true },
+    }),
+  ]);
+
+  const totals = logs.reduce<MacroTotals>(
+    (acc, l) => ({
+      calories: acc.calories + l.calories,
+      protein: acc.protein + (l.protein ?? 0),
+      carbs: acc.carbs + (l.carbs ?? 0),
+      fats: acc.fats + (l.fats ?? 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fats: 0 },
+  );
+
+  const dateStr = today.toISOString().split("T")[0];
+  const itemLines = logs.map(
+    (l) => `  • ${l.meal ? `[${l.meal}] ` : ""}${l.foodName}: ${Math.round(l.calories)} kcal`,
+  );
+
+  let result =
+    `Today (${dateStr}) — ${logs.length} item(s) logged:\n` +
+    `Consumed: ${Math.round(totals.calories)} kcal | P: ${Math.round(totals.protein)}g | C: ${Math.round(totals.carbs)}g | F: ${Math.round(totals.fats)}g\n`;
+
+  if (goal) {
+    const remCal = Math.round(goal.dailyCalories - totals.calories);
+    const remP = Math.round(goal.proteinGrams - totals.protein);
+    const remC = Math.round(goal.carbsGrams - totals.carbs);
+    const remF = Math.round(goal.fatsGrams - totals.fats);
+    result +=
+      `Target:   ${Math.round(goal.dailyCalories)} kcal | P: ${Math.round(goal.proteinGrams)}g | C: ${Math.round(goal.carbsGrams)}g | F: ${Math.round(goal.fatsGrams)}g\n` +
+      `Remaining: ${remCal > 0 ? remCal : 0} kcal | P: ${remP > 0 ? remP : 0}g | C: ${remC > 0 ? remC : 0}g | F: ${remF > 0 ? remF : 0}g\n` +
+      (remCal < 0 ? `⚠️ Over target by ${Math.abs(remCal)} kcal\n` : "");
+  } else {
+    result += "(No active calorie goal set)\n";
+  }
+
+  if (itemLines.length > 0) {
+    result += `\nItems logged today:\n${itemLines.join("\n")}`;
+  } else {
+    result += "\nNothing logged yet today.";
+  }
+
+  return result;
+}
+
+async function handleGetGoalProgress(userId: number): Promise<string> {
+  const [goal, latestWeight] = await Promise.all([
+    prisma.calorieGoal.findFirst({
+      where: { userId, active: true },
+      select: {
+        name: true,
+        type: true,
+        currentWeight: true,
+        targetWeight: true,
+        targetDate: true,
+        dailyCalories: true,
+        weeklyChange: true,
+        createdAt: true,
+      },
+    }),
+    prisma.weightLog.findFirst({
+      where: { userId },
+      orderBy: { date: "desc" },
+      select: { weight: true, date: true },
+    }),
+  ]);
+
+  if (!goal) return "No active calorie goal found. Set a goal in the Goals section to track progress.";
+
+  const now = new Date();
+  const totalDays = Math.max(
+    1,
+    (goal.targetDate.getTime() - goal.createdAt.getTime()) / 86400000,
+  );
+  const elapsed = Math.max(
+    0,
+    (now.getTime() - goal.createdAt.getTime()) / 86400000,
+  );
+  const remaining = Math.max(0, (goal.targetDate.getTime() - now.getTime()) / 86400000);
+  const weightToGo = Math.abs(goal.targetWeight - goal.currentWeight);
+  const expectedProgress = (elapsed / totalDays) * weightToGo;
+
+  let progressLine = "";
+  if (latestWeight) {
+    const actualChange = Math.abs(latestWeight.weight - goal.currentWeight);
+    const pctDone = weightToGo > 0 ? Math.round((actualChange / weightToGo) * 100) : 0;
+    const ahead = goal.type === "cut"
+      ? latestWeight.weight <= goal.currentWeight - expectedProgress
+      : latestWeight.weight >= goal.currentWeight + expectedProgress;
+    progressLine =
+      `Current weight: ${latestWeight.weight} kg (logged ${latestWeight.date.toISOString().split("T")[0]})\n` +
+      `Progress: ${actualChange.toFixed(1)} kg of ${weightToGo.toFixed(1)} kg target (${pctDone}% complete)\n` +
+      `Schedule: ${ahead ? "✅ Ahead of schedule" : "⚠️ Behind schedule"} (expected ${expectedProgress.toFixed(1)} kg by now)\n`;
+  }
+
+  return (
+    `Active goal: ${goal.name ?? goal.type}\n` +
+    `Type: ${goal.type} | Start: ${goal.currentWeight} kg → Target: ${goal.targetWeight} kg\n` +
+    `Daily calories: ${Math.round(goal.dailyCalories)} kcal | Weekly change rate: ${goal.weeklyChange > 0 ? "+" : ""}${goal.weeklyChange} kg/week\n` +
+    `Timeline: ${Math.round(elapsed)} days elapsed, ${Math.round(remaining)} days remaining (target: ${goal.targetDate.toISOString().split("T")[0]})\n` +
+    progressLine
+  );
+}
+
+interface SuggestFoodsArgs { preference?: string }
+
+async function handleSuggestFoods(userId: number, args: SuggestFoodsArgs): Promise<string> {
+  // Get today\'s remaining macros first
+  const today = new Date();
+  const start = new Date(today); start.setUTCHours(0, 0, 0, 0);
+  const end = new Date(today); end.setUTCHours(23, 59, 59, 999);
+
+  const [logs, goal] = await Promise.all([
+    prisma.foodLog.findMany({
+      where: { userId, date: { gte: start, lte: end } },
+      select: { calories: true, protein: true, carbs: true, fats: true },
+    }),
+    prisma.calorieGoal.findFirst({
+      where: { userId, active: true },
+      select: { dailyCalories: true, proteinGrams: true, carbsGrams: true, fatsGrams: true },
+    }),
+  ]);
+
+  const consumed = logs.reduce<MacroTotals>(
+    (acc, l) => ({
+      calories: acc.calories + l.calories,
+      protein: acc.protein + (l.protein ?? 0),
+      carbs: acc.carbs + (l.carbs ?? 0),
+      fats: acc.fats + (l.fats ?? 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fats: 0 },
+  );
+
+  const pref = args.preference ? ` (preference: ${args.preference})` : "";
+
+  if (!goal) {
+    return (
+      `No active calorie goal — I\'ll suggest based on general good nutrition${pref}.\n` +
+      `Consumed today: ${Math.round(consumed.calories)} kcal | P: ${Math.round(consumed.protein)}g | C: ${Math.round(consumed.carbs)}g | F: ${Math.round(consumed.fats)}g\n` +
+      `Suggestion context provided. Please suggest 3-5 whole foods with estimated macros.`
+    );
+  }
+
+  const rem = {
+    calories: Math.max(0, Math.round(goal.dailyCalories - consumed.calories)),
+    protein: Math.max(0, Math.round(goal.proteinGrams - consumed.protein)),
+    carbs: Math.max(0, Math.round(goal.carbsGrams - consumed.carbs)),
+    fats: Math.max(0, Math.round(goal.fatsGrams - consumed.fats)),
+  };
+
+  return (
+    `Remaining macros for today${pref}:\n` +
+    `Calories: ${rem.calories} kcal | Protein: ${rem.protein}g | Carbs: ${rem.carbs}g | Fats: ${rem.fats}g\n\n` +
+    `Based on these remaining targets, please suggest 3-5 specific foods with serving sizes and estimated macros that would help the user hit their targets.`
+  );
+}
+
 // ── WRITE TOOL HANDLERS ──────────────────────────────────────────────────────
 
 async function handleLogFood(userId: number, args: LogFoodArgs): Promise<string> {
@@ -924,10 +1157,16 @@ async function dispatchTool(
       return handleGetWorkoutTemplates(userId);
     case "get_personal_records":
       return handleGetPersonalRecords(userId, args);
+    case "get_today_nutrition":
+      return handleGetTodayNutrition(userId);
+    case "get_goal_progress":
+      return handleGetGoalProgress(userId);
+    case "suggest_foods":
+      return handleSuggestFoods(userId, args);
     case "log_food":
-      return "For safety, food logging requires explicit user confirmation in the app UI.";
+      return handleLogFood(userId, args as unknown as LogFoodArgs);
     case "save_workout_template":
-      return "For safety, workout changes require explicit user confirmation in the app UI.";
+      return handleSaveWorkoutTemplate(userId, args as unknown as SaveTemplateArgs);
     default:
       return `Unknown tool: ${name}`;
   }
@@ -949,56 +1188,8 @@ async function dispatchTool(
 
 const MAX_TOOL_ROUNDS = 5;
 
-// ── OpenAI error classifier ──────────────────────────────────────────────────
-// Returns a user-friendly message based on the OpenAI API error type/status.
-function classifyOpenAIError(error: unknown): string {
-  if (error instanceof OpenAI.APIConnectionTimeoutError) {
-    return "The request to the AI timed out. Please try again in a moment.";
-  }
-
-  if (error instanceof OpenAI.APIConnectionError) {
-    return "Unable to reach the AI service. Check your internet connection and try again.";
-  }
-
-  if (error instanceof OpenAI.APIError) {
-    const status = error.status;
-    const code = error.code as string | undefined;
-    const type = error.type as string | undefined;
-
-    if (status === 429) {
-      return "The AI service is temporarily rate-limited. Please wait a moment and try again.";
-    }
-
-    if (status === 503 || status === 529) {
-      return "OpenAI is temporarily overloaded. Please try again in a few seconds.";
-    }
-
-    if (
-      status === 400 &&
-      (code === "context_length_exceeded" || type === "invalid_request_error")
-    ) {
-      return "This conversation is too long for the AI to process. Please start a new chat to continue.";
-    }
-
-    if (status === 400 && code === "model_not_found") {
-      return "The AI model is not available right now. Please contact support.";
-    }
-
-    if (status === 401) {
-      return "AI service authentication failed. Please contact support.";
-    }
-
-    if (status === 402) {
-      return "AI service quota exceeded. Please contact support.";
-    }
-
-    // Generic API error with status
-    return `The AI service returned an error (${status}). Please try again.`;
-  }
-
-  // Unknown error
-  return "An unexpected error occurred. Please try again.";
-}
+// Error classification is now delegated to provider.classifyError() and
+// provider.isRateLimitError(). The standalone function has been removed.
 
 export const chat = async (
   userMessage: string,
@@ -1027,10 +1218,10 @@ export const chat = async (
       `AI agent (${agentType}) — round ${round + 1}, ${messages.length} messages`,
     );
 
-    let completion: OpenAI.Chat.ChatCompletion;
+    let result: import("./providers/ProviderAdapter.js").CompletionResult;
     try {
-      completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+      result = await provider.complete({
+        model: provider.defaultModel,
         messages,
         tools,
         // "auto" means the AI decides whether to call a tool or reply directly.
@@ -1040,21 +1231,21 @@ export const chat = async (
         temperature: 0.7,
       });
     } catch (error) {
-      const userFacingMsg = classifyOpenAIError(error);
+      const userFacingMsg = provider.classifyError(error);
       logger.error(
-        `OpenAI API error (${agentType}, round ${round + 1}):`,
+        `AI provider error (${agentType}, round ${round + 1}):`,
         error,
       );
       // Throw a structured error the chatController can catch and return as HTTP 502
       const apiError = Object.assign(new Error(userFacingMsg), {
-        statusCode: error instanceof OpenAI.APIError && error.status === 429 ? 429 : 502,
+        statusCode: provider.isRateLimitError(error) ? 429 : 502,
         userFacing: true,
       }) as AppError;
       throw apiError;
     }
 
-    totalTokens += completion.usage?.total_tokens ?? 0;
-    const responseMessage = completion.choices[0]?.message;
+    totalTokens += result.tokensUsed;
+    const responseMessage = result.message;
 
     if (!responseMessage) break;
 

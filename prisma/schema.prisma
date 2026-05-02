@@ -40,6 +40,7 @@ model User {
   foods          FoodLog[]
   weights        WeightLog[]
   conversations  Conversation[]
+  agentMessages  AgentMessage[]
   calorieGoals   CalorieGoal[]
   reports        MonthlyReport[]
   templates      WorkoutTemplate[]
@@ -467,4 +468,23 @@ model MealPlanEntry {
   day MealPlanDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
 
   @@index([dayId])
+}
+
+// ── Agent Conversation Memory ─────────────────────────────────────────────────
+// One row per message (user or assistant), per agent thread.
+// The agent loop reads the last 20 rows per (userId, agentType) at chat time.
+// Trim-on-insert keeps the table bounded — oldest rows deleted after every save.
+// This is separate from Conversation (which drives the chat UI history display).
+
+model AgentMessage {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  agentType String   // "coach" | "nutritionist" | "general"
+  role      String   // "user" | "assistant"
+  content   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, agentType, createdAt])
 }

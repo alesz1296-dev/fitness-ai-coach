@@ -3,13 +3,18 @@ import { Prisma } from "@prisma/client";
 import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
-import { chat, ChatMessage } from "../ai/agent.js";
+import { chat } from "../ai/agent.js";
 import {
   AgentType,
   extractWorkoutJson,
   extractNutritionJson,
   extractMealPlanJson,
 } from "../ai/prompts.js";
+import {
+  buildUserContext,
+  loadAgentHistory,
+  saveAgentExchange,
+} from "../ai/context.js";
 import { calculateCalorieGoal } from "../lib/calorieCalculator.js";
 import logger from "../lib/logger.js";
 
@@ -111,58 +116,24 @@ export const sendMessage = async (
       );
     }
 
-    // Load user profile for context
+    // Load user profile and conversation memory in parallel
     const xLang = (req.headers["x-language"] as string | undefined) ?? null;
     const language = xLang === "es" || xLang === "en" ? xLang : "en";
 
-    const user = await prisma.user.findUnique({
-      where: { id: req.user!.id },
-      select: {
-        username: true,
-        age: true,
-        weight: true,
-        height: true,
-        fitnessLevel: true,
-        goal: true,
-        sex: true,
-        activityLevel: true,
-        proteinMultiplier: true,
-        trainingDaysPerWeek: true,
-        trainingHoursPerDay: true,
-        injuries: true,
-        waterTargetMl: true,
-        id: true,
-      },
-    });
+    const [user, history] = await Promise.all([
+      buildUserContext(req.user!.id, language),
+      loadAgentHistory(req.user!.id, agentType as AgentType),
+    ]);
 
     if (!user) {
       return next(createError("User not found", 404));
-    }
-
-    // Inject language preference into user context for AI system prompt
-    const userWithLang = { ...user, language };
-
-    // Load recent conversation history for context
-    const recentHistory = await prisma.conversation.findMany({
-      where: { userId: req.user!.id, agentType },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-    });
-
-    // Build history array in chronological order
-    const history: ChatMessage[] = [];
-    for (const entry of recentHistory.reverse()) {
-      history.push({ role: "user", content: entry.message });
-      if (entry.response) {
-        history.push({ role: "assistant", content: entry.response });
-      }
     }
 
     // Call the AI agent
     const { message: aiResponse, tokensUsed } = await chat(
       message.trim(),
       agentType as AgentType,
-      userWithLang,
+      user,
       history,
     );
 
@@ -181,17 +152,20 @@ export const sendMessage = async (
     const metadataJson =
       Object.keys(metadataObj).length > 0 ? JSON.stringify(metadataObj) : null;
 
-    // Save conversation to DB
-    const conversation = await prisma.conversation.create({
-      data: {
-        userId: req.user!.id,
-        role: "user",
-        message: message.trim(),
-        response: aiResponse,
-        agentType,
-        ...(metadataJson && { metadata: metadataJson }),
-      },
-    });
+    // Persist: Conversation (chat UI display) + AgentMessage (agent memory) in parallel
+    const [conversation] = await Promise.all([
+      prisma.conversation.create({
+        data: {
+          userId: req.user!.id,
+          role: "user",
+          message: message.trim(),
+          response: aiResponse,
+          agentType,
+          ...(metadataJson && { metadata: metadataJson }),
+        },
+      }),
+      saveAgentExchange(req.user!.id, agentType as AgentType, message.trim(), aiResponse),
+    ]);
 
     logger.info(
       `Chat (${agentType}) — user ${req.user!.id} — ${tokensUsed} tokens`,
@@ -304,17 +278,22 @@ export const clearHistory = async (
 };
 
 // ── GET /api/chat/ai-status ───────────────────────────────────────────────────
-// Returns whether the OpenAI API key is configured (without exposing it).
+// Returns which AI provider is active and whether its key is configured.
 export const getAiStatus = async (
   _req: AuthRequest,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const key = process.env.OPENAI_API_KEY ?? "";
+    const providerName = process.env.AI_PROVIDER ?? "openai";
+    const key =
+      providerName === "deepseek"
+        ? (process.env.DEEPSEEK_API_KEY ?? "")
+        : (process.env.OPENAI_API_KEY ?? "");
     const configured = key.length > 0 && !key.startsWith("sk-your");
     const masked = configured ? `${key.slice(0, 8)}...${key.slice(-4)}` : null;
-    res.json({ configured, masked, model: "gpt-4o-mini" });
+    const model = providerName === "deepseek" ? "deepseek-chat" : "gpt-4o-mini";
+    res.json({ configured, masked, model, provider: providerName });
   } catch (error) {
     next(error);
   }
