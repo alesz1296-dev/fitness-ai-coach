@@ -9,7 +9,6 @@ import { Modal } from "../../components/ui/Modal";
 import { useTranslation } from "../../i18n";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
 type MealType = typeof MEALS[number];
 

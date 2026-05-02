@@ -41,6 +41,13 @@ export interface Translation {
     editSchedule: string; browsePlans: string; avgCalBurned: string;
     noPlanThisWeek: string; noPlanSub: string; daysCompleted: string;
     languageChanged: string;
+    tapToView: string; kcalTarget: string; target: string; targetColon: string;
+    inTheLast7Days: string; dayRest: string; daysRest: string;
+    sinceLastWorkout: string; trainedToday: string;
+    consumed: string; kcalOf: string; kcalOver: string;
+    projected: string; chatWithCoach: string; nutritionAdvice: string;
+    browseTemplates: string; monthlyReport: string; trainingDaysSaved: string;
+    myGoal: string; saved: string; kgToGo: string;
   };
   nutrition: {
     title: string; logFood: string; foodLog: string; quickLog: string;
@@ -155,6 +162,9 @@ export interface Translation {
     recentChats: string; noHistory: string;
     switchToAgent: string; switchBody: string; stayHere: string; switchBtn: string;
     inputPlaceholder: string;
+    starterCoach1: string; starterCoach2: string; starterCoach3: string; starterCoach4: string;
+    starterNutri1: string; starterNutri2: string; starterNutri3: string; starterNutri4: string;
+    starterGeneral1: string; starterGeneral2: string; starterGeneral3: string; starterGeneral4: string;
     toastWorkoutUpdated: string; toastWorkoutSaved: string;
     toastMealUpdated: string; toastMealSaved: string; toastGoalSaved: string;
   };
@@ -247,6 +257,27 @@ const en: Translation = {
     noPlanSub: "Choose from beginner-friendly to advanced templates",
     daysCompleted: "days",
     languageChanged: "Language updated",
+    tapToView: "tap to view →",
+    kcalTarget: "kcal target",
+    target: "target",
+    targetColon: "Target:",
+    inTheLast7Days: "in the last 7 days",
+    dayRest: "day rest",
+    daysRest: "days rest",
+    sinceLastWorkout: "Since last workout",
+    trainedToday: "Trained today",
+    consumed: "consumed",
+    kcalOf: "of",
+    kcalOver: "kcal over",
+    projected: "Projected",
+    chatWithCoach: "Chat with AI Coach",
+    nutritionAdvice: "Nutrition Advice",
+    browseTemplates: "Browse Templates",
+    monthlyReport: "Monthly Report",
+    trainingDaysSaved: "Training days saved!",
+    myGoal: "My Goal",
+    saved: "Saved!",
+    kgToGo: "kg to go",
   },
   nutrition: {
     title: "Nutrition", logFood: "Log Food", foodLog: "Food Log",
@@ -578,6 +609,18 @@ const en: Translation = {
     switchBody: "Your current conversation is saved. You can switch back anytime.",
     stayHere: "Stay here", switchBtn: "Switch",
     inputPlaceholder: "Ask {{agent}}…  (Shift+Enter for new line)",
+    starterCoach1: "Create a 4-day Upper/Lower split for me",
+    starterCoach2: "What's the best routine for building a bigger back?",
+    starterCoach3: "How should I structure progressive overload?",
+    starterCoach4: "Give me a Push Day workout I can save",
+    starterNutri1: "What should I eat to build muscle while staying lean?",
+    starterNutri2: "Create a high-protein meal plan for 2500 calories",
+    starterNutri3: "How much protein do I really need per day?",
+    starterNutri4: "Give me a calorie plan to lose 1kg per week",
+    starterGeneral1: "How many rest days should I take per week?",
+    starterGeneral2: "What's the best way to track my progress?",
+    starterGeneral3: "How do I avoid a training plateau?",
+    starterGeneral4: "Explain the difference between cutting and bulking",
     toastWorkoutUpdated: "✅ Template updated! Check Workouts.",
     toastWorkoutSaved: "✅ Template saved! Check Workouts.",
     toastMealUpdated: "✅ Meal plan updated! Check Meal Planner.",

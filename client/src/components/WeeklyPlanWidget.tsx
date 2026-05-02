@@ -27,7 +27,14 @@ function ToastBanner({ msg }: { msg: string | null }) {
   );
 }
 
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+// Jan 1 2024 is a Monday — use it as the epoch for day-of-week names
+function getDayLabels(lang: string): string[] {
+  return Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(lang, { weekday: "short" }).format(new Date(2024, 0, 1 + i))
+  );
+}
+// Keep a static English fallback used only in non-hook contexts (e.g. initDayConfigs default label)
+const DAY_LABELS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // ── Workout plan templates ────────────────────────────────────────────────────
 
@@ -260,13 +267,13 @@ interface DayConfig {
   targetCalories: string;
 }
 
-function initDayConfigs(existingPlan: WeeklyPlan | null): DayConfig[] {
-  return DAY_LABELS.map((_, i) => {
+function initDayConfigs(existingPlan: WeeklyPlan | null, dayLabels: string[] = DAY_LABELS_EN): DayConfig[] {
+  return dayLabels.map((_, i) => {
     const existing = existingPlan?.days.find((d) => d.dayIndex === i);
     return {
       dayIndex: i,
       active: !!existing,
-      label: existing?.label ?? DAY_LABELS[i] + " Training",
+      label: existing?.label ?? dayLabels[i] + " Training",
       targetCalories: existing?.targetCalories ? String(existing.targetCalories) : "",
     };
   });
@@ -282,6 +289,8 @@ function PlanCard({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const { i18n } = useTranslation();
+  const dayLabels = getDayLabels(i18n.language);
   const levelColor = plan.level === "advanced"
     ? "text-purple-700 bg-purple-50 border-purple-200"
     : "text-blue-700 bg-blue-50 border-blue-200";
@@ -309,7 +318,7 @@ function PlanCard({
       </div>
       {/* Mini schedule preview */}
       <div className="mt-3 grid grid-cols-7 gap-1">
-        {DAY_LABELS.map((label, i) => {
+        {dayLabels.map((label, i) => {
           const active = plan.schedule.some((s) => s.dayIndex === i);
           return (
             <div
@@ -333,11 +342,13 @@ function PlanCard({
 function SetupModal({
   existingPlan,
   initialDays,
+  dayLabels,
   onSave,
   onClose,
 }: {
   existingPlan: WeeklyPlan | null;
   initialDays?: number;
+  dayLabels: string[];
   onSave: () => void;
   onClose: () => void;
 }) {
@@ -346,7 +357,7 @@ function SetupModal({
   // Seed selectedDays from the user's profile training schedule if available
   const [selectedDays, setSelectedDays] = useState(initialDays ?? 3);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const [days, setDays] = useState<DayConfig[]>(initDayConfigs(existingPlan));
+  const [days, setDays] = useState<DayConfig[]>(initDayConfigs(existingPlan, dayLabels));
   const [loading, setLoading] = useState(false);
 
   const filteredPlans = PLAN_TEMPLATES.filter((p) => p.days === selectedDays);
@@ -355,12 +366,12 @@ function SetupModal({
   const applyTemplate = (template: PlanTemplate) => {
     setSelectedTemplateId(template.id);
     setDays(
-      DAY_LABELS.map((_, i) => {
+      dayLabels.map((_, i) => {
         const slot = template.schedule.find((s) => s.dayIndex === i);
         return {
           dayIndex: i,
           active: !!slot,
-          label: slot?.label ?? DAY_LABELS[i] + " Training",
+          label: slot?.label ?? dayLabels[i] + " Training",
           targetCalories: "",
         };
       })
@@ -376,7 +387,7 @@ function SetupModal({
       // Custom: activate the right number of days
       const activeDayIndices = [0, 1, 2, 3, 4, 5, 6].slice(0, selectedDays);
       setDays(
-        DAY_LABELS.map((label, i) => ({
+        dayLabels.map((label, i) => ({
           dayIndex: i,
           active: activeDayIndices.includes(i),
           label: label + " Training",
@@ -401,7 +412,7 @@ function SetupModal({
       await weeklyPlanApi.upsert({
         days: activeDays.map((d) => ({
           dayIndex: d.dayIndex,
-          label: d.label || DAY_LABELS[d.dayIndex] + " Training",
+          label: d.label || dayLabels[d.dayIndex] + " Training",
           targetCalories: d.targetCalories ? Number(d.targetCalories) : null,
         })),
       });
@@ -513,7 +524,7 @@ function SetupModal({
                 : "bg-gray-100 text-gray-500 hover:bg-gray-200"
             }`}
           >
-            {DAY_LABELS[d.dayIndex]}
+            {dayLabels[d.dayIndex]}
           </button>
         ))}
       </div>
@@ -525,7 +536,7 @@ function SetupModal({
           {activeDays.map((d) => (
             <div key={d.dayIndex} className="flex gap-2 items-end">
               <div className="w-10 text-xs font-semibold text-brand-600 pt-6 text-center">
-                {DAY_LABELS[d.dayIndex]}
+                {dayLabels[d.dayIndex]}
               </div>
               <div className="flex-1">
                 <Input
@@ -615,10 +626,12 @@ function LogCaloriesModal({
 // ── Sync-to-calendar modal ────────────────────────────────────────────────────
 function SyncCalendarModal({
   plan,
+  dayLabels,
   onClose,
   onSynced,
 }: {
   plan: WeeklyPlan;
+  dayLabels: string[];
   onClose: () => void;
   onSynced: (msg: string) => void;
 }) {
@@ -670,7 +683,7 @@ function SyncCalendarModal({
         <div className="bg-gray-50 rounded-xl px-3 py-2.5 space-y-1">
           {activeDays.map((d) => (
             <div key={d.dayIndex} className="flex items-center gap-2 text-xs">
-              <span className="w-8 font-semibold text-brand-600">{DAY_LABELS[d.dayIndex]}</span>
+              <span className="w-8 font-semibold text-brand-600">{dayLabels[d.dayIndex]}</span>
               <span className="text-gray-600 truncate">{d.label}</span>
             </div>
           ))}
@@ -723,7 +736,8 @@ function SyncCalendarModal({
 
 // ── Main widget ───────────────────────────────────────────────────────────────
 export default function WeeklyPlanWidget() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const dayLabels = getDayLabels(i18n.language);
   const { user, updateUser } = useAuthStore();
   const [plan, setPlan]           = useState<WeeklyPlan | null>(null);
   const [weekStart, setWeekStart] = useState<string>(getThisMonday());
@@ -808,7 +822,7 @@ export default function WeeklyPlanWidget() {
 
   if (apiError) return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-gray-900 mb-3">Weekly Training Plan</h2>
+      <h2 className="text-base font-semibold text-gray-900 mb-3">{t("dashboard.weeklyTrainingPlan")}</h2>
       <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-3 py-2 text-center">
         Run <code className="font-mono">npx prisma migrate dev --name weekly_plan</code> to enable this feature
       </p>
@@ -821,12 +835,12 @@ export default function WeeklyPlanWidget() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-base font-semibold text-gray-900 dark:text-white">{t("dashboard.weeklyTrainingPlan")}</h2>
-          <p className="text-xs text-gray-400 mt-0.5">Week of {format(parseISO(weekStart), "MMM d")}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{t("mealPlanner.weekOf")} {format(parseISO(weekStart), "MMM d")}</p>
         </div>
         <div className="flex items-center gap-2">
           {plan && total > 0 && (
             <span className="text-xs font-semibold text-brand-600 bg-brand-50 px-2.5 py-1 rounded-full">
-              {completed}/{total} days
+              {completed}/{total} {t("dashboard.daysCompleted")}
             </span>
           )}
           <Button
@@ -873,14 +887,14 @@ export default function WeeklyPlanWidget() {
             </div>
             {avgCal > 0 && (
               <p className="text-xs text-gray-400 mt-1.5">
-                Avg calories burned: <span className="font-medium text-gray-600 dark:text-gray-300">{Math.round(avgCal)} kcal</span>
+                {t("dashboard.avgCalBurned")}: <span className="font-medium text-gray-600 dark:text-gray-300">{Math.round(avgCal)} kcal</span>
               </p>
             )}
           </div>
 
           {/* Day cards */}
           <div className="grid grid-cols-7 gap-1.5">
-            {DAY_LABELS.map((label, i) => {
+            {dayLabels.map((label, i) => {
               const day = plan.days.find((d) => d.dayIndex === i);
               const date = getDayDate(weekStart, i);
               const isCurrentDay = isToday(date);
@@ -958,9 +972,10 @@ export default function WeeklyPlanWidget() {
         <SetupModal
           existingPlan={plan}
           initialDays={user?.trainingDaysPerWeek ?? undefined}
+          dayLabels={dayLabels}
           onSave={() => {
             setShowSetup(false);
-            toast.show("Training days saved!");
+            toast.show(t("dashboard.trainingDaysSaved"));
             load();
             // Refresh auth store so Settings page reflects the updated trainingDaysPerWeek.
             // updateProfile was already awaited in SetupModal.save(), so this sees fresh data.
@@ -983,6 +998,7 @@ export default function WeeklyPlanWidget() {
       {showSyncCal && plan && (
         <SyncCalendarModal
           plan={plan}
+          dayLabels={dayLabels}
           onClose={() => setShowSyncCal(false)}
           onSynced={(msg) => { setShowSyncCal(false); toast.show(msg); }}
         />

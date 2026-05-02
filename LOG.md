@@ -4,6 +4,108 @@ Most recent session first.
 
 ---
 
+---
+
+## 2026-05-02 — Session: Offline + Caching Mode
+
+### Goal
+Add full offline support: API response caching in the service worker, an IndexedDB sync queue
+for failed mutations, and a Zustand store + hook to replay queued ops on reconnect.
+
+### Files created
+- `client/src/lib/idb.ts` — lightweight IndexedDB wrapper (addPendingOp, getPendingOps,
+  deletePendingOp, getPendingCount, clearPendingOps)
+- `client/src/store/offlineStore.ts` — Zustand store tracking isOffline, pendingCount,
+  syncing, lastSyncAt
+- `client/src/hooks/useOfflineSync.ts` — flushQueue() standalone fn + useOfflineSync() hook
+  (sets up online/offline/SW-message listeners; mounted once in App)
+
+### Files modified
+- `client/public/sw.js` — rewrote fetch handler:
+  - Static assets: unchanged cache-first strategy, new cache name `fitai-shell-v2`
+  - API GETs: stale-while-revalidate with 5-minute TTL (`fitai-api-v1` cache)
+    - Fresh (<5 min): serve cache instantly, refresh in background
+    - Stale (>5 min): wait for network, fall back to stale cache if offline
+    - No cache at all: wait for network, return 503 JSON if offline
+  - Non-GET mutations: pass-through (axios handles offline queuing)
+  - Background Sync event: broadcasts SW_SYNC_REPLAY to all window clients
+- `client/src/api/axios.ts` — added response interceptor:
+  - Detects pure network errors (!error.response) on non-GET, non-auth mutations
+  - Serializes method + url + body + auth headers to IndexedDB via addPendingOp
+  - Increments offlineStore.pendingCount
+- `client/src/components/OfflineBanner.tsx` — now reads from offlineStore:
+  - Shows "X changes waiting to sync" when pendingCount > 0
+  - "Sync now" button calls flushQueue() directly
+  - "Syncing..." state while replay is in progress
+  - "Back online — syncing X changes..." on reconnect flash
+- `client/src/App.tsx` — added useOfflineSync() call at app root
+
+### TypeScript
+`npx tsc --noEmit` exits 0, no errors.
+
+## 2026-05-02 — Session: Dashboard + WeeklyPlanWidget + ChatPage i18n completion
+
+### Goal
+Complete the remaining dynamic translation gaps the user identified:
+- Dashboard: "day rest / since last workout", protein/carbs/fats labels, "consumed", chart legend "weight"/"projected", "View all"/"Manage" buttons, quick action labels
+- WeeklyPlanWidget: day-of-week abbreviations, "Week of", "Edit schedule", "Sync to calendar"
+- ChatPage: suggested starter prompts
+- MealPlannerPage: remove stale `DAY_NAMES` constant
+
+### Changes
+
+**`client/src/pages/dashboard/Dashboard.tsx`**
+- `StatCard`: added `useTranslation()` hook; `"tap to view →"` → `t("dashboard.tapToView")`
+- Stat card sub-text: `"of X kcal target"` → `t("dashboard.kcalTarget")`, protein target, weight target, `"in the last 7 days"` → `t("dashboard.inTheLast7Days")`
+- Rest-day streak: `"day/days rest"` → `t("dashboard.dayRest")` / `t("dashboard.daysRest")`
+- `"Since last workout"` → `t("dashboard.sinceLastWorkout")`; `"Trained today"` → `t("dashboard.trainedToday")`
+- MacroBar calls: `label="Protein/Carbs/Fats"` → `t("common.protein/carbs/fats")`
+- Calorie ring: `"consumed"` → `t("dashboard.consumed")`; `"of X kcal"` → dynamic with `t("dashboard.kcalOf")`; `"kcal over"` → `t("dashboard.kcalOver")`
+- Weight chart: `name="weight"` → `name={t("common.weight")}`, `name="projected"` → `name={t("dashboard.projected")}`; tooltip formatter simplified
+- "View all →" / "Manage →" buttons → `t("common.viewAll")` / `t("common.manage")` (already existed in en.ts)
+- Weight FAB: `"Saved!"`, `"Cancel"`, `"Save"` → `t()` calls
+- Quick actions: all four labels now use `t("dashboard.chatWithCoach")` etc.
+- `"My Goal"` fallback, `"Log your first workout"`, `"Set a goal"` buttons → `t()` calls
+
+**`client/src/components/WeeklyPlanWidget.tsx`**
+- Replaced static `DAY_LABELS = ["Mon", ...]` with `getDayLabels(lang: string)` helper using `Intl.DateTimeFormat({ weekday: "short" })`
+- `useTranslation()` expanded to `{ t, i18n }` in main widget; `dayLabels` computed from `i18n.language`
+- `dayLabels` prop threaded through `SetupModal` (+ `initDayConfigs`), `PlanCard`, `SyncCalendarModal`
+- `PlanCard`: added `useTranslation()` + local `dayLabels`
+- "Week of X" header → `t("mealPlanner.weekOf")`
+- "X/Y days" badge → `t("dashboard.daysCompleted")`
+- "Avg calories burned" → `t("dashboard.avgCalBurned")`
+- "Edit schedule" → `t("dashboard.editSchedule")`; "Sync to calendar" → `t("dashboard.syncToCalendar")`
+- "Training days saved!" toast → `t("dashboard.trainingDaysSaved")`
+- `WeeklyPlanWidget` apiError fallback header → `t("dashboard.weeklyTrainingPlan")`
+
+**`client/src/pages/chat/ChatPage.tsx`**
+- Module-level `STARTERS` constant replaced with `getStarters(t: (k: TKey) => string)` function
+- `STARTERS` now computed inside `ChatPage` component after `const { t } = useTranslation()`
+- 12 new `chat.starterCoach*`, `chat.starterNutri*`, `chat.starterGeneral*` keys used
+
+**`client/src/pages/mealplanner/MealPlannerPage.tsx`**
+- Removed stale module-level `DAY_NAMES` constant (was superseded by `DAY_NAMES_T` using `t()` in a previous session)
+
+**`client/src/i18n/locales/en.ts`**
+- Added 23 new `dashboard.*` keys: `tapToView`, `kcalTarget`, `target`, `targetColon`, `inTheLast7Days`, `dayRest`, `daysRest`, `sinceLastWorkout`, `trainedToday`, `consumed`, `kcalOf`, `kcalOver`, `projected`, `chatWithCoach`, `nutritionAdvice`, `browseTemplates`, `monthlyReport`, `trainingDaysSaved`, `myGoal`, `saved`, `kgToGo`
+- Added 12 new `chat.*` starter keys: `starterCoach1–4`, `starterNutri1–4`, `starterGeneral1–4`
+
+**`client/src/i18n/locales/es.ts`**
+- All 35 new keys translated to Spanish
+
+### TypeScript
+- `npx tsc --noEmit` — **0 errors**
+
+### Commit pending
+```bash
+git add -A
+git commit -m "feat: complete dashboard/widget/chat i18n — day labels, macros, chart legend, quick actions, starters"
+git push origin main
+```
+
+---
+
 ## 2026-05-02 — Session: Full i18n Spanish translation (all pages)
 
 ### Goal

@@ -233,6 +233,7 @@ Full codebase audit run before production hardening. Fix in order of priority.
 
 - _(All Phase 3 items resolved in Session 8 — see LOG.md)_
 - _(All Phase 4 feature polish items resolved — see LOG.md)_
+- ✅ **i18n — fully dynamic across all pages** — All UI strings on all pages (Dashboard, WorkoutsPage, ChatPage, NutritionPage, SettingsPage, GoalsPage, ReportsPage, MealPlannerPage, WeeklyPlanWidget, TemplatesPage, ProgressPage) use `t()` hook calls. Day-of-week abbreviations use `Intl.DateTimeFormat({ weekday: 'short' })` (locale-aware, no hardcoded strings). Chat suggested prompts translated per locale. No module-level string constants remain that would be stuck at boot-time language.
 - ✅ **Rate limiter too aggressive during testing** — Fixed in `src/middleware/rateLimiter.ts`. Dev mode now uses 5 000 req/15 min (general), 500 (chat), 200 (auth). Override via env vars: `RATE_LIMIT_MAX`, `CHAT_RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_MAX`, `REPORT_RATE_LIMIT_MAX`.
 - ✅ **Water intake buttons not persisting** — Fixed in `src/controllers/waterController.ts`: `logWater` stores dates as UTC midnight, `getToday` uses UTC-consistent start/end boundaries. Frontend `handleAddWater`/`handleDeleteWater` now catches errors and shows an inline banner.
 - ✅ **Rest/Workout days ↔ Settings desync** — Fixed in `WeeklyPlanWidget.tsx`: `SetupModal` receives `initialDays` from `user.trainingDaysPerWeek`; on save it calls `usersApi.updateProfile({ trainingDaysPerWeek })` and refreshes the auth store so Settings stays in sync.

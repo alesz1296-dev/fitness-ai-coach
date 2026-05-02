@@ -4,6 +4,7 @@ import { chatApi } from "../../api";
 import type { Conversation } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { useTranslation, t } from "../../i18n";
+import type { TKey } from "../../i18n";
 
 type AgentType = "coach" | "nutritionist" | "general";
 
@@ -37,26 +38,28 @@ const AGENTS: { id: AgentType; label: string; icon: string; desc: string }[] = [
   },
 ];
 
-const STARTERS: Record<AgentType, string[]> = {
-  coach: [
-    "Create a 4-day Upper/Lower split for me",
-    "What's the best routine for building a bigger back?",
-    "How should I structure progressive overload?",
-    "Give me a Push Day workout I can save",
-  ],
-  nutritionist: [
-    "What should I eat to build muscle while staying lean?",
-    "Create a high-protein meal plan for 2500 calories",
-    "How much protein do I really need per day?",
-    "Give me a calorie plan to lose 1kg per week",
-  ],
-  general: [
-    "How many rest days should I take per week?",
-    "What's the best way to track my progress?",
-    "How do I avoid a training plateau?",
-    "Explain the difference between cutting and bulking",
-  ],
-};
+function getStarters(t: (k: TKey) => string): Record<AgentType, string[]> {
+  return {
+    coach: [
+      t("chat.starterCoach1"),
+      t("chat.starterCoach2"),
+      t("chat.starterCoach3"),
+      t("chat.starterCoach4"),
+    ],
+    nutritionist: [
+      t("chat.starterNutri1"),
+      t("chat.starterNutri2"),
+      t("chat.starterNutri3"),
+      t("chat.starterNutri4"),
+    ],
+    general: [
+      t("chat.starterGeneral1"),
+      t("chat.starterGeneral2"),
+      t("chat.starterGeneral3"),
+      t("chat.starterGeneral4"),
+    ],
+  };
+}
 
 // ── Typing indicator ──────────────────────────────────────────────────────────
 function TypingDots() {
@@ -292,6 +295,7 @@ function ChatBubble({
 // ── Main Chat page ────────────────────────────────────────────────────────────
 export default function ChatPage() {
   const { t } = useTranslation();
+  const STARTERS = getStarters(t);
   const [searchParams] = useSearchParams();
   const defaultAgent = (searchParams.get("agent") as AgentType) || "general";
 

@@ -19,6 +19,7 @@ function StatCard({ label, value, sub, color, icon, onClick }: {
   label: string; value: string | number; sub?: string; color: string; icon: string;
   onClick?: () => void;
 }) {
+  const { t } = useTranslation();
   const Tag = onClick ? "button" : "div";
   return (
     <Tag
@@ -33,7 +34,7 @@ function StatCard({ label, value, sub, color, icon, onClick }: {
         </div>
         <span className="text-2xl opacity-80">{icon}</span>
       </div>
-      {onClick && <p className="text-[11px] opacity-80 mt-2 text-right font-semibold">tap to view →</p>}
+      {onClick && <p className="text-[11px] opacity-80 mt-2 text-right font-semibold">{t("dashboard.tapToView")}</p>}
     </Tag>
   );
 }
@@ -317,7 +318,7 @@ export default function Dashboard() {
         <StatCard
           label={t("dashboard.caloriesToday")}
           value={Math.round(calories)}
-          sub={`of ${Math.round(calorieTarget)} kcal target`}
+          sub={`${Math.round(calorieTarget)} ${t("dashboard.kcalTarget")}`}
           color="bg-gradient-to-br from-orange-400 to-orange-600"
           icon="🔥"
           onClick={() => navigate("/nutrition")}
@@ -325,7 +326,7 @@ export default function Dashboard() {
         <StatCard
           label={t("dashboard.proteinToday")}
           value={`${Math.round(today.totals.protein ?? 0)}g`}
-          sub={activeGoal ? `of ${Math.round(activeGoal.proteinGrams)}g target` : "today"}
+          sub={activeGoal ? `${Math.round(activeGoal.proteinGrams)}g ${t("dashboard.target")}` : t("common.today")}
           color="bg-gradient-to-br from-blue-500 to-blue-700"
           icon="💪"
           onClick={() => navigate("/nutrition")}
@@ -333,7 +334,7 @@ export default function Dashboard() {
         <StatCard
           label={t("progress.currentWeight")}
           value={weightLogs.at(-1) ? `${weightLogs.at(-1)!.weight}kg` : "—"}
-          sub={activeGoal ? `target: ${activeGoal.targetWeight}kg` : "log your weight"}
+          sub={activeGoal ? `${t("dashboard.targetColon")} ${activeGoal.targetWeight}kg` : t("dashboard.logYourWeight")}
           color="bg-gradient-to-br from-purple-500 to-purple-700"
           icon="⚖️"
           onClick={() => setShowWeightManager((v) => !v)}
@@ -341,7 +342,7 @@ export default function Dashboard() {
         <StatCard
           label={t("dashboard.workoutsThisWeek")}
           value={weeklyWorkoutCount}
-          sub="in the last 7 days"
+          sub={t("dashboard.inTheLast7Days")}
           color="bg-gradient-to-br from-brand-500 to-brand-700"
           icon="🏋️"
           onClick={() => navigate("/workouts")}
@@ -385,12 +386,12 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-purple-600 font-bold text-lg">
               😴 {streaks?.restDays != null ? streaks!.restDays : "—"}
-              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">day{streaks?.restDays !== 1 ? "s" : ""} rest</span>
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{streaks?.restDays !== 1 ? t("dashboard.daysRest") : t("dashboard.dayRest")}</span>
             </div>
             <span className="text-xs text-gray-400 dark:text-gray-500">→</span>
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500">Since last workout</p>
-          {today.hasWorkout && <p className="text-xs text-green-600 font-medium">✅ Trained today</p>}
+          <p className="text-xs text-gray-400 dark:text-gray-500">{t("dashboard.sinceLastWorkout")}</p>
+          {today.hasWorkout && <p className="text-xs text-green-600 font-medium">✅ {t("dashboard.trainedToday")}</p>}
         </button>
 
         {/* Water intake */}
@@ -422,9 +423,9 @@ export default function Dashboard() {
 
           {/* Macros — at top so they're immediately visible */}
           <div className="space-y-3 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700">
-            <MacroBar label="Protein" value={today.totals.protein ?? 0} target={activeGoal?.proteinGrams} color="bg-blue-500" />
-            <MacroBar label="Carbs"   value={today.totals.carbs   ?? 0} target={activeGoal?.carbsGrams}   color="bg-yellow-400" />
-            <MacroBar label="Fats"    value={today.totals.fats    ?? 0} target={activeGoal?.fatsGrams}    color="bg-red-400" />
+            <MacroBar label={t("common.protein")} value={today.totals.protein ?? 0} target={activeGoal?.proteinGrams} color="bg-blue-500" />
+            <MacroBar label={t("common.carbs")}   value={today.totals.carbs   ?? 0} target={activeGoal?.carbsGrams}   color="bg-yellow-400" />
+            <MacroBar label={t("common.fats")}    value={today.totals.fats    ?? 0} target={activeGoal?.fatsGrams}    color="bg-red-400" />
           </div>
 
           {/* Macro cycling day type badge */}
@@ -457,15 +458,15 @@ export default function Dashboard() {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-2xl font-bold text-gray-900 dark:text-white">{caloriePct}%</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">consumed</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{t("dashboard.consumed")}</span>
               </div>
             </div>
             <p className="mt-3 text-gray-800 dark:text-gray-100 font-semibold text-lg">{Math.round(calories)} kcal</p>
-            <p className="text-gray-400 dark:text-gray-500 text-sm">of {Math.round(calorieTarget)} kcal</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm">{t("dashboard.kcalOf")} {Math.round(calorieTarget)} kcal</p>
             <p className={`text-sm font-medium mt-1 ${calorieTarget - calories < 0 ? "text-red-500" : "text-brand-600"}`}>
               {calorieTarget - calories > 0
                 ? `${Math.round(calorieTarget - calories)} ${t("dashboard.kcalRemaining")}`
-                : `${Math.round(Math.abs(calorieTarget - calories))} kcal over`}
+                : `${Math.round(Math.abs(calorieTarget - calories))} ${t("dashboard.kcalOver")}`}
             </p>
 
             {/* No-goal CTA nudge */}
@@ -526,16 +527,13 @@ export default function Dashboard() {
                   <YAxis tick={{ fontSize: 11, fill: chartColors.tick }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
                   <Tooltip
                     contentStyle={{ borderRadius: "12px", border: `1px solid ${chartColors.tooltip.border}`, fontSize: "13px", backgroundColor: chartColors.tooltip.background, color: chartColors.tooltip.color }}
-                    formatter={(v: number, name: string) => [
-                      v != null ? `${Number(v).toFixed(1)} kg` : null,
-                      name === "weight" ? "Actual" : t("progress.projection"),
-                    ]}
+                    formatter={(v: number) => v != null ? `${Number(v).toFixed(1)} kg` : (null as any)}
                   />
                   {hasProjection && <Legend iconType="line" wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} />}
                   <Area
                     type="monotone"
                     dataKey="weight"
-                    name="weight"
+                    name={t("common.weight")}
                     stroke="#22c55e"
                     strokeWidth={2.5}
                     fill="url(#weightGrad)"
@@ -546,7 +544,7 @@ export default function Dashboard() {
                     <Line
                       type="monotone"
                       dataKey="projected"
-                      name="projected"
+                      name={t("dashboard.projected")}
                       stroke="#a78bfa"
                       strokeWidth={3}
                       strokeDasharray="6 3"
@@ -662,7 +660,7 @@ export default function Dashboard() {
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">⚖️ {t("dashboard.logWeight")}</p>
             {weightSaved ? (
-              <p className="text-center text-green-600 font-medium text-sm py-1">✅ Saved!</p>
+              <p className="text-center text-green-600 font-medium text-sm py-1">✅ {t("dashboard.saved")}</p>
             ) : (
               <>
                 <div className="flex items-center gap-2">
@@ -767,7 +765,7 @@ export default function Dashboard() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="font-semibold text-gray-800 dark:text-gray-100">{activeGoal.name || "My Goal"}</p>
+                    <p className="font-semibold text-gray-800 dark:text-gray-100">{activeGoal.name || t("dashboard.myGoal")}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                       {activeGoal.currentWeight}kg → {activeGoal.targetWeight}kg ·{" "}
                       {activeGoal.type === "cut" ? t("dashboard.cutting") : activeGoal.type === "bulk" ? t("dashboard.bulking") : t("dashboard.maintaining")}
@@ -822,10 +820,10 @@ export default function Dashboard() {
             <CardHeader title={t("dashboard.quickActions")} />
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: "Chat with AI Coach",  icon: "🤖", to: "/chat?agent=coach" },
-                { label: "Nutrition Advice",    icon: "🥗", to: "/chat?agent=nutritionist" },
-                { label: "Browse Templates",    icon: "📋", to: "/templates" },
-                { label: "Monthly Report",      icon: "📊", to: "/reports" },
+                { label: t("dashboard.chatWithCoach"),  icon: "🤖", to: "/chat?agent=coach" },
+                { label: t("dashboard.nutritionAdvice"),    icon: "🥗", to: "/chat?agent=nutritionist" },
+                { label: t("dashboard.browseTemplates"),    icon: "📋", to: "/templates" },
+                { label: t("dashboard.monthlyReport"),      icon: "📊", to: "/reports" },
               ].map((a) => (
                 <button
                   key={a.label}
