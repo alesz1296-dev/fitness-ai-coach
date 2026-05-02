@@ -283,9 +283,9 @@ export default function Dashboard() {
     const isAhead  = activeGoal.type === "cut"  ? delta < -threshold : delta > threshold;
     const isBehind = activeGoal.type === "cut"  ? delta > threshold  : delta < -threshold;
 
-    if (isAhead)  return { label: "🚀 Ahead of Schedule", cls: "bg-green-100 text-green-700" };
-    if (isBehind) return { label: "⚠️ Slightly Behind",   cls: "bg-amber-100  text-amber-700" };
-    return           { label: "✅ On Track",               cls: "bg-blue-100   text-blue-700"  };
+    if (isAhead)  return { label: t("dashboard.aheadOfSchedule"), cls: "bg-green-100 text-green-700" };
+    if (isBehind) return { label: t("dashboard.slightlyBehind"),  cls: "bg-amber-100  text-amber-700" };
+    return           { label: t("dashboard.onTrack"),              cls: "bg-blue-100   text-blue-700"  };
   })();
 
   const hour     = new Date().getHours();
@@ -410,7 +410,7 @@ export default function Dashboard() {
               style={{ width: `${Math.min(100, ((water?.totalMl ?? 0) / (water?.targetMl ?? 2000)) * 100)}%` }}
             />
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500">Water today · tap to log →</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{t("dashboard.waterToday")} · →</p>
         </button>
       </div>
 
@@ -464,7 +464,7 @@ export default function Dashboard() {
             <p className="text-gray-400 dark:text-gray-500 text-sm">of {Math.round(calorieTarget)} kcal</p>
             <p className={`text-sm font-medium mt-1 ${calorieTarget - calories < 0 ? "text-red-500" : "text-brand-600"}`}>
               {calorieTarget - calories > 0
-                ? `${Math.round(calorieTarget - calories)} kcal remaining`
+                ? `${Math.round(calorieTarget - calories)} ${t("dashboard.kcalRemaining")}`
                 : `${Math.round(Math.abs(calorieTarget - calories))} kcal over`}
             </p>
 
@@ -528,7 +528,7 @@ export default function Dashboard() {
                     contentStyle={{ borderRadius: "12px", border: `1px solid ${chartColors.tooltip.border}`, fontSize: "13px", backgroundColor: chartColors.tooltip.background, color: chartColors.tooltip.color }}
                     formatter={(v: number, name: string) => [
                       v != null ? `${Number(v).toFixed(1)} kg` : null,
-                      name === "weight" ? t("progress.bodyWeight") : t("goals.progressToDate"),
+                      name === "weight" ? "Actual" : t("progress.projection"),
                     ]}
                   />
                   {hasProjection && <Legend iconType="line" wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} />}

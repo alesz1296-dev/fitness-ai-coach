@@ -589,19 +589,30 @@ function CycleTrackingForm() {
 // ── Language Picker ──────────────────────────────────────────────────────────
 function LanguagePicker() {
   const { t, i18n } = useTranslation();
+  const [justChanged, setJustChanged] = useState(false);
+
+  const handleLangChange = (code: SupportedLang) => {
+    if (code === i18n.language) return;
+    i18n.changeLanguage(code);          // instant — persisted to localStorage
+    setJustChanged(true);
+    setTimeout(() => setJustChanged(false), 2500);
+  };
 
   return (
     <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
       <div>
         <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🌐 {t("profile.language")}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">Choose the display language for the app</p>
+        {justChanged
+          ? <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-0.5">✓ {t("dashboard.languageChanged")}</p>
+          : <p className="text-xs text-gray-500 dark:text-gray-400">{t("profile.changeLanguage")}</p>
+        }
       </div>
       <div className="flex gap-1.5">
         {(Object.entries(LANG_LABELS) as [SupportedLang, string][]).map(([code, label]) => (
           <button
             key={code}
             type="button"
-            onClick={() => i18n.changeLanguage(code)}
+            onClick={() => handleLangChange(code as SupportedLang)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
               i18n.language === code
                 ? "bg-brand-600 text-white border-brand-600"

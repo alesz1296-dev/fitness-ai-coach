@@ -1202,8 +1202,8 @@ export default function ProgressPage() {
           {stats && (
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
               {[
-                { label: "Current",  value: `${stats.latest} kg`,  color: "text-gray-900" },
-                { label: "Starting", value: `${stats.starting} kg`, color: "text-gray-500" },
+                { label: "Current",  value: `${stats.latest} kg`,  color: "text-gray-900 dark:text-white dark:drop-shadow-[0_0_10px_rgba(255,255,255,0.75)]" },
+                { label: "Starting", value: `${stats.starting} kg`, color: "text-gray-500 dark:text-gray-300" },
                 { label: "Change",   value: `${stats.change > 0 ? "+" : ""}${stats.change.toFixed(1)} kg`,
                   color: stats.change < 0 ? "text-green-600" : stats.change > 0 ? "text-red-600" : "text-gray-500" },
                 { label: "Lowest",   value: `${stats.min} kg`,     color: "text-blue-600" },

@@ -35,6 +35,12 @@ export interface Translation {
     activeGoal: string; manageGoal: string;
     cutting: string; bulking: string; maintaining: string;
     trainDay: string; restDay: string;
+    kcalRemaining: string;
+    onTrack: string; aheadOfSchedule: string; slightlyBehind: string;
+    weeklyTrainingPlan: string; tapDayComplete: string; syncToCalendar: string;
+    editSchedule: string; browsePlans: string; avgCalBurned: string;
+    noPlanThisWeek: string; noPlanSub: string; daysCompleted: string;
+    languageChanged: string;
   };
   nutrition: {
     title: string; logFood: string; foodLog: string; quickLog: string;
@@ -142,6 +148,20 @@ const en: Translation = {
     activeGoal: "Active Goal", manageGoal: "Manage",
     cutting: "Cutting", bulking: "Bulking", maintaining: "Maintaining",
     trainDay: "Train day", restDay: "Rest day",
+    kcalRemaining: "kcal remaining",
+    onTrack: "✅ On Track",
+    aheadOfSchedule: "🚀 Ahead of Schedule",
+    slightlyBehind: "⚠️ Slightly Behind",
+    weeklyTrainingPlan: "Weekly Training Plan",
+    tapDayComplete: "Tap a day to mark complete · Numbers show kcal",
+    syncToCalendar: "Sync to calendar",
+    editSchedule: "Edit schedule",
+    browsePlans: "Browse Plans",
+    avgCalBurned: "Avg calories burned",
+    noPlanThisWeek: "No plan for this week",
+    noPlanSub: "Choose from beginner-friendly to advanced templates",
+    daysCompleted: "days",
+    languageChanged: "Language updated",
   },
   nutrition: {
     title: "Nutrition", logFood: "Log Food", foodLog: "Food Log",

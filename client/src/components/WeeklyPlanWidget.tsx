@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { startOfWeek, addDays, format, isToday, parseISO } from "date-fns";
 import { weeklyPlanApi, usersApi, calendarApi, calorieGoalsApi } from "../api";
+import { useTranslation } from "../i18n";
 import { useAuthStore } from "../store/authStore";
 import type { WeeklyPlan, WeeklyPlanDay } from "../types";
 import { Button } from "./ui/Button";
@@ -722,6 +723,7 @@ function SyncCalendarModal({
 
 // ── Main widget ───────────────────────────────────────────────────────────────
 export default function WeeklyPlanWidget() {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
   const [plan, setPlan]           = useState<WeeklyPlan | null>(null);
   const [weekStart, setWeekStart] = useState<string>(getThisMonday());
@@ -818,7 +820,7 @@ export default function WeeklyPlanWidget() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">Weekly Training Plan</h2>
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">{t("dashboard.weeklyTrainingPlan")}</h2>
           <p className="text-xs text-gray-400 mt-0.5">Week of {format(parseISO(weekStart), "MMM d")}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -832,7 +834,7 @@ export default function WeeklyPlanWidget() {
             variant={plan ? "secondary" : "primary"}
             onClick={() => setShowSetup(true)}
           >
-            {plan ? "Edit Schedule" : "Set Up Plan"}
+            {plan ? t("dashboard.editSchedule") : t("dashboard.browsePlans")}
           </Button>
         </div>
       </div>
@@ -855,9 +857,9 @@ export default function WeeklyPlanWidget() {
       {!plan || total === 0 ? (
         <div className="text-center py-6">
           <p className="text-2xl mb-2">📅</p>
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">No plan for this week</p>
-          <p className="text-xs text-gray-400 mb-4">Choose from beginner-friendly to advanced templates</p>
-          <Button size="sm" onClick={() => setShowSetup(true)}>Browse Plans</Button>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{t("dashboard.noPlanThisWeek")}</p>
+          <p className="text-xs text-gray-400 mb-4">{t("dashboard.noPlanSub")}</p>
+          <Button size="sm" onClick={() => setShowSetup(true)}>{t("dashboard.browsePlans")}</Button>
         </div>
       ) : (
         <>
@@ -936,7 +938,7 @@ export default function WeeklyPlanWidget() {
 
           <div className="mt-3 flex items-center justify-between">
             <p className="text-xs text-gray-400">
-              Tap a day to mark complete · Numbers show kcal ·{" "}
+              {t("dashboard.tapDayComplete")} ·{" "}
               <button onClick={() => setShowSetup(true)} className="text-brand-500 hover:underline font-medium">
                 Edit schedule
               </button>
