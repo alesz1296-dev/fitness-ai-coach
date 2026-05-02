@@ -850,4 +850,10 @@ export default function Dashboard() {
                   {a.label}
                 </button>
               ))}
-            <
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
