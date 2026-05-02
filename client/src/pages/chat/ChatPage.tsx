@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { chatApi } from "../../api";
 import type { Conversation } from "../../types";
 import { Button } from "../../components/ui/Button";
+import { useTranslation, t } from "../../i18n";
 
 type AgentType = "coach" | "nutritionist" | "general";
 
@@ -18,21 +19,21 @@ interface ChatMessage {
 const AGENTS: { id: AgentType; label: string; icon: string; desc: string }[] = [
   {
     id: "coach",
-    label: "AI Coach",
+    label: t("chat.workoutCoach"),
     icon: "🏋️",
-    desc: "Workout plans, recovery, technique tips",
+    desc: t("chat.coachDesc"),
   },
   {
     id: "nutritionist",
-    label: "Nutritionist",
+    label: t("chat.nutritionist"),
     icon: "🥗",
-    desc: "Meal plans, macros, food advice",
+    desc: t("chat.nutritionistDesc"),
   },
   {
     id: "general",
-    label: "General",
+    label: t("chat.generalCoach"),
     icon: "🤖",
-    desc: "Any fitness or health question",
+    desc: t("chat.generalDesc"),
   },
 ];
 
@@ -59,6 +60,7 @@ const STARTERS: Record<AgentType, string[]> = {
 
 // ── Typing indicator ──────────────────────────────────────────────────────────
 function TypingDots() {
+  const { t } = useTranslation();
   return (
     <div className="flex items-end gap-1 px-4 py-3">
       {[0, 1, 2].map((i) => (
@@ -90,6 +92,7 @@ function SuggestionCard({
   confirmStyle: string;
   onConfirm: () => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const [state, setState] = useState<CardState>("idle");
 
   if (state === "dismissed") return null;
@@ -115,7 +118,7 @@ function SuggestionCard({
       {state === "saved" ? (
         <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-medium">
           <span>✅</span>
-          <span>Saved! Check {title}.</span>
+          <span>{t("chat.savedCheck", { title })}</span>
         </div>
       ) : (
         <>
@@ -143,13 +146,13 @@ function SuggestionCard({
               disabled={state === "saving"}
               className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${confirmStyle} disabled:opacity-60`}
             >
-              {state === "saving" ? "Saving…" : confirmLabel}
+              {state === "saving" ? t("chat.saving") : confirmLabel}
             </button>
             <button
               onClick={() => setState("dismissed")}
               className="px-3 py-2 rounded-xl text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-              Not now
+              {t("chat.notNow")}
             </button>
           </div>
         </>
@@ -172,6 +175,7 @@ function ChatBubble({
   onSavePlan: (plan: Record<string, any>) => Promise<void>;
   onSaveMealPlan: (plan: Record<string, any>) => Promise<void>;
 }) {
+  const { t } = useTranslation();
   const isUser = msg.role === "user";
 
   // Strip all fenced JSON blocks from displayed text so users don't see raw JSON
@@ -214,7 +218,7 @@ function ChatBubble({
           isUser ? "bg-brand-600 text-white" : "bg-gray-100 dark:bg-gray-700"
         }`}
       >
-        {isUser ? "Me" : agentIcon}
+        {isUser ? t("chat.meAvatar") : agentIcon}
       </div>
 
       {/* Bubble + action cards */}
@@ -235,16 +239,16 @@ function ChatBubble({
         {msg.suggestedWorkout && (
           <SuggestionCard
             icon="💪"
-            title="Your Workouts"
+            title={t("chat.workoutsTitle")}
             question={
               msg.suggestedWorkout.mode === "replace"
-                ? "Want to replace this saved workout template?"
-                : "Want to save this workout plan to your templates?"
+                ? t("chat.workoutReplaceQ")
+                : t("chat.workoutSaveQ")
             }
             confirmLabel={
               msg.suggestedWorkout.mode === "replace"
-                ? "Yes, update Workout"
-                : "Yes, add to Workouts"
+                ? t("chat.workoutUpdateBtn")
+                : t("chat.workoutAddBtn")
             }
             confirmStyle="bg-brand-600 hover:bg-brand-700 text-white"
             onConfirm={() => onSaveWorkout(msg.suggestedWorkout!)}
@@ -253,18 +257,18 @@ function ChatBubble({
         {msg.suggestedMealPlan && (
           <SuggestionCard
             icon="🥗"
-            title="Meal Planner"
+            title={t("chat.mealPlannerTitle")}
             question={
               msg.suggestedMealPlan.mode === "replace"
-                ? "Want to replace this Meal Planner plan?"
+                ? t("chat.mealReplaceQ")
                 : msg.suggestedMealPlan.mode === "append"
-                  ? "Want to add these meals to your Meal Planner?"
-                  : "Want to save this plan to Meal Planner?"
+                  ? t("chat.mealAppendQ")
+                  : t("chat.mealSaveQ")
             }
             confirmLabel={
               msg.suggestedMealPlan.mode === "replace"
-                ? "Yes, update Meal Plan"
-                : "Yes, save Meal Plan"
+                ? t("chat.mealUpdateBtn")
+                : t("chat.mealSaveBtn")
             }
             confirmStyle="bg-orange-500 hover:bg-orange-600 text-white"
             onConfirm={() => onSaveMealPlan(msg.suggestedMealPlan!)}
@@ -273,9 +277,9 @@ function ChatBubble({
         {msg.suggestedPlan && (
           <SuggestionCard
             icon="🎯"
-            title="Goals"
-            question="Want to save this calorie & macro plan to your goals?"
-            confirmLabel="Yes, save as Goal"
+            title={t("chat.goalsTitle")}
+            question={t("chat.goalSaveQ")}
+            confirmLabel={t("chat.goalSaveBtn")}
             confirmStyle="bg-green-600 hover:bg-green-700 text-white"
             onConfirm={() => onSavePlan(msg.suggestedPlan!)}
           />
@@ -287,6 +291,7 @@ function ChatBubble({
 
 // ── Main Chat page ────────────────────────────────────────────────────────────
 export default function ChatPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const defaultAgent = (searchParams.get("agent") as AgentType) || "general";
 
@@ -378,9 +383,9 @@ export default function ChatPage() {
     const d = new Date(dateStr);
     const today = new Date();
     const diff = Math.floor((today.getTime() - d.getTime()) / 86_400_000);
-    if (diff === 0) return "Today";
-    if (diff === 1) return "Yesterday";
-    if (diff < 7) return `${diff} days ago`;
+    if (diff === 0) return t("chat.today");
+    if (diff === 1) return t("chat.yesterday");
+    if (diff < 7) return t("chat.daysAgo", { n: diff });
     return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   };
 
@@ -419,7 +424,7 @@ export default function ChatPage() {
         ...prev,
         {
           role: "assistant",
-          content: "Sorry, I couldn't respond right now. Please try again.",
+          content: t("chat.errorMsg"),
         },
       ]);
     } finally {
@@ -428,7 +433,7 @@ export default function ChatPage() {
   };
 
   const clearHistory = async () => {
-    if (!confirm(`Clear ${agentInfo.label} conversation history?`)) return;
+    if (!confirm(t("chat.clearConfirm", { agent: agentInfo.label }))) return;
     await chatApi.clearHistory(agent);
     setMessages([]);
   };
@@ -452,8 +457,8 @@ export default function ChatPage() {
     });
     showToast(
       workout.mode === "replace"
-        ? "✅ Template updated! Check Workouts."
-        : "✅ Template saved! Check Workouts.",
+        ? t("chat.toastWorkoutUpdated")
+        : t("chat.toastWorkoutSaved"),
     );
   };
 
@@ -474,8 +479,8 @@ export default function ChatPage() {
     });
     showToast(
       mealPlan.mode === "replace"
-        ? "✅ Meal plan updated! Check Meal Planner."
-        : "✅ Meal plan saved! Check Meal Planner.",
+        ? t("chat.toastMealUpdated")
+        : t("chat.toastMealSaved"),
     );
   };
 
@@ -492,7 +497,7 @@ export default function ChatPage() {
       fatsGrams: plan.fatsGrams,
       notes: plan.notes,
     });
-    showToast("✅ Calorie goal saved! Check your Goals page.");
+    showToast(t("chat.toastGoalSaved"));
   };
 
   return (
@@ -503,13 +508,13 @@ export default function ChatPage() {
         <aside className="w-56 shrink-0 bg-white dark:bg-gray-800 border-r border-gray-100 dark:border-gray-700 flex-col hidden lg:flex">
           <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
             <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-              Recent chats
+              {t("chat.recentChats")}
             </p>
           </div>
           <div className="flex-1 overflow-y-auto py-2">
             {sidebarHistory.length === 0 ? (
               <p className="text-xs text-gray-300 dark:text-gray-600 px-4 py-3">
-                No history yet
+                {t("chat.noHistory")}
               </p>
             ) : (
               sidebarHistory.map((c) => {
@@ -552,14 +557,14 @@ export default function ChatPage() {
             <div className="max-w-3xl mx-auto">
               <div className="flex items-center justify-between mb-3">
                 <h1 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-                  AI Coach
+                  {t("chat.title")}
                 </h1>
                 {messages.length > 0 && (
                   <button
                     onClick={clearHistory}
                     className="text-xs text-gray-400 dark:text-gray-500 hover:text-red-500 transition-colors"
                   >
-                    Clear history
+                    {t("chat.clearHistory")}
                   </button>
                 )}
               </div>
@@ -665,7 +670,7 @@ export default function ChatPage() {
                     send();
                   }
                 }}
-                placeholder={`Ask ${agentInfo.label}…  (Shift+Enter for new line)`}
+                placeholder={t("chat.inputPlaceholder", { agent: agentInfo.label })}
                 rows={1}
                 className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 max-h-40 overflow-y-auto"
                 style={{ minHeight: "44px" }}
@@ -712,11 +717,10 @@ export default function ChatPage() {
                   <span className="text-4xl">{next.icon}</span>
                 </div>
                 <h3 className="font-bold text-gray-900 dark:text-white text-lg mb-1 text-center">
-                  Switch to {next.label}?
+                  {t("chat.switchToAgent", { agent: next.label })}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 text-center">
-                  Your current conversation is saved. You can switch back
-                  anytime.
+                  {t("chat.switchBody")}
                 </p>
                 <div className="flex gap-3">
                   <Button
@@ -724,10 +728,10 @@ export default function ChatPage() {
                     className="flex-1"
                     onClick={() => setPendingAgent(null)}
                   >
-                    Stay here
+                    {t("chat.stayHere")}
                   </Button>
                   <Button className="flex-1" onClick={confirmSwitch}>
-                    Switch
+                    {t("chat.switchBtn")}
                   </Button>
                 </div>
               </div>

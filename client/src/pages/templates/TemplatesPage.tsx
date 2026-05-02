@@ -6,6 +6,7 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { Badge } from "../../components/ui/Badge";
+import { useTranslation } from "../../i18n";
 
 const OBJECTIVE_COLORS: Record<string, string> = {
   hypertrophy: "bg-blue-100 text-blue-700",
@@ -26,6 +27,7 @@ function TemplateCard({ template, onStart, onView }: {
   onStart: (t: WorkoutTemplate) => void;
   onView:  (t: WorkoutTemplate) => void;
 }) {
+  const { t } = useTranslation();
   const muscleGroups = Array.isArray(template.muscleGroups)
     ? template.muscleGroups
     : [];
@@ -80,6 +82,7 @@ function TemplateDetail({ template, onStart, onClose }: {
   onStart: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -113,6 +116,7 @@ function TemplateDetail({ template, onStart, onClose }: {
 
 // ── Main Templates page ───────────────────────────────────────────────────────
 export default function TemplatesPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [tab,      setTab]      = useState<"recommended" | "mine">("recommended");
   const [grouped,  setGrouped]  = useState<Record<string, WorkoutTemplate[]>>({});
@@ -171,7 +175,7 @@ export default function TemplatesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Templates</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("templates.title")}</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Pre-built and custom workout splits</p>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { calorieGoalsApi } from "../../api";
-import { useTranslation } from "../../i18n";
+import { useTranslation, t as _t } from "../../i18n";
 import type { CalorieGoal } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -24,6 +24,7 @@ import {
 
 // ── Active goal projection: fetches live data, merges projected + actual ───────
 function ActiveGoalChart({ goalId, targetWeight }: { goalId: number; targetWeight: number }) {
+  const { t } = useTranslation();
   const [points, setPoints] = useState<ProjectionPoint[]>([]);
 
   useEffect(() => {
@@ -52,6 +53,7 @@ function ActiveGoalChart({ goalId, targetWeight }: { goalId: number; targetWeigh
 
 // ── Goal Creator Form ─────────────────────────────────────────────────────────
 function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [currentWeight, setCurrentWeight] = useState(String(user?.weight ?? ""));
   const [targetWeight,  setTargetWeight]  = useState("");
@@ -143,7 +145,7 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
           label="Goal Name (optional)"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Summer cut"
+          placeholder={t("goals.goalNamePlaceholder")}
         />
         <div className="grid grid-cols-2 gap-3">
           <Input
@@ -256,6 +258,7 @@ function EditGoalModal({
   onSave:  () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [name,          setName]          = useState(goal.name || "");
   const [targetWeight,  setTargetWeight]  = useState(String(goal.targetWeight));
@@ -334,7 +337,7 @@ function EditGoalModal({
         label="Goal Name (optional)"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="e.g. Summer cut"
+        placeholder={t("goals.goalNamePlaceholder")}
       />
 
       {/* ── Targets ── */}
@@ -540,7 +543,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <Button variant="secondary" size="sm" onClick={() => setEditingGoal(activeGoal)}>{t("common.edit")}</Button>
-                  <Button variant="secondary" size="sm" onClick={() => deactivate(activeGoal.id)}>Pause</Button>
+                  <Button variant="secondary" size="sm" onClick={() => deactivate(activeGoal.id)}>{t("goals.pause")}</Button>
                   <Button variant="danger"    size="sm" onClick={() => deleteGoal(activeGoal.id)}>{t("common.delete")}</Button>
                 </div>
               </div>

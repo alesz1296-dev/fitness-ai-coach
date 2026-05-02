@@ -6,6 +6,7 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
+import { useTranslation } from "../../i18n";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -33,6 +34,7 @@ function getMondayOfWeek(date: Date): string {
 
 // ── Macro summary bar ────────────────────────────────────────────────────────
 function MacroBar({ label, value, color }: { label: string; value: number; color: string }) {
+  const { t } = useTranslation();
   return (
     <div className="text-center">
       <div className={`text-sm font-bold ${color}`}>{Math.round(value)}{label === "kcal" ? "" : "g"}</div>
@@ -62,6 +64,7 @@ function FoodSearchModal({
   onSelect: (food: any, meal: MealType) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery]       = useState("");
   const [results, setResults]   = useState<any[]>([]);
   const [loading, setLoading]   = useState(false);
@@ -112,7 +115,7 @@ function FoodSearchModal({
   };
 
   return (
-    <Modal open={true} title="Add Food to Plan" onClose={onClose}>
+    <Modal open={true} title={t("mealPlanner.addFood")} onClose={onClose}>
       <div className="space-y-4">
         {/* Meal selector */}
         <div className="flex gap-2">
@@ -134,10 +137,10 @@ function FoodSearchModal({
         {/* Search */}
         <div className="relative">
           <Input
-            label="Search food"
+            label={t("mealPlanner.searchFood")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g. chicken breast, oats…"
+            placeholder={t("mealPlanner.searchPlaceholder")}
           />
           {loading && (
             <div className="absolute right-3 top-9">
@@ -168,14 +171,14 @@ function FoodSearchModal({
             <p className="font-semibold text-sm text-brand-800">{selected.name}</p>
             <div className="flex gap-2">
               <Input
-                label="Quantity"
+                label={t("mealPlanner.quantity")}
                 type="number"
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}
                 className="flex-1"
               />
               <Input
-                label="Unit"
+                label={t("mealPlanner.unit")}
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
                 className="flex-1"
@@ -189,7 +192,7 @@ function FoodSearchModal({
               <span>🥑 {Math.round((selected.fats ?? 0) * scale)}g F</span>
             </div>
             <Button onClick={handleAdd} className="w-full">
-              Add to {meal.charAt(0).toUpperCase() + meal.slice(1)}
+              {t("mealPlanner.addToMeal", { meal: meal.charAt(0).toUpperCase() + meal.slice(1) })}
             </Button>
           </div>
         )}
@@ -206,6 +209,7 @@ function EntryRow({
   entry: MealPlanEntry;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between py-1.5 gap-2">
       <div className="min-w-0 flex-1">
@@ -220,7 +224,7 @@ function EntryRow({
       <button
         onClick={onDelete}
         className="text-gray-300 hover:text-red-400 text-lg leading-none shrink-0"
-        title="Remove"
+        title={t("common.remove")}
       >
         ×
       </button>
@@ -240,6 +244,7 @@ function MealSection({
   onAddClick: () => void;
   onDeleteEntry: (id: number) => void;
 }) {
+  const { t } = useTranslation();
   const total = entries.reduce((s, e) => s + e.calories, 0);
   return (
     <div className={`border-l-4 ${MEAL_COLORS[meal]} pl-3 py-1`}>
@@ -256,11 +261,11 @@ function MealSection({
           onClick={onAddClick}
           className="text-brand-500 hover:text-brand-700 text-xs font-medium"
         >
-          + Add
+          + {t("common.add")}
         </button>
       </div>
       {entries.length === 0 ? (
-        <p className="text-xs text-gray-300 italic">No foods yet</p>
+        <p className="text-xs text-gray-300 italic">{t("mealPlanner.noFoods")}</p>
       ) : (
         <div className="divide-y divide-gray-50">
           {entries.map((e) => (
@@ -288,6 +293,8 @@ function DayColumn({
   onAddFood: (meal: MealType) => void;
   onDeleteEntry: (entryId: number) => void;
 }) {
+  const { t } = useTranslation();
+  const DAY_NAMES_T = [t('mealPlanner.monday'), t('mealPlanner.tuesday'), t('mealPlanner.wednesday'), t('mealPlanner.thursday'), t('mealPlanner.friday'), t('mealPlanner.saturday'), t('mealPlanner.sunday')];
   const totals = dayTotals(day);
 
   return (
@@ -300,7 +307,7 @@ function DayColumn({
           <span className={`text-sm font-bold ${isToday ? "text-brand-700" : "text-gray-800"}`}>
             {dayName}
           </span>
-          {isToday && <span className="text-xs bg-brand-600 text-white px-1.5 py-0.5 rounded-full">Today</span>}
+          {isToday && <span className="text-xs bg-brand-600 text-white px-1.5 py-0.5 rounded-full">{t("common.today")}</span>}
         </div>
         <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">{format(date, "MMM d")}</p>
       </div>
@@ -350,20 +357,21 @@ function PlanList({
   onDelete: (id: number) => void;
   loading: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">My Plans</h2>
-        <Button size="sm" onClick={onCreate}>+ New Plan</Button>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t("mealPlanner.myPlans")}</h2>
+        <Button size="sm" onClick={onCreate}>{t("mealPlanner.newPlan")}</Button>
       </div>
       {loading ? (
-        <div className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-400">Loading…</div>
+        <div className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-400">{t("common.loading")}</div>
       ) : plans.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-600 text-center py-8 px-4">
           <div className="text-3xl mb-2">🥘</div>
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">No meal plans yet</p>
-          <p className="text-xs text-gray-400 mb-3">Create a weekly meal plan or ask the AI Coach to generate one for you.</p>
-          <Button size="sm" onClick={onCreate}>+ Create first plan</Button>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{t("mealPlanner.noPlans")}</p>
+          <p className="text-xs text-gray-400 mb-3">{t("mealPlanner.noPlansDesc")}</p>
+          <Button size="sm" onClick={onCreate}>{t("mealPlanner.createFirst")}</Button>
         </div>
       ) : (
         plans.map((p) => (
@@ -378,7 +386,7 @@ function PlanList({
           >
             <div>
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{p.name}</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">Week of {p.weekStart}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">{t("mealPlanner.weekOf")} {p.weekStart}</p>
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(p.id); }}
@@ -395,7 +403,8 @@ function PlanList({
 
 // ── Create plan modal ─────────────────────────────────────────────────────────
 function CreatePlanModal({ onSave, onClose }: { onSave: (name: string, weekStart: string) => Promise<void>; onClose: () => void }) {
-  const [name, setName]           = useState("My Meal Plan");
+  const { t } = useTranslation();
+  const [name, setName]           = useState(t("mealPlanner.defaultPlanName"));
   const [weekStart, setWeekStart] = useState(getMondayOfWeek(new Date()));
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState("");
@@ -407,24 +416,24 @@ function CreatePlanModal({ onSave, onClose }: { onSave: (name: string, weekStart
     try {
       await onSave(name.trim(), weekStart);
     } catch (e: any) {
-      setError(e?.response?.data?.error ?? e?.message ?? "Failed to create plan");
+      setError(e?.response?.data?.error ?? e?.message ?? t("mealPlanner.createFailed"));
       setSaving(false);
     }
   };
 
   return (
-    <Modal open={true} title="Create Meal Plan" onClose={onClose}>
+    <Modal open={true} title={t("mealPlanner.createPlan")} onClose={onClose}>
       <div className="space-y-4">
-        <Input label="Plan name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cut Week 1" />
+        <Input label={t("mealPlanner.planName")} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("mealPlanner.planNamePlaceholder")} />
         <Input
-          label="Week starting (Monday)"
+          label={t("mealPlanner.weekStarting")}
           type="date"
           value={weekStart}
           onChange={(e) => setWeekStart(e.target.value)}
         />
         {error && <p className="text-sm text-red-500">{error}</p>}
         <Button className="w-full" onClick={handleSubmit} disabled={!name || !weekStart || saving} loading={saving}>
-          Create Plan
+          {t("mealPlanner.createPlan")}
         </Button>
       </div>
     </Modal>
@@ -433,6 +442,7 @@ function CreatePlanModal({ onSave, onClose }: { onSave: (name: string, weekStart
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function MealPlannerPage() {
+  const { t } = useTranslation();
   const [plans, setPlans]               = useState<MealPlan[]>([]);
   const [activePlan, setActivePlan]     = useState<MealPlan | null>(null);
   const [loadingPlans, setLoadingPlans] = useState(true);
@@ -476,7 +486,7 @@ export default function MealPlannerPage() {
 
   // ── Delete plan ────────────────────────────────────────────────────────────
   const handleDeletePlan = async (id: number) => {
-    if (!confirm("Delete this plan?")) return;
+    if (!confirm(t("mealPlanner.deletePlan"))) return;
     await mealPlansApi.delete(id);
     setPlans((prev) => prev.filter((p) => p.id !== id));
     if (activePlan?.id === id) setActivePlan(null);
@@ -547,9 +557,9 @@ export default function MealPlannerPage() {
     <div className="p-4 md:p-6 max-w-full space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">🥗 Meal Planner</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("nav.mealPlanner")}</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-          Plan your meals week by week — build a template, track macros, stay on goal.
+          {t("mealPlanner.subtitle")}
         </p>
       </div>
 
@@ -573,8 +583,8 @@ export default function MealPlannerPage() {
           {!activePlan ? (
             <div className="flex flex-col items-center justify-center h-64 text-center">
               <span className="text-5xl mb-4">📅</span>
-              <p className="text-gray-500 dark:text-gray-400">Select a plan or create a new one</p>
-              <Button className="mt-4" onClick={() => setShowCreate(true)}>+ New Plan</Button>
+              <p className="text-gray-500 dark:text-gray-400">{t("mealPlanner.selectPlan")}</p>
+              <Button className="mt-4" onClick={() => setShowCreate(true)}>{t("mealPlanner.newPlan")}</Button>
             </div>
           ) : loadingPlan ? (
             <div className="flex items-center justify-center h-64">
@@ -594,11 +604,11 @@ export default function MealPlannerPage() {
                   <div className="flex gap-4">
                     <div className="text-center">
                       <div className="text-sm font-bold text-orange-600">{Math.round(avgCalories)}</div>
-                      <div className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">avg kcal/day</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">{t("mealPlanner.avgKcalDay")}</div>
                     </div>
                     <div className="text-center">
                       <div className="text-sm font-bold text-purple-600">{Math.round(weeklyTotals.protein / 7)}g</div>
-                      <div className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">avg protein</div>
+                      <div className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">{t("mealPlanner.avgProtein")}</div>
                     </div>
                   </div>
                 )}
@@ -613,7 +623,7 @@ export default function MealPlannerPage() {
                     <DayColumn
                       key={day.id}
                       day={day}
-                      dayName={DAY_NAMES[day.dayIndex]}
+                      dayName={DAY_NAMES_T[day.dayIndex]}
                       date={date ?? new Date()}
                       isToday={dateStr === today}
                       onAddFood={(meal) => setAddFor({ dayId: day.id, defaultMeal: meal })}

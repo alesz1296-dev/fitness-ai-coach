@@ -53,6 +53,7 @@ export interface Translation {
     fastingTimer: string; startFast: string; stopFast: string; fastingFor: string;
     surplus: string; deficit: string; onTarget: string; includesSupps: string;
     autoEstimated: string; resetEstimate: string;
+    addSupplement2: string; addIngredient: string; adding: string; askNutritionist: string; buildDish: string; calorieComposition: string; caloriesKcal: string; caloriesFromMacros: string; clearAll: string; cookingExtras: string; cookingOil: string; createFirstFood: string; cuisine: string; defaultQty: string; defaultUnit: string; dietaryCategory: string; dishName: string; editMacros: string; emojiField: string; entries: string; filterMyFoods: string; filtering: string; foodName: string; foodType: string; getAiMealPlan: string; goalExceeded: string; goalMet: string; grams: string; ingredient: string; logAllMeals: string; logFirstMeal: string; logFoodMacros: string; logIngredientsSep: string; logTodayWeight: string; macronutrients: string; macrosPerServing: string; mealsLoggedSuccess: string; noCustomFoods: string; noFoodsLoggedToday: string; noItems: string; noResultsEnter: string; noResultsTryName: string; nothingLogged: string; nutritionistBuilding: string; pinFavourites: string; quantity: string; removeFromFavourites: string; removeSupplement: string; rightOnTarget: string; searchFoodDb: string; searchMyFoods: string; searchFoodPlaceholder: string; selectMealOptional: string; setCalorieGoal: string; startFromFood: string; supplementName: string; suggestedMealPlan: string; buildDishBowl: string; chatNutritionist: string; yourFoodLibrary: string; tdee: string; tapPhaseNutrition: string; within80Kcal: string; tryAgain: string; total: string; note: string; unit: string; meal: string; meals: string;
   };
   workouts: {
     title: string; logWorkout: string; workoutName: string; duration: string;
@@ -63,6 +64,34 @@ export interface Translation {
     filterMuscle: string; calculateCalories: string; calorieCalculator: string;
     restTimer: string; restComplete: string; startRest: string;
     strength: string; hypertrophy: string; endurance: string; cardio: string; mobility: string;
+    activityType: string; calorieCalcTitle: string; calcCalories: string;
+    stepsOptional: string; stepsPlaceholder: string;
+    searchExercise: string; searchByNameMuscle: string; anyMuscle: string;
+    noExercisesFound: string; noResultsTry: string; searching: string;
+    suggestExercises: string; exerciseNameReq: string; primaryMuscleReq: string;
+    describeExercise: string; instructionsOptional: string; equipment: string;
+    createCustomExercise: string; createExercise: string;
+    workoutNamePlaceholder: string; editWorkout: string; saveWorkout: string;
+    saveChanges: string; logThisWorkout: string; loggedWorkout: string;
+    howDidItGo: string; notesOptional: string; notesLabel: string;
+    sets: string; reps: string; rpe: string; rangeLabel: string;
+    markSetDone: string; addToWorkout: string; noExercisesLogged: string;
+    noPersonalTemplates: string; noRecommendedTemplates: string; personalised: string;
+    forkBtn: string; smartSuggestions: string;
+    seedTemplates: string; seedDesc: string; fullEditor: string; selectBtn: string;
+    addToCalendar: string; addToMonthlyCalendar: string; buildMonthlyPlan: string;
+    applyTemplateCalendar: string; weeklySchedule: string; whichDays: string;
+    targetMuscleGroups: string; trainingStyle: string; trainingTypeOptional: string;
+    labelCalendar: string; linkTemplate: string; repeatWeekdays: string;
+    overwriteDays: string; replaceDays: string; howManyMonths: string;
+    anyNotesDay: string; saveDayBtn: string; templateDay: string;
+    clickTrainingDays: string; clickToggle: string; wantsCustomise: string;
+    plannedWorkout: string; weightsCardio: string;
+    aiBuilderTitle: string; pickTargets: string; regenerate: string; nextBtn: string;
+    difficultyLabel: string; dateLabel: string; durationLabel: string;
+    exerciseSuggest: string; applyBtn: string; closeBtn: string;
+    cancelTimer: string; logged: string; loading: string;
+    todayLabel: string; doneBtn: string; viewBtn: string;
   };
   progress: {
     title: string; bodyWeight: string; logWeight: string; weightHistory: string;
@@ -75,6 +104,10 @@ export interface Translation {
     maintenance: string; targetWeight: string; targetDate: string;
     dailyCalories: string; weeklyChange: string; progressToDate: string;
     onTrack: string; behindSchedule: string; ahead: string;
+        goalNameOptional: string; currentWeightKg: string; targetWeightKg: string;
+    proteinG: string; carbsG: string; fatsG: string;
+    pause: string; reactivate: string; customise: string; targets: string;
+    goalNamePlaceholder: string; createCalorieGoalDesc: string; calorieTargetsDesc: string;
   };
   profile: {
     title: string; personalInfo: string; firstName: string; lastName: string;
@@ -92,6 +125,10 @@ export interface Translation {
     veryActive: string; extremelyActive: string;
     loseWeight: string; gainMuscle: string; maintainWeight: string; improveEndurance: string;
   };
+  settings: {
+    equipment: string; difficulty: string; instructions: string; searchFood: string;
+    savePreferences: string; saveInjuries: string; saveCycleSettings: string; updatePassword: string; currentPassword: string; newPassword: string; confirmPasswordField: string; selectActivityLevel: string; selectFitnessLevel: string; selectSex: string; selectDays: string; selectDuration: string; daysPerWeek: string; hoursPerSession: string; fitnessLevel: string; proteinTarget: string; appliedToCalc: string; whyMatters: string; usedByAI: string; showWaterWidget: string; switchDarkMode: string; controlsAppearance: string; preferenceSaved: string; downloadDataDesc: string; irreversibleActions: string; memberSince: string; account: string; username: string; cycleLength: string; firstDayPeriod: string; menstrualCycleTracking: string; cyclePersonalises: string; avgCycleLength: string; commonRanges: string; injuriesExercises: string; trainingSchedule: string; goToPlan: string; goalDescription: string; passwordHint: string; activityLevel: string;
+  };
   auth: {
     login: string; register: string; logout: string; email: string; password: string;
     confirmPassword: string; forgotPassword: string; resetPassword: string;
@@ -99,6 +136,52 @@ export interface Translation {
   };
   offline: {
     noConnection: string; readOnlyMode: string; offline: string; backOnline: string;
+  };
+  chat: {
+    title: string; newChat: string; clearHistory: string; thinking: string;
+    placeholder: string; send: string; noConversations: string;
+    workoutCoach: string; nutritionist: string; generalCoach: string;
+    coachDesc: string; nutritionistDesc: string; generalDesc: string;
+    logWorkout: string; logMeal: string; suggestWorkout: string;
+    saving: string; notNow: string; savedCheck: string; meAvatar: string;
+    workoutsTitle: string; workoutReplaceQ: string; workoutSaveQ: string;
+    workoutUpdateBtn: string; workoutAddBtn: string;
+    mealPlannerTitle: string; mealReplaceQ: string; mealAppendQ: string; mealSaveQ: string;
+    mealUpdateBtn: string; mealSaveBtn: string;
+    goalsTitle: string; goalSaveQ: string; goalSaveBtn: string;
+    today: string; yesterday: string; daysAgo: string;
+    errorMsg: string; clearConfirm: string;
+    recentChats: string; noHistory: string;
+    switchToAgent: string; switchBody: string; stayHere: string; switchBtn: string;
+    inputPlaceholder: string;
+    toastWorkoutUpdated: string; toastWorkoutSaved: string;
+    toastMealUpdated: string; toastMealSaved: string; toastGoalSaved: string;
+  };
+  reports: {
+    title: string; monthly: string; noReports: string; generating: string;
+    weightDelta: string; workoutsLogged: string; avgCalories: string;
+    aiSummary: string; generateSummary: string; topFoods: string;
+    consistency: string; highlights: string; back: string; startOfMonth: string; endOfMonth: string; month: string; year: string; pastReports: string; subtitle: string;
+  };
+  mealPlanner: {
+    title: string; thisWeek: string; addFood: string; clearDay: string;
+    noMeals: string; breakfast: string; lunch: string; dinner: string; snack: string;
+    searchFood: string; servings: string; logAll: string; logDay: string;
+    calories: string; planSaved: string; savePlan: string;
+    copyFromLast: string; aiGenerate: string; myPlans: string; newPlan: string; noPlans: string; noPlansDesc: string;
+    createFirst: string; createPlan: string; planName: string; weekStarting: string;
+    createFailed: string; planNamePlaceholder: string; weekOf: string; selectPlan: string;
+    subtitle: string; addToMeal: string; avgKcalDay: string; avgProtein: string;
+    noFoods: string; quantity: string; unit: string; deletePlan: string;
+    defaultPlanName: string; searchPlaceholder: string;
+    monday: string; tuesday: string; wednesday: string; thursday: string;
+    friday: string; saturday: string; sunday: string;
+  };
+  templates: {
+    title: string; useTemplate: string; noTemplates: string;
+    createTemplate: string; myTemplates: string; community: string;
+    difficulty: string; beginner: string; intermediate: string; advanced: string;
+    duration: string; exercises: string; startWorkout: string; preview: string;
   };
   ai: {
     nutritionCoach: string; workoutCoach: string; goalsCoach: string;
@@ -178,6 +261,75 @@ const en: Translation = {
     surplus: "Surplus", deficit: "Deficit", onTarget: "On target",
     includesSupps: "incl. supps", autoEstimated: "auto-estimated",
     resetEstimate: "↩ reset estimate",
+    addSupplement2: "Add Your Supplement",
+    addIngredient: "Add ingredient",
+    adding: "Adding…",
+    askNutritionist: "Ask Nutritionist",
+    buildDish: "Build a dish or bowl from multiple ingredients",
+    calorieComposition: "Calorie composition",
+    caloriesKcal: "Calories (kcal)",
+    caloriesFromMacros: "Calories from macros",
+    clearAll: "Clear all",
+    cookingExtras: "Cooking extras",
+    cookingOil: "Cooking oil",
+    createFirstFood: "Create First Food",
+    cuisine: "Cuisine",
+    defaultQty: "Default Qty",
+    defaultUnit: "Default Unit",
+    dietaryCategory: "Dietary Category",
+    dishName: "Dish name",
+    editMacros: "Edit macros per unit",
+    emojiField: "Emoji (e.g. 🌿)",
+    entries: "Entries",
+    filterMyFoods: "Filter my foods...",
+    filtering: "Filtering:",
+    foodName: "Food Name",
+    foodType: "Food Type",
+    getAiMealPlan: "Get an AI-generated meal plan for today",
+    goalExceeded: "Goal exceeded ✓",
+    goalMet: "Goal met ✓",
+    grams: "Grams",
+    ingredient: "Ingredient",
+    logAllMeals: "Log All Meals",
+    logFirstMeal: "Log First Meal",
+    logFoodMacros: "Log food to see macro breakdown",
+    logIngredientsSep: "Log ingredients separately",
+    logTodayWeight: "Log today's weight",
+    macronutrients: "Macronutrients",
+    macrosPerServing: "Macros per serving (default qty above)",
+    mealsLoggedSuccess: "Meals logged successfully!",
+    noCustomFoods: "No custom foods yet",
+    noFoodsLoggedToday: "No foods logged yet today.",
+    noItems: "No items",
+    noResultsEnter: "No results -- enter details manually below",
+    noResultsTryName: "No results — try a different name.",
+    nothingLogged: "Nothing logged yet",
+    nutritionistBuilding: "Nutritionist is building your plan…",
+    pinFavourites: "Pin your favourite foods here — tap",
+    quantity: "Quantity",
+    removeFromFavourites: "Remove from favourites",
+    removeSupplement: "Remove this supplement",
+    rightOnTarget: "Right on target!",
+    searchFoodDb: "Search Food Database",
+    searchMyFoods: "Search My Foods",
+    searchFoodPlaceholder: "Search food (e.g. chicken breast, oats)...",
+    selectMealOptional: "Select meal (optional)",
+    setCalorieGoal: "Set a calorie goal",
+    startFromFood: "Start from a food in the database (optional)",
+    supplementName: "Supplement name *",
+    suggestedMealPlan: "✨ Suggested Meal Plan",
+    buildDishBowl: "🥣 Build a Dish / Bowl",
+    chatNutritionist: "Chat with your AI nutritionist",
+    yourFoodLibrary: "Your personal food library — only visible to you",
+    tdee: "TDEE",
+    tapPhaseNutrition: "Tap to see phase-specific nutrition & workout tips",
+    within80Kcal: "You're within 80 kcal of your daily goal.",
+    tryAgain: "Try Again",
+    total: "Total",
+    note: "Note",
+    unit: "Unit",
+    meal: "Meal",
+    meals: "Meals",
   },
   workouts: {
     title: "Workouts", logWorkout: "Log Workout", workoutName: "Workout Name",
@@ -193,6 +345,89 @@ const en: Translation = {
     restComplete: "Rest complete!", startRest: "Start rest timer",
     strength: "Strength", hypertrophy: "Hypertrophy", endurance: "Endurance",
     cardio: "Cardio", mobility: "Mobility",
+    activityType: "Activity type",
+    calorieCalcTitle: "Calorie Calculator",
+    calcCalories: "Calculate calories burned from activity type →",
+    stepsOptional: "Steps (optional — overrides duration)",
+    stepsPlaceholder: "e.g. 8000",
+    searchExercise: "Search exercise…",
+    searchByNameMuscle: "Search by name or muscle…",
+    anyMuscle: "Any muscle",
+    noExercisesFound: "No exercises found",
+    noResultsTry: "No results — try a different muscle or name",
+    searching: "Searching…",
+    suggestExercises: "Suggest exercises",
+    exerciseNameReq: "Exercise Name *",
+    primaryMuscleReq: "Primary Muscle *",
+    describeExercise: "Describe how to perform this exercise…",
+    instructionsOptional: "Instructions (optional)",
+    equipment: "Equipment",
+    createCustomExercise: "Create Custom Exercise",
+    createExercise: "Create Exercise",
+    workoutNamePlaceholder: "Workout name (e.g. Push Day, Leg Day…)",
+    editWorkout: "Edit Workout",
+    saveWorkout: "Save Workout",
+    saveChanges: "Save Changes",
+    logThisWorkout: "Log This Workout",
+    loggedWorkout: "Logged workout",
+    howDidItGo: "How did it go?",
+    notesOptional: "Notes (optional)",
+    notesLabel: "Notes",
+    sets: "Sets",
+    reps: "Reps",
+    rpe: "RPE",
+    rangeLabel: "Range:",
+    markSetDone: "Mark set done and start rest timer",
+    addToWorkout: "Add to Workout",
+    noExercisesLogged: "No exercises logged",
+    noPersonalTemplates: "No personal templates yet",
+    noRecommendedTemplates: "No recommended templates yet",
+    personalised: "Personalised for your goal",
+    forkBtn: "Fork",
+    smartSuggestions: "Smart Suggestions",
+    seedTemplates: "Seed Recommended Templates",
+    seedDesc: "Seed the database with 24 research-based workout splits",
+    fullEditor: "Full editor (notes, bulk apply)",
+    selectBtn: "Select →",
+    addToCalendar: "Add to Calendar",
+    addToMonthlyCalendar: "Add to Monthly Calendar",
+    buildMonthlyPlan: "Build Monthly Workout Plan",
+    applyTemplateCalendar: "Apply Template to Calendar",
+    weeklySchedule: "Weekly Schedule",
+    whichDays: "Which days of the week?",
+    targetMuscleGroups: "Target muscle groups",
+    trainingStyle: "Training style",
+    trainingTypeOptional: "Training type (optional)",
+    labelCalendar: "Label (shown on calendar)",
+    linkTemplate: "Link to template (optional)",
+    repeatWeekdays: "Repeat on weekdays",
+    overwriteDays: "Overwrite days that already have a plan",
+    replaceDays: "Replace days that already have a plan",
+    howManyMonths: "How many months to fill?",
+    anyNotesDay: "Any notes for this day…",
+    saveDayBtn: "Save this day",
+    templateDay: "Template / Day",
+    clickTrainingDays: "Click to change your training days per week",
+    clickToggle: "Click to toggle workout/rest",
+    wantsCustomise: "Want to customise this plan?",
+    plannedWorkout: "Planned workout",
+    weightsCardio: "Weights + Cardio Combos",
+    aiBuilderTitle: "AI Workout Builder",
+    pickTargets: "Pick your targets and let AI design your session",
+    regenerate: "Regenerate",
+    nextBtn: "Next →",
+    difficultyLabel: "Difficulty",
+    dateLabel: "Date",
+    durationLabel: "Duration",
+    exerciseSuggest: "Exercise (💡 = suggest)",
+    applyBtn: "Apply",
+    closeBtn: "Close",
+    cancelTimer: "Cancel timer",
+    logged: "Logged",
+    loading: "Loading…",
+    todayLabel: "Today",
+    doneBtn: "Done",
+    viewBtn: "View",
   },
   progress: {
     title: "Progress", bodyWeight: "Body Weight", logWeight: "Log Weight",
@@ -209,6 +444,19 @@ const en: Translation = {
     dailyCalories: "Daily calories", weeklyChange: "Weekly change",
     progressToDate: "Progress to date", onTrack: "On track",
     behindSchedule: "Behind schedule", ahead: "Ahead of schedule",
+    goalNameOptional: "Goal Name (optional)",
+    currentWeightKg: "Current Weight (kg)",
+    targetWeightKg: "Target Weight (kg)",
+    proteinG: "Protein (g)",
+    carbsG: "Carbs (g)",
+    fatsG: "Fats (g)",
+    pause: "Pause",
+    reactivate: "Reactivate",
+    customise: "Customise",
+    targets: "Targets",
+    goalNamePlaceholder: "e.g. Summer cut",
+    createCalorieGoalDesc: "Create a calorie goal to get a personalised macro plan",
+    calorieTargetsDesc: "Calorie targets & body composition plans",
   },
   profile: {
     title: "Profile", personalInfo: "Personal information", firstName: "First name",
@@ -238,6 +486,46 @@ const en: Translation = {
     gainMuscle: "Gain muscle", maintainWeight: "Maintain weight",
     improveEndurance: "Improve endurance",
   },
+  settings: {
+    savePreferences: "Save Preferences",
+    saveInjuries: "Save Injuries",
+    saveCycleSettings: "Save Cycle Settings",
+    updatePassword: "Update Password",
+    currentPassword: "Current Password",
+    newPassword: "New Password",
+    confirmPasswordField: "Confirm Password",
+    selectActivityLevel: "Select activity level",
+    selectFitnessLevel: "Select fitness level",
+    selectSex: "Select sex",
+    selectDays: "Select days",
+    selectDuration: "Select duration",
+    daysPerWeek: "Days per week",
+    hoursPerSession: "Hours per session",
+    fitnessLevel: "Fitness Level",
+    proteinTarget: "Protein target",
+    appliedToCalc: "Applied to all new calorie goal calculations",
+    whyMatters: "Why this matters",
+    usedByAI: "Used by the AI and calorie calculator",
+    showWaterWidget: "Show the water intake widget on the Nutrition page",
+    switchDarkMode: "Switch the app to a dark colour scheme",
+    controlsAppearance: "Controls appearance and tracking features",
+    preferenceSaved: "Preferences saved",
+    downloadDataDesc: "Download a complete copy of your fitness data",
+    irreversibleActions: "Irreversible actions — proceed with caution",
+    memberSince: "Member since",
+    account: "Account",
+    username: "Username",
+    cycleLength: "Cycle length (days)",
+    firstDayPeriod: "First day of last period",
+    menstrualCycleTracking: "Menstrual Cycle Tracking",
+    cyclePersonalises: "Personalises nutrition & workout tips to your hormonal phase",
+    avgCycleLength: "Average is 28 days (range: 21–35)",
+    commonRanges: "Common ranges",
+    injuriesExercises: "Exercises and templates will avoid movements that stress affected areas",
+    trainingSchedule: "Training Schedule",
+    goToPlan: "Go to plan →",
+    goalDescription: "Set a goal in the Goals tab, or describe it here",
+  },
   auth: {
     login: "Log in", register: "Register", logout: "Log out", email: "Email",
     password: "Password", confirmPassword: "Confirm password",
@@ -250,6 +538,71 @@ const en: Translation = {
     readOnlyMode: "You're offline — changes won't be saved until you reconnect",
     offline: "Offline",
     backOnline: "Back online — all systems go!",
+  },
+  chat: {
+    title: "AI Coach", newChat: "New chat", clearHistory: "Clear history",
+    thinking: "Thinking…", placeholder: "Ask anything…", send: "Send",
+    noConversations: "No conversations yet",
+    workoutCoach: "Workout Coach", nutritionist: "Nutritionist", generalCoach: "General Coach",
+    coachDesc: "Workout plans, recovery, technique tips",
+    nutritionistDesc: "Meal plans, macros, food advice",
+    generalDesc: "General fitness & health questions",
+    logWorkout: "Log workout", logMeal: "Log meal", suggestWorkout: "Suggest a workout",
+    saving: "Saving…", notNow: "Not now",
+    savedCheck: "Saved! Check {{title}}.",
+    meAvatar: "Me",
+    workoutsTitle: "Your Workouts",
+    workoutReplaceQ: "Want to replace this saved workout template?",
+    workoutSaveQ: "Want to save this workout plan to your templates?",
+    workoutUpdateBtn: "Yes, update Workout",
+    workoutAddBtn: "Yes, add to Workouts",
+    mealPlannerTitle: "Meal Planner",
+    mealReplaceQ: "Want to replace this Meal Planner plan?",
+    mealAppendQ: "Want to add these meals to your Meal Planner?",
+    mealSaveQ: "Want to save this plan to Meal Planner?",
+    mealUpdateBtn: "Yes, update Meal Plan",
+    mealSaveBtn: "Yes, save Meal Plan",
+    goalsTitle: "Goals",
+    goalSaveQ: "Want to save this calorie & macro plan to your goals?",
+    goalSaveBtn: "Yes, save as Goal",
+    today: "Today", yesterday: "Yesterday", daysAgo: "{{n}} days ago",
+    errorMsg: "Sorry, I couldn't respond right now. Please try again.",
+    clearConfirm: "Clear {{agent}} conversation history?",
+    recentChats: "Recent chats", noHistory: "No history yet",
+    switchToAgent: "Switch to {{agent}}?",
+    switchBody: "Your current conversation is saved. You can switch back anytime.",
+    stayHere: "Stay here", switchBtn: "Switch",
+    inputPlaceholder: "Ask {{agent}}…  (Shift+Enter for new line)",
+    toastWorkoutUpdated: "✅ Template updated! Check Workouts.",
+    toastWorkoutSaved: "✅ Template saved! Check Workouts.",
+    toastMealUpdated: "✅ Meal plan updated! Check Meal Planner.",
+    toastMealSaved: "✅ Meal plan saved! Check Meal Planner.",
+    toastGoalSaved: "✅ Calorie goal saved! Check your Goals page.",
+  },
+  reports: {
+    title: "Reports", monthly: "Monthly Report", noReports: "No reports yet",
+    generating: "Generating…", weightDelta: "Weight change",
+    workoutsLogged: "Workouts logged", avgCalories: "Avg. calories / day",
+    aiSummary: "AI summary available", generateSummary: "Generate AI Summary",
+    topFoods: "Top foods", consistency: "Consistency", highlights: "Highlights",
+    back: "← Back to reports",
+  },
+  mealPlanner: {
+    title: "Meal Planner", thisWeek: "This week", addFood: "Add food",
+    clearDay: "Clear day", noMeals: "No meals planned",
+    breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack",
+    searchFood: "Search food…", servings: "Servings", logAll: "Log all to diary",
+    logDay: "Log day to diary", calories: "calories", planSaved: "Plan saved!",
+    savePlan: "Save plan", copyFromLast: "Copy from last week",
+    aiGenerate: "AI Generate",
+  },
+  templates: {
+    title: "Templates", useTemplate: "Use template", noTemplates: "No templates yet",
+    createTemplate: "Create template", myTemplates: "My Templates",
+    community: "Community", difficulty: "Difficulty",
+    beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced",
+    duration: "Duration", exercises: "Exercises", startWorkout: "Start Workout",
+    preview: "Preview",
   },
   ai: {
     nutritionCoach: "Nutrition Coach", workoutCoach: "Workout Coach",

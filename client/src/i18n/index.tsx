@@ -41,6 +41,40 @@ export const LANG_LABELS: Record<SupportedLang, string> = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Module-level t() — usable anywhere without hooks.
+// Automatically stays in sync with the React context via I18nProvider.
+// New languages: add a locale file + entry to LOCALES and LANG_LABELS — done.
+// ─────────────────────────────────────────────────────────────────────────────
+let _activeLang: SupportedLang = "en"; // updated on first I18nProvider mount
+
+function _resolve(key: string): string {
+  const locale = LOCALES[_activeLang] as unknown as Record<string, unknown>;
+  const parts = key.split(".");
+  let cur: unknown = locale;
+  for (const p of parts) {
+    if (cur == null || typeof cur !== "object") return key;
+    cur = (cur as Record<string, unknown>)[p];
+  }
+  return typeof cur === "string" ? cur : key;
+}
+
+/** Call t("section.key") anywhere — React component, sub-component, or utility. */
+export function t(key: TKey, vars?: Record<string, string | number>): string {
+  let str = _resolve(key);
+  if (vars) {
+    for (const [k, v] of Object.entries(vars)) {
+      str = str.replace(new RegExp(`\{\{${k}\}\}`, "g"), String(v));
+    }
+  }
+  return str;
+}
+
+/** Lightweight hook — triggers re-render on language change. Use in components that display translated text. */
+export function useT() {
+  return useTranslation().t;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Context
 // ─────────────────────────────────────────────────────────────────────────────
 interface I18nContextValue {
@@ -75,9 +109,14 @@ function resolve(obj: Record<string, unknown>, key: string): string {
 }
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<SupportedLang>(getInitialLang);
+  const [language, setLanguage] = useState<SupportedLang>(() => {
+    const l = getInitialLang();
+    _activeLang = l;            // sync module-level on mount
+    return l;
+  });
 
   const changeLanguage = useCallback((lang: SupportedLang) => {
+    _activeLang = lang;                            // sync module-level cache
     setLanguage(lang);
     try { localStorage.setItem("lang", lang); } catch { /* ignore */ }
     document.documentElement.lang = lang;

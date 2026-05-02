@@ -345,7 +345,7 @@ Nice-to-haves for a mature product:
 - **Apple Health / Samsung Health / Apple Watch** — Read steps, heart rate, active calories, and sleep data from HealthKit (iOS) and Samsung Health (Android) to enrich the dashboard and auto-log cardio. Apple Watch companion app for logging sets in-session. _Requires native wrapper (Capacitor plugin or React Native rewrite for Watch)._
 - **Barcode scanner** — Use device camera to scan packaged foods and auto-fill nutrition data via Open Food Facts API. Lower priority since manual search already works well.
 - **Exercise video links / form cues** — Link each exercise to a form guide video or embed cue text in the exercise detail view. Low effort (metadata field) but requires sourcing content.
-- **Multi-language support** — The UI is English-only. i18n scaffolding (react-i18next) would open the app to a wider audience.
+- ✅ **Multi-language support** — Custom zero-dependency i18n system. `I18nProvider` + `useTranslation()` + module-level `t()`. Locale files in `client/src/i18n/locales/`. Language picker in Settings persists to `localStorage["lang"]`. **All pages fully translated** (Workouts, Chat, Nutrition, Goals, Progress, Reports, MealPlanner, Templates, Settings, AI, Dashboard, Profile, Auth). To add a language: create `client/src/i18n/locales/xx.ts` implementing `Translation` interface, add to `LOCALES` + `LANG_LABELS` in `client/src/i18n/index.tsx` — no component changes needed.
 
 ---
 
@@ -699,14 +699,25 @@ eas build --platform all --profile production
 
 **Later:** Apple Watch / Health kit integration will replace MET estimates with actual HR-derived calorie burn.
 
-### i18n (#130) — planned
+### i18n (#130) — completed
 
-**Tech stack:** react-i18next + i18next. All UI strings extracted to `client/src/i18n/en.json` and `client/src/i18n/es.json`. Language stored in `localStorage` + user profile (`language` column on User). AI agents receive locale in system prompt so responses are in user's language.
+**Architecture:** Custom zero-dependency i18n. `I18nProvider` + `useTranslation()` hook + exported module-level `t()` (imported as `_t` in files that shadow it with the hook). Language stored in `localStorage["lang"]`.
+
+**Files:**
+- `client/src/i18n/index.tsx` — provider, hooks, `LOCALES` map, `LANG_LABELS`, module-level `t()`
+- `client/src/i18n/locales/en.ts` — English strings (~613 lines, typed via `Translation` interface). Sections: `nav`, `common`, `dashboard`, `nutrition` (65 keys), `workouts` (91 keys), `progress`, `goals` (13 keys), `profile`, `settings` (38 keys), `auth`, `offline`, `chat` (35 keys), `reports`, `mealPlanner`, `templates`, `ai`
+- `client/src/i18n/locales/es.ts` — Spanish strings implementing same interface (all sections translated)
+
+**Pages fully translated:** Workouts, Chat, Settings (with toast on language change), Goals, Nutrition, Reports, MealPlanner, Templates, and all shared components (Dashboard, Profile, Auth, Sidebar, BottomNav). Month names in Reports use `Intl.DateTimeFormat` so they auto-localise without extra keys. Day names in MealPlanner are in `mealPlanner.monday…sunday` keys.
+
+**Adding a language:** Create `client/src/i18n/locales/xx.ts` implementing `Translation` interface → add to `LOCALES` + `LANG_LABELS` in `index.tsx`. Zero component changes needed.
+
+**AI locale injection:** `X-Language` header on every request → `chatController.ts` reads it → `prompts.ts` instructs AI to respond in user's language (exercise names stay English).
 
 **Pending (next session priorities):**
 - `#128` ✅ Daily reset + 4am rollover
 - `#129` ✅ Calories burned estimation + display
-- `#130` i18n — Spanish (pending, next sprint)
+- `#130` ✅ i18n — Spanish fully done (all pages)
 - `#126` Shared goal components (blocks Goals overhaul)
 - `#124` Provider abstraction (blocks AI agents)
 

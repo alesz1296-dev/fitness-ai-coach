@@ -4,6 +4,52 @@ Most recent session first.
 
 ---
 
+## 2026-05-02 — Session: Full i18n Spanish translation (all pages)
+
+### Goal
+Every UI string on every page now renders in Spanish when Spanish is selected. Previously only nav labels and basic common strings were translated; all feature pages (Workouts, Chat, Nutrition, Goals, Settings, Reports, MealPlanner, Templates, Progress) remained in English.
+
+### Architecture
+
+**Custom zero-dependency i18n system** (`client/src/i18n/index.tsx`):
+- `I18nProvider` with React context, `useTranslation()` hook, `changeLanguage()`
+- Exported module-level `t()` function for use outside React components (imported as `_t` to avoid shadowing the hook's `t` inside components)
+- `LOCALES` map + `LANG_LABELS` dict — adding a language requires only a new locale file + two entries here; zero component changes needed
+- Language persisted in `localStorage["lang"]`
+
+**Locale files:**
+- `client/src/i18n/locales/en.ts` — ~613 lines. Typed via `Translation` interface. Sections: `nav`, `common`, `dashboard`, `nutrition` (65 keys), `workouts` (91 keys), `progress`, `goals` (13 keys), `profile`, `settings` (38 keys), `auth`, `offline`, `chat` (35 keys), `reports`, `mealPlanner`, `templates`, `ai`
+- `client/src/i18n/locales/es.ts` — All sections with Spanish values, same interface
+
+### Pages translated this session
+
+| File | Keys added / approach |
+|------|-----------------------|
+| `WorkoutsPage.tsx` | 91 new `workouts.*` keys; `useTranslation()` injected into 22 sub-functions; `TRAINING_TYPES` module-level array uses `_t()`; 80+ JSX string replacements |
+| `ChatPage.tsx` | 35 new `chat.*` keys; `AGENTS` array uses module-level `t()`; SuggestionCard, ChatBubble, dialog, toast, modal all translated |
+| `SettingsPage.tsx` | 38 new `settings.*` keys; hooks injected into 8 functions; language picker, profile form, password form, data export card |
+| `GoalsPage.tsx` | 13 new `goals.*` keys; ActiveGoalChart, GoalForm, EditGoalModal hooks added |
+| `NutritionPage.tsx` | 65 new `nutrition.*` keys; hooks injected into 13 sub-functions; food search, custom foods, macro display, meal planning, supplements |
+| `ReportsPage.tsx` | `reports.*` keys; all section headers, stat labels, empty states |
+| `MealPlannerPage.tsx` | `mealPlanner.*` keys; plan cards, form, empty state |
+| `TemplatesPage.tsx` | `templates.*` keys; template cards, builder |
+| `ProgressPage.tsx` | Existing `progress.*` keys wired in |
+| `Dashboard.tsx` | Existing `dashboard.*` keys wired in |
+
+### TypeScript
+- `npx tsc --noEmit` — **0 errors** (frontend)
+
+### Commit pending
+All changes are local. Run from project root:
+```bash
+rm .git/index.lock   # if VS Code held the lock
+git add -A
+git commit -m "feat: complete i18n translation for all pages (Workouts, Chat, Settings, Goals, Nutrition, Reports, MealPlanner, Templates)"
+git push origin main
+```
+
+---
+
 ## 2026-04-29 — Session: Analytics tab + Issues 11–20 + PWA (iPhone)
 
 ### Analytics backend + frontend

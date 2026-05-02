@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi, customFoodsApi, weightApi, workoutsApi,
 } from "../../api";
 import { useAuthStore } from "../../store/authStore";
-import { useTranslation } from "../../i18n";
+import { useTranslation, t as _t } from "../../i18n";
 import type { FoodLog, FoodTotals, CalorieGoal, WaterLog, CustomFood } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -248,6 +248,7 @@ function CustomFoodModal({
   onSave: (food: CustomFood) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [name,        setName]        = useState(initial?.name        ?? "");
   const [calories,    setCalories]    = useState(String(initial?.calories    ?? ""));
   const [protein,     setProtein]     = useState(String(initial?.protein     ?? ""));
@@ -331,7 +332,7 @@ function CustomFoodModal({
             value={cloneQuery}
             onChange={(e) => setCloneQuery(e.target.value)}
             onBlur={() => setTimeout(() => setCloneOpen(false), 150)}
-            placeholder="Search e.g. chicken breast..."
+            placeholder={t("nutrition.searchFoodPlaceholder")}
           />
           {cloneOpen && cloneResults.length > 0 && (
             <ul className="absolute z-30 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-48 overflow-y-auto">
@@ -362,7 +363,7 @@ function CustomFoodModal({
         <Input label="Default Unit" value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} placeholder="g, ml, serving..." />
       </div>
 
-      <p className="text-xs text-gray-400 dark:text-gray-500">Macros per serving (default qty above)</p>
+      <p className="text-xs text-gray-400 dark:text-gray-500">{t("nutrition.macrosPerServing")}</p>
 
       <div className="grid grid-cols-2 gap-3">
         <Input label="Calories (kcal)" type="number" min="0" step="1" value={calories} onChange={(e) => setCalories(e.target.value)} />
@@ -372,7 +373,7 @@ function CustomFoodModal({
       </div>
 
       <div className="flex gap-3 pt-2">
-        <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+        <Button variant="secondary" onClick={onClose} className="flex-1">{t("common.cancel")}</Button>
         <Button onClick={handleSave} loading={loading} className="flex-1">
           {initial ? "Save changes" : "Create food"}
         </Button>
@@ -383,6 +384,7 @@ function CustomFoodModal({
 
 // ── Food search (global DB + My Foods tab) ────────────────────────────────────
 function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
+  const { t } = useTranslation();
   const [tab,       setTab]       = useState<"all" | "mine">("all");
   const [query,     setQuery]     = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
@@ -493,7 +495,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               All
             </button>
             <div>
-              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Cuisine</p>
+              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{t("nutrition.cuisine")}</p>
               <div className="flex flex-wrap gap-1.5">
                 {CUISINE_TAGS.map(({ tag, label, emoji }) => (
                   <button key={tag} type="button"
@@ -506,7 +508,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Dietary Category</p>
+              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{t("nutrition.dietaryCategory")}</p>
               <div className="flex flex-wrap gap-1.5">
                 {DIETARY_TAGS.map(({ tag, label, emoji }) => (
                   <button key={tag} type="button"
@@ -519,7 +521,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Food Type</p>
+              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{t("nutrition.foodType")}</p>
               <div className="flex flex-wrap gap-1.5">
                 {FOOD_TYPE_TAGS.map(({ tag, label, emoji }) => (
                   <button key={tag} type="button"
@@ -536,7 +538,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
           {/* Active filter summary — shown only when ≥1 tag selected */}
           {activeTags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 px-0.5">
-              <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Filtering:</span>
+              <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{t("nutrition.filtering")}</span>
               {activeTags.map((t) => (
                 <button
                   key={t}
@@ -563,7 +565,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => (query || activeTags.length > 0) && results.length > 0 && setOpen(true)}
               onBlur={() => setTimeout(() => setOpen(false), 150)}
-              placeholder="Search food (e.g. chicken breast, oats)..."
+              placeholder={t("nutrition.searchFoodPlaceholder")}
               label="Search Food Database"
             />
             {open && results.length > 0 && (
@@ -616,7 +618,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
           <Input
             value={myFoodsQuery}
             onChange={(e) => setMyFoodsQuery(e.target.value)}
-            placeholder="Filter my foods..."
+            placeholder={t("nutrition.filterMyFoods")}
             label="Search My Foods"
           />
           {filteredMyFoods.length === 0 ? (
@@ -702,6 +704,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   onClose: () => void;
   editItem?: FoodLog | null;
 }) {
+  const { t } = useTranslation();
   const [foodName, setFoodName] = useState(editItem?.foodName ?? "");
   const [calories, setCalories] = useState(String(editItem?.calories ?? ""));
   const [protein,  setProtein]  = useState(String(editItem?.protein  ?? ""));
@@ -852,9 +855,9 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 text-gray-400 dark:text-gray-500 text-left">
-                  <th className="px-3 py-1.5 font-medium">Unit</th>
+                  <th className="px-3 py-1.5 font-medium">{t("nutrition.unit")}</th>
                   <th className="px-3 py-1.5 font-medium">≈ grams</th>
-                  <th className="px-3 py-1.5 font-medium hidden sm:table-cell">Note</th>
+                  <th className="px-3 py-1.5 font-medium hidden sm:table-cell">{t("nutrition.note")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -888,7 +891,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
       {/* Cooking / topping additions — shown only when relevant to the selected food */}
       {(showsOil(baseFood) || showsBreading(baseFood) || showsSweetener(baseFood)) && (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Cooking extras</p>
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">{t("nutrition.cookingExtras")}</p>
           <div className={`grid gap-3 ${
             [showsOil(baseFood), showsBreading(baseFood), showsSweetener(baseFood)].filter(Boolean).length === 1
               ? "grid-cols-1"
@@ -945,7 +948,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
         value={meal}
         onChange={(e) => setMeal(e.target.value as "breakfast" | "lunch" | "dinner" | "snack" | "")}
         options={MEAL_OPTIONS}
-        placeholder="Select meal (optional)"
+        placeholder={t("nutrition.selectMealOptional")}
       />
 
       {/* Cheat meal toggle */}
@@ -962,9 +965,9 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
       </label>
 
       <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-        <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+        <Button variant="secondary" className="flex-1" onClick={onClose}>{t("common.cancel")}</Button>
         <Button className="flex-1" loading={loading} onClick={submit}>
-          {editItem ? "Save Changes" : "Log Food"}
+          {editItem ? "Save Changes" : t("nutrition.logFood")}
         </Button>
       </div>
     </div>
@@ -978,6 +981,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
 function MacroRing({ label, value, total, color, goal, danger = false }: {
   label: string; value: number; total: number; color: string; goal?: number; danger?: boolean;
 }) {
+  const { t } = useTranslation();
   // Raw progress toward goal (unbounded — can exceed 100)
   const rawGoalPct  = goal && goal > 0 ? (value / goal) * 100 : 0;
   // What to draw on the SVG arc — capped at 100 so it never wraps past full
@@ -1021,8 +1025,8 @@ function MacroRing({ label, value, total, color, goal, danger = false }: {
         {Math.round(value)}g{goal ? <span className="font-normal text-gray-400">/{Math.round(goal)}g</span> : null}
       </p>
       {over && danger && <p className="text-xs text-red-500 font-medium">⚠ Over limit</p>}
-      {over && !danger && <p className="text-xs text-green-500 font-medium">Goal exceeded ✓</p>}
-      {!over && met && <p className="text-xs text-green-500 font-medium">Goal met ✓</p>}
+      {over && !danger && <p className="text-xs text-green-500 font-medium">{t("nutrition.goalExceeded")}</p>}
+      {!over && met && <p className="text-xs text-green-500 font-medium">{t("nutrition.goalMet")}</p>}
     </div>
   );
 }
@@ -1031,6 +1035,7 @@ function MacroRing({ label, value, total, color, goal, danger = false }: {
 function MacroBreakdown({ protein, carbs, fats }: {
   protein: number; carbs: number; fats: number;
 }) {
+  const { t } = useTranslation();
   const pCal  = Math.round(protein * 4);
   const cCal  = Math.round(carbs   * 4);
   const fCal  = Math.round(fats    * 9);
@@ -1050,7 +1055,7 @@ function MacroBreakdown({ protein, carbs, fats }: {
     <div className="space-y-4">
       {/* Stacked calorie bar */}
       <div>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">Calorie composition</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">{t("nutrition.calorieComposition")}</p>
         <div className="h-6 rounded-full overflow-hidden flex">
           {rows.map((r) => (
             <div
@@ -1074,8 +1079,8 @@ function MacroBreakdown({ protein, carbs, fats }: {
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">
             <th className="text-left pb-2 font-medium">Macro</th>
-            <th className="text-right pb-2 font-medium">Grams</th>
-            <th className="text-right pb-2 font-medium">Calories</th>
+            <th className="text-right pb-2 font-medium">{t("nutrition.grams")}</th>
+            <th className="text-right pb-2 font-medium">{t("common.calories")}</th>
             <th className="text-right pb-2 font-medium">% of kcal</th>
           </tr>
         </thead>
@@ -1096,7 +1101,7 @@ function MacroBreakdown({ protein, carbs, fats }: {
             </tr>
           ))}
           <tr className="font-semibold text-gray-800 dark:text-gray-100 text-sm border-t border-gray-200">
-            <td className="pt-2.5">Total</td>
+            <td className="pt-2.5">{t("nutrition.total")}</td>
             <td className="pt-2.5 text-right">{Math.round(protein + carbs + fats)}g</td>
             <td className="pt-2.5 text-right">{total} kcal</td>
             <td className="pt-2.5 text-right text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">100%</td>
@@ -1111,6 +1116,7 @@ function MacroBreakdown({ protein, carbs, fats }: {
 function MacroByMeal({ grouped, mealOrder }: {
   grouped: Record<string, FoodLog[]>; mealOrder: string[];
 }) {
+  const { t } = useTranslation();
   const meals = mealOrder.filter((m) => grouped[m]);
   if (meals.length === 0) return null;
 
@@ -1175,6 +1181,7 @@ function MacroByMeal({ grouped, mealOrder }: {
 type SortKey = "name" | "protein" | "carbs" | "fats" | "calories";
 
 function MacroByFood({ logs }: { logs: import("../../types").FoodLog[] }) {
+  const { t } = useTranslation();
   const [sortKey, setSortKey] = useState<SortKey>("calories");
   const [sortAsc, setSortAsc] = useState(false);
 
@@ -1212,7 +1219,7 @@ function MacroByFood({ logs }: { logs: import("../../types").FoodLog[] }) {
   );
 
   if (logs.length === 0) {
-    return <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No foods logged yet today.</p>;
+    return <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">{t("nutrition.noFoodsLoggedToday")}</p>;
   }
 
   return (
@@ -1261,7 +1268,7 @@ function MacroByFood({ logs }: { logs: import("../../types").FoodLog[] }) {
         </tbody>
         <tfoot>
           <tr className="border-t-2 border-gray-200 dark:border-gray-600 font-bold text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800/50">
-            <td className="py-2 px-2 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</td>
+            <td className="py-2 px-2 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t("nutrition.total")}</td>
             <td className="py-2 px-2 text-right text-blue-600 dark:text-blue-400">{Math.round(totP)}g</td>
             <td className="py-2 px-2 text-right text-amber-600 dark:text-amber-400">{Math.round(totC)}g</td>
             <td className="py-2 px-2 text-right text-red-500 dark:text-red-400">{Math.round(totF)}g</td>
@@ -1277,6 +1284,7 @@ function MacroByFood({ logs }: { logs: import("../../types").FoodLog[] }) {
 function MacroGoalBar({ label, consumed, target, color, bgColor, danger = false }: {
   label: string; consumed: number; target: number; color: string; bgColor: string; danger?: boolean;
 }) {
+  const { t } = useTranslation();
   const pct    = target > 0 ? Math.min((consumed / target) * 100, 100) : 0;
   const over   = consumed > target;
   const diff   = Math.abs(Math.round(target - consumed));
@@ -1321,6 +1329,7 @@ function MacroGoalBar({ label, consumed, target, color, bgColor, danger = false 
 
 // ── Calorie progress bar ──────────────────────────────────────────────────────
 function CalorieProgress({ consumed, target }: { consumed: number; target: number }) {
+  const { t } = useTranslation();
   const pct         = Math.min((consumed / target) * 100, 100);
   const remaining   = target - consumed;
   const over        = consumed > target;
@@ -1365,6 +1374,7 @@ function CalorieProgress({ consumed, target }: { consumed: number; target: numbe
 function DeficitSurplusBanner({ consumed, target, goalType }: {
   consumed: number; target: number; goalType?: string;
 }) {
+  const { t } = useTranslation();
   const diff        = consumed - target;
   const absDiff     = Math.abs(Math.round(diff));
   const pctOff      = target > 0 ? Math.abs(diff) / target : 0;
@@ -1376,7 +1386,7 @@ function DeficitSurplusBanner({ consumed, target, goalType }: {
     return (
       <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 bg-green-50 border border-green-200 text-sm text-green-800 mt-3">
         <span>🎯</span>
-        <p><span className="font-semibold">Right on target!</span> You're within 80 kcal of your daily goal.</p>
+        <p><span className="font-semibold">{t("nutrition.rightOnTarget")}</span> You're within 80 kcal of your daily goal.</p>
       </div>
     );
   }
@@ -1454,6 +1464,7 @@ interface MealPlanData {
 function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
   open: boolean; onClose: () => void; selectedDate: string; onLogged: () => void;
 }) {
+  const { t } = useTranslation();
   const [status, setStatus]     = useState<"idle" | "fetching" | "preview" | "logging" | "done">("idle");
   const [plan,   setPlan]       = useState<MealPlanData | null>(null);
   const [aiText, setAiText]     = useState("");
@@ -1509,14 +1520,14 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
       {status === "fetching" && (
         <div className="flex flex-col items-center gap-4 py-12">
           <div className="animate-spin w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full" />
-          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">Nutritionist is building your plan…</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">{t("nutrition.nutritionistBuilding")}</p>
         </div>
       )}
 
       {status === "done" && (
         <div className="flex flex-col items-center gap-4 py-10">
           <div className="text-5xl">✅</div>
-          <p className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">Meals logged successfully!</p>
+          <p className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">{t("nutrition.mealsLoggedSuccess")}</p>
         </div>
       )}
 
@@ -1538,7 +1549,7 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
                   {MEAL_ICONS[m.meal]} {m.meal}
                 </p>
                 {m.items.length === 0 ? (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">No items</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{t("nutrition.noItems")}</p>
                 ) : (
                   <table className="w-full text-xs text-gray-600 dark:text-gray-300 dark:text-gray-300">
                     <thead>
@@ -1589,8 +1600,8 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
         <div className="space-y-4 py-4">
           <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-3">{error}</p>
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
-            <Button className="flex-1" onClick={fetchPlan}>Try Again</Button>
+            <Button variant="secondary" className="flex-1" onClick={onClose}>{t("common.cancel")}</Button>
+            <Button className="flex-1" onClick={fetchPlan}>{t("nutrition.tryAgain")}</Button>
           </div>
         </div>
       )}
@@ -1612,6 +1623,7 @@ interface DishIngredient {
 function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
   open: boolean; onClose: () => void; selectedDate: string; onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [dishName,     setDishName]     = useState("");
   const [ingredients,  setIngredients]  = useState<DishIngredient[]>([]);
   const [meal,         setMeal]         = useState<string>("");
@@ -1701,7 +1713,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
 
         {/* Add ingredient */}
         <div className="border border-gray-100 dark:border-gray-700 rounded-xl p-4 space-y-3 bg-gray-50 dark:bg-gray-700/50">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 dark:text-gray-200">Add ingredient</p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 dark:text-gray-200">{t("nutrition.addIngredient")}</p>
           <FoodSearch onSelect={(f) => { setSelFood(f); setSelUnit(f.defaultUnit); setSelQty(String(f.defaultQty)); }} />
           {selFood && (
             <div className="flex items-end gap-2 flex-wrap">
@@ -1743,7 +1755,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700 dark:border-gray-700">
-                  <th className="text-left px-3 py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Ingredient</th>
+                  <th className="text-left px-3 py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">{t("nutrition.ingredient")}</th>
                   <th className="text-right px-2 py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Kcal</th>
                   <th className="text-right px-2 py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">P</th>
                   <th className="text-right px-2 py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">C</th>
@@ -1769,7 +1781,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
                 ))}
                 {/* Totals row */}
                 <tr className="bg-brand-50 font-semibold text-sm border-t border-brand-100">
-                  <td className="px-3 py-2 text-brand-700">Total</td>
+                  <td className="px-3 py-2 text-brand-700">{t("nutrition.total")}</td>
                   <td className="px-2 py-2 text-right text-brand-800">{Math.round(totals.cal)}</td>
                   <td className="px-2 py-2 text-right text-blue-700">{Math.round(totals.protein)}g</td>
                   <td className="px-2 py-2 text-right text-yellow-700">{Math.round(totals.carbs)}g</td>
@@ -1788,7 +1800,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
             value={meal}
             onChange={(e) => setMeal(e.target.value)}
             options={MEAL_OPTIONS}
-            placeholder="Select meal (optional)"
+            placeholder={t("nutrition.selectMealOptional")}
           />
           <div className="flex flex-col justify-end">
             <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-300 mb-1.5">
@@ -1809,7 +1821,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
 
         <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-          <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" className="flex-1" onClick={onClose}>{t("common.cancel")}</Button>
           <Button className="flex-1" loading={loading} onClick={saveDish} disabled={ingredients.length === 0}>
             Log {logSeparate ? `${ingredients.length} items` : "Dish"}
           </Button>
@@ -1865,6 +1877,7 @@ function getCyclePhase(periodStart: string, cycleLength = 28): CyclePhase | null
 }
 
 function CyclePhaseBanner({ periodStart, cycleLength }: { periodStart: string; cycleLength?: number | null }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const phase = getCyclePhase(periodStart, cycleLength ?? 28);
   if (!phase) return null;
@@ -1880,7 +1893,7 @@ function CyclePhaseBanner({ periodStart, cycleLength }: { periodStart: string; c
           <span className="text-lg">{phase.emoji}</span>
           <div>
             <p className="font-semibold text-sm">{phase.name} phase — Day {phase.day}</p>
-            <p className="text-xs opacity-70">Tap to see phase-specific nutrition & workout tips</p>
+            <p className="text-xs opacity-70">{t("nutrition.tapPhaseNutrition")}</p>
           </div>
         </div>
         <span className="text-sm opacity-60">{open ? "▲" : "▼"}</span>
@@ -2440,13 +2453,13 @@ export default function NutritionPage() {
               <button
                 onClick={() => navigate("/goals")}
                 className="text-brand-600 hover:underline"
-              >Set a calorie goal</button> to track limits & deficit/surplus
+              >{t("nutrition.setCalorieGoal")}</button> to track limits & deficit/surplus
             </p>
           )}
 
           <div className="flex justify-around pt-4 border-t border-gray-100 dark:border-gray-700 text-center mt-3">
             <div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">Entries</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{t("nutrition.entries")}</p>
               <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{logs.length}</p>
             </div>
             <div>
@@ -2455,7 +2468,7 @@ export default function NutritionPage() {
             </div>
             {hasGoal && (
               <div>
-                <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">TDEE</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{t("nutrition.tdee")}</p>
                 <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{Math.round(activeGoal!.tdee ?? 0)}</p>
               </div>
             )}
@@ -2465,7 +2478,7 @@ export default function NutritionPage() {
         {/* ── Macronutrients card ── */}
         <Card className="lg:col-span-2">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
-            <h3 className="font-semibold text-gray-900 dark:text-white dark:text-white">Macronutrients</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white dark:text-white">{t("nutrition.macronutrients")}</h3>
 
             {/* View toggle — always visible; "vs Goals" only when a goal exists */}
             <div className="flex flex-wrap gap-0.5 bg-gray-100 rounded-lg p-0.5 text-xs overflow-x-auto">
@@ -2500,7 +2513,7 @@ export default function NutritionPage() {
                   <MacroRing label="Carbs"   value={effectiveTotals.carbs}   total={totalMacroG} color="#f59e0b" goal={activeGoal?.carbsGrams} danger={true} />
                   <MacroRing label="Fats"    value={effectiveTotals.fats}    total={totalMacroG} color="#ef4444" goal={activeGoal?.fatsGrams} danger={true} />
                   <div className="text-center">
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Calories from macros</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{t("nutrition.caloriesFromMacros")}</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white">
                       {Math.round(effectiveTotals.protein * 4 + effectiveTotals.carbs * 4 + effectiveTotals.fats * 9)}
                     </p>
@@ -2563,8 +2576,8 @@ export default function NutritionPage() {
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-8 gap-2">
-              <p className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-500">Log food to see macro breakdown</p>
-              <Button size="sm" onClick={() => setShowForm(true)}>Log First Meal</Button>
+              <p className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-500">{t("nutrition.logFoodMacros")}</p>
+              <Button size="sm" onClick={() => setShowForm(true)}>{t("nutrition.logFirstMeal")}</Button>
             </div>
           )}
         </Card>
@@ -2682,7 +2695,7 @@ export default function NutritionPage() {
                   type="text"
                   value={favSearchQ}
                   onChange={(e) => setFavSearchQ(e.target.value)}
-                  placeholder="Search food to favourite…"
+                  placeholder={t("nutrition.searchFoodPlaceholder")}
                   className="w-full rounded-xl border border-amber-200 dark:border-amber-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
                 />
                 {favSearchRes.length > 0 && (
@@ -2700,7 +2713,7 @@ export default function NutritionPage() {
                   </div>
                 )}
                 {favSearchQ.trim() && favSearchRes.length === 0 && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 px-1">No results — try a different name.</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 px-1">{t("nutrition.noResultsTryName")}</p>
                 )}
               </div>
             )}
@@ -2767,7 +2780,7 @@ export default function NutritionPage() {
       ) : logs.length === 0 ? (
         <Card className="text-center py-14">
           <div className="text-5xl mb-3">🥗</div>
-          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Nothing logged yet</h3>
+          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">{t("nutrition.nothingLogged")}</h3>
           <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">
             {isToday
               ? "Log your first meal to start tracking today's nutrition."
@@ -2964,26 +2977,26 @@ export default function NutritionPage() {
         {/* Add custom supplement form */}
         {showAddCustomSupp && (
           <div className="mb-4 p-3 rounded-xl border border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/20 space-y-2">
-            <p className="text-xs font-semibold text-purple-800 dark:text-purple-200">Add Your Supplement</p>
+            <p className="text-xs font-semibold text-purple-800 dark:text-purple-200">{t("nutrition.addSupplement2")}</p>
             <div className="grid grid-cols-2 gap-2">
               <div className="col-span-2 flex gap-2">
                 <input
                   type="text"
-                  placeholder="Emoji (e.g. 🌿)"
+                  placeholder={t("nutrition.emojiField")}
                   value={newSuppDraft.emoji}
                   onChange={(e) => setNewSuppDraft((p) => ({ ...p, emoji: e.target.value }))}
                   className="w-16 rounded-lg border border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-purple-300"
                 />
                 <input
                   type="text"
-                  placeholder="Supplement name *"
+                  placeholder={t("nutrition.supplementName")}
                   value={newSuppDraft.name}
                   onChange={(e) => setNewSuppDraft((p) => ({ ...p, name: e.target.value }))}
                   className="flex-1 rounded-lg border border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
                 />
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">Unit</label>
+                <label className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">{t("nutrition.unit")}</label>
                 <input type="text" placeholder="caps / g / ml" value={newSuppDraft.unit}
                   onChange={(e) => setNewSuppDraft((p) => ({ ...p, unit: e.target.value }))}
                   className="w-full mt-0.5 rounded-lg border border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
@@ -3007,7 +3020,7 @@ export default function NutritionPage() {
               onClick={addCustomSupp}
               disabled={!newSuppDraft.name.trim()}
               className="w-full py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >Add Supplement</button>
+            >{t("nutrition.addSupplement")}</button>
           </div>
         )}
 
@@ -3070,8 +3083,8 @@ export default function NutritionPage() {
                       ))}
                     </div>
                     <div className="flex gap-1 justify-center">
-                      <button onClick={saveSuppEdit} className="text-[10px] px-2 py-1 rounded-lg bg-amber-500 text-white font-semibold hover:bg-amber-600">Save</button>
-                      <button onClick={() => resetSuppEdit(id as SuppId)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 dark:text-gray-300 hover:bg-gray-200">Reset</button>
+                      <button onClick={saveSuppEdit} className="text-[10px] px-2 py-1 rounded-lg bg-amber-500 text-white font-semibold hover:bg-amber-600">{t("common.save")}</button>
+                      <button onClick={() => resetSuppEdit(id as SuppId)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 dark:text-gray-300 hover:bg-gray-200">{t("common.reset")}</button>
                       <button onClick={() => setEditingSupp(null)} className="text-[10px] px-2 py-1 rounded-lg bg-gray-100 text-gray-600 dark:text-gray-300 hover:bg-gray-200">✕</button>
                     </div>
                   </div>
@@ -3185,12 +3198,12 @@ export default function NutritionPage() {
               ) : myFoodsPanelList.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-5xl mb-3">🍽️</div>
-                  <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">No custom foods yet</p>
+                  <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">{t("nutrition.noCustomFoods")}</p>
                   <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Create foods with your own macros — they'll appear here and in the food search.</p>
                   <button
                     onClick={() => { setMyFoodsPanelEdit(null); setShowMyFoodsCreate(true); }}
                     className="px-4 py-2 rounded-xl bg-green-500 text-white text-sm font-semibold hover:bg-green-600 transition-colors"
-                  >Create First Food</button>
+                  >{t("nutrition.createFirstFood")}</button>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -3209,7 +3222,7 @@ export default function NutritionPage() {
                         <button
                           onClick={() => { setMyFoodsPanelEdit(food); setShowMyFoodsCreate(true); }}
                           className="px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 hover:bg-amber-100 transition-colors"
-                        >Edit</button>
+                        >{t("common.edit")}</button>
                         <button
                           onClick={async () => {
                             if (!confirm(`Delete "${food.name}"?`)) return;
@@ -3217,7 +3230,7 @@ export default function NutritionPage() {
                             loadMyFoodsPanel();
                           }}
                           className="px-2.5 py-1 rounded-lg text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-100 transition-colors"
-                        >Delete</button>
+                        >{t("common.delete")}</button>
                       </div>
                     </div>
                   ))}

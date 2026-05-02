@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { applyDark, readDarkPref } from "../../hooks/useDarkMode";
-import { useTranslation, LANG_LABELS } from "../../i18n";
+import { useTranslation, LANG_LABELS, t as _t } from "../../i18n";
 import type { SupportedLang } from "../../i18n";
 import { usersApi, calorieGoalsApi } from "../../api";
 import { useAuthStore } from "../../store/authStore";
@@ -21,6 +21,7 @@ function useToast() {
   return { msg, show };
 }
 function ToastBanner({ msg }: { msg: string | null }) {
+  const { t } = useTranslation();
   if (!msg) return null;
   return (
     <div className="fixed bottom-20 right-4 z-50 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 md:bottom-6 md:right-6">
@@ -47,6 +48,7 @@ function parseApiError(e: any): string {
 
 // ── Profile form ──────────────────────────────────────────────────────────────
 function ProfileForm() {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
   const navigate = useNavigate();
   const [activeGoalId, setActiveGoalId] = useState<number | null>(null);
@@ -144,7 +146,7 @@ function ProfileForm() {
 
   return (
     <Card>
-      <CardHeader title="Profile" subtitle="Used by the AI and calorie calculator" />
+      <CardHeader title={t("profile.title")} subtitle="Used by the AI and calorie calculator" />
 
       {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2 mb-4">{error}</p>}
       {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
@@ -179,17 +181,17 @@ function ProfileForm() {
             label="Sex"
             value={form.sex}
             onChange={set("sex")}
-            placeholder="Select sex"
+            placeholder={t("settings.selectSex")}
             options={[
               { value: "male",   label: "Male" },
               { value: "female", label: "Female" },
             ]}
           />
           <Select
-            label="Activity Level (non-training)"
+            label={t("settings.selectActivityLevel")}
             value={form.activityLevel}
             onChange={set("activityLevel")}
-            placeholder="Select activity level"
+            placeholder={t("settings.selectActivityLevel")}
             options={[
               { value: "sedentary",  label: "Sedentary (desk job)" },
               { value: "light",      label: "Light (on feet most of the day)" },
@@ -202,13 +204,13 @@ function ProfileForm() {
 
         {/* Training schedule — drives precise TDEE when both are filled */}
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">Training Schedule</p>
+          <p className="text-sm font-medium text-gray-700 mb-2">{t("settings.trainingSchedule")}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="Days per week"
+              label={t("settings.daysPerWeek")}
               value={form.trainingDaysPerWeek}
               onChange={set("trainingDaysPerWeek")}
-              placeholder="Select days"
+              placeholder={t("settings.selectDays")}
               options={[
                 { value: "1", label: "1 day / week" },
                 { value: "2", label: "2 days / week" },
@@ -220,10 +222,10 @@ function ProfileForm() {
               ]}
             />
             <Select
-              label="Hours per session"
+              label={t("settings.hoursPerSession")}
               value={form.trainingHoursPerDay}
               onChange={set("trainingHoursPerDay")}
-              placeholder="Select duration"
+              placeholder={t("settings.selectDuration")}
               options={[
                 { value: "0.5",  label: "~30 min" },
                 { value: "0.75", label: "~45 min" },
@@ -247,10 +249,10 @@ function ProfileForm() {
         </div>
 
         <Select
-          label="Fitness Level"
+          label={t("settings.fitnessLevel")}
           value={form.fitnessLevel}
           onChange={set("fitnessLevel")}
-          placeholder="Select fitness level"
+          placeholder={t("settings.selectFitnessLevel")}
           options={[
             { value: "beginner",     label: "Beginner (< 1 year training)" },
             { value: "intermediate", label: "Intermediate (1–3 years)" },
@@ -269,17 +271,17 @@ function ProfileForm() {
             value={form.goal}
             onChange={set("goal")}
             rows={2}
-            placeholder="Set a goal in the Goals tab, or describe it here — e.g. Lose 10kg for summer…"
+            placeholder={t("settings.goalDescription")}
             className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
           />
         </div>
 
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-sm text-blue-700 dark:text-blue-300">
-          <p className="font-semibold mb-1">Why this matters</p>
+          <p className="font-semibold mb-1">{t("settings.whyMatters")}</p>
           <p>Age, weight, height, and sex are used for Mifflin-St Jeor BMR. When you set your <strong>training days and session duration</strong>, calorie goals switch to a precise MET-based TDEE that accounts for actual exercise calories burned — more accurate than the activity multiplier alone. All goal calculations, nutrition targets, and progress projections depend on this.</p>
         </div>
 
-        <Button loading={saving} onClick={save} className="w-full">Save Profile</Button>
+        <Button loading={saving} onClick={save} className="w-full">{t("profile.saveProfile")}</Button>
       </div>
       <ToastBanner msg={toast.msg} />
     </Card>
@@ -288,6 +290,7 @@ function ProfileForm() {
 
 // ── Nutrition preferences ─────────────────────────────────────────────────────
 function NutritionPreferencesForm() {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
   const [multiplier, setMultiplier] = useState(user?.proteinMultiplier ?? 2.0);
   const [saving,  setSaving]  = useState(false);
@@ -316,7 +319,7 @@ function NutritionPreferencesForm() {
 
   return (
     <Card>
-      <CardHeader title="Nutrition Preferences" subtitle="Applied to all new calorie goal calculations" />
+      <CardHeader title={t("profile.nutritionPreferences")} subtitle="Applied to all new calorie goal calculations" />
 
       {error   && <p className="text-sm text-red-600   bg-red-50   rounded-xl px-3 py-2 mb-4">{error}</p>}
       {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
@@ -371,7 +374,7 @@ function NutritionPreferencesForm() {
 
         {/* Reference table */}
         <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 text-sm text-gray-600 dark:text-gray-300 space-y-1">
-          <p className="font-semibold text-gray-700 dark:text-gray-200 mb-2">Common ranges</p>
+          <p className="font-semibold text-gray-700 dark:text-gray-200 mb-2">{t("settings.commonRanges")}</p>
           {[
             { range: "0.8 – 1.0", label: "Sedentary / general health (RDA minimum)" },
             { range: "1.2 – 1.6", label: "Recreational fitness, moderate training" },
@@ -386,7 +389,7 @@ function NutritionPreferencesForm() {
           ))}
         </div>
 
-        <Button loading={saving} onClick={save} className="w-full">Save Preferences</Button>
+        <Button loading={saving} onClick={save} className="w-full">{t("settings.savePreferences")}</Button>
       </div>
     </Card>
   );
@@ -414,6 +417,7 @@ const INJURY_AREAS = [
 ];
 
 function InjuryForm() {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
   const [selected, setSelected] = useState<string[]>(user?.injuries ?? []);
   const [saving,  setSaving]  = useState(false);
@@ -439,7 +443,7 @@ function InjuryForm() {
 
   return (
     <Card>
-      <CardHeader title="Injuries & Limitations" subtitle="Exercises and templates will avoid movements that stress affected areas" />
+      <CardHeader title={t("profile.injuriesForm")} subtitle="Exercises and templates will avoid movements that stress affected areas" />
 
       {error   && <p className="text-sm text-red-600   bg-red-50   rounded-xl px-3 py-2 mb-4">{error}</p>}
       {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
@@ -480,7 +484,7 @@ function InjuryForm() {
           </div>
         )}
 
-        <Button loading={saving} onClick={save} className="w-full">Save Injuries</Button>
+        <Button loading={saving} onClick={save} className="w-full">{t("settings.saveInjuries")}</Button>
       </div>
     </Card>
   );
@@ -488,6 +492,7 @@ function InjuryForm() {
 
 // ── Female cycle tracking ─────────────────────────────────────────────────────
 function CycleTrackingForm() {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
   const [periodStart, setPeriodStart] = useState(user?.periodStart ?? "");
   const [cycleLength, setCycleLength] = useState(String(user?.cycleLength ?? 28));
@@ -531,7 +536,7 @@ function CycleTrackingForm() {
 
   return (
     <Card>
-      <CardHeader title="Menstrual Cycle Tracking" subtitle="Personalises nutrition & workout tips to your hormonal phase" />
+      <CardHeader title={t("settings.menstrualCycleTracking")} subtitle="Personalises nutrition & workout tips to your hormonal phase" />
 
       {error   && <p className="text-sm text-red-600   bg-red-50   rounded-xl px-3 py-2 mb-4">{error}</p>}
       {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
@@ -539,7 +544,7 @@ function CycleTrackingForm() {
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">First day of last period</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">{t("settings.firstDayPeriod")}</label>
             <input
               type="date"
               value={periodStart}
@@ -549,7 +554,7 @@ function CycleTrackingForm() {
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Cycle length (days)</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">{t("settings.cycleLength")}</label>
             <input
               type="number"
               min={20} max={45}
@@ -557,7 +562,7 @@ function CycleTrackingForm() {
               onChange={(e) => setCycleLength(e.target.value)}
               className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
-            <p className="text-xs text-gray-400 mt-1">Average is 28 days (range: 21–35)</p>
+            <p className="text-xs text-gray-400 mt-1">{t("settings.avgCycleLength")}</p>
           </div>
         </div>
 
@@ -576,11 +581,11 @@ function CycleTrackingForm() {
         )}
 
         <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 text-xs text-gray-500 dark:text-gray-400 space-y-1">
-          <p className="font-medium text-gray-600 dark:text-gray-300">Why this matters</p>
+          <p className="font-medium text-gray-600 dark:text-gray-300">{t("settings.whyMatters")}</p>
           <p>Hormonal fluctuations affect energy, strength, hunger, and recovery throughout the cycle. Tailoring nutrition and training intensity to each phase can reduce symptoms and improve performance.</p>
         </div>
 
-        <Button loading={saving} onClick={save} className="w-full">Save Cycle Settings</Button>
+        <Button loading={saving} onClick={save} className="w-full">{t("settings.saveCycleSettings")}</Button>
       </div>
     </Card>
   );
@@ -589,41 +594,40 @@ function CycleTrackingForm() {
 // ── Language Picker ──────────────────────────────────────────────────────────
 function LanguagePicker() {
   const { t, i18n } = useTranslation();
-  const [justChanged, setJustChanged] = useState(false);
+  const toast = useToast();
 
   const handleLangChange = (code: SupportedLang) => {
     if (code === i18n.language) return;
-    i18n.changeLanguage(code);          // instant — persisted to localStorage
-    setJustChanged(true);
-    setTimeout(() => setJustChanged(false), 2500);
+    i18n.changeLanguage(code);
+    toast.show(t("dashboard.languageChanged"));
   };
 
   return (
-    <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
-      <div>
-        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🌐 {t("profile.language")}</p>
-        {justChanged
-          ? <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-0.5">✓ {t("dashboard.languageChanged")}</p>
-          : <p className="text-xs text-gray-500 dark:text-gray-400">{t("profile.changeLanguage")}</p>
-        }
+    <>
+      <ToastBanner msg={toast.msg} />
+      <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
+        <div>
+          <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🌐 {t("profile.language")}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{t("profile.changeLanguage")}</p>
+        </div>
+        <div className="flex gap-1.5">
+          {(Object.entries(LANG_LABELS) as [SupportedLang, string][]).map(([code, label]) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => handleLangChange(code as SupportedLang)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                i18n.language === code
+                  ? "bg-brand-600 text-white border-brand-600"
+                  : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-brand-400"
+              }`}
+            >
+              {code === "en" ? "🇬🇧" : "🇪🇸"} {label}
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="flex gap-1.5">
-        {(Object.entries(LANG_LABELS) as [SupportedLang, string][]).map(([code, label]) => (
-          <button
-            key={code}
-            type="button"
-            onClick={() => handleLangChange(code as SupportedLang)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-              i18n.language === code
-                ? "bg-brand-600 text-white border-brand-600"
-                : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-brand-400"
-            }`}
-          >
-            {code === "en" ? "🇬🇧" : "🇪🇸"} {label}
-          </button>
-        ))}
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -631,6 +635,7 @@ function LanguagePicker() {
 type AppPrefs = { trackWater: boolean; darkMode: boolean };
 
 function AppPreferencesForm() {
+  const { t } = useTranslation();
   const initPrefs = (): AppPrefs => {
     try {
       const s = localStorage.getItem("app_prefs_v1");
@@ -666,7 +671,7 @@ function AppPreferencesForm() {
 
   return (
     <Card>
-      <CardHeader title="App Preferences" subtitle="Controls appearance and tracking features" />
+      <CardHeader title={t("profile.appPreferences")} subtitle="Controls appearance and tracking features" />
       {saved && <p className="text-sm text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-xl px-3 py-2 mb-4">Preferences saved</p>}
       <div className="space-y-1">
 
@@ -674,7 +679,7 @@ function AppPreferencesForm() {
         <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
           <div>
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🌙 Dark Mode</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Switch the app to a dark colour scheme</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.switchDarkMode")}</p>
           </div>
           <Toggle on={prefs.darkMode} onClick={() => toggle("darkMode")} />
         </div>
@@ -686,7 +691,7 @@ function AppPreferencesForm() {
         <div className="flex items-center justify-between py-3">
           <div>
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">💧 Water Tracking</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Show the water intake widget on the Nutrition page</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.showWaterWidget")}</p>
           </div>
           <Toggle on={prefs.trackWater} onClick={() => toggle("trackWater")} />
         </div>
@@ -698,6 +703,7 @@ function AppPreferencesForm() {
 
 // ── Change password form ──────────────────────────────────────────────────────
 function PasswordForm() {
+  const { t } = useTranslation();
   const [current, setCurrent] = useState("");
   const [next,    setNext]    = useState("");
   const [confirm, setConfirm] = useState("");
@@ -721,14 +727,14 @@ function PasswordForm() {
 
   return (
     <Card>
-      <CardHeader title="Change Password" />
+      <CardHeader title={t("profile.changePassword")} />
       {error   && <p className="text-sm text-red-600   bg-red-50   rounded-xl px-3 py-2 mb-4">{error}</p>}
       {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
       <div className="space-y-4">
-        <Input label="Current Password" type="password" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="••••••••" />
-        <Input label="New Password"     type="password" value={next}    onChange={(e) => setNext(e.target.value)}    placeholder="••••••••" hint="At least 8 characters" />
-        <Input label="Confirm Password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" />
-        <Button loading={saving} onClick={save} className="w-full">Update Password</Button>
+        <Input label={t("settings.currentPassword")} type="password" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="••••••••" />
+        <Input label={t("settings.newPassword")}     type="password" value={next}    onChange={(e) => setNext(e.target.value)}    placeholder="••••••••" hint={t("settings.passwordHint")} />
+        <Input label={t("settings.confirmPasswordField")} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" />
+        <Button loading={saving} onClick={save} className="w-full">{t("settings.updatePassword")}</Button>
       </div>
     </Card>
   );
@@ -736,6 +742,7 @@ function PasswordForm() {
 
 // ── Account info ──────────────────────────────────────────────────────────────
 function AccountInfo() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   if (!user) return null;
   return (
@@ -743,16 +750,16 @@ function AccountInfo() {
       <CardHeader title="Account" />
       <div className="space-y-3">
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500 dark:text-gray-400">Username</span>
+          <span className="text-gray-500 dark:text-gray-400">{t("settings.username")}</span>
           <span className="font-medium text-gray-800 dark:text-gray-200">@{user.username}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500 dark:text-gray-400">Email</span>
+          <span className="text-gray-500 dark:text-gray-400">{t("profile.email")}</span>
           <span className="font-medium text-gray-800 dark:text-gray-200">{user.email}</span>
         </div>
         {user.createdAt && (
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500 dark:text-gray-400">Member since</span>
+            <span className="text-gray-500 dark:text-gray-400">{t("settings.memberSince")}</span>
             <span className="font-medium text-gray-800 dark:text-gray-200">
               {new Date(user.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
             </span>

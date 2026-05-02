@@ -3,14 +3,16 @@ import { reportsApi } from "../../api";
 import type { MonthlyReport } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { useTranslation } from "../../i18n";
 
-const MONTHS = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December",
-];
+// Month names come from Intl so they auto-localise
+function monthName(month: number, lang: string): string {
+  return new Intl.DateTimeFormat(lang, { month: "long" }).format(new Date(2000, month - 1, 1));
+}
 
 // ── Report card ───────────────────────────────────────────────────────────────
 function ReportCard({ report, onSelect }: { report: MonthlyReport; onSelect: () => void }) {
+  const { t, i18n } = useTranslation();
   const changeColor =
     report.weightDelta == null ? "text-gray-400"
     : report.weightDelta < 0  ? "text-green-600"
@@ -22,10 +24,10 @@ function ReportCard({ report, onSelect }: { report: MonthlyReport; onSelect: () 
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="font-bold text-gray-900 dark:text-white">
-            {MONTHS[report.month - 1]} {report.year}
+            {monthName(report.month, i18n.language)} {report.year}
           </h3>
           {report.aiSummary && (
-            <p className="text-xs text-brand-600 mt-0.5 font-medium">✨ AI summary available</p>
+            <p className="text-xs text-brand-600 mt-0.5 font-medium">✨ {t("reports.aiSummary")}</p>
           )}
         </div>
         <span className="text-2xl">📊</span>
@@ -33,13 +35,13 @@ function ReportCard({ report, onSelect }: { report: MonthlyReport; onSelect: () 
 
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: "Workouts",     value: String(report.totalWorkouts) },
-          { label: "PRs Hit",      value: String(report.prsHit) },
-          { label: "Avg Calories", value: report.avgCalories  ? `${Math.round(report.avgCalories)} kcal`  : "—" },
-          { label: "Avg Protein",  value: report.avgProtein   ? `${Math.round(report.avgProtein)}g`        : "—" },
-          { label: "Total Volume", value: report.totalVolume  ? `${(report.totalVolume / 1000).toFixed(1)}t` : "—" },
+          { label: t("reports.workoutsLogged"),     value: String(report.totalWorkouts) },
+          { label: t("reports.highlights"),      value: String(report.prsHit) },
+          { label: t("reports.avgCalories"), value: report.avgCalories  ? `${Math.round(report.avgCalories)} kcal`  : "—" },
+          { label: t("common.protein"),  value: report.avgProtein   ? `${Math.round(report.avgProtein)}g`        : "—" },
+          { label: t("reports.consistency"), value: report.totalVolume  ? `${(report.totalVolume / 1000).toFixed(1)}t` : "—" },
           {
-            label: "Weight Change",
+            label: t("reports.weightDelta"),
             value: report.weightDelta != null
               ? `${report.weightDelta > 0 ? "+" : ""}${report.weightDelta.toFixed(1)} kg`
               : "—",
@@ -58,25 +60,26 @@ function ReportCard({ report, onSelect }: { report: MonthlyReport; onSelect: () 
 
 // ── Report detail ─────────────────────────────────────────────────────────────
 function ReportDetail({ report, onClose }: { report: MonthlyReport; onClose: () => void }) {
+  const { t, i18n } = useTranslation();
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-          {MONTHS[report.month - 1]} {report.year}
+          {monthName(report.month, i18n.language)} {report.year}
         </h2>
-        <Button variant="secondary" size="sm" onClick={onClose}>← Back</Button>
+        <Button variant="secondary" size="sm" onClick={onClose}>{t("reports.back")}</Button>
       </div>
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {[
-          { icon: "🏋️", label: "Total Workouts",  value: String(report.totalWorkouts) },
-          { icon: "🏆", label: "New PRs",          value: String(report.prsHit) },
-          { icon: "🔥", label: "Avg Daily Kcal",   value: report.avgCalories ? `${Math.round(report.avgCalories)}` : "—" },
-          { icon: "💪", label: "Avg Protein",       value: report.avgProtein  ? `${Math.round(report.avgProtein)}g`  : "—" },
-          { icon: "📦", label: "Total Volume",      value: report.totalVolume ? `${(report.totalVolume / 1000).toFixed(1)}t` : "—" },
+          { icon: "🏋️", label: t("reports.workoutsLogged"),  value: String(report.totalWorkouts) },
+          { icon: "🏆", label: t("reports.highlights"),          value: String(report.prsHit) },
+          { icon: "🔥", label: t("reports.avgCalories"),   value: report.avgCalories ? `${Math.round(report.avgCalories)}` : "—" },
+          { icon: "💪", label: t("common.protein"),       value: report.avgProtein  ? `${Math.round(report.avgProtein)}g`  : "—" },
+          { icon: "📦", label: t("reports.consistency"),      value: report.totalVolume ? `${(report.totalVolume / 1000).toFixed(1)}t` : "—" },
           {
-            icon: "⚖️", label: "Weight Change",
+            icon: "⚖️", label: t("reports.weightDelta"),
             value: report.weightDelta != null
               ? `${report.weightDelta > 0 ? "+" : ""}${report.weightDelta.toFixed(1)} kg`
               : "—",
@@ -93,15 +96,15 @@ function ReportDetail({ report, onClose }: { report: MonthlyReport; onClose: () 
       {/* Weight summary */}
       {(report.weightStart != null || report.weightEnd != null) && (
         <Card>
-          <CardHeader title="Weight" />
+          <CardHeader title={t("common.weight")} />
           <div className="flex justify-around text-center">
             <div>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Start of month</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{t("reports.startOfMonth")}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{report.weightStart ?? "—"} kg</p>
             </div>
             <div className="flex items-center text-gray-300 text-2xl">→</div>
             <div>
-              <p className="text-xs text-gray-400 dark:text-gray-500">End of month</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{t("reports.endOfMonth")}</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{report.weightEnd ?? "—"} kg</p>
             </div>
           </div>
@@ -111,7 +114,7 @@ function ReportDetail({ report, onClose }: { report: MonthlyReport; onClose: () 
       {/* AI summary */}
       {report.aiSummary && (
         <Card>
-          <CardHeader title="✨ AI Coach Summary" subtitle="Generated by your AI coach" />
+          <CardHeader title={t("reports.aiSummary")}  />
           <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap text-sm">
             {report.aiSummary}
           </div>
@@ -129,6 +132,7 @@ function ReportDetail({ report, onClose }: { report: MonthlyReport; onClose: () 
 
 // ── Main Reports page ─────────────────────────────────────────────────────────
 export default function ReportsPage() {
+  const { t, i18n } = useTranslation();
   const now = new Date();
 
   const [reports,    setReports]    = useState<MonthlyReport[]>([]);
@@ -177,28 +181,28 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Monthly Reports</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">AI-powered summaries of your fitness progress</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("reports.title")}</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t("reports.subtitle")}</p>
         </div>
       </div>
 
       {/* Generate panel */}
       <Card>
-        <CardHeader title="Generate Report" subtitle="Compile your stats for any month" />
+        <CardHeader title={t("reports.title")} subtitle={t("reports.monthly")} />
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2 mb-4">{error}</p>}
         <div className="flex flex-wrap gap-3 items-end">
           <div>
-            <p className="text-xs text-gray-500 mb-1">Month</p>
+            <p className="text-xs text-gray-500 mb-1">{t("reports.month")}</p>
             <select
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
               className="border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
-              {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+              {Array.from({length:12},(_,i)=><option key={i+1} value={i+1}>{monthName(i+1,i18n.language)}</option>)}
             </select>
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">Year</p>
+            <p className="text-xs text-gray-500 mb-1">{t("reports.year")}</p>
             <select
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
@@ -215,16 +219,16 @@ export default function ReportsPage() {
                 onChange={(e) => setAiSummary(e.target.checked)}
                 className="w-4 h-4 rounded accent-brand-600"
               />
-              Include AI summary
+              {t("reports.aiSummary")}
             </label>
           </div>
           <Button loading={generating} onClick={generate}>
-            {generating ? "Generating…" : "Generate Report"}
+            {generating ? t("reports.generating") : t("reports.title")}
           </Button>
         </div>
         {generating && (
           <p className="text-xs text-gray-400 mt-3 animate-pulse">
-            {aiSummary ? "Crunching your data and writing an AI summary… this may take 10–20 seconds." : "Compiling your stats…"}
+            {aiSummary ? t("reports.generating") : t("reports.generating")}
           </p>
         )}
       </Card>
@@ -237,12 +241,12 @@ export default function ReportsPage() {
       ) : reports.length === 0 ? (
         <Card className="text-center py-16">
           <div className="text-5xl mb-4">📊</div>
-          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">No reports yet</h3>
-          <p className="text-sm text-gray-400">Generate your first monthly report above to get an AI-powered breakdown of your progress.</p>
+          <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">{t("reports.noReports")}</h3>
+          <p className="text-sm text-gray-400">{t("reports.subtitle")}</p>
         </Card>
       ) : (
         <div>
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Past Reports</h2>
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">{t("reports.pastReports")}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {reports.map((r) => (
               <ReportCard key={r.id} report={r} onSelect={() => setSelected(r)} />

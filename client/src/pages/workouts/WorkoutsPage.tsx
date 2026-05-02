@@ -6,7 +6,7 @@ import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, 
 import { workoutsApi, templatesApi, searchApi, foodApi, calorieGoalsApi, calendarApi, usersApi, chatApi, customExercisesApi } from "../../api";
 import type { Workout, WorkoutExercise, PRResult, WorkoutTemplate, WorkoutCalendarDay } from "../../types";
 import { useAuthStore } from "../../store/authStore";
-import { useTranslation } from "../../i18n";
+import { useTranslation, t as _t } from "../../i18n";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -110,6 +110,7 @@ function CalorieCalculator({
   weightKg: number;
   onApply: (kcal: number) => void;
 }) {
+  const { t } = useTranslation();
   const [activityId, setActivityId] = useState("weights_general");
   const [steps, setSteps]           = useState("");
   const [open, setOpen]             = useState(false);
@@ -138,7 +139,7 @@ function CalorieCalculator({
         className="w-full text-left text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1.5 py-1"
       >
         <span>🔥</span>
-        <span>Calculate calories burned from activity type →</span>
+        <span>{t("workouts.calcCalories")}</span>
       </button>
     );
   }
@@ -152,7 +153,7 @@ function CalorieCalculator({
 
       {/* Activity selector */}
       <div>
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Activity type</label>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t("workouts.activityType")}</label>
         <select
           value={activityId}
           onChange={(e) => setActivityId(e.target.value)}
@@ -176,12 +177,12 @@ function CalorieCalculator({
       {/* Steps input for walking activities */}
       {isStepActivity && (
         <div>
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Steps (optional — overrides duration)</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">{t("workouts.stepsOptional")}</label>
           <input
             type="number"
             value={steps}
             onChange={(e) => setSteps(e.target.value)}
-            placeholder="e.g. 8000"
+            placeholder={t("workouts.stepsPlaceholder")}
             className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
           />
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">~0.04 kcal/step, adjusted for your weight</p>
@@ -246,6 +247,7 @@ function getCardioSuggestions(goal?: string | null): CardioCombo[] {
 }
 
 function CardioSuggestionsPanel({ goal }: { goal?: string | null }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const suggestions = getCardioSuggestions(goal);
 
@@ -261,8 +263,8 @@ function CardioSuggestionsPanel({ goal }: { goal?: string | null }) {
         <div className="flex items-center gap-2">
           <span className="text-lg">💡</span>
           <div>
-            <p className="text-sm font-semibold text-blue-800">Weights + Cardio Combos</p>
-            <p className="text-xs text-blue-500">Personalised for your goal</p>
+            <p className="text-sm font-semibold text-blue-800">{t("workouts.weightsCardio")}</p>
+            <p className="text-xs text-blue-500">{t("workouts.personalised")}</p>
           </div>
         </div>
         <span className="text-blue-400 text-lg">{open ? "▲" : "▼"}</span>
@@ -309,6 +311,7 @@ function useToast() {
 }
 
 function ToastBanner({ msg }: { msg: string | null }) {
+  const { t } = useTranslation();
   if (!msg) return null;
   return (
     <div className="fixed bottom-20 right-4 z-50 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 md:bottom-6 md:right-6">
@@ -394,6 +397,7 @@ function ExerciseSuggestPanel({
   onSelect: (name: string, item: any) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [searchQ, setSearchQ] = useState(currentExercise ?? "");
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -464,15 +468,15 @@ function ExerciseSuggestPanel({
       <input
         value={searchQ}
         onChange={(e) => handleSearch(e.target.value)}
-        placeholder="Search by name or muscle…"
+        placeholder={t("workouts.searchByNameMuscle")}
         className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
       />
 
       {/* Results */}
       <div className="max-h-56 overflow-y-auto space-y-1">
-        {loading && <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">Searching…</p>}
+        {loading && <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{t("workouts.searching")}</p>}
         {!loading && results.length === 0 && (
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">No results — try a different muscle or name</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-2">{t("workouts.noResultsTry")}</p>
         )}
         {results.map((ex) => {
           const banned = isContraindicated(ex.name, injuries);
@@ -493,7 +497,7 @@ function ExerciseSuggestPanel({
               {banned ? (
                 <span className="text-xs text-red-400 ml-2 shrink-0">⚠️ injury</span>
               ) : (
-                <span className="text-xs text-brand-500 ml-2 shrink-0">Select →</span>
+                <span className="text-xs text-brand-500 ml-2 shrink-0">{t("workouts.selectBtn")}</span>
               )}
             </div>
           );
@@ -528,6 +532,7 @@ function CreateCustomExerciseModal({
   onCreated: (ex: any) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [name,          setName]          = useState(initialName);
   const [muscle,        setMuscle]        = useState("Chest");
   const [equipment,     setEquipment]     = useState("Bodyweight");
@@ -572,7 +577,7 @@ function CreateCustomExerciseModal({
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Equipment</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t("settings.equipment")}</label>
           <select value={equipment} onChange={(e) => setEquipment(e.target.value)}
             className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
             {EQUIPMENT_OPTIONS.map((eq) => <option key={eq} value={eq}>{eq}</option>)}
@@ -581,7 +586,7 @@ function CreateCustomExerciseModal({
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Difficulty</label>
+        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t("workouts.difficultyLabel")}</label>
         <div className="flex gap-2">
           {(["beginner","intermediate","advanced"] as const).map((d) => (
             <button key={d} onClick={() => setDifficulty(d)}
@@ -597,14 +602,14 @@ function CreateCustomExerciseModal({
         <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Instructions (optional)</label>
         <textarea
           value={instructions} onChange={(e) => setInstructions(e.target.value)}
-          rows={3} placeholder="Describe how to perform this exercise…"
+          rows={3} placeholder={t("workouts.describeExercise")}
           className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
         />
       </div>
 
       <div className="flex gap-2 pt-1">
-        <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">Cancel</button>
-        <Button className="flex-1" loading={saving} onClick={save}>Create Exercise</Button>
+        <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">{t("common.cancel")}</button>
+        <Button className="flex-1" loading={saving} onClick={save}>{t("workouts.createExercise")}</Button>
       </div>
     </div>
   );
@@ -616,6 +621,7 @@ function ExerciseSearch({
   value: string; onChange: (v: string, item?: any) => void;
   muscle?: string; placeholder?: string;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState(value);
   const [results, setResults] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
@@ -690,7 +696,7 @@ function ExerciseSearch({
             ))
           ) : (
             <div className="px-3 py-2">
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">No exercises found.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{t("workouts.noExercisesFound")}</p>
               <button
                 onMouseDown={() => { setOpen(false); onChange("__create_custom__:" + query); }}
                 className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium"
@@ -718,11 +724,11 @@ const BUILDER_MUSCLE_GROUPS = [
 ];
 
 const TRAINING_TYPES: { value: string; label: string; icon: string; color: string }[] = [
-  { value: "strength",    label: "Strength",    icon: "🏋️", color: "bg-purple-100 text-purple-700 border-purple-200" },
-  { value: "hypertrophy", label: "Hypertrophy", icon: "📈", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  { value: "endurance",   label: "Endurance",   icon: "🏃", color: "bg-green-100 text-green-700 border-green-200" },
-  { value: "cardio",      label: "Cardio",      icon: "❤️", color: "bg-red-100 text-red-700 border-red-200" },
-  { value: "mobility",    label: "Mobility",    icon: "🧘", color: "bg-amber-100 text-amber-700 border-amber-200" },
+  { value: "strength",    label: _t("workouts.strength"),    icon: "🏋️", color: "bg-purple-100 text-purple-700 border-purple-200" },
+  { value: "hypertrophy", label: _t("workouts.hypertrophy"), icon: "📈", color: "bg-blue-100 text-blue-700 border-blue-200" },
+  { value: "endurance",   label: _t("workouts.endurance"),   icon: "🏃", color: "bg-green-100 text-green-700 border-green-200" },
+  { value: "cardio",      label: _t("workouts.cardio"),      icon: "❤️", color: "bg-red-100 text-red-700 border-red-200" },
+  { value: "mobility",    label: _t("workouts.mobility"),    icon: "🧘", color: "bg-amber-100 text-amber-700 border-amber-200" },
 ];
 
 function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
@@ -731,6 +737,7 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
   injuries?: string[];
   defaultMuscle?: string;
 }) {
+  const { t } = useTranslation();
   const [suggestKey,       setSuggestKey]       = useState<string | null>(null);
   const [customCreateKey,  setCustomCreateKey]  = useState<string | null>(null);
   const [customInitName,   setCustomInitName]   = useState("");
@@ -754,7 +761,7 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 dark:text-gray-200">Exercises</p>
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 dark:text-gray-200">{t("workouts.exercises")}</p>
         <Button size="sm" variant="secondary" onClick={() => setRows((p) => [...p, newRow()])}>+ Add</Button>
       </div>
       <div className="space-y-3 pr-1">
@@ -769,7 +776,7 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
                     onChange={(e) => updateRow(r.key, "muscle", e.target.value)}
                     className="w-full mb-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400"
                   >
-                    <option value="">Any muscle</option>
+                    <option value="">{t("workouts.anyMuscle")}</option>
                     {BUILDER_MUSCLE_GROUPS.filter(m => m !== "Any").map(m => (
                       <option key={m} value={m}>{m}</option>
                     ))}
@@ -792,7 +799,7 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
                     type="button"
                     onClick={() => setSuggestKey(suggestKey === r.key ? null : r.key)}
                     className={`text-xs px-1 py-0.5 rounded transition-colors ${suggestKey === r.key ? "text-brand-600" : "text-gray-300 hover:text-brand-400"}`}
-                    title="Suggest exercises"
+                    title={t("workouts.suggestExercises")}
                   >💡</button>
                   <button type="button" onClick={() => removeRow(r.key)} className="text-gray-300 hover:text-red-400 transition-colors text-xs">✕</button>
                 </div>
@@ -815,14 +822,14 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
       </div>
       <div className="grid grid-cols-12 gap-1.5 mt-1">
         <p className="col-span-4 text-xs text-gray-400 dark:text-gray-500 pl-2">Exercise (💡 = suggest)</p>
-        <p className="col-span-2 text-xs text-gray-400 dark:text-gray-500 text-center">Sets</p>
-        <p className="col-span-2 text-xs text-gray-400 dark:text-gray-500 text-center">Reps</p>
+        <p className="col-span-2 text-xs text-gray-400 dark:text-gray-500 text-center">{t("workouts.sets")}</p>
+        <p className="col-span-2 text-xs text-gray-400 dark:text-gray-500 text-center">{t("workouts.reps")}</p>
         <p className="col-span-2 text-xs text-gray-400 dark:text-gray-500 text-center">kg</p>
-        <p className="col-span-1 text-xs text-gray-400 dark:text-gray-500 text-center">RPE</p>
+        <p className="col-span-1 text-xs text-gray-400 dark:text-gray-500 text-center">{t("workouts.rpe")}</p>
       </div>
 
       {customCreateKey && (
-        <Modal open={!!customCreateKey} onClose={() => setCustomCreateKey(null)} title="Create Custom Exercise" size="sm">
+        <Modal open={!!customCreateKey} onClose={() => setCustomCreateKey(null)} title={t("workouts.createCustomExercise")} size="sm">
           <CreateCustomExerciseModal
             initialName={customInitName}
             onCreated={(ex) => { updateRow(customCreateKey, "exerciseName", ex.name); setCustomCreateKey(null); }}
@@ -838,6 +845,7 @@ function ExerciseRows({ rows, setRows, injuries = [], defaultMuscle = "" }: {
 // Create workout form
 // ─────────────────────────────────────────────────────────────────────────────
 function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [name, setName] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
@@ -910,7 +918,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
           </div>
         ))}
       </div>
-      <Button className="w-full" onClick={onSave}>Done</Button>
+      <Button className="w-full" onClick={onSave}>{t("workouts.doneBtn")}</Button>
     </div>
   );
 
@@ -918,7 +926,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
     <div className="space-y-4">
       {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">{error}</p>}
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Workout Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Push Day" className="col-span-2" />
+        <Input label={t("workouts.workoutName")} value={name} onChange={(e) => setName(e.target.value)} placeholder="Push Day" className="col-span-2" />
         <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <Input label="Duration (min)" type="number" value={duration} onChange={(e) => setDuration(e.target.value)} />
         <div className="col-span-2">
@@ -947,9 +955,9 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
             className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
         </div>
-        <Textarea label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="How did it go?" className="col-span-2" />
+        <Textarea label={t("workouts.notesLabel")} value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="How did it go?" className="col-span-2" />
         <div className="col-span-2">
-          <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1.5">Training type (optional)</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1.5">{t("workouts.trainingTypeOptional")}</p>
           <div className="flex flex-wrap gap-1.5">
             {TRAINING_TYPES.map((t) => (
               <button
@@ -978,7 +986,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
 
       {/* Muscle-group filter chips — filters ExerciseSearch results in all rows */}
       <div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1.5">Filter exercises by muscle group</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1.5">{t("workouts.filterByMuscle")}</p>
         <div className="flex flex-wrap gap-1.5">
           {BUILDER_MUSCLE_GROUPS.map((mg) => (
             <button
@@ -999,8 +1007,8 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
 
       <ExerciseRows rows={rows} setRows={setRows} injuries={injuries} defaultMuscle={builderMuscle} />
       <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-        <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
-        <Button className="flex-1" loading={loading} onClick={submit}>Save Workout</Button>
+        <Button variant="secondary" className="flex-1" onClick={onClose}>{t("common.cancel")}</Button>
+        <Button className="flex-1" loading={loading} onClick={submit}>{t("workouts.saveWorkout")}</Button>
       </div>
     </div>
   );
@@ -1010,6 +1018,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
 // Edit workout form (header fields only)
 // ─────────────────────────────────────────────────────────────────────────────
 function EditWorkoutForm({ workout, onSave, onClose }: { workout: Workout; onSave: () => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(workout.name);
   const [date, setDate] = useState(workout.date.split("T")[0]);
   const [duration, setDuration] = useState(String(workout.duration));
@@ -1039,13 +1048,13 @@ function EditWorkoutForm({ workout, onSave, onClose }: { workout: Workout; onSav
     <div className="space-y-4">
       {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">{error}</p>}
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Workout Name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-2" />
+        <Input label={t("workouts.workoutName")} value={name} onChange={(e) => setName(e.target.value)} className="col-span-2" />
         <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <Input label="Duration (min)" type="number" value={duration} onChange={(e) => setDuration(e.target.value)} />
         <Input label="Calories Burned" type="number" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder="optional" className="col-span-2" />
-        <Textarea label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="col-span-2" />
+        <Textarea label={t("workouts.notesLabel")} value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="col-span-2" />
         <div className="col-span-2">
-          <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1.5">Training type</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1.5">{t("workouts.trainingType")}</p>
           <div className="flex flex-wrap gap-1.5">
             {TRAINING_TYPES.map((t) => (
               <button
@@ -1065,8 +1074,8 @@ function EditWorkoutForm({ workout, onSave, onClose }: { workout: Workout; onSav
         </div>
       </div>
       <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-        <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
-        <Button className="flex-1" loading={loading} onClick={submit}>Save Changes</Button>
+        <Button variant="secondary" className="flex-1" onClick={onClose}>{t("common.cancel")}</Button>
+        <Button className="flex-1" loading={loading} onClick={submit}>{t("workouts.saveChanges")}</Button>
       </div>
     </div>
   );
@@ -1090,6 +1099,7 @@ function AddExercisePanel({
 }: {
   workoutId: number; onAdded: (ex: WorkoutExercise) => void; onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [muscle, setMuscle] = useState("Any");
   const [exerciseList, setExerciseList] = useState<ExerciseItem[]>([]);
   const [listLoading, setListLoading] = useState(false);
@@ -1138,7 +1148,7 @@ function AddExercisePanel({
 
   return (
     <div className="mt-4 border border-brand-200 bg-brand-50 rounded-xl p-4 space-y-3">
-      <p className="text-sm font-semibold text-brand-800">Add Exercise</p>
+      <p className="text-sm font-semibold text-brand-800">{t("workouts.addExercise")}</p>
 
       {/* Muscle group chips */}
       <div className="flex flex-wrap gap-1.5">
@@ -1171,7 +1181,7 @@ function AddExercisePanel({
               <div className="w-5 h-5 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : displayed.length === 0 ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">No exercises found</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">{t("workouts.noExercisesFound")}</p>
           ) : displayed.map((ex) => (
             <button
               key={ex.name}
@@ -1216,8 +1226,8 @@ function AddExercisePanel({
       {error && <p className="text-xs text-red-600">{error}</p>}
 
       <div className="flex gap-2">
-        <Button variant="secondary" size="sm" className="flex-1" onClick={onCancel}>Cancel</Button>
-        <Button size="sm" className="flex-1" loading={saving} onClick={submit}>Add to Workout</Button>
+        <Button variant="secondary" size="sm" className="flex-1" onClick={onCancel}>{t("common.cancel")}</Button>
+        <Button size="sm" className="flex-1" loading={saving} onClick={submit}>{t("workouts.addToWorkout")}</Button>
       </div>
     </div>
   );
@@ -1232,6 +1242,7 @@ function WorkoutDetail({
   workout: Workout; onClose: () => void; onEdit: () => void;
   onDelete: () => void; onRefresh: () => void;
 }) {
+  const { t } = useTranslation();
   type ExerciseEditData = Pick<WorkoutExercise, "sets" | "reps"> & { exerciseName?: string; weight: number | null; rpe: number | null };
 
   const [exercises, setExercises] = useState<WorkoutExercise[]>(workout.exercises);
@@ -1338,7 +1349,7 @@ function WorkoutDetail({
                 onClick={saveKcal}
                 className="text-xs bg-orange-500 hover:bg-orange-600 text-white font-medium px-2 py-1 rounded-lg disabled:opacity-50"
               >
-                {savingKcal ? "…" : "Save"}
+                {savingKcal ? "…" : t("common.save")}
               </button>
               <button type="button" onClick={() => setEditingKcal(false)} className="text-xs text-gray-400 hover:text-gray-600 px-1">✕</button>
             </div>
@@ -1371,11 +1382,11 @@ function WorkoutDetail({
             {editing === ex.id ? (
               <div className="space-y-2">
                 <div>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">Exercise</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{t("workouts.exercise")}</p>
                   <ExerciseSearch
                     value={editData?.exerciseName ?? ex.exerciseName}
                     onChange={(v) => updateEditData({ exerciseName: v } as any)}
-                    placeholder="Search exercise…"
+                    placeholder={t("workouts.searchExercise")}
                   />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -1402,7 +1413,7 @@ function WorkoutDetail({
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" loading={saving} onClick={() => saveEdit(ex.id)} className="flex-1">Save</Button>
-                  <Button size="sm" variant="secondary" onClick={() => { setEditing(null); setEditData(null); }} className="flex-1">Cancel</Button>
+                  <Button size="sm" variant="secondary" onClick={() => { setEditing(null); setEditData(null); }} className="flex-1">{t("common.cancel")}</Button>
                 </div>
               </div>
             ) : (
@@ -1423,7 +1434,7 @@ function WorkoutDetail({
                           ? "bg-blue-100 text-blue-700 font-semibold"
                           : "bg-green-50 hover:bg-green-100 text-green-700"
                       }`}
-                      title="Mark set done and start rest timer"
+                      title={t("workouts.markSetDone")}
                     >
                       ✓ Set done
                     </button>
@@ -1456,7 +1467,7 @@ function WorkoutDetail({
                     <button
                       onClick={() => setTimerExId(null)}
                       className="text-xs text-blue-300 hover:text-blue-600 ml-1"
-                      title="Cancel timer"
+                      title={t("workouts.cancelTimer")}
                     >
                       ✕
                     </button>
@@ -1466,7 +1477,7 @@ function WorkoutDetail({
             )}
           </div>
         ))}
-        {exercises.length === 0 && <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No exercises logged</p>}
+        {exercises.length === 0 && <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">{t("workouts.noExercisesLogged")}</p>}
       </div>
 
       {/* Add exercise */}
@@ -1485,7 +1496,7 @@ function WorkoutDetail({
         </button>
       )}
 
-      <Button variant="secondary" className="w-full" onClick={onClose}>Close</Button>
+      <Button variant="secondary" className="w-full" onClick={onClose}>{t("workouts.closeBtn")}</Button>
     </div>
   );
 }
@@ -1656,6 +1667,7 @@ function SmartPlanSuggestions({ template, user }: {
   template: WorkoutTemplate;
   user?: { sex?: string | null; goal?: string | null; fitnessLevel?: string | null };
 }) {
+  const { t } = useTranslation();
   const suggestions = analyzeTemplate(template.exercises, user);
   if (suggestions.length === 0) return null;
 
@@ -1667,7 +1679,7 @@ function SmartPlanSuggestions({ template, user }: {
 
   return (
     <div className="space-y-2 mt-2">
-      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">Smart Suggestions</p>
+      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 dark:text-gray-500 uppercase tracking-wide">{t("workouts.smartSuggestions")}</p>
       {suggestions.map((s, i) => (
         <div key={i} className={`border rounded-xl px-3 py-2.5 text-xs leading-relaxed ${colorMap[s.type]}`}>
           {s.text}
@@ -1681,6 +1693,7 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
   template: WorkoutTemplate;
   onStart: () => void; onView: () => void; onDelete?: () => void;
 }) {
+  const { t } = useTranslation();
   const muscleGroups = Array.isArray(template.muscleGroups) ? template.muscleGroups : [];
 
   return (
@@ -1694,7 +1707,7 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
           <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">{template.dayLabel} · {template.frequency}×/week</p>
         </div>
         <div className="flex gap-1 shrink-0">
-          {template.isSystem && <Badge variant="info">Recommended</Badge>}
+          {template.isSystem && <Badge variant="info">{t("workouts.recommended")}</Badge>}
           {template.aiGenerated && !template.isSystem && <Badge variant="success">AI</Badge>}
         </div>
       </div>
@@ -1725,7 +1738,7 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
         {onDelete && (
           <button onClick={onDelete} className="px-2 text-xs text-red-400 hover:text-red-600 transition-colors">🗑</button>
         )}
-        <Button variant="secondary" size="sm" className="flex-1" onClick={onView}>View</Button>
+        <Button variant="secondary" size="sm" className="flex-1" onClick={onView}>{t("workouts.viewBtn")}</Button>
         <Button size="sm" className="flex-1" onClick={onStart}>▶ Start</Button>
       </div>
     </Card>
@@ -1737,6 +1750,7 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
   onFork?: () => void; onRename?: (name: string) => void;
   onUpdated?: () => void;
 }) {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const injuries = user?.injuries ?? [];
   const [renaming, setRenaming] = useState(false);
@@ -1826,7 +1840,7 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
         <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-sm text-blue-800 dark:text-blue-300">
           <span>🔧</span>
           <div className="flex-1">
-            <p className="font-medium">Want to customise this plan?</p>
+            <p className="font-medium">{t("workouts.wantsCustomise")}</p>
             <p className="text-xs text-blue-600 mt-0.5">Fork it to My Templates — then you can rename it and adjust exercises.</p>
           </div>
           <Button
@@ -1921,7 +1935,7 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
       <SmartPlanSuggestions template={{ ...template, exercises }} user={user ?? undefined} />
 
       <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-        <Button variant="secondary" className="flex-1" onClick={onClose}>Close</Button>
+        <Button variant="secondary" className="flex-1" onClick={onClose}>{t("workouts.closeBtn")}</Button>
         <Button className="flex-1" onClick={onStart}>▶ Start Workout</Button>
       </div>
     </div>
@@ -1945,6 +1959,7 @@ const GOAL_OBJECTIVE_MAP: Record<string, string> = {
 };
 
 function RecommendedBanner({ goal }: { goal?: string | null }) {
+  const { t } = useTranslation();
   if (!goal) return null;
   const objective = GOAL_OBJECTIVE_MAP[goal.toLowerCase()];
   if (!objective) return null;
@@ -1965,6 +1980,7 @@ function RecommendedBanner({ goal }: { goal?: string | null }) {
 }
 
 function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: () => void; trainingDays: number }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [subTab, setSubTab] = useState<"recommended" | "mine">("recommended");
@@ -2116,9 +2132,9 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
         Object.keys(grouped).length === 0 ? (
           <Card className="text-center py-14">
             <div className="text-5xl mb-4">📋</div>
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">No recommended templates yet</h3>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Seed the database with 24 research-based workout splits</p>
-            <Button loading={seeding} onClick={seedTemplates}>Seed Recommended Templates</Button>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">{t("workouts.noRecommendedTemplates")}</h3>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">{t("workouts.seedDesc")}</p>
+            <Button loading={seeding} onClick={seedTemplates}>{t("workouts.seedTemplates")}</Button>
           </Card>
         ) : (
           <div className="space-y-8">
@@ -2144,7 +2160,7 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
         mine.length === 0 ? (
           <Card className="text-center py-14">
             <div className="text-5xl mb-4">⚙️</div>
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">No personal templates yet</h3>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">{t("workouts.noPersonalTemplates")}</h3>
             <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Save a logged workout as a template, or ask the AI Coach to generate one.</p>
             <Button variant="secondary" onClick={() => navigate("/chat?agent=coach")}>🤖 Ask AI Coach</Button>
           </Card>
@@ -2216,7 +2232,7 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Plan-to-calendar modal (from TemplatesTab → "Add to Monthly Calendar")
+// Plan-to-calendar modal (from TemplatesTab → t("workouts.addToMonthlyCalendar"))
 // ─────────────────────────────────────────────────────────────────────────────
 const DEFAULT_DAY_PATTERNS: Record<number, number[]> = {
   1: [0], 2: [0, 3], 3: [0, 2, 4], 4: [0, 1, 3, 4],
@@ -2231,6 +2247,7 @@ function PlanToCalendarModal({
   onClose: () => void;
   onApplied: (msg: string) => void;
 }) {
+  const { t } = useTranslation();
   const today = new Date();
   const thisMonth = format(today, "yyyy-MM");
   const nextMonth = format(new Date(today.getFullYear(), today.getMonth() + 1, 1), "yyyy-MM");
@@ -2283,7 +2300,7 @@ function PlanToCalendarModal({
   };
 
   return (
-    <Modal open title="Add to Monthly Calendar" onClose={onClose} size="md">
+    <Modal open title={t("workouts.addToMonthlyCalendar")} onClose={onClose} size="md">
       <div className="space-y-5 p-1">
         {/* Template info */}
         <div className="bg-brand-50 border border-brand-100 rounded-xl px-4 py-3">
@@ -2363,7 +2380,7 @@ function PlanToCalendarModal({
         </div>
 
         <div className="flex gap-3">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">{t("common.cancel")}</Button>
           <Button onClick={handleApply} loading={saving} className="flex-1">
             Add to Calendar
           </Button>
@@ -2379,6 +2396,7 @@ function PlanToCalendarModal({
 const WEEKDAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
 function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; trainingDays: number }) {
+  const { t } = useTranslation();
   const [month, setMonth] = useState(new Date());
   const [cheatDays, setCheatDays]         = useState<Set<string>>(new Set());
   const [calendarDays, setCalendarDays]   = useState<WorkoutCalendarDay[]>([]);
@@ -2586,7 +2604,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
           🔄 {swapFrom
             ? `First day selected: ${format(new Date(swapFrom + "T12:00:00"), "MMM d")} — now click the day to swap it with`
             : "Click a day to start swapping, then click another day"}
-          <button onClick={() => { setSwapMode(false); setSwapFrom(null); }} className="ml-auto text-xs underline">Cancel</button>
+          <button onClick={() => { setSwapMode(false); setSwapFrom(null); }} className="ml-auto text-xs underline">{t("common.cancel")}</button>
         </div>
       )}
 
@@ -2660,7 +2678,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-50 inline-block" /> 😴 Rest day</span>
         <span className="flex items-center gap-1.5">🍕 Cheat meal</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-brand-400 inline-block" /> Today</span>
-        {loadingCal && <span className="text-gray-400 dark:text-gray-500 italic">Loading…</span>}
+        {loadingCal && <span className="text-gray-400 dark:text-gray-500 italic">{t("workouts.loading")}</span>}
       </div>
 
       {/* ── Inline day editor ── */}
@@ -2679,7 +2697,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
               <button
                 onClick={() => setEditDay(selected)}
                 className="text-xs text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 px-2 py-1 rounded-lg hover:bg-brand-100 dark:hover:bg-brand-900 transition"
-                title="Full editor (notes, bulk apply)"
+                title={t("workouts.fullEditor")}
               >⚙️ More</button>
               <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-1">✕</button>
             </div>
@@ -2716,7 +2734,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
                 value={inlineName}
                 onChange={(e) => setInlineName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && saveInline()}
-                placeholder="Workout name (e.g. Push Day, Leg Day…)"
+                placeholder={t("workouts.workoutNamePlaceholder")}
                 className="flex-1 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-brand-400"
               />
               <button
@@ -2724,7 +2742,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
                 disabled={inlineSaving}
                 className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition disabled:opacity-50"
               >
-                {inlineSaving ? "…" : "Save"}
+                {inlineSaving ? "…" : t("common.save")}
               </button>
             </div>
           )}
@@ -2732,7 +2750,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
           {/* Logged workouts (read-only) */}
           {selectedWorkouts.length > 0 && (
             <div className="space-y-1.5 pt-1 border-t border-gray-100 dark:border-gray-700">
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Logged</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t("workouts.logged")}</p>
               {selectedWorkouts.map((w) => (
                 <div key={w.id} className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl px-3 py-2 border border-brand-100 dark:border-brand-900">
                   <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">✅ {w.name}</span>
@@ -2869,6 +2887,7 @@ function MonthlyPlanBuilderModal({
   onClose: () => void;
   onBuilt: (msg: string) => void;
 }) {
+  const { t } = useTranslation();
   const defaultPattern = DEFAULT_DAY_PATTERNS[Math.min(trainingDays, 7)] ?? DEFAULT_DAY_PATTERNS[4];
 
   const [days, setDays] = useState<BuilderDay[]>(
@@ -2943,7 +2962,7 @@ function MonthlyPlanBuilderModal({
   const restDayCount = days.filter((d) => d.isRest).length;
 
   return (
-    <Modal open title="Build Monthly Workout Plan" onClose={onClose} size="lg">
+    <Modal open title={t("workouts.buildMonthlyPlan")} onClose={onClose} size="lg">
       <div className="space-y-5 p-1">
         <p className="text-sm text-gray-500 dark:text-gray-400">
           Set each day as a workout or rest, name your sessions, then choose how many months to fill.
@@ -2952,7 +2971,7 @@ function MonthlyPlanBuilderModal({
 
         {/* Duration picker */}
         <div>
-          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-2">Duration</label>
+          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-2">{t("workouts.duration")}</label>
           <div className="flex gap-2">
             {[
               { n: 1, label: "1 Month" },
@@ -2976,7 +2995,7 @@ function MonthlyPlanBuilderModal({
 
         {/* Day grid */}
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block">Weekly Schedule</label>
+          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block">{t("workouts.weeklySchedule")}</label>
           {days.map((d, i) => (
             <div key={i}
               className={`rounded-xl border p-3 transition
@@ -2992,7 +3011,7 @@ function MonthlyPlanBuilderModal({
                     ${d.isRest
                       ? "bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 border-green-300"
                       : "bg-brand-600 text-white border-brand-600"}`}
-                  title="Click to toggle workout/rest"
+                  title={t("workouts.clickToggle")}
                 >
                   {WEEKDAY_LABELS[i]}
                 </button>
@@ -3035,7 +3054,7 @@ function MonthlyPlanBuilderModal({
         {error && <p className="text-sm text-red-500">{error}</p>}
 
         <div className="flex gap-3 pt-1">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">{t("common.cancel")}</Button>
           <Button onClick={handleBuild} loading={saving} className="flex-1 bg-brand-600">
             🗓 Build {duration} Month{duration > 1 ? "s" : ""}
           </Button>
@@ -3071,6 +3090,7 @@ function ApplyTemplateModal({
   onClose: () => void;
   onApplied: (msg: string) => void;
 }) {
+  const { t } = useTranslation();
   const [assignments, setAssignments] = useState<TemplateAssignment[]>([
     { template: null, weekdays: new Set() },
   ]);
@@ -3152,7 +3172,7 @@ function ApplyTemplateModal({
     : `${months[0]} – ${months[months.length - 1]}`;
 
   return (
-    <Modal open title="Apply Template to Calendar" onClose={onClose} size="lg">
+    <Modal open title={t("workouts.applyTemplateCalendar")} onClose={onClose} size="lg">
       <div className="space-y-5 p-1">
         <p className="text-sm text-gray-500 dark:text-gray-400">
           Assign workout templates to weekdays. Every matching day in the selected range will be populated.
@@ -3160,7 +3180,7 @@ function ApplyTemplateModal({
 
         {/* Duration picker */}
         <div>
-          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-2">Duration</label>
+          <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-2">{t("workouts.duration")}</label>
           <div className="flex gap-2">
             {[1, 2, 3].map((n) => (
               <button
@@ -3190,7 +3210,7 @@ function ApplyTemplateModal({
 
             {/* Template picker */}
             <div>
-              <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block mb-1">Template / Day</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block mb-1">{t("workouts.templateDay")}</label>
               <select
                 value={a.template?.id ?? ""}
                 onChange={(e) => {
@@ -3210,7 +3230,7 @@ function ApplyTemplateModal({
 
             {/* Weekday checkboxes */}
             <div>
-              <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block mb-1">Repeat on weekdays</label>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block mb-1">{t("workouts.repeatWeekdays")}</label>
               <div className="flex gap-1.5 flex-wrap">
                 {WEEKDAY_LABELS.map((label, dow) => (
                   <button
@@ -3251,7 +3271,7 @@ function ApplyTemplateModal({
         {error && <p className="text-sm text-red-500">{error}</p>}
 
         <div className="flex gap-3 pt-2">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">{t("common.cancel")}</Button>
           <Button onClick={handleApply} loading={saving} className="flex-1">
             Populate {duration} month{duration > 1 ? "s" : ""}
           </Button>
@@ -3276,6 +3296,7 @@ function EditCalendarDayModal({
   onClose: () => void;
   onSaved: (msg: string) => void;
 }) {
+  const { t } = useTranslation();
   const [isRest, setIsRest]           = useState(current?.isRestDay ?? false);
   const [workoutName, setWorkoutName] = useState(current?.workoutName ?? "");
   const [selectedTpl, setSelectedTpl] = useState<number | "">(current?.templateId ?? "");
@@ -3374,7 +3395,7 @@ function EditCalendarDayModal({
               <Input
                 value={workoutName}
                 onChange={(e) => setWorkoutName(e.target.value)}
-                placeholder="e.g. Push Day, Leg Day…"
+                placeholder={t("workouts.workoutNamePlaceholder")}
               />
             </div>
           </>
@@ -3382,19 +3403,19 @@ function EditCalendarDayModal({
 
         {/* Notes */}
         <div>
-          <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block mb-1">Notes (optional)</label>
+          <label className="text-xs font-medium text-gray-600 dark:text-gray-300 block mb-1">{t("workouts.notesOptional")}</label>
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Any notes for this day…"
+            placeholder={t("workouts.anyNotesDay")}
             rows={2}
           />
         </div>
 
         {/* Primary actions */}
         <div className="flex gap-3 pt-2">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button onClick={handleSave} loading={working} className="flex-1">Save this day</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">{t("common.cancel")}</Button>
+          <Button onClick={handleSave} loading={working} className="flex-1">{t("common.save")}</Button>
         </div>
 
         {/* Bulk-apply */}
@@ -3441,6 +3462,7 @@ function EditCalendarDayModal({
 // AI Workout Builder
 // ─────────────────────────────────────────────────────────────────────────────
 function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [muscles,  setMuscles]  = useState<string[]>([]);
   const [type,     setType]     = useState("hypertrophy");
@@ -3452,10 +3474,10 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
 
   const MUSCLE_OPTS = ["Chest","Back","Shoulders","Biceps","Triceps","Legs","Glutes","Core","Full Body"];
   const TYPE_OPTS   = [
-    { value: "strength",    label: "Strength",    icon: "🏋️" },
-    { value: "hypertrophy", label: "Hypertrophy", icon: "📈" },
-    { value: "endurance",   label: "Endurance",   icon: "🏃" },
-    { value: "mobility",    label: "Mobility",    icon: "🧘" },
+    { value: "strength",    label: _t("workouts.strength"),    icon: "🏋️" },
+    { value: "hypertrophy", label: _t("workouts.hypertrophy"), icon: "📈" },
+    { value: "endurance",   label: _t("workouts.endurance"),   icon: "🏃" },
+    { value: "mobility",    label: _t("workouts.mobility"),    icon: "🧘" },
   ];
 
   const toggleMuscle = (m: string) => setMuscles((p) => p.includes(m) ? p.filter((x) => x !== m) : [...p, m]);
@@ -3502,11 +3524,11 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <Card>
-        <CardHeader title="AI Workout Builder" subtitle="Pick your targets and let AI design your session" />
+        <CardHeader title={t("workouts.aiBuilderTitle")} subtitle={t("workouts.pickTargets")} />
 
         {/* Muscle groups */}
         <div className="mb-4">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Target muscle groups</p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{t("workouts.targetMuscleGroups")}</p>
           <div className="flex flex-wrap gap-2">
             {MUSCLE_OPTS.map((m) => (
               <button
@@ -3520,7 +3542,7 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
 
         {/* Training type */}
         <div className="mb-4">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Training style</p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{t("workouts.trainingStyle")}</p>
           <div className="flex gap-2 flex-wrap">
             {TYPE_OPTS.map((t) => (
               <button
@@ -3561,8 +3583,8 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
             ))}
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => { setPlan(null); generate(); }}>Regenerate</Button>
-            <Button loading={saving} className="flex-1" onClick={logWorkout}>Log This Workout</Button>
+            <Button variant="secondary" className="flex-1" onClick={() => { setPlan(null); generate(); }}>{t("workouts.regenerate")}</Button>
+            <Button loading={saving} className="flex-1" onClick={logWorkout}>{t("workouts.logThisWorkout")}</Button>
           </div>
         </Card>
       )}
@@ -3703,7 +3725,7 @@ export default function WorkoutsPage() {
           ) : (
             <button
               onClick={() => setEditingDays(true)}
-              title="Click to change your training days per week"
+              title={t("workouts.clickTrainingDays")}
               className="flex items-center gap-2 bg-brand-50 border border-brand-200 rounded-xl px-3 py-1.5 hover:bg-brand-100 hover:border-brand-400 transition group"
             >
               <span className="text-sm text-brand-700 font-medium hidden sm:inline">🗓️ Training days/week</span>
@@ -3814,7 +3836,7 @@ export default function WorkoutsPage() {
               <div className="flex justify-center gap-2">
                 <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => load(page - 1)}>← Prev</Button>
                 <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 py-1.5">Page {page} of {pages}</span>
-                <Button variant="secondary" size="sm" disabled={page >= pages} onClick={() => load(page + 1)}>Next →</Button>
+                <Button variant="secondary" size="sm" disabled={page >= pages} onClick={() => load(page + 1)}>{t("workouts.nextBtn")}</Button>
               </div>
             )}
           </>
@@ -3849,7 +3871,7 @@ export default function WorkoutsPage() {
       </Modal>
 
       {/* Edit modal */}
-      <Modal open={!!editing} onClose={() => setEditing(null)} title="Edit Workout" size="md">
+      <Modal open={!!editing} onClose={() => setEditing(null)} title={t("workouts.editWorkout")} size="md">
         {editing && (
           <EditWorkoutForm
             workout={editing}
