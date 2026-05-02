@@ -12,12 +12,18 @@ import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { Select } from "../../components/ui/Select";
 
-const MEAL_OPTIONS = [
-  { value: "breakfast", label: "🌅 Breakfast" },
-  { value: "lunch",     label: "☀️  Lunch" },
-  { value: "dinner",    label: "🌙 Dinner" },
-  { value: "snack",     label: "🍎 Snack" },
-];
+function getMealOptions(t: (k: string) => string) {
+  return [
+    { value: "breakfast",   label: `🌅 ${t("mealPlanner.breakfast")}` },
+    { value: "lunch",       label: `☀️  ${t("mealPlanner.lunch")}` },
+    { value: "dinner",      label: `🌙 ${t("mealPlanner.dinner")}` },
+    { value: "snack",       label: `🍎 ${t("mealPlanner.snack")}` },
+    { value: "snack1",      label: `🍏 ${t("mealPlanner.snack1")}` },
+    { value: "snack2",      label: `🥤 ${t("mealPlanner.snack2")}` },
+    { value: "snack3",      label: `🍌 ${t("mealPlanner.snack3")}` },
+    { value: "pre_workout", label: `💪 ${t("mealPlanner.preWorkout")}` },
+  ];
+}
 
 // Cooking oil presets — kcal and fat grams added on top of the food's macros
 const COOKING_OILS: Record<string, { label: string; kcal: number; fat: number }> = {
@@ -140,6 +146,7 @@ function showsSweetener(food: FoodSnap): boolean {
 
 const MEAL_ICONS: Record<string, string> = {
   breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎",
+  snack1: "🍏", snack2: "🥤", snack3: "🍌", pre_workout: "💪",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -289,11 +296,11 @@ function CustomFoodModal({
   };
 
   const handleSave = async () => {
-    if (!name.trim())                         { setError("Name is required"); return; }
-    if (!calories || isNaN(Number(calories))) { setError("Calories are required"); return; }
-    if (Number(calories) < 0)                 { setError("Calories must be 0 or more"); return; }
-    if (!defaultQty || Number(defaultQty) <= 0) { setError("Default quantity must be positive"); return; }
-    if (!defaultUnit.trim())                  { setError("Default unit is required"); return; }
+    if (!name.trim())                         { setError(t("nutrition.nameRequired")); return; }
+    if (!calories || isNaN(Number(calories))) { setError(t("nutrition.caloriesReq")); return; }
+    if (Number(calories) < 0)                 { setError(t("nutrition.caloriesPositive")); return; }
+    if (!defaultQty || Number(defaultQty) <= 0) { setError(t("nutrition.defaultQtyPositive")); return; }
+    if (!defaultUnit.trim())                  { setError(t("nutrition.defaultUnitRequired")); return; }
 
     setLoading(true); setError("");
     try {
@@ -317,7 +324,7 @@ function CustomFoodModal({
       }
       onSave(saved);
     } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to save custom food");
+      setError(e.response?.data?.error || t("nutrition.failedSaveCustomFood"));
     } finally { setLoading(false); }
   };
 
@@ -326,7 +333,7 @@ function CustomFoodModal({
       {!initial && (
         <div className="relative">
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-            Start from a food in the database (optional)
+            {t("nutrition.startFromFood")}
           </p>
           <Input
             value={cloneQuery}
@@ -356,26 +363,26 @@ function CustomFoodModal({
 
       {error && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">{error}</p>}
 
-      <Input label="Food Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. My Protein Shake" />
+      <Input label={t("nutrition.foodName")} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. My Protein Shake" />
 
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Default Qty" type="number" min="0.1" step="any" value={defaultQty} onChange={(e) => setDefaultQty(e.target.value)} />
-        <Input label="Default Unit" value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} placeholder="g, ml, serving..." />
+        <Input label={t("nutrition.defaultQty")} type="number" min="0.1" step="any" value={defaultQty} onChange={(e) => setDefaultQty(e.target.value)} />
+        <Input label={t("nutrition.defaultUnit")} value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)} placeholder="g, ml, serving..." />
       </div>
 
       <p className="text-xs text-gray-400 dark:text-gray-500">{t("nutrition.macrosPerServing")}</p>
 
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Calories (kcal)" type="number" min="0" step="1" value={calories} onChange={(e) => setCalories(e.target.value)} />
-        <Input label="Protein (g)" type="number" min="0" step="0.1" value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="0" />
-        <Input label="Carbs (g)" type="number" min="0" step="0.1" value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="0" />
-        <Input label="Fats (g)" type="number" min="0" step="0.1" value={fats} onChange={(e) => setFats(e.target.value)} placeholder="0" />
+        <Input label={t("nutrition.caloriesKcal")} type="number" min="0" step="1" value={calories} onChange={(e) => setCalories(e.target.value)} />
+        <Input label={`${t("common.protein")} (g)`} type="number" min="0" step="0.1" value={protein} onChange={(e) => setProtein(e.target.value)} placeholder="0" />
+        <Input label={`${t("common.carbs")} (g)`} type="number" min="0" step="0.1" value={carbs} onChange={(e) => setCarbs(e.target.value)} placeholder="0" />
+        <Input label={`${t("common.fats")} (g)`} type="number" min="0" step="0.1" value={fats} onChange={(e) => setFats(e.target.value)} placeholder="0" />
       </div>
 
       <div className="flex gap-3 pt-2">
         <Button variant="secondary" onClick={onClose} className="flex-1">{t("common.cancel")}</Button>
         <Button onClick={handleSave} loading={loading} className="flex-1">
-          {initial ? "Save changes" : "Create food"}
+          {initial ? t("nutrition.saveChanges") : t("nutrition.createFood")}
         </Button>
       </div>
     </div>
@@ -457,7 +464,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400"
           }`}
         >
-          🌐 Food Database
+          🌐 {t("nutrition.foodDatabase")}
         </button>
         <button
           type="button"
@@ -468,14 +475,14 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               : "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 hover:bg-amber-100"
           }`}
         >
-          ⭐ My Foods {myFoods.length > 0 ? `(${myFoods.length})` : "— your custom foods"}
+          ⭐ {t("nutrition.myFoods")} {myFoods.length > 0 ? `(${myFoods.length})` : `— ${t("nutrition.myFoodsCustom")}`}
         </button>
         <button
           type="button"
           onClick={() => { setEditingFood(null); setShowCreateModal(true); }}
           className="ml-auto px-2.5 py-1.5 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/30 transition-all font-semibold"
         >
-          + Create New Food
+          + {t("nutrition.createNewFood")}
         </button>
       </div>
 
@@ -554,7 +561,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
                 onClick={() => setActiveTags([])}
                 className="px-2 py-0.5 rounded-full text-xs font-medium text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:border-red-400 hover:text-red-500 transition-all"
               >
-                Clear all
+                {t("nutrition.clearAll")}
               </button>
             </div>
           )}
@@ -566,7 +573,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               onFocus={() => (query || activeTags.length > 0) && results.length > 0 && setOpen(true)}
               onBlur={() => setTimeout(() => setOpen(false), 150)}
               placeholder={t("nutrition.searchFoodPlaceholder")}
-              label="Search Food Database"
+              label={t("nutrition.searchFoodDb")}
             />
             {open && results.length > 0 && (
               <ul className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-64 overflow-y-auto">
@@ -605,7 +612,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
             )}
             {open && results.length === 0 && (query.trim().length > 1 || activeTags.length > 0) && (
               <div className="absolute z-20 left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-400 dark:text-gray-500">
-                No results -- enter details manually below
+                {t("nutrition.noResultsEnter")}
               </div>
             )}
           </div>
@@ -619,13 +626,13 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
             value={myFoodsQuery}
             onChange={(e) => setMyFoodsQuery(e.target.value)}
             placeholder={t("nutrition.filterMyFoods")}
-            label="Search My Foods"
+            label={t("nutrition.searchMyFoods")}
           />
           {filteredMyFoods.length === 0 ? (
             <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500">
               {myFoods.length === 0
-                ? "No custom foods yet. Hit + New food to create your first one."
-                : "No foods match your filter."}
+                ? t("nutrition.noCustomFoodsCreate")
+                : t("nutrition.noFoodsMatchFilter")}
             </div>
           ) : (
             <ul className="space-y-1 max-h-56 overflow-y-auto pr-1">
@@ -651,17 +658,17 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
                     type="button"
                     onClick={() => { setEditingFood(f); setShowCreateModal(true); }}
                     className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-brand-600 transition-all text-sm"
-                    title="Edit"
+                    title={t("common.edit")}
                   >
-                    Edit
+                    {t("common.edit")}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDeleteMyFood(f.id)}
                     className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 transition-all text-sm"
-                    title="Delete"
+                    title={t("common.delete")}
                   >
-                    Del
+                    {t("common.delete")}
                   </button>
                 </li>
               ))}
@@ -674,7 +681,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
         <Modal
           open
           onClose={() => { setShowCreateModal(false); setEditingFood(null); }}
-          title={editingFood ? "Edit custom food" : "Create custom food"}
+          title={editingFood ? t("nutrition.editCustomFood") : t("nutrition.createCustomFood")}
         >
           <CustomFoodModal
             initial={editingFood}
@@ -712,8 +719,9 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   const [fats,     setFats]     = useState(String(editItem?.fats     ?? ""));
   const [quantity, setQuantity] = useState(String(editItem?.quantity ?? "100"));
   const [unit,     setUnit]     = useState(editItem?.unit ?? "g");
-  const [meal,     setMeal]     = useState<"breakfast" | "lunch" | "dinner" | "snack" | "">(
-    (editItem?.meal as "breakfast" | "lunch" | "dinner" | "snack" | undefined) ?? ""
+  type MealVal = "breakfast" | "lunch" | "dinner" | "snack" | "snack1" | "snack2" | "snack3" | "pre_workout" | "";
+  const [meal,     setMeal]     = useState<MealVal>(
+    (editItem?.meal as MealVal | undefined) ?? ""
   );
   const [cookingOil,   setCookingOil]   = useState<keyof typeof COOKING_OILS>("none");
   const [breading,     setBreading]     = useState<keyof typeof BREADING_OPTIONS>("none");
@@ -760,10 +768,10 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   };
 
   const submit = async () => {
-    if (!foodName.trim()) { setError("Food name is required"); return; }
-    if (!calories || isNaN(Number(calories))) { setError("Calories are required"); return; }
-    if (!quantity || isNaN(Number(quantity)) || Number(quantity) <= 0) { setError("Quantity must be a positive number"); return; }
-    if (!unit.trim()) { setError("Unit is required"); return; }
+    if (!foodName.trim()) { setError(t("nutrition.foodNameRequired")); return; }
+    if (!calories || isNaN(Number(calories))) { setError(t("nutrition.caloriesReq")); return; }
+    if (!quantity || isNaN(Number(quantity)) || Number(quantity) <= 0) { setError(t("nutrition.qtyPositive")); return; }
+    if (!unit.trim()) { setError(t("nutrition.unitRequired")); return; }
 
     setLoading(true); setError("");
     try {
@@ -796,7 +804,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
       if (Array.isArray(details) && details.length > 0) {
         setError(details.map((d: any) => d.message).join(" · "));
       } else {
-        setError(e.response?.data?.error || "Failed to save. Check all fields and try again.");
+        setError(e.response?.data?.error || t("nutrition.failedSaveFood"));
       }
     } finally { setLoading(false); }
   };
@@ -808,7 +816,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
         <>
           <FoodSearch onSelect={fillFromSearch} />
           <p className="text-[11px] text-gray-400 dark:text-gray-500 -mt-1">
-            💡 Have custom foods? Switch to the <span className="text-amber-600 dark:text-amber-400 font-medium">⭐ My Foods</span> tab above.
+            💡 {t("nutrition.haveCustomFoods")}
           </p>
         </>
       )}
@@ -818,7 +826,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
       )}
 
       <Input
-        label="Food Name"
+        label={t("nutrition.foodName")}
         value={foodName}
         onChange={(e) => setFoodName(e.target.value)}
         placeholder="e.g. Chicken Breast"
@@ -826,7 +834,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
 
       <div className="grid grid-cols-2 gap-3">
         <Input
-          label="Quantity"
+          label={t("nutrition.quantity")}
           type="number"
           min="0"
           step="any"
@@ -834,7 +842,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
           onChange={(e) => handleQuantityChange(e.target.value)}
         />
         <Input
-          label="Unit"
+          label={t("nutrition.unit")}
           value={unit}
           onChange={(e) => setUnit(e.target.value)}
           placeholder="g, ml, cups, slices…"
@@ -848,7 +856,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
           onClick={() => setShowUnitRef((v) => !v)}
           className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
         >
-          📏 {showUnitRef ? "Hide" : "Show"} unit reference (spoon, cup, bowl…)
+          📏 {showUnitRef ? t("nutrition.hideUnitRef") : t("nutrition.showUnitRef")}
         </button>
         {showUnitRef && (
           <div className="mt-2 border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden text-xs">
@@ -876,15 +884,15 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
 
       {/* Macro fields — auto-filled from search, editable */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Input label="Calories" type="number" min="0" value={calories} onChange={(e) => setCalories(e.target.value)} />
-        <Input label="Protein (g)" type="number" min="0" step="0.1" value={protein} onChange={(e) => setProtein(e.target.value)} />
-        <Input label="Carbs (g)"   type="number" min="0" step="0.1" value={carbs}   onChange={(e) => setCarbs(e.target.value)} />
-        <Input label="Fats (g)"    type="number" min="0" step="0.1" value={fats}    onChange={(e) => setFats(e.target.value)} />
+        <Input label={t("common.calories")} type="number" min="0" value={calories} onChange={(e) => setCalories(e.target.value)} />
+        <Input label={`${t("common.protein")} (g)`} type="number" min="0" step="0.1" value={protein} onChange={(e) => setProtein(e.target.value)} />
+        <Input label={`${t("common.carbs")} (g)`}   type="number" min="0" step="0.1" value={carbs}   onChange={(e) => setCarbs(e.target.value)} />
+        <Input label={`${t("common.fats")} (g)`}    type="number" min="0" step="0.1" value={fats}    onChange={(e) => setFats(e.target.value)} />
       </div>
 
       {baseFood && (
         <p className="text-xs text-brand-600 bg-brand-50 rounded-lg px-3 py-2">
-          ✓ Macros update automatically as you change quantity
+          ✓ {t("nutrition.macroAutoUpdate")}
         </p>
       )}
 
@@ -901,7 +909,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
           }`}>
             {showsOil(baseFood) && (
               <Select
-                label="Cooking oil"
+                label={t("nutrition.cookingOil")}
                 value={cookingOil}
                 onChange={(e) => setCookingOil(e.target.value as keyof typeof COOKING_OILS)}
                 options={Object.entries(COOKING_OILS).map(([v, o]) => ({ value: v, label: o.label }))}
@@ -909,7 +917,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
             )}
             {showsBreading(baseFood) && (
               <Select
-                label="Breading / coating"
+                label={t("nutrition.breadingCoating")}
                 value={breading}
                 onChange={(e) => setBreading(e.target.value as keyof typeof BREADING_OPTIONS)}
                 options={Object.entries(BREADING_OPTIONS).map(([v, o]) => ({ value: v, label: o.label }))}
@@ -917,7 +925,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
             )}
             {showsSweetener(baseFood) && (
               <Select
-                label="Sweetener / sugar"
+                label={t("nutrition.sweetenerSugar")}
                 value={sweetener}
                 onChange={(e) => setSweetener(e.target.value as keyof typeof SWEETENER_OPTIONS)}
                 options={Object.entries(SWEETENER_OPTIONS).map(([v, o]) => ({ value: v, label: o.label }))}
@@ -944,10 +952,10 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
       )}
 
       <Select
-        label="Meal"
+        label={t("nutrition.meal")}
         value={meal}
-        onChange={(e) => setMeal(e.target.value as "breakfast" | "lunch" | "dinner" | "snack" | "")}
-        options={MEAL_OPTIONS}
+        onChange={(e) => setMeal(e.target.value as MealVal)}
+        options={getMealOptions(t as (k: string) => string)}
         placeholder={t("nutrition.selectMealOptional")}
       />
 
@@ -960,14 +968,14 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
           <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${isCheatMeal ? "translate-x-5" : "translate-x-0.5"}`} />
         </div>
         <span className="text-sm text-gray-600 dark:text-gray-300 dark:text-gray-300">
-          🍕 Mark as cheat meal
+          🍕 {t("nutrition.cheatMeal")}
         </span>
       </label>
 
       <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
         <Button variant="secondary" className="flex-1" onClick={onClose}>{t("common.cancel")}</Button>
         <Button className="flex-1" loading={loading} onClick={submit}>
-          {editItem ? "Save Changes" : t("nutrition.logFood")}
+          {editItem ? t("nutrition.saveChanges") : t("nutrition.logFood")}
         </Button>
       </div>
     </div>
@@ -1046,9 +1054,9 @@ function MacroBreakdown({ protein, carbs, fats }: {
   const fPct = total > 0 ? (fCal / total) * 100 : 0;
 
   const rows = [
-    { label: "🥩 Protein", g: protein, cal: pCal, pct: pPct, color: "#3b82f6", textColor: "text-blue-600" },
-    { label: "🍞 Carbs",   g: carbs,   cal: cCal, pct: cPct, color: "#f59e0b", textColor: "text-amber-600" },
-    { label: "🥑 Fats",    g: fats,    cal: fCal, pct: fPct, color: "#ef4444", textColor: "text-red-500" },
+    { label: `🥩 ${t("common.protein")}`, g: protein, cal: pCal, pct: pPct, color: "#3b82f6", textColor: "text-blue-600" },
+    { label: `🍞 ${t("common.carbs")}`,   g: carbs,   cal: cCal, pct: cPct, color: "#f59e0b", textColor: "text-amber-600" },
+    { label: `🥑 ${t("common.fats")}`,    g: fats,    cal: fCal, pct: fPct, color: "#ef4444", textColor: "text-red-500" },
   ];
 
   return (
@@ -1078,7 +1086,7 @@ function MacroBreakdown({ protein, carbs, fats }: {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-100 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">
-            <th className="text-left pb-2 font-medium">Macro</th>
+            <th className="text-left pb-2 font-medium">{t("nutrition.macronutrients")}</th>
             <th className="text-right pb-2 font-medium">{t("nutrition.grams")}</th>
             <th className="text-right pb-2 font-medium">{t("common.calories")}</th>
             <th className="text-right pb-2 font-medium">% of kcal</th>
@@ -1145,7 +1153,7 @@ function MacroByMeal({ grouped, mealOrder }: {
             <div className="flex items-baseline justify-between mb-1">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-200 capitalize">
                 {MEAL_ICONS[meal] ?? "🍽️"}{" "}
-                {meal === "other" ? "Other" : meal.charAt(0).toUpperCase() + meal.slice(1)}
+                {(t as (k: string) => string)(`mealPlanner.${meal}`) || t("mealPlanner.other")}
               </span>
               <span className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">
                 <span className="font-semibold text-gray-600 dark:text-gray-300 dark:text-gray-300">{Math.round(cal)}</span> kcal
@@ -1165,7 +1173,7 @@ function MacroByMeal({ grouped, mealOrder }: {
       })}
 
       <div className="flex gap-4 justify-center text-xs text-gray-400 dark:text-gray-500 pt-1 border-t border-gray-50">
-        {[["#3b82f6","Protein"],["#f59e0b","Carbs"],["#ef4444","Fats"]].map(([color, name]) => (
+        {([[`#3b82f6`, t("common.protein")],[`#f59e0b`, t("common.carbs")],[`#ef4444`, t("common.fats")]] as [string,string][]).map(([color, name]) => (
           <span key={name} className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: color }} />
             {name}
@@ -1227,11 +1235,11 @@ function MacroByFood({ logs }: { logs: import("../../types").FoodLog[] }) {
       <table className="w-full text-xs min-w-[380px]">
         <thead>
           <tr className="text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
-            <th className="text-left py-2 px-2"><SortBtn k="name" label="Food" /></th>
-            <th className="text-right py-2 px-2 text-blue-500"><SortBtn k="protein" label="Protein" /></th>
-            <th className="text-right py-2 px-2 text-amber-500"><SortBtn k="carbs" label="Carbs" /></th>
-            <th className="text-right py-2 px-2 text-red-500"><SortBtn k="fats" label="Fat" /></th>
-            <th className="text-right py-2 px-2"><SortBtn k="calories" label="kcal" /></th>
+            <th className="text-left py-2 px-2"><SortBtn k="name" label={t("nutrition.foodName")} /></th>
+            <th className="text-right py-2 px-2 text-blue-500"><SortBtn k="protein" label={t("common.protein")} /></th>
+            <th className="text-right py-2 px-2 text-amber-500"><SortBtn k="carbs" label={t("common.carbs")} /></th>
+            <th className="text-right py-2 px-2 text-red-500"><SortBtn k="fats" label={t("common.fats")} /></th>
+            <th className="text-right py-2 px-2"><SortBtn k="calories" label={t("common.kcal")} /></th>
           </tr>
         </thead>
         <tbody>
@@ -1350,20 +1358,20 @@ function CalorieProgress({ consumed, target }: { consumed: number; target: numbe
         />
       </div>
       <div className="flex justify-between mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-        <span>{Math.round(consumed)} kcal consumed</span>
+        <span>{Math.round(consumed)} {t("nutrition.kCalConsumed")}</span>
         <span className={devAlert || over ? "text-red-500 font-medium" : ""}>
           {over
-            ? `${Math.round(-remaining)} kcal over`
+            ? `${Math.round(-remaining)} ${t("nutrition.kCalOver")}`
             : tenPctUnder
-            ? `${Math.round(remaining)} kcal under target`
-            : `${Math.round(remaining)} kcal left`}
+            ? `${Math.round(remaining)} ${t("nutrition.kCalUnderTarget")}`
+            : `${Math.round(remaining)} ${t("nutrition.kCalLeft")}`}
         </span>
       </div>
       {devAlert && (
         <p className="text-xs text-red-500 font-medium mt-1">
           {tenPctOver
-            ? `⚠ More than 10% over your ${Math.round(target)} kcal goal`
-            : `⚠ More than 10% under your ${Math.round(target)} kcal goal`}
+            ? `⚠ ${t("nutrition.within80Kcal").replace("80", `10% / ${Math.round(target)}`)} ${t("nutrition.kCalOver")}`
+            : `⚠ ${Math.round(Math.abs(consumed - target) / target * 100)}% ${t("nutrition.kCalUnderTarget")} (${Math.round(target)} ${t("common.kcal")})`}
         </p>
       )}
     </div>
@@ -1488,11 +1496,11 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
         setPlan(res.data.suggestedMealPlan as MealPlanData);
         setStatus("preview");
       } else {
-        setError("The nutritionist didn't return a structured meal plan. Try again or ask directly in the chat.");
+        setError(t("nutrition.noStructuredPlan"));
         setStatus("idle");
       }
     } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to get meal plan suggestion.");
+      setError(e.response?.data?.error || t("nutrition.failedMealPlan"));
       setStatus("idle");
     }
   };
@@ -1508,7 +1516,7 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
       setStatus("done");
       setTimeout(() => { onLogged(); onClose(); }, 1000);
     } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to log meals.");
+      setError(e.response?.data?.error || t("nutrition.failedLogMeals"));
       setStatus("preview");
     }
   };
@@ -1516,7 +1524,7 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
   const MEAL_ICONS: Record<string, string> = { breakfast: "🌅", lunch: "☀️", dinner: "🌙", snack: "🍎" };
 
   return (
-    <Modal open={open} onClose={onClose} title="✨ Suggested Meal Plan" size="lg">
+    <Modal open={open} onClose={onClose} title={t("nutrition.suggestedMealPlan")} size="lg">
       {status === "fetching" && (
         <div className="flex flex-col items-center gap-4 py-12">
           <div className="animate-spin w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full" />
@@ -1546,7 +1554,7 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
             {plan.meals.map((m) => (
               <div key={m.meal} className="border border-gray-100 dark:border-gray-700 rounded-xl p-3">
                 <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 capitalize">
-                  {MEAL_ICONS[m.meal]} {m.meal}
+                  {MEAL_ICONS[m.meal] ?? "🍽️"} {t(`mealPlanner.${m.meal}`) || t("mealPlanner.other")}
                 </p>
                 {m.items.length === 0 ? (
                   <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{t("nutrition.noItems")}</p>
@@ -1584,13 +1592,13 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
 
           <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
             <Button variant="secondary" className="flex-1" onClick={fetchPlan} disabled={status === "logging"}>
-              🔄 Regenerate
+              🔄 {t("nutrition.regenerate")}
             </Button>
             <Button variant="secondary" className="flex-1" onClick={onClose} disabled={status === "logging"}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button className="flex-1" loading={status === "logging"} onClick={logAll}>
-              Log All Meals
+              {t("nutrition.logAllMeals")}
             </Button>
           </div>
         </div>
@@ -1660,7 +1668,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
   const removeIngredient = (idx: number) => setIngredients((prev) => prev.filter((_, i) => i !== idx));
 
   const saveDish = async () => {
-    if (ingredients.length === 0) { setError("Add at least one ingredient"); return; }
+    if (ingredients.length === 0) { setError(t("nutrition.addOneIngredient")); return; }
     const name = dishName.trim() || "Custom Dish";
     setLoading(true); setError("");
     try {
@@ -1696,16 +1704,16 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
       onSaved(); onClose();
       setIngredients([]); setDishName(""); setMeal("");
     } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to save dish");
+      setError(e.response?.data?.error || t("nutrition.failedSaveDish"));
     } finally { setLoading(false); }
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="🥣 Build a Dish / Bowl" size="lg">
+    <Modal open={open} onClose={onClose} title={t("nutrition.buildDishBowl")} size="lg">
       <div className="space-y-4">
         {/* Dish name */}
         <Input
-          label="Dish name"
+          label={t("nutrition.dishName")}
           value={dishName}
           onChange={(e) => setDishName(e.target.value)}
           placeholder="e.g. My Protein Bowl, Chicken Salad…"
@@ -1796,10 +1804,10 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
         {/* Meal selector + log mode */}
         <div className="grid grid-cols-2 gap-3">
           <Select
-            label="Meal"
+            label={t("nutrition.meal")}
             value={meal}
             onChange={(e) => setMeal(e.target.value)}
-            options={MEAL_OPTIONS}
+            options={getMealOptions(t as (k: string) => string)}
             placeholder={t("nutrition.selectMealOptional")}
           />
           <div className="flex flex-col justify-end">
@@ -1810,10 +1818,10 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
                 onChange={(e) => setLogSeparate(e.target.checked)}
                 className="rounded border-gray-300"
               />
-              Log ingredients separately
+              {t("nutrition.logIngredientsSep")}
             </label>
             <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">
-              {logSeparate ? "Each ingredient logged individually" : "Logged as one combined dish entry"}
+              {logSeparate ? t("nutrition.loggedIndividually") : t("nutrition.loggedAsDish")}
             </p>
           </div>
         </div>
@@ -1823,7 +1831,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
         <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
           <Button variant="secondary" className="flex-1" onClick={onClose}>{t("common.cancel")}</Button>
           <Button className="flex-1" loading={loading} onClick={saveDish} disabled={ingredients.length === 0}>
-            Log {logSeparate ? `${ingredients.length} items` : "Dish"}
+            {logSeparate ? `${t("nutrition.logAllMeals")} (${ingredients.length})` : `${t("nutrition.logFood")} ${t("nutrition.dishName")}`}
           </Button>
         </div>
       </div>
@@ -2273,7 +2281,7 @@ export default function NutritionPage() {
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(log);
   }
-  const mealOrder = ["breakfast", "lunch", "dinner", "snack", "other"];
+  const mealOrder = ["breakfast", "lunch", "dinner", "snack", "snack1", "snack2", "snack3", "pre_workout", "other"];
   const isToday   = date === getEffectiveToday();
 
   // ── Quick re-log (frequent foods) ───────────────────────────────────────────
@@ -2398,7 +2406,7 @@ export default function NutritionPage() {
           <CardHeader title={t("common.calories")} />
           <div className="text-center py-2">
             <p className="text-4xl font-bold text-gray-900 dark:text-white dark:text-white">{Math.round(effectiveTotals.calories)}</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{t("common.kcal")} {t("nutrition.caloriesConsumed").toLowerCase()}{(suppMacros.calories + customSuppMacros.calories) > 0 ? <span className="text-purple-600"> (incl. supps)</span> : ""}</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{t("common.kcal")} {t("nutrition.caloriesConsumed").toLowerCase()}{(suppMacros.calories + customSuppMacros.calories) > 0 ? <span className="text-purple-600"> ({t("nutrition.includesSupps")})</span> : ""}</p>
             {caloriesBurned > 0 && (
               <div className="mt-1.5">
                 <button
@@ -2463,7 +2471,7 @@ export default function NutritionPage() {
               <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{logs.length}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">Meals</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{t("nutrition.meals")}</p>
               <p className="font-bold text-gray-800 dark:text-gray-100 dark:text-gray-100">{Object.keys(grouped).length}</p>
             </div>
             {hasGoal && (
@@ -2483,11 +2491,11 @@ export default function NutritionPage() {
             {/* View toggle — always visible; "vs Goals" only when a goal exists */}
             <div className="flex flex-wrap gap-0.5 bg-gray-100 rounded-lg p-0.5 text-xs overflow-x-auto">
               {([
-                { key: "distribution", label: "🍩 Rings"      },
-                { key: "breakdown",    label: "📊 Breakdown"  },
-                { key: "by-meal",      label: "🍽️ Meals"     },
-                { key: "by-food",      label: "🔍 Foods"     },
-                ...(hasGoal ? [{ key: "goals", label: "🎯 Goals" }] : []),
+                { key: "distribution", label: `🍩 ${t("nutrition.viewRings")}` },
+                { key: "breakdown",    label: `📊 ${t("nutrition.viewBreakdown")}` },
+                { key: "by-meal",      label: `🍽️ ${t("nutrition.meals")}` },
+                { key: "by-food",      label: `🔍 ${t("nutrition.viewFoods")}` },
+                ...(hasGoal ? [{ key: "goals", label: `🎯 ${t("nutrition.viewGoals")}` }] : []),
               ] as { key: typeof macroView; label: string }[]).map(({ key, label }) => (
                 <button
                   key={key}
@@ -2509,9 +2517,9 @@ export default function NutritionPage() {
               {/* 🍩 Distribution — macro rings showing % of total grams */}
               {macroView === "distribution" && (
                 <div className="flex items-center justify-around">
-                  <MacroRing label="Protein" value={effectiveTotals.protein} total={totalMacroG} color="#3b82f6" goal={activeGoal?.proteinGrams} />
-                  <MacroRing label="Carbs"   value={effectiveTotals.carbs}   total={totalMacroG} color="#f59e0b" goal={activeGoal?.carbsGrams} danger={true} />
-                  <MacroRing label="Fats"    value={effectiveTotals.fats}    total={totalMacroG} color="#ef4444" goal={activeGoal?.fatsGrams} danger={true} />
+                  <MacroRing label={t("common.protein")} value={effectiveTotals.protein} total={totalMacroG} color="#3b82f6" goal={activeGoal?.proteinGrams} />
+                  <MacroRing label={t("common.carbs")}   value={effectiveTotals.carbs}   total={totalMacroG} color="#f59e0b" goal={activeGoal?.carbsGrams} danger={true} />
+                  <MacroRing label={t("common.fats")}    value={effectiveTotals.fats}    total={totalMacroG} color="#ef4444" goal={activeGoal?.fatsGrams} danger={true} />
                   <div className="text-center">
                     <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{t("nutrition.caloriesFromMacros")}</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white">
@@ -2545,14 +2553,14 @@ export default function NutritionPage() {
               {macroView === "goals" && hasGoal && (
                 <div className="space-y-4 pt-1">
                   <MacroGoalBar
-                    label="🥩 Protein"
+                    label={`🥩 ${t("common.protein")}`}
                     consumed={effectiveTotals.protein}
                     target={activeGoal!.proteinGrams}
                     color="#3b82f6"
                     bgColor="bg-blue-100"
                   />
                   <MacroGoalBar
-                    label="🍞 Carbohydrates"
+                    label={`🍞 ${t("common.carbs")}`}
                     consumed={effectiveTotals.carbs}
                     target={activeGoal!.carbsGrams}
                     color="#f59e0b"
@@ -2560,7 +2568,7 @@ export default function NutritionPage() {
                     danger={true}
                   />
                   <MacroGoalBar
-                    label="🥑 Fats"
+                    label={`🥑 ${t("common.fats")}`}
                     consumed={effectiveTotals.fats}
                     target={activeGoal!.fatsGrams}
                     color="#ef4444"
@@ -2585,13 +2593,13 @@ export default function NutritionPage() {
 
       {/* Action buttons — below macros for immediate access */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Button onClick={() => { setEditItem(null); setShowForm(true); }}>+ Log Food</Button>
+        <Button onClick={() => { setEditItem(null); setShowForm(true); }}>+ {t("nutrition.logFood")}</Button>
         <Button
           variant="secondary"
           size="sm"
           onClick={toggleFasting}
           className={fastingActive ? "border-violet-400 dark:border-violet-600 text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/30 hover:bg-violet-100 dark:hover:bg-violet-900/50 font-medium tabular-nums" : ""}
-          title={fastingActive ? `End fast · ${formatFastingDuration(fastingElapsed)} elapsed` : "Start fasting timer"}
+          title={fastingActive ? `${t("nutrition.stopFast")} · ${formatFastingDuration(fastingElapsed)}` : t("nutrition.startFast")}
         >
           {fastingActive ? `⏸ ${formatFastingDuration(fastingElapsed)}` : `⏱ ${t("nutrition.startFast")}`}
         </Button>
@@ -2599,33 +2607,33 @@ export default function NutritionPage() {
           variant="secondary"
           size="sm"
           onClick={() => { setShowMyFoodsPanel(true); loadMyFoodsPanel(); }}
-          title="Create and manage your personal custom foods (also accessible in Log Food)"
+          title={t("nutrition.yourFoodLibrary")}
         >
-          ⭐ My Foods
+          ⭐ {t("nutrition.myFoods")}
         </Button>
         <Button
           variant="secondary"
           size="sm"
           onClick={() => setShowDish(true)}
-          title="Build a dish or bowl from multiple ingredients"
+          title={t("nutrition.buildDish")}
         >
-          🥣 Build Dish
+          🥣 {t("nutrition.buildDish").split(" ").slice(0, 2).join(" ")}
         </Button>
         <Button
           variant="secondary"
           size="sm"
           onClick={() => setShowMealPlan(true)}
-          title="Get an AI-generated meal plan for today"
+          title={t("nutrition.getAiMealPlan")}
         >
-          ✨ AI Plan
+          ✨ {t("nutrition.getAiMealPlan").split(" ").slice(0, 2).join(" ")}
         </Button>
         <Button
           variant="secondary"
           size="sm"
           onClick={() => navigate("/chat?agent=nutritionist")}
-          title="Chat with your AI nutritionist"
+          title={t("nutrition.chatNutritionist")}
         >
-          🥗 Ask AI
+          🥗 {t("nutrition.askNutritionist")}
         </Button>
       </div>
 
@@ -2809,7 +2817,7 @@ export default function NutritionPage() {
                     <div>
                       <h3 className="font-semibold text-gray-900 dark:text-white dark:text-white">
                         {MEAL_ICONS[meal] ?? "🍽️"}{" "}
-                        {meal === "other" ? "Other" : meal.charAt(0).toUpperCase() + meal.slice(1)}
+                        {(t as (k: string) => string)(`mealPlanner.${meal}`) || t("mealPlanner.other")}
                       </h3>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                         {Math.round(mealCal)} kcal &nbsp;·&nbsp;
@@ -2829,12 +2837,12 @@ export default function NutritionPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-100 dark:border-gray-700 dark:border-gray-700">
-                          <th className="text-left py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Food</th>
-                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Qty</th>
-                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">Kcal</th>
-                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">P</th>
-                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">C</th>
-                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">F</th>
+                          <th className="text-left py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">{t("nutrition.foodName")}</th>
+                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">{t("nutrition.quantity").slice(0,3)}</th>
+                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">{t("common.kcal")}</th>
+                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">{t("common.protein").slice(0,1)}</th>
+                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">{t("common.carbs").slice(0,1)}</th>
+                          <th className="text-right py-2 text-xs text-gray-400 dark:text-gray-500 font-medium">{t("common.fats").slice(0,1)}</th>
                           <th className="w-16" />
                         </tr>
                       </thead>
@@ -2950,7 +2958,7 @@ export default function NutritionPage() {
         )}
 
         {waterTotal >= waterTarget && (
-          <p className="mt-2 text-xs text-green-600 font-medium">✅ Daily target reached! Great job staying hydrated.</p>
+          <p className="mt-2 text-xs text-green-600 font-medium">✅ {t("nutrition.waterTargetReached")}</p>
         )}
       </Card>}
 
@@ -3177,14 +3185,14 @@ export default function NutritionPage() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
               <div>
-                <h2 className="font-bold text-gray-900 dark:text-white text-lg">📋 My Foods</h2>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Your personal food library — only visible to you</p>
+                <h2 className="font-bold text-gray-900 dark:text-white text-lg">📋 {t("nutrition.myFoods")}</h2>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t("nutrition.yourFoodLibrary")}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setMyFoodsPanelEdit(null); setShowMyFoodsCreate(true); }}
                   className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-green-500 text-white hover:bg-green-600 transition-colors"
-                >+ New Food</button>
+                >+ {t("nutrition.newFoodBtn")}</button>
                 <button onClick={() => setShowMyFoodsPanel(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 text-lg font-bold">×</button>
               </div>
             </div>
@@ -3246,7 +3254,7 @@ export default function NutritionPage() {
         <Modal
           open={showMyFoodsCreate}
           onClose={() => { setShowMyFoodsCreate(false); setMyFoodsPanelEdit(null); }}
-          title={myFoodsPanelEdit ? "Edit Custom Food" : "Create Custom Food"}
+          title={myFoodsPanelEdit ? t("nutrition.editCustomFood") : t("nutrition.createCustomFood")}
           size="md"
         >
           <CustomFoodModal

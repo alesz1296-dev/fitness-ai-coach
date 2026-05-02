@@ -773,3 +773,99 @@ Compound chips appear at the top of all muscle group selectors (WorkoutForm buil
 - `#124` Provider abstraction (blocks AI function tools)
 - `#106` Food log date-cursor pagination
 - `#107` Workout history pagination
+
+## Session 2026-05-02 — NutritionPage i18n + new meal types + external DB API planning
+
+### NutritionPage.tsx full translation (#134) — completed
+
+All hardcoded English strings in `NutritionPage.tsx` (3300 lines) replaced with `t()` calls:
+- Meal type labels (Breakfast/Lunch/Dinner/Snack/Other) → `t("mealPlanner.*")`
+- Macro labels (Protein/Carbs/Fats) → `t("common.protein")` etc.
+- Form labels, modal titles, error messages, action buttons, table headers → `t("nutrition.*")` keys
+- Macro view tabs (Rings/Breakdown/Meals/Foods/Goals), calorie strings (kcal consumed/over/left/under target), water target message, My Foods panel, Build Dish modal, Suggest Meal Plan modal — all translated
+- Dynamic meal name display pattern: `` (t as (k: string) => string)(`mealPlanner.${meal}`) || t("mealPlanner.other") `` — works for all current and future meal types
+- ~30 new `nutrition.*` keys added to both `en.ts` and `es.ts` interfaces + values
+
+**i18n files updated:**
+- `en.ts`: `Translation` interface + values extended with `mealPlanner.snack1/snack2/snack3/preWorkout/other` and 30+ `nutrition.*` keys
+- `es.ts`: Same additions fully translated into Spanish (avoiding special characters that caused prior truncation issues)
+
+### New meal types (#135) — completed
+
+Added `snack1`, `snack2`, `snack3`, `pre_workout` as first-class meal type values throughout:
+- `MEAL_OPTIONS` const → `getMealOptions(t)` function (same reactive-to-language pattern as `getStarters()` in ChatPage)
+- `MEAL_ICONS` extended: `snack1: "🍏"`, `snack2: "🥤"`, `snack3: "🍌"`, `pre_workout: "💪"`
+- `mealOrder` in main component updated to include all 8 types + `"other"` fallback
+- `MealVal` TypeScript union type updated in `LogFoodForm` and `BuildDishModal`
+- `FoodLog.meal` in `client/src/types/index.ts` extended to include all new values
+- Backend: `types/index.ts` `FoodLog.meal` union updated — no backend schema change needed (stored as varchar, already flexible)
+- Translation keys: `mealPlanner.snack1 = "Snack 1"`, `mealPlanner.snack2 = "Snack 2"`, `mealPlanner.snack3 = "Snack 3"`, `mealPlanner.preWorkout = "Pre Workout"` (EN); `"Merienda 1"`, `"Merienda 2"`, `"Merienda 3"`, `"Pre-Entreno"` (ES)
+
+### External food + exercise database API — architecture decision (#136)
+
+**Context:** Current app ships with a 257-item food seed and ~170-item exercise seed. User wants to wire up external APIs with millions of items.
+
+**Food database — recommended approach (B5):**
+
+| API | Items | Cost | Notes |
+|-----|-------|------|-------|
+| Open Food Facts | 3M+ | Free | Open source, barcode support, community-maintained, REST + JSON |
+| USDA FoodData Central | 600K+ | Free (API key) | US gov, very accurate macros, no barcode |
+| Nutritionix | 800K+ | Paid (~$50/mo) | Restaurant data, branded foods, good SDK |
+
+**Decision:** Open Food Facts as primary (free, massive, covers barcodes for B4), USDA FoodData Central as fallback for items not found. Nutritionix only if restaurant data becomes important.
+
+**Backend architecture for food API (B5):**
+```
+POST /api/food/search-external
+  → checks Redis cache (key: "food-ext:{query}", TTL: 24h)
+  → if miss: queries Open Food Facts REST API
+  → normalises response to internal FoodItem shape
+  → caches result, returns to client
+  → on API error: falls back to internal DB seed
+
+GET /api/food/barcode/:code   (reuses B4 barcode scanner flow)
+  → Open Food Facts /product/{barcode}.json
+  → returns { name, calories, protein, carbs, fats, unit, servingSize }
+```
+
+Frontend: FoodSearch component gets a third tab "🌐 All Foods" that queries `/api/food/search-external`. Results show source badge (🌿 Open Food Facts / 🏛 USDA). Selecting an item auto-fills the LogFoodForm — user still manually sets quantity.
+
+**Exercise database — recommended approach (B8):**
+
+| API | Items | Cost | Notes |
+|-----|-------|------|-------|
+| Wger REST API | 800+ exercises | Free (self-host or wger.de) | Apache 2.0, muscle diagrams, can seed DB from it |
+| ExerciseDB (RapidAPI) | 1300+ | Free tier (10 req/day) / $10/mo | GIFs, muscle group tags, equipment filter |
+| API Ninjas Exercise | 1000+ | Free tier | Simple, no images |
+
+**Decision:** Use Wger to do a one-time bulk seed into our Postgres `Exercise` table (no runtime API dependency, no rate limits, offline-safe). Fetch ExerciseDB GIF URLs on first view and cache in DB (`gifUrl` column on Exercise). Falls back to no GIF if ExerciseDB is unavailable.
+
+**Backend architecture for exercise API (B8):**
+```
+src/scripts/seed-exercises-wger.ts   (one-time seeder, run in CI)
+  → GET https://wger.de/api/v2/exercise/?format=json&language=2&limit=100
+  → paginate all results
+  → upsert into Exercise table (match on name + category)
+  → preserves custom exercises (userId != null rows untouched)
+
+src/scripts/seed-exercise-gifs.ts    (optional enrichment)
+  → for each Exercise row with no gifUrl
+  → query ExerciseDB by name
+  → store gifUrl (nullable column, migration needed)
+```
+
+Frontend: Exercise cards show GIF thumbnail on hover (lazy-loaded, falls back to muscle diagram SVG). No UI change required for search — data is already in DB.
+
+**Shared principles (applies to both B5 and B8):**
+- External APIs are never called in the critical path of a user save/log operation
+- All external data passes through a normalisation layer before touching the DB
+- Redis cache with 24h TTL for search queries (food), one-time seed for exercises
+- Graceful degradation — if external API is down, internal data still works
+- No user-facing error for external API failures (silent fallback)
+
+**Pending (next session priorities):**
+- `#124` Provider abstraction — still the top blocker for AI agents
+- `#126` Shared goal components — blocks Goals overhaul
+- `B5` Food DB API wiring (Open Food Facts + USDA) — architecture above is ready to implement
+- `B8` Exercise DB seeding (Wger bulk seed script) — straightforward once B5 pattern is established

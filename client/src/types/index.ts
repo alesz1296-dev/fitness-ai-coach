@@ -121,7 +121,7 @@ export interface FoodLog {
   fats?: number | null;
   quantity: number;
   unit: string;
-  meal?: "breakfast" | "lunch" | "dinner" | "snack" | null;
+  meal?: "breakfast" | "lunch" | "dinner" | "snack" | "snack1" | "snack2" | "snack3" | "pre_workout" | null;
   isCheatMeal?: boolean;
   date: string;
 }

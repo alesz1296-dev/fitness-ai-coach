@@ -61,6 +61,18 @@ export interface Translation {
     surplus: string; deficit: string; onTarget: string; includesSupps: string;
     autoEstimated: string; resetEstimate: string;
     addSupplement2: string; addIngredient: string; adding: string; askNutritionist: string; buildDish: string; calorieComposition: string; caloriesKcal: string; caloriesFromMacros: string; clearAll: string; cookingExtras: string; cookingOil: string; createFirstFood: string; cuisine: string; defaultQty: string; defaultUnit: string; dietaryCategory: string; dishName: string; editMacros: string; emojiField: string; entries: string; filterMyFoods: string; filtering: string; foodName: string; foodType: string; getAiMealPlan: string; goalExceeded: string; goalMet: string; grams: string; ingredient: string; logAllMeals: string; logFirstMeal: string; logFoodMacros: string; logIngredientsSep: string; logTodayWeight: string; macronutrients: string; macrosPerServing: string; mealsLoggedSuccess: string; noCustomFoods: string; noFoodsLoggedToday: string; noItems: string; noResultsEnter: string; noResultsTryName: string; nothingLogged: string; nutritionistBuilding: string; pinFavourites: string; quantity: string; removeFromFavourites: string; removeSupplement: string; rightOnTarget: string; searchFoodDb: string; searchMyFoods: string; searchFoodPlaceholder: string; selectMealOptional: string; setCalorieGoal: string; startFromFood: string; supplementName: string; suggestedMealPlan: string; buildDishBowl: string; chatNutritionist: string; yourFoodLibrary: string; tdee: string; tapPhaseNutrition: string; within80Kcal: string; tryAgain: string; total: string; note: string; unit: string; meal: string; meals: string;
+    mealOther: string; foodDatabase: string; createNewFood: string; editCustomFood: string; createCustomFood: string;
+    saveChanges: string; createFood: string; nameRequired: string; caloriesReq: string; caloriesPositive: string;
+    defaultQtyPositive: string; defaultUnitRequired: string; failedSaveCustomFood: string;
+    foodNameRequired: string; qtyPositive: string; unitRequired: string; failedSaveFood: string;
+    macroAutoUpdate: string; cheatMeal: string; showUnitRef: string; hideUnitRef: string;
+    breadingCoating: string; sweetenerSugar: string; regenerate: string;
+    failedMealPlan: string; failedLogMeals: string; noStructuredPlan: string;
+    loggedIndividually: string; loggedAsDish: string; failedSaveDish: string; addOneIngredient: string;
+    kCalConsumed: string; kCalOver: string; kCalLeft: string; kCalUnderTarget: string;
+    waterTargetReached: string; haveCustomFoods: string; noCustomFoodsCreate: string; noFoodsMatchFilter: string;
+    viewRings: string; viewBreakdown: string; viewFoods: string; viewGoals: string;
+    logSeparate: string; myFoodsCustom: string; newFoodBtn: string;
   };
   workouts: {
     filterByMuscle: string; exercise: string; recommended: string;
@@ -177,6 +189,7 @@ export interface Translation {
   mealPlanner: {
     title: string; thisWeek: string; addFood: string; clearDay: string;
     noMeals: string; breakfast: string; lunch: string; dinner: string; snack: string;
+    snack1: string; snack2: string; snack3: string; preWorkout: string; other: string;
     searchFood: string; servings: string; logAll: string; logDay: string;
     calories: string; planSaved: string; savePlan: string;
     copyFromLast: string; aiGenerate: string; myPlans: string; newPlan: string; noPlans: string; noPlansDesc: string;
@@ -363,6 +376,52 @@ const en: Translation = {
     unit: "Unit",
     meal: "Meal",
     meals: "Meals",
+    mealOther: "Other",
+    foodDatabase: "Food Database",
+    createNewFood: "Create New Food",
+    editCustomFood: "Edit custom food",
+    createCustomFood: "Create custom food",
+    saveChanges: "Save changes",
+    createFood: "Create food",
+    nameRequired: "Name is required",
+    caloriesReq: "Calories are required",
+    caloriesPositive: "Calories must be 0 or more",
+    defaultQtyPositive: "Default quantity must be positive",
+    defaultUnitRequired: "Default unit is required",
+    failedSaveCustomFood: "Failed to save custom food",
+    foodNameRequired: "Food name is required",
+    qtyPositive: "Quantity must be a positive number",
+    unitRequired: "Unit is required",
+    failedSaveFood: "Failed to save. Check all fields and try again.",
+    macroAutoUpdate: "Macros update automatically as you change quantity",
+    cheatMeal: "Mark as cheat meal",
+    showUnitRef: "Show unit reference (spoon, cup, bowl…)",
+    hideUnitRef: "Hide unit reference (spoon, cup, bowl…)",
+    breadingCoating: "Breading / coating",
+    sweetenerSugar: "Sweetener / sugar",
+    regenerate: "Regenerate",
+    failedMealPlan: "Failed to get meal plan suggestion.",
+    failedLogMeals: "Failed to log meals.",
+    noStructuredPlan: "The nutritionist didn't return a structured meal plan. Try again or ask directly in the chat.",
+    loggedIndividually: "Each ingredient logged individually",
+    loggedAsDish: "Logged as one combined dish entry",
+    failedSaveDish: "Failed to save dish",
+    addOneIngredient: "Add at least one ingredient",
+    kCalConsumed: "kcal consumed",
+    kCalOver: "kcal over",
+    kCalLeft: "kcal left",
+    kCalUnderTarget: "kcal under target",
+    waterTargetReached: "Daily target reached! Great job staying hydrated.",
+    haveCustomFoods: "Have custom foods? Switch to the My Foods tab above.",
+    noCustomFoodsCreate: "No custom foods yet. Hit + New food to create your first one.",
+    noFoodsMatchFilter: "No foods match your filter.",
+    viewRings: "Rings",
+    viewBreakdown: "Breakdown",
+    viewFoods: "Foods",
+    viewGoals: "Goals",
+    logSeparate: "Log ingredients separately",
+    myFoodsCustom: "your custom foods",
+    newFoodBtn: "New Food",
   },
   workouts: {
     filterByMuscle: "Filter exercises by muscle group", exercise: "Exercise", recommended: "Recommended",
@@ -640,6 +699,7 @@ const en: Translation = {
     title: "Meal Planner", thisWeek: "This week", addFood: "Add food",
     clearDay: "Clear day", noMeals: "No meals planned",
     breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack",
+    snack1: "Snack 1", snack2: "Snack 2", snack3: "Snack 3", preWorkout: "Pre Workout", other: "Other",
     searchFood: "Search food…", servings: "Servings", logAll: "Log all to diary",
     logDay: "Log day to diary", calories: "calories", planSaved: "Plan saved!",
     savePlan: "Save plan", copyFromLast: "Copy from last week",

@@ -114,9 +114,10 @@ _These block the AI Agents, Proactive Engine, and Goals Overhaul sections below.
 | B2 | Apple Watch companion app — log sets in-session from wrist | Wearable | P3 | 🗂️ Deferred | Requires native WatchKit + Capacitor or full RN rewrite |
 | B3 | Samsung Health integration — Android equivalent of B1 | Health Platform | P2 | ⏳ Pending | Samsung Health SDK + Capacitor plugin |
 | B4 | Barcode scanner for food — camera → Open Food Facts API → auto-fill macros | Nutrition | P2 | ⏳ Pending | Low priority since manual search works |
-| B5 | Larger food database — USDA FoodData Central or Nutritionix API (millions of items). _Merge/replace current 257-item seed; evaluate merging with M10 exercise DB expansion_ | Nutrition | P2 | ⏳ Pending | Evaluate Open Food Facts (free) vs Nutritionix (paid) |
+| B5 | Larger food database — wire up external API (Open Food Facts primary, USDA FoodData Central fallback). Backend proxy endpoint + Redis cache + graceful fallback to internal seed. _Replaces/supplements current 257-item seed_ | Nutrition | P2 | ⏳ Pending | **Recommended:** Open Food Facts (free, 3M+ items, barcode support) + USDA FoodData Central (free, 600K+) as fallback. Nutritionix = paid but has restaurant data. See CONTEXT.md for full architecture. |
 | B6 | AI image → food macro analysis — photo of meal → GPT-4o Vision estimates macros | Nutrition/AI | P2 | ⏳ Pending | New endpoint + camera UI in Nutrition page |
 | B7 | Android APK build — React Native / Expo EAS build for Samsung Galaxy Store + Play Store | Mobile | P2 | 🔄 In Progress | iOS/PWA on Railway. APK via `eas build --platform android`. Expo scaffold already in `/mobile` |
+| B8 | External exercise database API — Wger REST API (free, self-hostable) or ExerciseDB via RapidAPI (1300+ exercises with GIFs, muscle diagrams). _Supplements current ~170-item seed_ | Workouts | P2 | ⏳ Pending | **Recommended:** Wger as primary (free, no rate limit if self-hosted, Apache 2.0). ExerciseDB for GIFs/images. See CONTEXT.md for full architecture. |
 
 ---
 
@@ -150,5 +151,5 @@ _These block the AI Agents, Proactive Engine, and Goals Overhaul sections below.
 | 3 | #108 → #109 #110 #111 #113 | Goals overhaul (requires #126 from Sprint 1) |
 | 4 | #118 → #125 → #119 → #120 → #121 | Proactive engine + notification center |
 | 5 | #106, #107, #71, #127, #85 | Infra & UX polish |
-| 6 | B7 (Android APK), B4 (barcode), B5 (food DB), B6 (AI image food) | Platform + data expansion |
+| 6 | B7 (Android APK), B4 (barcode), B5 (food DB API), B8 (exercise DB API), B6 (AI image food) | Platform + data expansion |
 | 7 | B3 (Samsung Health), B1 (Apple Health), B2 (Apple Watch) | Health platform integrations |
