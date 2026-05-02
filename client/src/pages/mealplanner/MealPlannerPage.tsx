@@ -294,7 +294,6 @@ function DayColumn({
   onDeleteEntry: (entryId: number) => void;
 }) {
   const { t } = useTranslation();
-  const DAY_NAMES_T = [t('mealPlanner.monday'), t('mealPlanner.tuesday'), t('mealPlanner.wednesday'), t('mealPlanner.thursday'), t('mealPlanner.friday'), t('mealPlanner.saturday'), t('mealPlanner.sunday')];
   const totals = dayTotals(day);
 
   return (
@@ -527,6 +526,9 @@ export default function MealPlannerPage() {
       };
     });
   };
+
+  // ── Day name translations ──────────────────────────────────────────────────
+  const DAY_NAMES_T = [t('mealPlanner.monday'), t('mealPlanner.tuesday'), t('mealPlanner.wednesday'), t('mealPlanner.thursday'), t('mealPlanner.friday'), t('mealPlanner.saturday'), t('mealPlanner.sunday')];
 
   // ── Weekly plan dates ──────────────────────────────────────────────────────
   const weekDates = activePlan

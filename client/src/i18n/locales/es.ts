@@ -12,6 +12,7 @@ const es: Translation = {
     goals:       "Metas",
     profile:     "Perfil",
     more:        "Más",
+    mealPlanner: "Planificador", chat: "Coach IA", reports: "Informes", settings: "Ajustes", templates: "Plantillas", aiCoach: "Coach IA",
   },
 
   common: {
@@ -255,6 +256,7 @@ const es: Translation = {
     endurance:       "Resistencia",
     cardio:          "Cardio",
     mobility:        "Movilidad",
+    filterByMuscle: "Filtrar por grupo muscular", exercise: "Ejercicio", recommended: "Recomendado",
     activityType: "Tipo de actividad",
     calorieCalcTitle: "Calculadora de calorías",
     calcCalories: "Calcular calorías quemadas por tipo de actividad →",
@@ -434,6 +436,7 @@ const es: Translation = {
     improveEndurance:"Mejorar resistencia",
   },
   settings: {
+    equipment: "Equipo", difficulty: "Dificultad", instructions: "Instrucciones", searchFood: "Buscar alimento",
     savePreferences: "Guardar preferencias",
     saveInjuries: "Guardar lesiones",
     saveCycleSettings: "Guardar configuración del ciclo",

@@ -5,7 +5,7 @@
 export interface Translation {
   nav: {
     dashboard: string; nutrition: string; workouts: string; progress: string;
-    goals: string; profile: string; more: string;
+    goals: string; profile: string; more: string; mealPlanner: string; chat: string; reports: string; settings: string; templates: string; aiCoach: string;
   };
   common: {
     save: string; cancel: string; delete: string; edit: string; add: string;
@@ -56,6 +56,7 @@ export interface Translation {
     addSupplement2: string; addIngredient: string; adding: string; askNutritionist: string; buildDish: string; calorieComposition: string; caloriesKcal: string; caloriesFromMacros: string; clearAll: string; cookingExtras: string; cookingOil: string; createFirstFood: string; cuisine: string; defaultQty: string; defaultUnit: string; dietaryCategory: string; dishName: string; editMacros: string; emojiField: string; entries: string; filterMyFoods: string; filtering: string; foodName: string; foodType: string; getAiMealPlan: string; goalExceeded: string; goalMet: string; grams: string; ingredient: string; logAllMeals: string; logFirstMeal: string; logFoodMacros: string; logIngredientsSep: string; logTodayWeight: string; macronutrients: string; macrosPerServing: string; mealsLoggedSuccess: string; noCustomFoods: string; noFoodsLoggedToday: string; noItems: string; noResultsEnter: string; noResultsTryName: string; nothingLogged: string; nutritionistBuilding: string; pinFavourites: string; quantity: string; removeFromFavourites: string; removeSupplement: string; rightOnTarget: string; searchFoodDb: string; searchMyFoods: string; searchFoodPlaceholder: string; selectMealOptional: string; setCalorieGoal: string; startFromFood: string; supplementName: string; suggestedMealPlan: string; buildDishBowl: string; chatNutritionist: string; yourFoodLibrary: string; tdee: string; tapPhaseNutrition: string; within80Kcal: string; tryAgain: string; total: string; note: string; unit: string; meal: string; meals: string;
   };
   workouts: {
+    filterByMuscle: string; exercise: string; recommended: string;
     title: string; logWorkout: string; workoutName: string; duration: string;
     caloriesBurned: string; addCaloriesBurned: string; trainingType: string;
     exercises: string; addExercise: string; history: string; templates: string;
@@ -195,6 +196,7 @@ const en: Translation = {
   nav: {
     dashboard: "Dashboard", nutrition: "Nutrition", workouts: "Workouts",
     progress: "Progress", goals: "Goals", profile: "Profile", more: "More",
+    mealPlanner: "Meal Planner", chat: "AI Coach", reports: "Reports", settings: "Settings", templates: "Templates", aiCoach: "AI Coach",
   },
   common: {
     save: "Save", cancel: "Cancel", delete: "Delete", edit: "Edit", add: "Add",
@@ -332,6 +334,7 @@ const en: Translation = {
     meals: "Meals",
   },
   workouts: {
+    filterByMuscle: "Filter exercises by muscle group", exercise: "Exercise", recommended: "Recommended",
     title: "Workouts", logWorkout: "Log Workout", workoutName: "Workout Name",
     duration: "Duration (min)", caloriesBurned: "Calories Burned",
     addCaloriesBurned: "Add calories burned", trainingType: "Training type",
@@ -466,7 +469,7 @@ const en: Translation = {
     injuries: "Injuries / limitations", trainingDays: "Training days per week",
     saveProfile: "Save Profile", profileSaved: "Profile saved!",
     language: "Language", changeLanguage: "Change language",
-    darkMode: "Dark mode", notifications: "Notifications",
+    darkMode: "Dark mode",
     waterTracking: "Water tracking", security: "Security",
     changePassword: "Change Password", deleteAccount: "Delete Account",
     dangerZone: "Danger Zone",
@@ -484,7 +487,7 @@ const en: Translation = {
     moderatelyActive: "Moderately active", veryActive: "Very active",
     extremelyActive: "Extremely active", loseWeight: "Lose weight",
     gainMuscle: "Gain muscle", maintainWeight: "Maintain weight",
-    improveEndurance: "Improve endurance",
+    improveEndurance: "Improve endurance", notifications: "Notifications",
   },
   settings: {
     savePreferences: "Save Preferences",
@@ -525,6 +528,8 @@ const en: Translation = {
     trainingSchedule: "Training Schedule",
     goToPlan: "Go to plan →",
     goalDescription: "Set a goal in the Goals tab, or describe it here",
+    equipment: "Equipment", difficulty: "Difficulty", instructions: "Instructions",
+    searchFood: "Search food", passwordHint: "At least 8 characters", activityLevel: "Activity Level",
   },
   auth: {
     login: "Log in", register: "Register", logout: "Log out", email: "Email",
@@ -586,6 +591,7 @@ const en: Translation = {
     aiSummary: "AI summary available", generateSummary: "Generate AI Summary",
     topFoods: "Top foods", consistency: "Consistency", highlights: "Highlights",
     back: "← Back to reports",
+    startOfMonth: "Start of month", endOfMonth: "End of month", month: "Month", year: "Year", pastReports: "Past Reports", subtitle: "AI-powered summaries of your fitness progress",
   },
   mealPlanner: {
     title: "Meal Planner", thisWeek: "This week", addFood: "Add food",
@@ -595,6 +601,19 @@ const en: Translation = {
     logDay: "Log day to diary", calories: "calories", planSaved: "Plan saved!",
     savePlan: "Save plan", copyFromLast: "Copy from last week",
     aiGenerate: "AI Generate",
+    myPlans: "My Plans", newPlan: "+ New Plan", noPlans: "No meal plans yet",
+    noPlansDesc: "Create a weekly meal plan or ask the AI Coach to generate one for you.",
+    createFirst: "+ Create first plan", createPlan: "Create Meal Plan",
+    planName: "Plan name", weekStarting: "Week starting (Monday)",
+    createFailed: "Failed to create plan", planNamePlaceholder: "e.g. Cut Week 1",
+    weekOf: "Week of", selectPlan: "Select a plan or create a new one",
+    subtitle: "Plan your meals week by week — build a template, track macros, stay on goal.",
+    addToMeal: "Add to {{meal}}", avgKcalDay: "avg kcal/day", avgProtein: "avg protein",
+    noFoods: "No foods yet", quantity: "Quantity", unit: "Unit",
+    deletePlan: "Delete this plan?", defaultPlanName: "My Meal Plan",
+    searchPlaceholder: "e.g. chicken breast, oats…",
+    monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday", thursday: "Thursday",
+    friday: "Friday", saturday: "Saturday", sunday: "Sunday",
   },
   templates: {
     title: "Templates", useTemplate: "Use template", noTemplates: "No templates yet",
