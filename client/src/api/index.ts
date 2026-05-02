@@ -119,6 +119,7 @@ export const usersApi = {
     api.put<{ user: User }>("/users/profile", data),
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.put("/users/password", data),
+  resetAllData: () => api.delete("/users/data"),
 };
 
 // ── Workouts ──────────────────────────────────────────────────────────────────

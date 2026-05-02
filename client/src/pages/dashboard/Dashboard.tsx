@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { format, parseISO, addWeeks } from "date-fns";
 import { useAuthStore } from "../../store/authStore";
+import { useTranslation } from "../../i18n";
 import { dashboardApi, calorieGoalsApi, weightApi } from "../../api";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -69,6 +70,7 @@ function MacroBar({ label, value, target, color }: {
 }
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const navigate  = useNavigate();
 
@@ -287,7 +289,7 @@ export default function Dashboard() {
   })();
 
   const hour     = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const greeting = hour < 12 ? t("dashboard.goodMorning") : hour < 18 ? t("dashboard.goodAfternoon") : t("dashboard.goodEvening");
   const displayName = user?.firstName || user?.username;
 
   return (
@@ -302,10 +304,10 @@ export default function Dashboard() {
         </div>
         <div className="flex gap-2 sm:gap-3">
           <Button variant="secondary" size="sm" onClick={() => navigate("/nutrition")} className="flex-1 sm:flex-none">
-            + Log Food
+            + {t("nutrition.logFood")}
           </Button>
           <Button size="sm" onClick={() => navigate("/workouts")} className="flex-1 sm:flex-none">
-            + Log Workout
+            + {t("workouts.logWorkout")}
           </Button>
         </div>
       </div>
@@ -313,7 +315,7 @@ export default function Dashboard() {
       {/* Top stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Calories Today"
+          label={t("dashboard.caloriesToday")}
           value={Math.round(calories)}
           sub={`of ${Math.round(calorieTarget)} kcal target`}
           color="bg-gradient-to-br from-orange-400 to-orange-600"
@@ -321,7 +323,7 @@ export default function Dashboard() {
           onClick={() => navigate("/nutrition")}
         />
         <StatCard
-          label="Protein Today"
+          label={t("dashboard.proteinToday")}
           value={`${Math.round(today.totals.protein ?? 0)}g`}
           sub={activeGoal ? `of ${Math.round(activeGoal.proteinGrams)}g target` : "today"}
           color="bg-gradient-to-br from-blue-500 to-blue-700"
@@ -329,7 +331,7 @@ export default function Dashboard() {
           onClick={() => navigate("/nutrition")}
         />
         <StatCard
-          label="Current Weight"
+          label={t("progress.currentWeight")}
           value={weightLogs.at(-1) ? `${weightLogs.at(-1)!.weight}kg` : "—"}
           sub={activeGoal ? `target: ${activeGoal.targetWeight}kg` : "log your weight"}
           color="bg-gradient-to-br from-purple-500 to-purple-700"
@@ -337,7 +339,7 @@ export default function Dashboard() {
           onClick={() => setShowWeightManager((v) => !v)}
         />
         <StatCard
-          label="Workouts This Week"
+          label={t("dashboard.workoutsThisWeek")}
           value={weeklyWorkoutCount}
           sub="in the last 7 days"
           color="bg-gradient-to-br from-brand-500 to-brand-700"
@@ -353,11 +355,11 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-orange-500 font-bold text-lg">
               🔥 {streaks?.workout ?? 0}
-              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">day streak</span>
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{t("dashboard.dayStreak")}</span>
             </div>
             <span className="text-xs text-gray-400 dark:text-gray-500">→</span>
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500">Workout streak</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{t("dashboard.workoutStreak")}</p>
           {(streaks?.workoutBest ?? 0) > 0 && (
             <p className="text-xs text-gray-400 dark:text-gray-500">Best: {streaks!.workoutBest} days</p>
           )}
@@ -368,11 +370,11 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-green-600 font-bold text-lg">
               🥗 {streaks?.nutrition ?? 0}
-              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">day streak</span>
+              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">{t("dashboard.dayStreak")}</span>
             </div>
             <span className="text-xs text-gray-400 dark:text-gray-500">→</span>
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500">On-target nutrition</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{t("dashboard.nutritionStreak")}</p>
           {(streaks?.cheatMealsThisWeek ?? 0) > 0 && (
             <p className="text-xs text-gray-400 dark:text-gray-500">🍕 {streaks!.cheatMealsThisWeek} cheat meal{streaks!.cheatMealsThisWeek > 1 ? "s" : ""} this week</p>
           )}
@@ -416,7 +418,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calorie progress */}
         <Card className="lg:col-span-1">
-          <CardHeader title="Today's Calories" subtitle={format(new Date(), "MMMM d")} />
+          <CardHeader title={t("dashboard.todaysCalories")} subtitle={format(new Date(), "MMMM d")} />
 
           {/* Macros — at top so they're immediately visible */}
           <div className="space-y-3 mb-4 pb-4 border-b border-gray-100 dark:border-gray-700">
@@ -433,7 +435,7 @@ export default function Dashboard() {
                   ? "bg-indigo-100 text-indigo-700"
                   : "bg-slate-100 text-slate-600"
               }`}>
-                {today.hasWorkout ? "🏋️ Training Day Macros" : "😴 Rest Day Macros"}
+                {today.hasWorkout ? `🏋️ ${t("dashboard.trainingDayMacros")}` : `😴 ${t("dashboard.restDayMacros")}`}
               </span>
             </div>
           )}
@@ -473,8 +475,8 @@ export default function Dashboard() {
                 className="mt-3 w-full bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-center justify-between hover:bg-amber-100 transition-colors text-left"
               >
                 <div>
-                  <p className="text-xs font-semibold text-amber-700">No calorie goal set</p>
-                  <p className="text-xs text-amber-600 mt-0.5">Set a goal to track your progress</p>
+                  <p className="text-xs font-semibold text-amber-700">{t("dashboard.noGoalSet")}</p>
+                  <p className="text-xs text-amber-600 mt-0.5">{t("dashboard.setGoal")}</p>
                 </div>
                 <span className="text-amber-500 font-bold text-base ml-2">→</span>
               </button>
@@ -483,13 +485,13 @@ export default function Dashboard() {
             {/* Burned calories row — only shown if today has workout calories */}
             {caloriesBurnedToday > 0 && (
               <div className="mt-3 w-full bg-orange-50 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
-                <span className="text-orange-600 font-medium">🔥 Burned today</span>
+                <span className="text-orange-600 font-medium">🔥 {t("dashboard.burnedToday")}</span>
                 <span className="text-orange-700 font-bold">−{Math.round(caloriesBurnedToday)} kcal</span>
               </div>
             )}
             {caloriesBurnedToday > 0 && (
               <div className="mt-1 w-full bg-gray-50 dark:bg-gray-700 rounded-xl px-3 py-2 flex items-center justify-between text-xs">
-                <span className="text-gray-500 dark:text-gray-400 font-medium">Net calories</span>
+                <span className="text-gray-500 dark:text-gray-400 font-medium">{t("nutrition.netCalories")}</span>
                 <span className={`font-bold ${netCalories > calorieTarget ? "text-red-600" : "text-gray-700 dark:text-gray-200"}`}>
                   {Math.round(netCalories)} kcal
                 </span>
@@ -501,8 +503,8 @@ export default function Dashboard() {
         {/* Weight chart */}
         <Card className="lg:col-span-2">
           <CardHeader
-            title="Weight Trend"
-            subtitle={hasProjection ? "Actual + projected to goal" : "Last 14 days"}
+            title={t("dashboard.weightTrend")}
+            subtitle={hasProjection ? t("dashboard.weightTrendSub") : undefined}
             action={
               <Button variant="ghost" size="sm" onClick={() => navigate("/progress")}>
                 View all →
@@ -526,7 +528,7 @@ export default function Dashboard() {
                     contentStyle={{ borderRadius: "12px", border: `1px solid ${chartColors.tooltip.border}`, fontSize: "13px", backgroundColor: chartColors.tooltip.background, color: chartColors.tooltip.color }}
                     formatter={(v: number, name: string) => [
                       v != null ? `${Number(v).toFixed(1)} kg` : null,
-                      name === "weight" ? "Actual" : "Projected",
+                      name === "weight" ? t("progress.bodyWeight") : t("goals.progressToDate"),
                     ]}
                   />
                   {hasProjection && <Legend iconType="line" wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} />}
@@ -591,8 +593,8 @@ export default function Dashboard() {
                   onClick={() => setShowWeightManager((v) => !v)}
                   className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors w-full justify-between"
                 >
-                  <span className="font-medium">📋 Weight Log History ({weightLogs.length} entries)</span>
-                  <span>{showWeightManager ? "▲ Hide" : "▼ Show"}</span>
+                  <span className="font-medium">📋 {t("dashboard.weightLogHistory")} ({weightLogs.length})</span>
+                  <span>{showWeightManager ? "▲" : "▼"}</span>
                 </button>
                 {showWeightManager && (
                   <div className="mt-2 space-y-1.5 max-h-56 overflow-y-auto pr-1">
@@ -628,11 +630,11 @@ export default function Dashboard() {
                               <button
                                 onClick={() => { setEditingLog({ id: log.id, weight: log.weight, date: dateStr }); setEditVal(String(log.weight)); setShowWeightManager(true); }}
                                 className="px-2 py-1 rounded-lg text-[10px] font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 hover:bg-amber-100 transition-colors"
-                              >Edit</button>
+                              >{t("common.edit")}</button>
                               <button
                                 onClick={() => handleDeleteWeight(log.id)}
                                 className="px-2 py-1 rounded-lg text-[10px] font-medium bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 hover:bg-red-100 transition-colors"
-                              >Delete</button>
+                              >{t("common.delete")}</button>
                             </>
                           )}
                         </div>
@@ -645,7 +647,7 @@ export default function Dashboard() {
           ) : (
             <div className="h-52 flex flex-col items-center justify-center text-gray-400">
               <span className="text-4xl mb-3">⚖️</span>
-              <p className="text-sm">No weight data yet</p>
+              <p className="text-sm">{t("progress.noWeightData")}</p>
               <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate("/progress")}>
                 Log your weight
               </Button>
@@ -658,7 +660,7 @@ export default function Dashboard() {
       <div className="fixed bottom-20 left-4 z-50 flex flex-col items-start gap-3 md:bottom-8 md:left-auto md:right-8 md:items-end">
         {showWeightFab && (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">⚖️ Log Weight</p>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">⚖️ {t("dashboard.logWeight")}</p>
             {weightSaved ? (
               <p className="text-center text-green-600 font-medium text-sm py-1">✅ Saved!</p>
             ) : (
@@ -704,7 +706,7 @@ export default function Dashboard() {
         {/* Recent workouts */}
         <Card>
           <CardHeader
-            title="Recent Workouts"
+            title={t("dashboard.recentWorkouts")}
             action={
               <Button variant="ghost" size="sm" onClick={() => navigate("/workouts")}>
                 View all →
@@ -741,7 +743,7 @@ export default function Dashboard() {
           ) : (
             <div className="h-40 flex flex-col items-center justify-center text-gray-400">
               <span className="text-4xl mb-3">🏋️</span>
-              <p className="text-sm">No workouts logged yet</p>
+              <p className="text-sm">{t("dashboard.noWorkoutsYet")}</p>
               <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate("/workouts")}>
                 Log your first workout
               </Button>
@@ -754,7 +756,7 @@ export default function Dashboard() {
           {/* Active calorie goal */}
           <Card>
             <CardHeader
-              title="Active Goal"
+              title={t("dashboard.activeGoal")}
               action={
                 <Button variant="ghost" size="sm" onClick={() => navigate("/goals")}>
                   Manage →
@@ -768,7 +770,7 @@ export default function Dashboard() {
                     <p className="font-semibold text-gray-800 dark:text-gray-100">{activeGoal.name || "My Goal"}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                       {activeGoal.currentWeight}kg → {activeGoal.targetWeight}kg ·{" "}
-                      {activeGoal.type === "cut" ? "Cutting" : activeGoal.type === "bulk" ? "Bulking" : "Maintaining"}
+                      {activeGoal.type === "cut" ? t("dashboard.cutting") : activeGoal.type === "bulk" ? t("dashboard.bulking") : t("dashboard.maintaining")}
                     </p>
                   </div>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
@@ -776,7 +778,7 @@ export default function Dashboard() {
                     activeGoal.type === "bulk" ? "bg-green-100 text-green-700" :
                                                   "bg-gray-100 text-gray-600"
                   }`}>
-                    {activeGoal.type === "cut" ? "Cut" : activeGoal.type === "bulk" ? "Bulk" : "Maintain"}
+                    {activeGoal.type === "cut" ? t("goals.weightLoss") : activeGoal.type === "bulk" ? t("goals.weightGain") : t("goals.maintenance")}
                   </span>
                 </div>
                 {activeGoal.macrosCycling && (
@@ -785,15 +787,15 @@ export default function Dashboard() {
                       🔄 Macro Cycling
                     </span>
                     <span className="text-gray-400 dark:text-gray-500">
-                      {today.hasWorkout ? "🏋️ Train day" : "😴 Rest day"} active
+                      {today.hasWorkout ? `🏋️ ${t("dashboard.trainDay")}` : `😴 ${t("dashboard.restDay")}`} active
                     </span>
                   </div>
                 )}
                 <div className="grid grid-cols-3 gap-2 text-center">
                   {[
-                    { label: "Calories", value: `${Math.round(effectiveCalorieTarget ?? activeGoal.dailyCalories)} kcal` },
-                    { label: "Protein",  value: `${Math.round(activeGoal.proteinGrams)}g` },
-                    { label: "Weekly",   value: `${activeGoal.weeklyChange > 0 ? "+" : ""}${activeGoal.weeklyChange}kg` },
+                    { label: t("common.calories"), value: `${Math.round(effectiveCalorieTarget ?? activeGoal.dailyCalories)} kcal` },
+                    { label: t("common.protein"),  value: `${Math.round(activeGoal.proteinGrams)}g` },
+                    { label: t("goals.weeklyChange"),   value: `${activeGoal.weeklyChange > 0 ? "+" : ""}${activeGoal.weeklyChange}kg` },
                   ].map((item) => (
                     <div key={item.label} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-2.5">
                       <p className="text-xs text-gray-400 dark:text-gray-500">{item.label}</p>
@@ -804,7 +806,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="text-center py-4">
-                <p className="text-sm text-gray-400">No active goal set</p>
+                <p className="text-sm text-gray-400">{t("dashboard.noGoalSet")}</p>
                 <Button variant="secondary" size="sm" className="mt-3" onClick={() => navigate("/goals")}>
                   Set a goal
                 </Button>
@@ -817,7 +819,7 @@ export default function Dashboard() {
 
           {/* Quick actions */}
           <Card>
-            <CardHeader title="Quick Actions" />
+            <CardHeader title={t("dashboard.quickActions")} />
             <div className="grid grid-cols-2 gap-2">
               {[
                 { label: "Chat with AI Coach",  icon: "🤖", to: "/chat?agent=coach" },

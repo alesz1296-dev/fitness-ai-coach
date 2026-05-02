@@ -249,3 +249,27 @@ export const deleteAccount = async (
     next(error);
   }
 };
+
+// ── Reset all user data ────────────────────────────────────────────────────────
+export const resetUserData = async (
+  req: AuthRequest, res: Response, next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    // Delete all user data in dependency order
+    await prisma.$transaction([
+      prisma.foodLog.deleteMany({ where: { userId } }),
+      prisma.waterLog.deleteMany({ where: { userId } }),
+      (prisma as any).customFood.deleteMany({ where: { userId } }),
+      (prisma as any).supplement.deleteMany({ where: { userId } }),
+      (prisma as any).customSupplement.deleteMany({ where: { userId } }),
+      (prisma as any).fastingLog.deleteMany({ where: { userId } }),
+      (prisma as any).workoutExercise.deleteMany({ where: { workout: { userId } } }),
+      prisma.workout.deleteMany({ where: { userId } }),
+      prisma.weightLog.deleteMany({ where: { userId } }),
+      (prisma as any).calorieGoal.deleteMany({ where: { userId } }),
+    ]);
+    logger.info(`User ${userId} reset all data`);
+    res.json({ message: "All data has been reset successfully." });
+  } catch (error) { next(error); }
+};

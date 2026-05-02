@@ -6,6 +6,7 @@ import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, 
 import { workoutsApi, templatesApi, searchApi, foodApi, calorieGoalsApi, calendarApi, usersApi, chatApi, customExercisesApi } from "../../api";
 import type { Workout, WorkoutExercise, PRResult, WorkoutTemplate, WorkoutCalendarDay } from "../../types";
 import { useAuthStore } from "../../store/authStore";
+import { useTranslation } from "../../i18n";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -3570,13 +3571,14 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
 }
 
 export default function WorkoutsPage() {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
   const [tab, setTab] = useState<"history" | "calendar" | "templates" | "ai-build">(
     () => (sessionStorage.getItem("workouts_tab") as "history" | "calendar" | "templates" | "ai-build") ?? "calendar"
   );
-  const switchTab = (t: "history" | "calendar" | "templates" | "ai-build") => {
-    sessionStorage.setItem("workouts_tab", t);
-    setTab(t);
+  const switchTab = (tabKey: "history" | "calendar" | "templates" | "ai-build") => {
+    sessionStorage.setItem("workouts_tab", tabKey);
+    setTab(tabKey);
   };
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [allWorkouts, setAllWorkouts] = useState<Workout[]>([]);
@@ -3669,11 +3671,11 @@ export default function WorkoutsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white dark:text-white">Workouts</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white dark:text-white">{t("workouts.title")}</h1>
           <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm mt-1">
-            {tab === "history"   ? `${total} workout${total !== 1 ? "s" : ""} logged`
-            : tab === "calendar" ? "Training calendar"
-            : tab === "ai-build" ? "AI-generated workouts"
+            {tab === "history"   ? `${total} workout${total !== 1 ? "s" : ""} ${t("workouts.history").toLowerCase()}`
+            : tab === "calendar" ? t("workouts.calendar")
+            : tab === "ai-build" ? t("workouts.aiBuilder")
             :                      "Pre-built and custom workout splits"}
           </p>
         </div>
@@ -3713,7 +3715,7 @@ export default function WorkoutsPage() {
             </button>
           )}
           {tab === "history" && (
-            <Button onClick={() => setShowForm(true)}>+ Log Workout</Button>
+            <Button onClick={() => setShowForm(true)}>+ {t("workouts.logWorkout")}</Button>
           )}
         </div>
       </div>
@@ -3721,9 +3723,9 @@ export default function WorkoutsPage() {
       {/* Main tabs — full width on mobile */}
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-full sm:w-fit">
         {([
-          { key: "history",   label: "🏋️ History" },
-          { key: "calendar",  label: "📅 Calendar" },
-          { key: "templates", label: "📋 Templates" },
+          { key: "history",   label: `🏋️ ${t("workouts.history")}` },
+          { key: "calendar",  label: `📅 ${t("workouts.calendar")}` },
+          { key: "templates", label: `📋 ${t("workouts.templates")}` },
           { key: "ai-build",  label: "🤖 AI Build" },
         ] as const).map(({ key, label }) => (
           <button
@@ -3752,11 +3754,11 @@ export default function WorkoutsPage() {
         ) : workouts.length === 0 ? (
           <Card className="text-center py-16">
             <div className="text-5xl mb-4">🏋️</div>
-            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">No workouts yet</h3>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Log your first workout to start tracking progress</p>
+            <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">{t("workouts.noWorkouts")}</h3>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">{t("workouts.logFirst")}</p>
             <div className="flex gap-2 justify-center">
-              <Button onClick={() => setShowForm(true)}>Log Your First Workout</Button>
-              <Button variant="secondary" onClick={() => switchTab("templates")}>Browse Templates</Button>
+              <Button onClick={() => setShowForm(true)}>{t("workouts.logWorkout")}</Button>
+              <Button variant="secondary" onClick={() => switchTab("templates")}>{t("workouts.templates")}</Button>
             </div>
           </Card>
         ) : (
@@ -3826,7 +3828,7 @@ export default function WorkoutsPage() {
       {tab === "ai-build" && <AIWorkoutBuilder onWorkoutLogged={() => { switchTab("history"); }} />}
 
       {/* Create modal */}
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Log Workout" size="lg">
+      <Modal open={showForm} onClose={() => setShowForm(false)} title={t("workouts.logWorkout")} size="lg">
         <WorkoutForm
           onSave={() => { setShowForm(false); load(1); loadAll(); toast.show("Workout logged!"); }}
           onClose={() => setShowForm(false)}

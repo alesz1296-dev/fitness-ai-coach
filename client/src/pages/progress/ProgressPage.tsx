@@ -6,6 +6,7 @@ import {
   ReferenceLine, ReferenceArea,
 } from "recharts";
 import { weightApi, workoutsApi, predictionsApi, analyticsApi } from "../../api";
+import { useTranslation } from "../../i18n";
 import type { AnalyticsData } from "../../api";
 import type { WeightLog, WeightStats, ExerciseProgression } from "../../types";
 import { useAuthStore } from "../../store/authStore";
@@ -154,6 +155,7 @@ function computeBodyComp(
 // Log weight form
 // ─────────────────────────────────────────────────────────────────────────────
 function LogWeightForm({ onSave, onClose }: { onSave: () => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const [weight,  setWeight]  = useState("");
   const [notes,   setNotes]   = useState("");
   const [date,    setDate]    = useState(new Date().toISOString().split("T")[0]);
@@ -179,8 +181,8 @@ function LogWeightForm({ onSave, onClose }: { onSave: () => void; onClose: () =>
       <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       <Input label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Morning weight, after gym…" />
       <div className="flex gap-2">
-        <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
-        <Button className="flex-1" loading={loading} onClick={submit}>Log Weight</Button>
+        <Button variant="secondary" className="flex-1" onClick={onClose}>{t("common.cancel")}</Button>
+        <Button className="flex-1" loading={loading} onClick={submit}>{t("progress.logWeight")}</Button>
       </div>
     </div>
   );
@@ -202,6 +204,7 @@ function BodyCompositionCard({
   age: number | null | undefined;
   sex: "male" | "female" | null | undefined;
 }) {
+  const { t } = useTranslation();
   const isDark   = useIsDark();
   const chartGrid   = isDark ? "#374151" : "#f0f0f0";
   const chartTick   = isDark ? "#9ca3af" : "#9ca3af";
@@ -231,7 +234,7 @@ function BodyCompositionCard({
   if (missingFields) {
     return (
       <Card>
-        <CardHeader title="Body Composition" subtitle="Estimated from your profile" />
+        <CardHeader title={t("progress.bodyFat")} subtitle="Estimated from your profile" />
         <div className="text-center py-8 text-gray-400 text-sm space-y-2">
           <p className="text-2xl">📊</p>
           <p>Complete your profile to see body composition estimates.</p>
@@ -254,7 +257,7 @@ function BodyCompositionCard({
   return (
     <Card>
       <CardHeader
-        title="Body Composition"
+        title={t("progress.bodyFat")}
         subtitle={`Estimated · ${latestWeight} kg`}
       />
       <div className="space-y-5">
@@ -368,6 +371,7 @@ function BodyCompositionCard({
 // Exercise progression section
 // ─────────────────────────────────────────────────────────────────────────────
 function ExerciseProgressionSection() {
+  const { t } = useTranslation();
   const isDark   = useIsDark();
   const chartGrid   = isDark ? "#374151" : "#f0f0f0";
   const chartTick   = isDark ? "#9ca3af" : "#9ca3af";
@@ -391,7 +395,7 @@ function ExerciseProgressionSection() {
 
   return (
     <Card>
-      <CardHeader title="Exercise Progression" subtitle="Track strength gains over time" />
+      <CardHeader title={t("workouts.exercises")} subtitle="Track strength gains over time" />
       <div className="flex gap-2 mb-4">
         <Input
           value={query}
@@ -400,7 +404,7 @@ function ExerciseProgressionSection() {
           placeholder="e.g. Bench Press, Squat, Deadlift…"
           className="flex-1"
         />
-        <Button onClick={search} loading={loading}>Search</Button>
+        <Button onClick={search} loading={loading}>{t("common.search")}</Button>
       </div>
 
       {meta && (
@@ -833,6 +837,7 @@ function StatBadge({ label, value, sub, color = "text-gray-900 dark:text-white" 
 }
 
 function AnalyticsTab() {
+  const { t } = useTranslation();
   const isDark      = useIsDark();
   const chartGrid   = isDark ? "#374151" : "#f0f0f0";
   const chartTick   = isDark ? "#9ca3af" : "#9ca3af";
@@ -905,7 +910,7 @@ function AnalyticsTab() {
 
           {/* Calorie intake + 7-day rolling avg */}
           <Card>
-            <CardHeader title="Calorie Intake Over Time" subtitle="Daily total (bars) and 7-day rolling average (line)" />
+            <CardHeader title={t("common.calories")} subtitle="Daily total (bars) and 7-day rolling average (line)" />
             <ResponsiveContainer width="100%" height={220}>
               <ComposedChart data={daily} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                 <defs>
@@ -932,7 +937,7 @@ function AnalyticsTab() {
 
           {/* Macro breakdown — stacked bar */}
           <Card>
-            <CardHeader title="Macro Breakdown" subtitle="Protein · Carbs · Fats (g/day)" />
+            <CardHeader title={t("nutrition.macros")} subtitle="Protein · Carbs · Fats (g/day)" />
             <ResponsiveContainer width="100%" height={200}>
               <ComposedChart data={daily} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
@@ -1001,7 +1006,7 @@ function AnalyticsTab() {
           {/* Weight trend in analytics */}
           {data.weightSeries && data.weightSeries.length > 1 && (
             <Card>
-              <CardHeader title="Weight Trend" subtitle="Logged weight over the selected period" />
+              <CardHeader title={t("dashboard.weightTrend")} subtitle="Logged weight over the selected period" />
               <ResponsiveContainer width="100%" height={180}>
                 <ComposedChart data={data.weightSeries} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
@@ -1060,6 +1065,7 @@ function AnalyticsTab() {
 type TabId = "body" | "strength" | "predictions" | "analytics" | "goals";
 
 export default function ProgressPage() {
+  const { t } = useTranslation();
   const { user }                   = useAuthStore();
   const isDark   = useIsDark();
   const chartGrid   = isDark ? "#374151" : "#f0f0f0";
@@ -1151,7 +1157,7 @@ export default function ProgressPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Progress & Goals</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("progress.title")}</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Body composition, weight trend, strength, and calorie goals</p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
@@ -1213,7 +1219,7 @@ export default function ProgressPage() {
 
           {/* Body weight trend chart */}
           <Card>
-            <CardHeader title="Body Weight Trend" subtitle={`Last ${days} days`} />
+            <CardHeader title={t("progress.bodyWeight")} subtitle={`Last ${days} days`} />
             {loading ? (
               <div className="flex justify-center py-12">
                 <div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" />
@@ -1240,7 +1246,7 @@ export default function ProgressPage() {
             ) : (
               <div className="text-center py-12">
                 <div className="text-4xl mb-3">⚖️</div>
-                <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">No weight logged yet</p>
+                <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">{t("progress.noWeightData")}</p>
                 <p className="text-sm text-gray-400 max-w-xs mx-auto">Tap "+ Log Weight" to add your first entry. Your trend chart will appear once you have data.</p>
               </div>
             )}
@@ -1258,16 +1264,16 @@ export default function ProgressPage() {
           {/* Weight log table */}
           {logs.length > 0 && (
             <Card>
-              <CardHeader title="Weight Log" />
+              <CardHeader title={t("progress.weightHistory")} />
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-100 dark:border-gray-700">
-                      <th className="text-left py-2 text-xs text-gray-400 font-medium">Date</th>
-                      <th className="text-right py-2 text-xs text-gray-400 font-medium">Weight</th>
+                      <th className="text-left py-2 text-xs text-gray-400 font-medium">{t("common.date")}</th>
+                      <th className="text-right py-2 text-xs text-gray-400 font-medium">{t("common.weight")}</th>
                       <th className="text-right py-2 text-xs text-gray-400 font-medium">Est. Fat%</th>
                       <th className="text-right py-2 text-xs text-gray-400 font-medium">Change</th>
-                      <th className="text-left py-2 text-xs text-gray-400 font-medium pl-4">Notes</th>
+                      <th className="text-left py-2 text-xs text-gray-400 font-medium pl-4">{t("common.notes")}</th>
                       <th className="w-10"></th>
                     </tr>
                   </thead>
@@ -1335,12 +1341,12 @@ export default function ProgressPage() {
       )}
 
       {/* ── Log Weight Modal ─────────────────────────────────────────────── */}
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Log Weight">
+      <Modal open={showForm} onClose={() => setShowForm(false)} title={t("progress.logWeight")}>
         <LogWeightForm onSave={() => { setShowForm(false); load(); }} onClose={() => setShowForm(false)} />
       </Modal>
 
       {/* ── Edit Weight Log Modal ────────────────────────────────────────── */}
-      <Modal open={editingLog !== null} onClose={() => setEditingLog(null)} title="Edit Weight Entry">
+      <Modal open={editingLog !== null} onClose={() => setEditingLog(null)} title={t("common.edit") + " " + t("common.weight")}>
         <div className="space-y-4">
           <Input
             label="Weight (kg)"
@@ -1363,8 +1369,8 @@ export default function ProgressPage() {
             placeholder="Morning weight, after gym…"
           />
           <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setEditingLog(null)}>Cancel</Button>
-            <Button className="flex-1" loading={savingEdit} onClick={handleEditSubmit}>Save Changes</Button>
+            <Button variant="secondary" className="flex-1" onClick={() => setEditingLog(null)}>{t("common.cancel")}</Button>
+            <Button className="flex-1" loading={savingEdit} onClick={handleEditSubmit}>{t("common.save")}</Button>
           </div>
         </div>
       </Modal>

@@ -588,12 +588,12 @@ function CycleTrackingForm() {
 
 // ── Language Picker ──────────────────────────────────────────────────────────
 function LanguagePicker() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
       <div>
-        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🌐 Language</p>
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🌐 {t("profile.language")}</p>
         <p className="text-xs text-gray-500 dark:text-gray-400">Choose the display language for the app</p>
       </div>
       <div className="flex gap-1.5">
@@ -754,6 +754,7 @@ function AccountInfo() {
 
 // ── Main Settings page ────────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
 
   // Refresh profile from server on mount
@@ -764,8 +765,8 @@ export default function SettingsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Profile</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Manage your profile and account</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("profile.title")}</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t("profile.manageProfile")}</p>
       </div>
 
       <AccountInfo />
@@ -778,7 +779,7 @@ export default function SettingsPage() {
 
       {/* Data export */}
       <Card>
-        <CardHeader title="Your Data" subtitle="Download a complete copy of your fitness data" />
+        <CardHeader title={t("profile.yourData")} subtitle="Download a complete copy of your fitness data" />
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Exports workouts, food logs, weight history, and goals as a JSON file.
@@ -789,7 +790,6 @@ export default function SettingsPage() {
               const token = localStorage.getItem("accessToken");
               const a = document.createElement("a");
               a.href = `/api/users/export`;
-              // Use fetch to pass auth header, then trigger download
               fetch("/api/users/export", { headers: { Authorization: `Bearer ${token}` } })
                 .then((r) => r.blob())
                 .then((blob) => {
@@ -805,6 +805,76 @@ export default function SettingsPage() {
           </Button>
         </div>
       </Card>
+
+      {/* ── Danger Zone ───────────────────────────────────────────────────── */}
+      <DangerZone />
     </div>
+  );
+}
+
+// ── Danger Zone component ─────────────────────────────────────────────────────
+function DangerZone() {
+  const { logout } = useAuthStore();
+  const navigate = useNavigate();
+  const [resetConfirm,  setResetConfirm]  = useState(false);
+  const [resetBusy,     setResetBusy]     = useState(false);
+  const [resetDone,     setResetDone]     = useState(false);
+  const { t } = useTranslation();
+
+  const handleReset = async () => {
+    setResetBusy(true);
+    try {
+      await usersApi.resetAllData();
+      setResetDone(true);
+      setResetConfirm(false);
+      setTimeout(() => setResetDone(false), 4000);
+    } catch { /* silent */ }
+    finally { setResetBusy(false); }
+  };
+
+  return (
+    <Card className="border border-red-200 dark:border-red-900/50">
+      <CardHeader
+        title={`⚠️ ${t("profile.dangerZone")}`}
+        subtitle="Irreversible actions — proceed with caution"
+      />
+      <div className="space-y-4">
+        {/* Reset all data */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30">
+          <div>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("profile.resetAllData")}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Deletes all workouts, food logs, weight history, water logs, and goals.
+              Your account and profile stay intact.
+            </p>
+          </div>
+          {resetDone ? (
+            <span className="text-sm text-green-600 font-medium whitespace-nowrap">✅ {t("profile.resetDataSuccess")}</span>
+          ) : resetConfirm ? (
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="secondary" onClick={() => setResetConfirm(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                className="bg-red-600 hover:bg-red-700 text-white"
+                loading={resetBusy}
+                onClick={handleReset}
+              >
+                Yes, delete everything
+              </Button>
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-700 text-white shrink-0"
+              onClick={() => setResetConfirm(true)}
+            >
+              Reset all data
+            </Button>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }

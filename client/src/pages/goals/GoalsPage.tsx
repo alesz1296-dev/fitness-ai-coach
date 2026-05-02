@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { calorieGoalsApi } from "../../api";
+import { useTranslation } from "../../i18n";
 import type { CalorieGoal } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -435,6 +436,7 @@ function EditGoalModal({
 
 // ── Main Goals page ───────────────────────────────────────────────────────────
 export default function GoalsPage({ embedded = false }: { embedded?: boolean } = {}) {
+  const { t } = useTranslation();
   const [goals,        setGoals]       = useState<CalorieGoal[]>([]);
   const [loading,      setLoading]     = useState(true);
   const [showForm,     setShowForm]    = useState(false);
@@ -461,7 +463,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
   };
 
   const deleteGoal = async (id: number) => {
-    if (!confirm("Delete this goal?")) return;
+    if (!confirm(t("common.confirm") + "?")) return;
     await calorieGoalsApi.delete(id);
     load();
   };
@@ -470,9 +472,9 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
   const inactiveGoals = goals.filter((g) => !g.active);
 
   const TYPE_LABELS: Record<string, { label: string; color: string }> = {
-    cut:      { label: "Cut",      color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
-    bulk:     { label: "Bulk",     color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
-    maintain: { label: "Maintain", color: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" },
+    cut:      { label: t("goals.weightLoss"), color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+    bulk:     { label: t("goals.weightGain"), color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+    maintain: { label: t("goals.maintenance"), color: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" },
   };
 
   return (
@@ -481,19 +483,19 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
       {!embedded ? (
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Goals</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("goals.title")}</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
               Calorie targets &amp; body composition plans
             </p>
           </div>
-          <Button onClick={() => setShowForm(true)}>+ New Goal</Button>
+          <Button onClick={() => setShowForm(true)}>+ {t("goals.createGoal")}</Button>
         </div>
       ) : (
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
             Calorie targets &amp; body composition plans
           </p>
-          <Button size="sm" onClick={() => setShowForm(true)}>+ New Goal</Button>
+          <Button size="sm" onClick={() => setShowForm(true)}>+ {t("goals.createGoal")}</Button>
         </div>
       )}
 
@@ -505,14 +507,14 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
       ) : goals.length === 0 ? (
         <Card className="text-center py-16">
           <div className="text-5xl mb-4">🎯</div>
-          <h3 className="font-semibold text-gray-800 dark:text-white mb-2">No goals set yet</h3>
+          <h3 className="font-semibold text-gray-800 dark:text-white mb-2">{t("goals.noGoal")}</h3>
           <p className="text-sm text-gray-400 mb-4">
             Create a calorie goal to get a personalised macro plan
           </p>
           <p className="text-xs text-gray-400 mb-4">
             Make sure your profile has age, height, weight, sex and activity level filled in.
           </p>
-          <Button onClick={() => setShowForm(true)}>Create My First Goal</Button>
+          <Button onClick={() => setShowForm(true)}>{t("goals.createGoal")}</Button>
         </Card>
       ) : (
         <div className="space-y-6">
@@ -537,19 +539,19 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <Button variant="secondary" size="sm" onClick={() => setEditingGoal(activeGoal)}>Edit</Button>
+                  <Button variant="secondary" size="sm" onClick={() => setEditingGoal(activeGoal)}>{t("common.edit")}</Button>
                   <Button variant="secondary" size="sm" onClick={() => deactivate(activeGoal.id)}>Pause</Button>
-                  <Button variant="danger"    size="sm" onClick={() => deleteGoal(activeGoal.id)}>Delete</Button>
+                  <Button variant="danger"    size="sm" onClick={() => deleteGoal(activeGoal.id)}>{t("common.delete")}</Button>
                 </div>
               </div>
 
               {/* Macro tiles */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 {[
-                  { label: "Daily Calories", value: `${Math.round(activeGoal.dailyCalories)} kcal` },
-                  { label: "Protein",        value: `${Math.round(activeGoal.proteinGrams)}g` },
-                  { label: "Carbs",          value: `${Math.round(activeGoal.carbsGrams)}g` },
-                  { label: "Fats",           value: `${Math.round(activeGoal.fatsGrams)}g` },
+                  { label: t("goals.dailyCalories"), value: `${Math.round(activeGoal.dailyCalories)} kcal` },
+                  { label: t("common.protein"),      value: `${Math.round(activeGoal.proteinGrams)}g` },
+                  { label: t("common.carbs"),        value: `${Math.round(activeGoal.carbsGrams)}g` },
+                  { label: t("common.fats"),         value: `${Math.round(activeGoal.fatsGrams)}g` },
                 ].map((item) => (
                   <div key={item.label} className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3 text-center">
                     <p className="text-xs text-gray-400 dark:text-gray-500">{item.label}</p>
@@ -559,8 +561,8 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
               </div>
 
               <CardHeader
-                title="Weight Projection"
-                subtitle="Blue dashed = projected · Green = actual"
+                title={t("goals.progressToDate")}
+                subtitle={t("dashboard.weightTrendSub")}
               />
               <ActiveGoalChart goalId={activeGoal.id} targetWeight={activeGoal.targetWeight} />
             </Card>
@@ -569,7 +571,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
           {/* Past / paused goals */}
           {inactiveGoals.length > 0 && (
             <Card>
-              <CardHeader title="Past Goals" />
+              <CardHeader title={t("goals.editGoal")} />
               <div className="space-y-3">
                 {inactiveGoals.map((g) => (
                   <div
@@ -601,7 +603,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
       )}
 
       {/* ── Modals ── */}
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Create Goal" size="md">
+      <Modal open={showForm} onClose={() => setShowForm(false)} title={t("goals.createGoal")} size="md">
         <GoalForm
           onSave={() => { setShowForm(false); load(); }}
           onClose={() => setShowForm(false)}
@@ -612,7 +614,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
         <Modal
           open={!!editingGoal}
           onClose={() => setEditingGoal(null)}
-          title="Edit Goal"
+          title={t("goals.editGoal")}
           size="md"
         >
           <EditGoalModal

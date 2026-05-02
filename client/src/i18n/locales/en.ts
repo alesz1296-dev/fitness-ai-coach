@@ -18,6 +18,7 @@ export interface Translation {
     kg: string; lbs: string; kcal: string; min: string;
     sets: string; reps: string; rpe: string; net: string;
     burned: string; estimated: string; error: string;
+    viewAll: string; manage: string;
   };
   dashboard: {
     title: string; goodMorning: string; goodAfternoon: string; goodEvening: string;
@@ -25,6 +26,15 @@ export interface Translation {
     workoutToday: string; waterToday: string; bodyWeight: string; logWeight: string;
     noGoalSet: string; setGoal: string; recentWorkouts: string;
     noWorkoutsYet: string; weeklyActivity: string;
+    caloriesToday: string; proteinToday: string; workoutsThisWeek: string;
+    dayStreak: string; workoutStreak: string; nutritionStreak: string;
+    weightTrend: string; weightTrendSub: string; todaysCalories: string;
+    trainingDayMacros: string; restDayMacros: string;
+    burnedToday: string; logYourWeight: string; logFirstWorkout: string;
+    quickActions: string; weightLogHistory: string;
+    activeGoal: string; manageGoal: string;
+    cutting: string; bulking: string; maintaining: string;
+    trainDay: string; restDay: string;
   };
   nutrition: {
     title: string; logFood: string; foodLog: string; quickLog: string;
@@ -68,6 +78,10 @@ export interface Translation {
     language: string; changeLanguage: string; darkMode: string; notifications: string;
     waterTracking: string; security: string; changePassword: string;
     deleteAccount: string; dangerZone: string;
+    resetAllData: string; resetConfirmMsg: string; resetDataSuccess: string;
+    yesDeleteEverything: string; yourData: string; downloadMyData: string;
+    manageProfile: string; appPreferences: string; nutritionPreferences: string;
+    injuriesForm: string;
     sedentary: string; lightlyActive: string; moderatelyActive: string;
     veryActive: string; extremelyActive: string;
     loseWeight: string; gainMuscle: string; maintainWeight: string; improveEndurance: string;
@@ -76,6 +90,9 @@ export interface Translation {
     login: string; register: string; logout: string; email: string; password: string;
     confirmPassword: string; forgotPassword: string; resetPassword: string;
     noAccount: string; haveAccount: string; signUp: string; signIn: string; verifyEmail: string;
+  };
+  offline: {
+    noConnection: string; readOnlyMode: string; offline: string; backOnline: string;
   };
   ai: {
     nutritionCoach: string; workoutCoach: string; goalsCoach: string;
@@ -88,7 +105,7 @@ export interface Translation {
 const en: Translation = {
   nav: {
     dashboard: "Dashboard", nutrition: "Nutrition", workouts: "Workouts",
-    progress: "Progress & Goals", goals: "Goals", profile: "Profile", more: "More",
+    progress: "Progress", goals: "Goals", profile: "Profile", more: "More",
   },
   common: {
     save: "Save", cancel: "Cancel", delete: "Delete", edit: "Edit", add: "Add",
@@ -102,6 +119,7 @@ const en: Translation = {
     kg: "kg", lbs: "lbs", kcal: "kcal", min: "min",
     sets: "Sets", reps: "Reps", rpe: "RPE", net: "Net",
     burned: "burned", estimated: "estimated", error: "Error",
+    viewAll: "View all →", manage: "Manage →",
   },
   dashboard: {
     title: "Dashboard", goodMorning: "Good morning", goodAfternoon: "Good afternoon",
@@ -112,6 +130,18 @@ const en: Translation = {
     noGoalSet: "No goal set", setGoal: "Set a goal",
     recentWorkouts: "Recent Workouts", noWorkoutsYet: "No workouts logged yet",
     weeklyActivity: "Weekly Activity",
+    caloriesToday: "Calories Today", proteinToday: "Protein Today",
+    workoutsThisWeek: "Workouts This Week",
+    dayStreak: "day streak", workoutStreak: "Workout streak",
+    nutritionStreak: "On-target nutrition",
+    weightTrend: "Weight Trend", weightTrendSub: "Actual + projected to goal",
+    todaysCalories: "Today's Calories", trainingDayMacros: "Training Day Macros",
+    restDayMacros: "Rest Day Macros", burnedToday: "Burned today",
+    logYourWeight: "Log your weight", logFirstWorkout: "Log your first workout",
+    quickActions: "Quick Actions", weightLogHistory: "Weight Log History",
+    activeGoal: "Active Goal", manageGoal: "Manage",
+    cutting: "Cutting", bulking: "Bulking", maintaining: "Maintaining",
+    trainDay: "Train day", restDay: "Rest day",
   },
   nutrition: {
     title: "Nutrition", logFood: "Log Food", foodLog: "Food Log",
@@ -145,7 +175,7 @@ const en: Translation = {
     cardio: "Cardio", mobility: "Mobility",
   },
   progress: {
-    title: "Progress & Goals", bodyWeight: "Body Weight", logWeight: "Log Weight",
+    title: "Progress", bodyWeight: "Body Weight", logWeight: "Log Weight",
     weightHistory: "Weight History", goalWeight: "Goal Weight",
     currentWeight: "Current Weight", startWeight: "Start Weight",
     projection: "Projection", bodyFat: "Body Fat %", analytics: "Analytics",
@@ -172,6 +202,16 @@ const en: Translation = {
     waterTracking: "Water tracking", security: "Security",
     changePassword: "Change Password", deleteAccount: "Delete Account",
     dangerZone: "Danger Zone",
+    resetAllData: "Reset all data",
+    resetConfirmMsg: "Deletes all workouts, food logs, weight history, water logs, and goals. Your account and profile stay intact.",
+    resetDataSuccess: "Data reset!",
+    yesDeleteEverything: "Yes, delete everything",
+    yourData: "Your Data",
+    downloadMyData: "Download my data",
+    manageProfile: "Manage your profile and account",
+    appPreferences: "App Preferences",
+    nutritionPreferences: "Nutrition Preferences",
+    injuriesForm: "Injuries & Limitations",
     sedentary: "Sedentary", lightlyActive: "Lightly active",
     moderatelyActive: "Moderately active", veryActive: "Very active",
     extremelyActive: "Extremely active", loseWeight: "Lose weight",
@@ -184,6 +224,12 @@ const en: Translation = {
     forgotPassword: "Forgot password?", resetPassword: "Reset password",
     noAccount: "Don't have an account?", haveAccount: "Already have an account?",
     signUp: "Sign up", signIn: "Sign in", verifyEmail: "Verify your email",
+  },
+  offline: {
+    noConnection: "No internet connection",
+    readOnlyMode: "You're offline — changes won't be saved until you reconnect",
+    offline: "Offline",
+    backOnline: "Back online — all systems go!",
   },
   ai: {
     nutritionCoach: "Nutrition Coach", workoutCoach: "Workout Coach",

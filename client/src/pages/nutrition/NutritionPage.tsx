@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi, customFoodsApi, weightApi, workoutsApi,
 } from "../../api";
 import { useAuthStore } from "../../store/authStore";
+import { useTranslation } from "../../i18n";
 import type { FoodLog, FoodTotals, CalorieGoal, WaterLog, CustomFood } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -1909,6 +1910,7 @@ function formatFastingDuration(ms: number): string {
 
 // ── Main Nutrition page ───────────────────────────────────────────────────────
 export default function NutritionPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { hash } = useLocation();
 
@@ -2356,7 +2358,7 @@ export default function NutritionPage() {
       {/* Header: title + date nav */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Nutrition</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("nutrition.title")}</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{format(parseISO(date), "EEEE, MMMM d")}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -2380,10 +2382,10 @@ export default function NutritionPage() {
 
         {/* ── Calories card ── */}
         <Card className="lg:col-span-1">
-          <CardHeader title="Calories" />
+          <CardHeader title={t("common.calories")} />
           <div className="text-center py-2">
             <p className="text-4xl font-bold text-gray-900 dark:text-white dark:text-white">{Math.round(effectiveTotals.calories)}</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">kcal consumed{(suppMacros.calories + customSuppMacros.calories) > 0 ? <span className="text-purple-600"> (incl. supps)</span> : ""}</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">{t("common.kcal")} {t("nutrition.caloriesConsumed").toLowerCase()}{(suppMacros.calories + customSuppMacros.calories) > 0 ? <span className="text-purple-600"> (incl. supps)</span> : ""}</p>
             {caloriesBurned > 0 && (
               <div className="mt-1.5">
                 <button
@@ -2391,7 +2393,7 @@ export default function NutritionPage() {
                   onClick={() => setShowBurnedBreakdown((v) => !v)}
                   className="inline-flex items-center gap-1 text-sm text-orange-500 dark:text-orange-400 font-semibold hover:text-orange-600 dark:hover:text-orange-300 transition-colors"
                 >
-                  🔥 -{Math.round(caloriesBurned)} kcal burned
+                  🔥 -{Math.round(caloriesBurned)} {t("common.kcal")} {t("common.burned")}
                   {burnedWorkouts.length > 0 && (
                     <span className="text-xs text-orange-400">{showBurnedBreakdown ? "▲" : "▼"}</span>
                   )}
@@ -2578,7 +2580,7 @@ export default function NutritionPage() {
           className={fastingActive ? "border-violet-400 dark:border-violet-600 text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/30 hover:bg-violet-100 dark:hover:bg-violet-900/50 font-medium tabular-nums" : ""}
           title={fastingActive ? `End fast · ${formatFastingDuration(fastingElapsed)} elapsed` : "Start fasting timer"}
         >
-          {fastingActive ? `⏸ ${formatFastingDuration(fastingElapsed)}` : "⏱ Start Fast"}
+          {fastingActive ? `⏸ ${formatFastingDuration(fastingElapsed)}` : `⏱ ${t("nutrition.startFast")}`}
         </Button>
         <Button
           variant="secondary"
@@ -2625,7 +2627,7 @@ export default function NutritionPage() {
           <div className="flex items-center gap-3">
             <span className="text-2xl">🕐</span>
             <div>
-              <p className="font-semibold text-violet-800 text-sm">Fasting window active</p>
+              <p className="font-semibold text-violet-800 text-sm">{t("nutrition.fastingTimer")}</p>
               <p className="text-xs text-violet-500 mt-0.5">
                 Started at {fastingStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </p>
@@ -2772,7 +2774,7 @@ export default function NutritionPage() {
               : `Nothing was logged on ${format(parseISO(date), "MMM d")}.`}
           </p>
           <div className="flex gap-2 justify-center">
-            <Button onClick={() => setShowForm(true)}>Log Food</Button>
+            <Button onClick={() => setShowForm(true)}>{t("nutrition.logFood")}</Button>
             <Button variant="secondary" onClick={() => navigate("/chat?agent=nutritionist")}>
               Ask Nutritionist
             </Button>
@@ -2871,7 +2873,7 @@ export default function NutritionPage() {
       {/* ── Water tracking widget ─────────────────────────────────────────── */}
       {trackWater && <Card id="water-section" className="p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">💧 Water Intake</h3>
+          <h3 className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">💧 {t("nutrition.waterIntake")}</h3>
           <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">
             <span className="font-bold text-blue-600">{Math.round(waterTotal / 100) / 10}L</span>
             {" / "}
@@ -2943,7 +2945,7 @@ export default function NutritionPage() {
       <Card>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">💊 Supplements</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white">💊 {t("nutrition.supplements")}</h3>
             <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">Click to toggle · ✏️ edits macros · preferences saved to your device</p>
           </div>
           <div className="flex items-center gap-2">
@@ -3127,7 +3129,7 @@ export default function NutritionPage() {
       <Modal
         open={showForm}
         onClose={() => { setShowForm(false); setEditItem(null); }}
-        title={editItem ? "Edit Food Entry" : "Log Food"}
+        title={editItem ? t("common.edit") : t("nutrition.logFood")}
         size="md"
       >
         <LogFoodForm
@@ -3264,8 +3266,8 @@ export default function NutritionPage() {
                   <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">kg</span>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" className="flex-1" onClick={() => { setShowWeightFab(false); setWeightVal(""); }}>Cancel</Button>
-                  <Button size="sm" className="flex-1" loading={savingWeight} onClick={handleLogWeight}>Save</Button>
+                  <Button size="sm" variant="secondary" className="flex-1" onClick={() => { setShowWeightFab(false); setWeightVal(""); }}>{t("common.cancel")}</Button>
+                  <Button size="sm" className="flex-1" loading={savingWeight} onClick={handleLogWeight}>{t("common.save")}</Button>
                 </div>
               </>
             )}

@@ -87,7 +87,7 @@ export function ProfileSummaryBar() {
         {data.bodyFatPct != null && (
           <button
             onClick={() => navigate("/progress")}
-            title="View body composition in Progress & Goals"
+            title="View body composition in Progress"
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-purple-200 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800 text-xs font-medium hover:opacity-80 transition-all"
           >
             <span>🫀</span>

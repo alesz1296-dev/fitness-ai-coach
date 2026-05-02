@@ -8,6 +8,7 @@ import {
   changePassword,
   deleteAccount,
   exportData,
+  resetUserData,
 } from "../controllers/userController.js";
 
 const router = Router();
@@ -29,5 +30,8 @@ router.get("/export", exportData);
 
 // DELETE /api/users/account
 router.delete("/account", deleteAccount);
+
+// DELETE /api/users/data  — wipe all user logs/goals/workouts but keep account
+router.delete("/data", resetUserData);
 
 export default router;
