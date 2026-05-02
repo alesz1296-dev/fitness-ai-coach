@@ -2915,7 +2915,8 @@ function MonthlyPlanBuilderModal({
   onClose: () => void;
   onBuilt: (msg: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const weekdayLabels = getWeekdayLabels(i18n.language);
   const defaultPattern = DEFAULT_DAY_PATTERNS[Math.min(trainingDays, 7)] ?? DEFAULT_DAY_PATTERNS[4];
 
   const [days, setDays] = useState<BuilderDay[]>(
