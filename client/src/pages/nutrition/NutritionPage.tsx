@@ -26,25 +26,46 @@ function getMealOptions(t: (k: string) => string) {
 }
 
 // Cooking oil presets — kcal and fat grams added on top of the food's macros
-const COOKING_OILS: Record<string, { label: string; kcal: number; fat: number }> = {
-  none:          { label: "No oil",             kcal: 0,   fat: 0    },
-  spray:         { label: "Spray oil (~1 sec)", kcal: 10,  fat: 1.1  },
-  olive_tsp:     { label: "Olive oil – 1 tsp",  kcal: 40,  fat: 4.5  },
-  olive_tbsp:    { label: "Olive oil – 1 tbsp", kcal: 119, fat: 13.4 },
-  oil_tsp:       { label: "Oil – 1 tsp",        kcal: 35,  fat: 4.0  },
-  oil_tbsp:      { label: "Oil – 1 tbsp",       kcal: 106, fat: 12.0 },
+const COOKING_OILS_DATA: Record<string, { kcal: number; fat: number }> = {
+  none:      { kcal: 0,   fat: 0    },
+  spray:     { kcal: 10,  fat: 1.1  },
+  olive_tsp: { kcal: 40,  fat: 4.5  },
+  olive_tbsp:{ kcal: 119, fat: 13.4 },
+  oil_tsp:   { kcal: 35,  fat: 4.0  },
+  oil_tbsp:  { kcal: 106, fat: 12.0 },
 };
+function getCookingOils(t: (k: string) => string): Record<string, { label: string; kcal: number; fat: number }> {
+  return {
+    none:      { label: t("nutrition.oilNone"),      ...COOKING_OILS_DATA.none      },
+    spray:     { label: t("nutrition.oilSpray"),     ...COOKING_OILS_DATA.spray     },
+    olive_tsp: { label: t("nutrition.oilOliveTsp"),  ...COOKING_OILS_DATA.olive_tsp },
+    olive_tbsp:{ label: t("nutrition.oilOliveTbsp"), ...COOKING_OILS_DATA.olive_tbsp},
+    oil_tsp:   { label: t("nutrition.oilTsp"),       ...COOKING_OILS_DATA.oil_tsp   },
+    oil_tbsp:  { label: t("nutrition.oilTbsp"),      ...COOKING_OILS_DATA.oil_tbsp  },
+  };
+}
 
 // Breading presets — kcal and carbs added on top of the food's macros (per serving coated)
-const BREADING_OPTIONS: Record<string, { label: string; kcal: number; carbs: number; fat: number }> = {
-  none:          { label: "No breading",                  kcal: 0,  carbs: 0,  fat: 0   },
-  flour_light:   { label: "Flour coat (light dusting)",   kcal: 28, carbs: 6,  fat: 0.3 },
-  breadcrumbs:   { label: "Breadcrumbs (standard)",       kcal: 65, carbs: 13, fat: 1   },
-  panko:         { label: "Panko breadcrumbs",            kcal: 60, carbs: 12, fat: 0.8 },
-  beer_batter:   { label: "Beer batter",                  kcal: 90, carbs: 16, fat: 3   },
-  tempura:       { label: "Tempura batter",               kcal: 75, carbs: 14, fat: 2.5 },
-  cornmeal:      { label: "Cornmeal / polenta crust",     kcal: 55, carbs: 12, fat: 0.5 },
+const BREADING_DATA: Record<string, { kcal: number; carbs: number; fat: number }> = {
+  none:        { kcal: 0,  carbs: 0,  fat: 0   },
+  flour_light: { kcal: 28, carbs: 6,  fat: 0.3 },
+  breadcrumbs: { kcal: 65, carbs: 13, fat: 1   },
+  panko:       { kcal: 60, carbs: 12, fat: 0.8 },
+  beer_batter: { kcal: 90, carbs: 16, fat: 3   },
+  tempura:     { kcal: 75, carbs: 14, fat: 2.5 },
+  cornmeal:    { kcal: 55, carbs: 12, fat: 0.5 },
 };
+function getBreadingOptions(t: (k: string) => string): Record<string, { label: string; kcal: number; carbs: number; fat: number }> {
+  return {
+    none:        { label: t("nutrition.breadNone"),        ...BREADING_DATA.none        },
+    flour_light: { label: t("nutrition.breadFlour"),       ...BREADING_DATA.flour_light },
+    breadcrumbs: { label: t("nutrition.breadBreadcrumbs"), ...BREADING_DATA.breadcrumbs },
+    panko:       { label: t("nutrition.breadPanko"),       ...BREADING_DATA.panko       },
+    beer_batter: { label: t("nutrition.breadBeer"),        ...BREADING_DATA.beer_batter },
+    tempura:     { label: t("nutrition.breadTempura"),     ...BREADING_DATA.tempura     },
+    cornmeal:    { label: t("nutrition.breadCornmeal"),    ...BREADING_DATA.cornmeal    },
+  };
+}
 
 // Quantity reference — common household measures → approximate grams
 const UNIT_REFERENCE: { unit: string; approxG: number; note: string }[] = [
@@ -64,18 +85,32 @@ const UNIT_REFERENCE: { unit: string; approxG: number; note: string }[] = [
 ];
 
 // Sweetener presets — for coffee, tea, oatmeal, yogurt, etc.
-const SWEETENER_OPTIONS: Record<string, { label: string; kcal: number; carbs: number }> = {
-  none:          { label: "No sweetener",           kcal: 0,  carbs: 0   },
-  sugar_tsp:     { label: "White sugar – 1 tsp",    kcal: 16, carbs: 4   },
-  sugar_tbsp:    { label: "White sugar – 1 tbsp",   kcal: 48, carbs: 12  },
-  brown_tsp:     { label: "Brown sugar – 1 tsp",    kcal: 17, carbs: 4.5 },
-  honey_tsp:     { label: "Honey – 1 tsp",          kcal: 21, carbs: 5.7 },
-  honey_tbsp:    { label: "Honey – 1 tbsp",         kcal: 64, carbs: 17  },
-  agave_tsp:     { label: "Agave syrup – 1 tsp",    kcal: 20, carbs: 5   },
-  maple_tsp:     { label: "Maple syrup – 1 tsp",    kcal: 18, carbs: 4.5 },
-  stevia:        { label: "Stevia / sweetener (0)", kcal: 0,  carbs: 0   },
-  condensed_tbsp:{ label: "Condensed milk – 1 tbsp",kcal: 62, carbs: 10.5},
+const SWEETENER_DATA: Record<string, { kcal: number; carbs: number }> = {
+  none:           { kcal: 0,  carbs: 0    },
+  sugar_tsp:      { kcal: 16, carbs: 4    },
+  sugar_tbsp:     { kcal: 48, carbs: 12   },
+  brown_tsp:      { kcal: 17, carbs: 4.5  },
+  honey_tsp:      { kcal: 21, carbs: 5.7  },
+  honey_tbsp:     { kcal: 64, carbs: 17   },
+  agave_tsp:      { kcal: 20, carbs: 5    },
+  maple_tsp:      { kcal: 18, carbs: 4.5  },
+  stevia:         { kcal: 0,  carbs: 0    },
+  condensed_tbsp: { kcal: 62, carbs: 10.5 },
 };
+function getSweetenerOptions(t: (k: string) => string): Record<string, { label: string; kcal: number; carbs: number }> {
+  return {
+    none:           { label: t("nutrition.sweetNone"),      ...SWEETENER_DATA.none           },
+    sugar_tsp:      { label: t("nutrition.sweetSugarTsp"),  ...SWEETENER_DATA.sugar_tsp      },
+    sugar_tbsp:     { label: t("nutrition.sweetSugarTbsp"), ...SWEETENER_DATA.sugar_tbsp     },
+    brown_tsp:      { label: t("nutrition.sweetBrownTsp"),  ...SWEETENER_DATA.brown_tsp      },
+    honey_tsp:      { label: t("nutrition.sweetHoneyTsp"),  ...SWEETENER_DATA.honey_tsp      },
+    honey_tbsp:     { label: t("nutrition.sweetHoneyTbsp"), ...SWEETENER_DATA.honey_tbsp     },
+    agave_tsp:      { label: t("nutrition.sweetAgave"),     ...SWEETENER_DATA.agave_tsp      },
+    maple_tsp:      { label: t("nutrition.sweetMaple"),     ...SWEETENER_DATA.maple_tsp      },
+    stevia:         { label: t("nutrition.sweetStevia"),    ...SWEETENER_DATA.stevia         },
+    condensed_tbsp: { label: t("nutrition.sweetCondensed"), ...SWEETENER_DATA.condensed_tbsp },
+  };
+}
 
 // ── Food-type detection helpers ───────────────────────────────────────────────
 // These decide which "cooking extras" make sense for the selected food.
@@ -171,45 +206,51 @@ function calcMacro(
 }
 
 // ── Food tag filter chips — grouped into 3 categories ────────────────────────
-const CUISINE_TAGS = [
-  { tag: "japanese",       label: "Japanese",       emoji: "🍱" },
-  { tag: "italian",        label: "Italian",        emoji: "🍝" },
-  { tag: "mexican",        label: "Mexican",        emoji: "🌮" },
-  { tag: "middle-eastern", label: "Middle Eastern", emoji: "🧆" },
-  { tag: "korean",         label: "Korean",         emoji: "🥢" },
-];
+function getCuisineTags(t: (k: string) => string) {
+  return [
+    { tag: "japanese",       label: t("nutrition.tagJapanese"),     emoji: "🍱" },
+    { tag: "italian",        label: t("nutrition.tagItalian"),      emoji: "🍝" },
+    { tag: "mexican",        label: t("nutrition.tagMexican"),      emoji: "🌮" },
+    { tag: "middle-eastern", label: t("nutrition.tagMiddleEastern"),emoji: "🧆" },
+    { tag: "korean",         label: t("nutrition.tagKorean"),       emoji: "🥢" },
+  ];
+}
 
-const DIETARY_TAGS = [
-  { tag: "fit",          label: "Fit",          emoji: "💪" },
-  { tag: "keto",         label: "Keto",         emoji: "🥑" },
-  { tag: "high-protein", label: "High-Protein", emoji: "🍗" },
-  { tag: "vegan",        label: "Vegan",        emoji: "🌱" },
-  { tag: "vegetarian",   label: "Vegetarian",   emoji: "🥦" },
-  { tag: "fast-food",    label: "Fast Food",    emoji: "🍔" },
-  { tag: "dessert",      label: "Desserts",     emoji: "🍰" },
-  { tag: "integral",     label: "Whole Grain",  emoji: "🌾" },
-  { tag: "low-carb",     label: "Low-Carb",     emoji: "🥗" },
-  { tag: "high-sugar",   label: "High-Sugar",   emoji: "🍬" },
-];
+function getDietaryTags(t: (k: string) => string) {
+  return [
+    { tag: "fit",          label: t("nutrition.tagFit"),         emoji: "💪" },
+    { tag: "keto",         label: t("nutrition.tagKeto"),        emoji: "🥑" },
+    { tag: "high-protein", label: t("nutrition.tagHighProtein"), emoji: "🍗" },
+    { tag: "vegan",        label: t("nutrition.tagVegan"),       emoji: "🌱" },
+    { tag: "vegetarian",   label: t("nutrition.tagVegetarian"),  emoji: "🥦" },
+    { tag: "fast-food",    label: t("nutrition.tagFastFood"),    emoji: "🍔" },
+    { tag: "dessert",      label: t("nutrition.tagDesserts"),    emoji: "🍰" },
+    { tag: "integral",     label: t("nutrition.tagWholeGrain"),  emoji: "🌾" },
+    { tag: "low-carb",     label: t("nutrition.tagLowCarb"),     emoji: "🥗" },
+    { tag: "high-sugar",   label: t("nutrition.tagHighSugar"),   emoji: "🍬" },
+  ];
+}
 
-const FOOD_TYPE_TAGS = [
-  { tag: "meat",      label: "Meats",      emoji: "🥩" },
-  { tag: "seafood",   label: "Seafood",    emoji: "🦐" },
-  { tag: "cheese",    label: "Cheese",     emoji: "🧀" },
-  { tag: "soup",      label: "Soups",      emoji: "🍲" },
-  { tag: "sausage",   label: "Sausages",   emoji: "🌭" },
-  { tag: "vegetable", label: "Vegetables", emoji: "🫛" },
-  { tag: "fruit",     label: "Fruits",     emoji: "🍎" },
-  { tag: "smoothie",  label: "Smoothies",  emoji: "🥤" },
-  { tag: "salad",     label: "Salads",     emoji: "🥗" },
-  { tag: "pasta",     label: "Pasta",      emoji: "🍜" },
-  { tag: "dairy",     label: "Dairy",      emoji: "🥛" },
-];
+function getFoodTypeTags(t: (k: string) => string) {
+  return [
+    { tag: "meat",      label: t("nutrition.tagMeats"),      emoji: "🥩" },
+    { tag: "seafood",   label: t("nutrition.tagSeafood"),    emoji: "🦐" },
+    { tag: "cheese",    label: t("nutrition.tagCheese"),     emoji: "🧀" },
+    { tag: "soup",      label: t("nutrition.tagSoups"),      emoji: "🍲" },
+    { tag: "sausage",   label: t("nutrition.tagSausages"),   emoji: "🌭" },
+    { tag: "vegetable", label: t("nutrition.tagVegetables"), emoji: "🫛" },
+    { tag: "fruit",     label: t("nutrition.tagFruits"),     emoji: "🍎" },
+    { tag: "smoothie",  label: t("nutrition.tagSmoothies"),  emoji: "🥤" },
+    { tag: "salad",     label: t("nutrition.tagSalads"),     emoji: "🥗" },
+    { tag: "pasta",     label: t("nutrition.tagPasta"),      emoji: "🍜" },
+    { tag: "dairy",     label: t("nutrition.tagDairy"),      emoji: "🥛" },
+  ];
+}
 
 // Flat list for backward-compat tag display in food rows (TAG_COLORS still used)
 const TAG_FILTERS = [
   { tag: "", label: "All", emoji: "🍽️" },
-  ...CUISINE_TAGS, ...DIETARY_TAGS, ...FOOD_TYPE_TAGS,
+  ...getCuisineTags((k) => k), ...getDietaryTags((k) => k), ...getFoodTypeTags((k) => k),
 ];
 
 const TAG_COLORS: Record<string, string> = {
@@ -504,7 +545,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
             <div>
               <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{t("nutrition.cuisine")}</p>
               <div className="flex flex-wrap gap-1.5">
-                {CUISINE_TAGS.map(({ tag, label, emoji }) => (
+                {getCuisineTags(t as (k: string) => string).map(({ tag, label, emoji }) => (
                   <button key={tag} type="button"
                     onClick={(e) => handleTagClick(tag, e)}
                     onDoubleClick={() => handleTagDeselect(tag)}
@@ -517,7 +558,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
             <div>
               <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{t("nutrition.dietaryCategory")}</p>
               <div className="flex flex-wrap gap-1.5">
-                {DIETARY_TAGS.map(({ tag, label, emoji }) => (
+                {getDietaryTags(t as (k: string) => string).map(({ tag, label, emoji }) => (
                   <button key={tag} type="button"
                     onClick={(e) => handleTagClick(tag, e)}
                     onDoubleClick={() => handleTagDeselect(tag)}
@@ -530,7 +571,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
             <div>
               <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{t("nutrition.foodType")}</p>
               <div className="flex flex-wrap gap-1.5">
-                {FOOD_TYPE_TAGS.map(({ tag, label, emoji }) => (
+                {getFoodTypeTags(t as (k: string) => string).map(({ tag, label, emoji }) => (
                   <button key={tag} type="button"
                     onClick={(e) => handleTagClick(tag, e)}
                     onDoubleClick={() => handleTagDeselect(tag)}
@@ -723,9 +764,9 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
   const [meal,     setMeal]     = useState<MealVal>(
     (editItem?.meal as MealVal | undefined) ?? ""
   );
-  const [cookingOil,   setCookingOil]   = useState<keyof typeof COOKING_OILS>("none");
-  const [breading,     setBreading]     = useState<keyof typeof BREADING_OPTIONS>("none");
-  const [sweetener,    setSweetener]    = useState<keyof typeof SWEETENER_OPTIONS>("none");
+  const [cookingOil,   setCookingOil]   = useState<keyof typeof COOKING_OILS_DATA>("none");
+  const [breading,     setBreading]     = useState<keyof typeof BREADING_DATA>("none");
+  const [sweetener,    setSweetener]    = useState<keyof typeof SWEETENER_DATA>("none");
   const [isCheatMeal,  setIsCheatMeal]  = useState(editItem?.isCheatMeal ?? false);
   const [showUnitRef, setShowUnitRef] = useState(false);
   const [loading,  setLoading]  = useState(false);
@@ -775,9 +816,9 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
 
     setLoading(true); setError("");
     try {
-      const oil   = COOKING_OILS[cookingOil];
-      const bread = BREADING_OPTIONS[breading];
-      const sweet = SWEETENER_OPTIONS[sweetener];
+      const oil   = COOKING_OILS_DATA[cookingOil];
+      const bread = BREADING_DATA[breading];
+      const sweet = SWEETENER_DATA[sweetener];
       const extraKcal  = oil.kcal  + bread.kcal  + sweet.kcal;
       const extraCarbs = bread.carbs + sweet.carbs;
       const extraFat   = oil.fat   + bread.fat;
@@ -911,31 +952,31 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
               <Select
                 label={t("nutrition.cookingOil")}
                 value={cookingOil}
-                onChange={(e) => setCookingOil(e.target.value as keyof typeof COOKING_OILS)}
-                options={Object.entries(COOKING_OILS).map(([v, o]) => ({ value: v, label: o.label }))}
+                onChange={(e) => setCookingOil(e.target.value as keyof typeof COOKING_OILS_DATA)}
+                options={Object.entries(getCookingOils(t as (k: string) => string)).map(([v, o]) => ({ value: v as string, label: o.label }))}
               />
             )}
             {showsBreading(baseFood) && (
               <Select
                 label={t("nutrition.breadingCoating")}
                 value={breading}
-                onChange={(e) => setBreading(e.target.value as keyof typeof BREADING_OPTIONS)}
-                options={Object.entries(BREADING_OPTIONS).map(([v, o]) => ({ value: v, label: o.label }))}
+                onChange={(e) => setBreading(e.target.value as keyof typeof BREADING_DATA)}
+                options={Object.entries(getBreadingOptions(t as (k: string) => string)).map(([v, o]) => ({ value: v as string, label: o.label }))}
               />
             )}
             {showsSweetener(baseFood) && (
               <Select
                 label={t("nutrition.sweetenerSugar")}
                 value={sweetener}
-                onChange={(e) => setSweetener(e.target.value as keyof typeof SWEETENER_OPTIONS)}
-                options={Object.entries(SWEETENER_OPTIONS).map(([v, o]) => ({ value: v, label: o.label }))}
+                onChange={(e) => setSweetener(e.target.value as keyof typeof SWEETENER_DATA)}
+                options={Object.entries(getSweetenerOptions(t as (k: string) => string)).map(([v, o]) => ({ value: v as string, label: o.label }))}
               />
             )}
           </div>
           {(cookingOil !== "none" || breading !== "none" || sweetener !== "none") && (() => {
-            const oil   = COOKING_OILS[cookingOil];
-            const bread = BREADING_OPTIONS[breading];
-            const sweet = SWEETENER_OPTIONS[sweetener];
+            const oil   = COOKING_OILS_DATA[cookingOil];
+            const bread = BREADING_DATA[breading];
+            const sweet = SWEETENER_DATA[sweetener];
             const totalKcal  = oil.kcal + bread.kcal + sweet.kcal;
             const totalCarbs = bread.carbs + sweet.carbs;
             const totalFat   = oil.fat + bread.fat;
@@ -1394,7 +1435,7 @@ function DeficitSurplusBanner({ consumed, target, goalType }: {
     return (
       <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 bg-green-50 border border-green-200 text-sm text-green-800 mt-3">
         <span>🎯</span>
-        <p><span className="font-semibold">{t("nutrition.rightOnTarget")}</span> You're within 80 kcal of your daily goal.</p>
+        <p><span className="font-semibold">{t("nutrition.rightOnTarget")}</span> {t("nutrition.within80Kcal")}</p>
       </div>
     );
   }
@@ -1407,10 +1448,10 @@ function DeficitSurplusBanner({ consumed, target, goalType }: {
         <div className="flex items-start gap-2 rounded-xl px-4 py-2.5 bg-red-50 border border-red-300 text-sm text-red-800 mt-3" style={{ boxShadow: "0 0 0 1px rgba(239,68,68,0.20)" }}>
           <span className="mt-0.5">⚠️</span>
           <p>
-            <span className="font-semibold">⚠ {Math.round(pctOff * 100)}% over your {Math.round(target)} kcal goal ({absDiff} kcal surplus).</span>{" "}
+            <span className="font-semibold">{t("nutrition.surplusLargeTitle", { pct: Math.round(pctOff * 100), target: Math.round(target), kcal: absDiff })}</span>{" "}
             {isBuilding
-              ? "Even for a bulk, this surplus is large — excess may convert to fat."
-              : "This significantly exceeds your daily target and will impact your progress."}
+              ? t("nutrition.surplusLargeBulk")
+              : t("nutrition.surplusLargeDefault")}
           </p>
         </div>
       );
@@ -1419,10 +1460,10 @@ function DeficitSurplusBanner({ consumed, target, goalType }: {
       <div className="flex items-start gap-2 rounded-xl px-4 py-2.5 bg-orange-50 border border-orange-200 text-sm text-orange-800 mt-3">
         <span className="mt-0.5">📈</span>
         <p>
-          <span className="font-semibold">Calorie surplus of {absDiff} kcal.</span>{" "}
+          <span className="font-semibold">{t("nutrition.surplusTitle", { kcal: absDiff })}</span>{" "}
           {isBuilding
-            ? "You're in a planned surplus — good for muscle building. Make sure protein is on track."
-            : "You've exceeded your daily target. This contributes to weight gain over time."}
+            ? t("nutrition.surplusBulk")
+            : t("nutrition.surplusDefault")}
         </p>
       </div>
     );
@@ -1436,10 +1477,10 @@ function DeficitSurplusBanner({ consumed, target, goalType }: {
       <div className="flex items-start gap-2 rounded-xl px-4 py-2.5 bg-red-50 border border-red-300 text-sm text-red-800 mt-3" style={{ boxShadow: "0 0 0 1px rgba(239,68,68,0.20)" }}>
         <span className="mt-0.5">⚠️</span>
         <p>
-          <span className="font-semibold">⚠ {Math.round(pctOff * 100)}% under your {Math.round(target)} kcal goal ({absDiff} kcal deficit).</span>{" "}
+          <span className="font-semibold">{t("nutrition.deficitLargeTitle", { pct: Math.round(pctOff * 100), target: Math.round(target), kcal: absDiff })}</span>{" "}
           {isCutting
-            ? "This deficit is too aggressive — risks muscle loss and metabolic adaptation."
-            : "You're significantly under your target. Log missing meals or increase intake."}
+            ? t("nutrition.deficitLargeCut")
+            : t("nutrition.deficitLargeDefault")}
         </p>
       </div>
     );
@@ -1448,10 +1489,10 @@ function DeficitSurplusBanner({ consumed, target, goalType }: {
     <div className="flex items-start gap-2 rounded-xl px-4 py-2.5 bg-blue-50 border border-blue-200 text-sm text-blue-800 mt-3">
       <span className="mt-0.5">📉</span>
       <p>
-        <span className="font-semibold">Calorie deficit of {absDiff} kcal.</span>{" "}
+        <span className="font-semibold">{t("nutrition.deficitTitle", { kcal: absDiff })}</span>{" "}
         {isCutting
-          ? "You're on track for fat loss. Ensure you're hitting your protein target to protect muscle."
-          : "You're under your daily target. Log more meals if this isn't intentional."}
+          ? t("nutrition.deficitCut")
+          : t("nutrition.deficitDefault")}
       </p>
     </div>
   );
@@ -1669,7 +1710,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
 
   const saveDish = async () => {
     if (ingredients.length === 0) { setError(t("nutrition.addOneIngredient")); return; }
-    const name = dishName.trim() || "Custom Dish";
+    const name = dishName.trim() || t("nutrition.customDish");
     setLoading(true); setError("");
     try {
       type MealType = "breakfast" | "lunch" | "dinner" | "snack";
@@ -1842,7 +1883,7 @@ function BuildDishModal({ open, onClose, selectedDate, onSaved }: {
 // ── Fasting timer helpers ─────────────────────────────────────────────────────
 // ── Menstrual cycle phase helpers ─────────────────────────────────────────────
 type CyclePhase = {
-  name: "Menstruation" | "Follicular" | "Ovulation" | "Luteal";
+  name: string;
   day: number;
   emoji: string;
   color: string;
@@ -1850,7 +1891,8 @@ type CyclePhase = {
   workoutTip: string;
 };
 
-function getCyclePhase(periodStart: string, cycleLength = 28): CyclePhase | null {
+function getCyclePhase(periodStart: string, cycleLength = 28, t?: (k: string) => string): CyclePhase | null {
+  const _t = t ?? ((k: string) => k);
   const start = new Date(periodStart);
   if (isNaN(start.getTime())) return null;
   const today = new Date();
@@ -1859,35 +1901,35 @@ function getCyclePhase(periodStart: string, cycleLength = 28): CyclePhase | null
   const dayOfCycle = (daysSince % cycleLength) + 1;
 
   if (dayOfCycle <= 5) return {
-    name: "Menstruation", day: dayOfCycle, emoji: "🔴",
+    name: _t("nutrition.phaseMenstruation"), day: dayOfCycle, emoji: "🔴",
     color: "border-red-200 bg-red-50 text-red-800",
-    nutritionTip: "Boost iron (red meat, lentils, spinach) and anti-inflammatory foods (omega-3, berries, ginger). Avoid excess sodium to reduce bloating.",
-    workoutTip: "Gentle movement is ideal — yoga, walks, light cycling. Skip very heavy lifting if you feel fatigued.",
+    nutritionTip: _t("nutrition.phaseMenstruationNutrition"),
+    workoutTip: _t("nutrition.phaseMenstruationWorkout"),
   };
   if (dayOfCycle <= 13) return {
-    name: "Follicular", day: dayOfCycle, emoji: "🟢",
+    name: _t("nutrition.phaseFollicular"), day: dayOfCycle, emoji: "🟢",
     color: "border-green-200 bg-green-50 text-green-800",
-    nutritionTip: "Rising oestrogen boosts insulin sensitivity. Slightly increase carbs to fuel higher-energy sessions.",
-    workoutTip: "Great time to push intensity — strength training, intervals, and new exercises respond well.",
+    nutritionTip: _t("nutrition.phaseFollicularNutrition"),
+    workoutTip: _t("nutrition.phaseFollicularWorkout"),
   };
   if (dayOfCycle <= 16) return {
-    name: "Ovulation", day: dayOfCycle, emoji: "🟡",
+    name: _t("nutrition.phaseOvulation"), day: dayOfCycle, emoji: "🟡",
     color: "border-yellow-200 bg-yellow-50 text-yellow-800",
-    nutritionTip: "Peak performance window. Maintain protein and carbs. Zinc (pumpkin seeds, meat) supports hormonal balance.",
-    workoutTip: "Peak strength and energy. Ideal for PRs, HIIT, and high-volume sessions. Warm up well — laxity increases near ovulation.",
+    nutritionTip: _t("nutrition.phaseOvulationNutrition"),
+    workoutTip: _t("nutrition.phaseOvulationWorkout"),
   };
   return {
-    name: "Luteal", day: dayOfCycle, emoji: "🟣",
+    name: _t("nutrition.phaseLuteal"), day: dayOfCycle, emoji: "🟣",
     color: "border-purple-200 bg-purple-50 text-purple-800",
-    nutritionTip: "Cravings and hunger increase — prioritise magnesium (dark chocolate, nuts, seeds) and fibre to manage them. You need ~100–300 kcal more.",
-    workoutTip: "Moderate your intensity as progesterone rises. Strength is maintained but recovery takes longer — prioritise sleep and rest days.",
+    nutritionTip: _t("nutrition.phaseLutealNutrition"),
+    workoutTip: _t("nutrition.phaseLutealWorkout"),
   };
 }
 
 function CyclePhaseBanner({ periodStart, cycleLength }: { periodStart: string; cycleLength?: number | null }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const phase = getCyclePhase(periodStart, cycleLength ?? 28);
+  const phase = getCyclePhase(periodStart, cycleLength ?? 28, t as (k: string) => string);
   if (!phase) return null;
 
   return (
@@ -1900,7 +1942,7 @@ function CyclePhaseBanner({ periodStart, cycleLength }: { periodStart: string; c
         <div className="flex items-center gap-2">
           <span className="text-lg">{phase.emoji}</span>
           <div>
-            <p className="font-semibold text-sm">{phase.name} phase — Day {phase.day}</p>
+            <p className="font-semibold text-sm">{phase.name} {t("nutrition.phaseDay")} {phase.day}</p>
             <p className="text-xs opacity-70">{t("nutrition.tapPhaseNutrition")}</p>
           </div>
         </div>
@@ -2000,12 +2042,12 @@ export default function NutritionPage() {
 
   // ── Supplements ──────────────────────────────────────────────────────────────
   const SUPPLEMENT_DEFS = {
-    creatine:     { name: "Creatine Monohydrate", emoji: "💊", unit: "g",     defaultQty: 5,  cal: 0,   p: 0,  c: 0,  f: 0   },
-    omega3:       { name: "Omega-3 Fish Oil",      emoji: "🐟", unit: "caps",  defaultQty: 3,  cal: 9,   p: 0,  c: 0,  f: 1   },
-    whey:         { name: "Whey Protein Shake",    emoji: "🥤", unit: "scoop", defaultQty: 1,  cal: 120, p: 25, c: 5,  f: 2   },
-    casein:       { name: "Casein Protein Shake",  emoji: "🌙", unit: "scoop", defaultQty: 1,  cal: 120, p: 24, c: 6,  f: 1.5 },
-    plant:        { name: "Plant Protein Shake",   emoji: "🌿", unit: "scoop", defaultQty: 1,  cal: 110, p: 20, c: 8,  f: 3   },
-    mass_gainer:  { name: "Mass Gainer Shake",     emoji: "💪", unit: "scoop", defaultQty: 1,  cal: 380, p: 25, c: 65, f: 5   },
+    creatine:     { name: t("nutrition.suppCreatine"), emoji: "💊", unit: "g",     defaultQty: 5,  cal: 0,   p: 0,  c: 0,  f: 0   },
+    omega3:       { name: t("nutrition.suppOmega3"),      emoji: "🐟", unit: "caps",  defaultQty: 3,  cal: 9,   p: 0,  c: 0,  f: 1   },
+    whey:         { name: t("nutrition.suppWhey"),    emoji: "🥤", unit: "scoop", defaultQty: 1,  cal: 120, p: 25, c: 5,  f: 2   },
+    casein:       { name: t("nutrition.suppCasein"),  emoji: "🌙", unit: "scoop", defaultQty: 1,  cal: 120, p: 24, c: 6,  f: 1.5 },
+    plant:        { name: t("nutrition.suppPlant"),   emoji: "🌿", unit: "scoop", defaultQty: 1,  cal: 110, p: 20, c: 8,  f: 3   },
+    mass_gainer:  { name: t("nutrition.suppMassGainer"),     emoji: "💪", unit: "scoop", defaultQty: 1,  cal: 380, p: 25, c: 65, f: 5   },
   };
   type SuppId = keyof typeof SUPPLEMENT_DEFS;
 
@@ -2682,7 +2724,7 @@ export default function NutritionPage() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">⭐ Favourites</p>
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">⭐ {t("nutrition.favourites")}</p>
                 {favFoods.length > 0 && (
                   <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded-full px-1.5 py-0.5">{favFoods.length}</span>
                 )}
@@ -2691,7 +2733,7 @@ export default function NutritionPage() {
                 onClick={() => setShowFavSearch((v) => !v)}
                 className="text-xs px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-100 font-medium transition-colors"
               >
-                {showFavSearch ? "✕ Cancel" : "+ Add to Favourites"}
+                {showFavSearch ? `✕ ${t("common.cancel")}` : t("nutrition.addToFavourites")}
               </button>
             </div>
 
@@ -2729,7 +2771,7 @@ export default function NutritionPage() {
             {favFoods.length === 0 && !showFavSearch ? (
               <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-xl px-3 py-2">
                 <span className="text-base">⭐</span>
-                <p className="text-xs text-amber-700 dark:text-amber-400">Pin your favourite foods here — tap <strong>"+ Add to Favourites"</strong> above, or tap ⭐ next to any logged meal.</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400">{t("nutrition.pinFavouritesHint")}</p>
               </div>
             ) : (
               <div className="flex gap-2 flex-wrap">
@@ -2746,7 +2788,7 @@ export default function NutritionPage() {
                       onClick={(e) => { e.stopPropagation(); toggleFav(fav); }}
                       role="button"
                       className="text-amber-300 hover:text-red-400 font-bold leading-none ml-0.5 cursor-pointer"
-                      title="Remove from favourites"
+                      title={t("nutrition.removeFromFavourites")}
                     >×</span>
                   </button>
                 ))}
@@ -2757,7 +2799,7 @@ export default function NutritionPage() {
           {/* ── Quick Re-log ── */}
           {frequentFoods.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-2">⚡ Quick Re-log</p>
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-2">⚡ {t("nutrition.quickRelog")}</p>
               <div className="flex gap-2 flex-wrap">
                 {frequentFoods.map((food) => (
                   <button
@@ -2863,7 +2905,7 @@ export default function NutritionPage() {
                                 <button
                                   onClick={() => toggleFav(log)}
                                   className={`text-xs px-2 py-1 rounded-lg transition-colors ${isFav(log.foodName) ? "bg-amber-100 text-amber-500" : "bg-gray-100 hover:bg-gray-200 text-gray-400 dark:text-gray-500"}`}
-                                  title={isFav(log.foodName) ? "Remove from favourites" : "Add to favourites"}
+                                  title={isFav(log.foodName) ? t("nutrition.removeFromFavourites") : t("nutrition.addToFavourites")}
                                 >⭐</button>
                                 <button
                                   onClick={() => { setEditItem(log); setShowForm(true); }}
@@ -2978,7 +3020,7 @@ export default function NutritionPage() {
             <button
               onClick={() => setShowAddCustomSupp((v) => !v)}
               className="text-xs px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300 hover:bg-purple-100 font-medium transition-colors"
-            >{showAddCustomSupp ? "✕ Cancel" : "+ Custom"}</button>
+            >{showAddCustomSupp ? `✕ ${t("common.cancel")}` : t("nutrition.addCustomSupp")}</button>
           </div>
         </div>
 
@@ -3010,14 +3052,14 @@ export default function NutritionPage() {
                   className="w-full mt-0.5 rounded-lg border border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
               </div>
               <div>
-                <label className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">Default qty</label>
+                <label className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">{t("nutrition.defaultQtyLabel")}</label>
                 <input type="number" min="1" value={newSuppDraft.defaultQty}
                   onChange={(e) => setNewSuppDraft((p) => ({ ...p, defaultQty: Number(e.target.value) }))}
                   className="w-full mt-0.5 rounded-lg border border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
               </div>
               {(["cal","p","c","f"] as const).map((key) => (
                 <div key={key}>
-                  <label className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">{key === "cal" ? "kcal" : key === "p" ? "Protein g" : key === "c" ? "Carbs g" : "Fat g"}</label>
+                  <label className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-semibold">{key === "cal" ? t("nutrition.kcalLabel") : key === "p" ? t("nutrition.proteinG") : key === "c" ? t("nutrition.carbsG") : t("nutrition.fatG")}</label>
                   <input type="number" min="0" step="0.5" value={newSuppDraft[key]}
                     onChange={(e) => setNewSuppDraft((p) => ({ ...p, [key]: Number(e.target.value) }))}
                     className="w-full mt-0.5 rounded-lg border border-purple-200 dark:border-purple-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300" />
@@ -3056,7 +3098,7 @@ export default function NutritionPage() {
                   >
                     <button
                       onClick={(e) => openSuppEdit(e, id as SuppId)}
-                      title="Edit macros per unit"
+                      title={t("nutrition.editMacros")}
                       className={`absolute top-1.5 left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] transition-colors z-10 ${
                         hasOverride ? "bg-amber-400 text-white" : "bg-gray-100 text-gray-400 dark:text-gray-500 hover:bg-gray-200 hover:text-gray-600"
                       }`}
@@ -3079,11 +3121,11 @@ export default function NutritionPage() {
                 )}
                 {isEditing && (
                   <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-2.5 text-center">
-                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-2">{def.emoji} Macros / {def.defaultQty} {def.unit}</p>
+                    <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-2">{def.emoji} {t("nutrition.macrosPerUnit", { qty: def.defaultQty, unit: def.unit })}</p>
                     <div className="grid grid-cols-2 gap-1 mb-2">
                       {(["cal", "p", "c", "f"] as const).map((key) => (
                         <div key={key} className="text-left">
-                          <label className="text-[9px] text-gray-500 dark:text-gray-400 uppercase font-semibold">{key === "cal" ? "kcal" : key === "p" ? "prot" : key === "c" ? "carbs" : "fat"}</label>
+                          <label className="text-[9px] text-gray-500 dark:text-gray-400 uppercase font-semibold">{key === "cal" ? t("nutrition.kcalLabel") : key === "p" ? t("nutrition.protShort") : key === "c" ? t("nutrition.carbsShort") : t("nutrition.fatShort")}</label>
                           <input type="number" min="0" step="0.5" value={suppEditDraft[key]}
                             onChange={(e) => setSuppEditDraft((prev) => ({ ...prev, [key]: Number(e.target.value) }))}
                             className="w-full rounded border border-gray-200 px-1 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" />
@@ -3120,7 +3162,7 @@ export default function NutritionPage() {
                   {/* Delete custom supp */}
                   <button
                     onClick={(e) => { e.stopPropagation(); removeCustomSupp(cs.id); }}
-                    title="Remove this supplement"
+                    title={t("nutrition.removeSupplement")}
                     className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] bg-gray-100 text-red-400 hover:bg-red-50 hover:text-red-500 z-10 font-bold transition-colors"
                   >×</button>
                   <div className="text-2xl mb-1">{cs.emoji || "💊"}</div>
@@ -3269,9 +3311,9 @@ export default function NutritionPage() {
       <div className="fixed bottom-32 right-4 z-50 flex flex-col items-end gap-3 md:bottom-8 md:right-8">
         {showWeightFab && (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">&#9878;&#65039; Log Weight</p>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">&#9878;&#65039; {t("nutrition.logWeight")}</p>
             {weightSaved ? (
-              <p className="text-center text-green-600 font-medium text-sm py-1">&#x2705; Saved!</p>
+              <p className="text-center text-green-600 font-medium text-sm py-1">&#x2705; {t("nutrition.savedConfirm")}</p>
             ) : (
               <>
                 <div className="flex items-center gap-2">

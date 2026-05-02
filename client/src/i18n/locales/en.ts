@@ -73,6 +73,34 @@ export interface Translation {
     waterTargetReached: string; haveCustomFoods: string; noCustomFoodsCreate: string; noFoodsMatchFilter: string;
     viewRings: string; viewBreakdown: string; viewFoods: string; viewGoals: string;
     logSeparate: string; myFoodsCustom: string; newFoodBtn: string;
+    surplusLargeTitle: string; surplusLargeBulk: string; surplusLargeDefault: string;
+    surplusTitle: string; surplusBulk: string; surplusDefault: string;
+    deficitLargeTitle: string; deficitLargeCut: string; deficitLargeDefault: string;
+    deficitTitle: string; deficitCut: string; deficitDefault: string;
+    suppCreatine: string; suppOmega3: string; suppWhey: string;
+    suppCasein: string; suppPlant: string; suppMassGainer: string;
+    macrosPerUnit: string; addCustomSupp: string;
+    favourites: string; addToFavourites: string; pinFavouritesHint: string; quickRelog: string;
+    kcalLabel: string; proteinG: string; carbsG: string; fatG: string;
+    protShort: string; carbsShort: string; fatShort: string; defaultQtyLabel: string;
+    logWeight: string; savedConfirm: string; customDish: string;
+    tagJapanese: string; tagItalian: string; tagMexican: string; tagMiddleEastern: string; tagKorean: string;
+    tagFit: string; tagKeto: string; tagHighProtein: string; tagVegan: string; tagVegetarian: string;
+    tagFastFood: string; tagDesserts: string; tagWholeGrain: string; tagLowCarb: string; tagHighSugar: string;
+    tagMeats: string; tagSeafood: string; tagCheese: string; tagSoups: string; tagSausages: string;
+    tagVegetables: string; tagFruits: string; tagSmoothies: string; tagSalads: string; tagPasta: string; tagDairy: string;
+    oilNone: string; oilSpray: string; oilOliveTsp: string; oilOliveTbsp: string; oilTsp: string; oilTbsp: string;
+    breadNone: string; breadFlour: string; breadBreadcrumbs: string; breadPanko: string;
+    breadBeer: string; breadTempura: string; breadCornmeal: string;
+    sweetNone: string; sweetSugarTsp: string; sweetSugarTbsp: string; sweetBrownTsp: string;
+    sweetHoneyTsp: string; sweetHoneyTbsp: string; sweetAgave: string; sweetMaple: string;
+    sweetStevia: string; sweetCondensed: string;
+    phaseMenstruation: string; phaseFollicular: string; phaseOvulation: string; phaseLuteal: string;
+    phaseDay: string;
+    phaseMenstruationNutrition: string; phaseMenstruationWorkout: string;
+    phaseFollicularNutrition: string; phaseFollicularWorkout: string;
+    phaseOvulationNutrition: string; phaseOvulationWorkout: string;
+    phaseLutealNutrition: string; phaseLutealWorkout: string;
   };
   workouts: {
     filterByMuscle: string; exercise: string; recommended: string;
@@ -422,6 +450,71 @@ const en: Translation = {
     logSeparate: "Log ingredients separately",
     myFoodsCustom: "your custom foods",
     newFoodBtn: "New Food",
+    surplusLargeTitle: "⚠ {{pct}}% over your {{target}} kcal goal ({{kcal}} kcal surplus).",
+    surplusLargeBulk: "Even for a bulk, this surplus is large — excess may convert to fat.",
+    surplusLargeDefault: "This significantly exceeds your daily target and will impact your progress.",
+    surplusTitle: "Calorie surplus of {{kcal}} kcal.",
+    surplusBulk: "You're in a planned surplus — good for muscle building. Make sure protein is on track.",
+    surplusDefault: "You've exceeded your daily target. This contributes to weight gain over time.",
+    deficitLargeTitle: "⚠ {{pct}}% under your {{target}} kcal goal ({{kcal}} kcal deficit).",
+    deficitLargeCut: "This deficit is too aggressive — risks muscle loss and metabolic adaptation.",
+    deficitLargeDefault: "You're significantly under your target. Log missing meals or increase intake.",
+    deficitTitle: "Calorie deficit of {{kcal}} kcal.",
+    deficitCut: "You're on track for fat loss. Ensure you're hitting your protein target to protect muscle.",
+    deficitDefault: "You're under your daily target. Log more meals if this isn't intentional.",
+    suppCreatine: "Creatine Monohydrate",
+    suppOmega3: "Omega-3 Fish Oil",
+    suppWhey: "Whey Protein Shake",
+    suppCasein: "Casein Protein Shake",
+    suppPlant: "Plant Protein Shake",
+    suppMassGainer: "Mass Gainer Shake",
+    macrosPerUnit: "Macros / {{qty}} {{unit}}",
+    addCustomSupp: "+ Custom",
+    favourites: "Favourites",
+    addToFavourites: "+ Add to Favourites",
+    pinFavouritesHint: "Pin your favourite foods here — tap \"+ Add to Favourites\" above, or tap ⭐ next to any logged meal.",
+    quickRelog: "Quick Re-log",
+    kcalLabel: "kcal",
+    proteinG: "Protein g",
+    carbsG: "Carbs g",
+    fatG: "Fat g",
+    protShort: "prot",
+    carbsShort: "carbs",
+    fatShort: "fat",
+    defaultQtyLabel: "Default qty",
+    logWeight: "Log Weight",
+    savedConfirm: "Saved!",
+    customDish: "Custom Dish",
+    tagJapanese: "Japanese", tagItalian: "Italian", tagMexican: "Mexican",
+    tagMiddleEastern: "Middle Eastern", tagKorean: "Korean",
+    tagFit: "Fit", tagKeto: "Keto", tagHighProtein: "High-Protein",
+    tagVegan: "Vegan", tagVegetarian: "Vegetarian", tagFastFood: "Fast Food",
+    tagDesserts: "Desserts", tagWholeGrain: "Whole Grain", tagLowCarb: "Low-Carb", tagHighSugar: "High-Sugar",
+    tagMeats: "Meats", tagSeafood: "Seafood", tagCheese: "Cheese", tagSoups: "Soups",
+    tagSausages: "Sausages", tagVegetables: "Vegetables", tagFruits: "Fruits",
+    tagSmoothies: "Smoothies", tagSalads: "Salads", tagPasta: "Pasta", tagDairy: "Dairy",
+    oilNone: "No oil", oilSpray: "Spray oil (~1 sec)",
+    oilOliveTsp: "Olive oil \u2013 1 tsp", oilOliveTbsp: "Olive oil \u2013 1 tbsp",
+    oilTsp: "Oil \u2013 1 tsp", oilTbsp: "Oil \u2013 1 tbsp",
+    breadNone: "No breading", breadFlour: "Flour coat (light dusting)",
+    breadBreadcrumbs: "Breadcrumbs (standard)", breadPanko: "Panko breadcrumbs",
+    breadBeer: "Beer batter", breadTempura: "Tempura batter", breadCornmeal: "Cornmeal / polenta crust",
+    sweetNone: "No sweetener", sweetSugarTsp: "White sugar \u2013 1 tsp",
+    sweetSugarTbsp: "White sugar \u2013 1 tbsp", sweetBrownTsp: "Brown sugar \u2013 1 tsp",
+    sweetHoneyTsp: "Honey \u2013 1 tsp", sweetHoneyTbsp: "Honey \u2013 1 tbsp",
+    sweetAgave: "Agave syrup \u2013 1 tsp", sweetMaple: "Maple syrup \u2013 1 tsp",
+    sweetStevia: "Stevia / sweetener (0)", sweetCondensed: "Condensed milk \u2013 1 tbsp",
+    phaseMenstruation: "Menstruation", phaseFollicular: "Follicular",
+    phaseOvulation: "Ovulation", phaseLuteal: "Luteal",
+    phaseDay: "phase \u2014 Day",
+    phaseMenstruationNutrition: "Boost iron (red meat, lentils, spinach) and anti-inflammatory foods (omega-3, berries, ginger). Avoid excess sodium to reduce bloating.",
+    phaseMenstruationWorkout: "Gentle movement is ideal \u2014 yoga, walks, light cycling. Skip very heavy lifting if you feel fatigued.",
+    phaseFollicularNutrition: "Rising oestrogen boosts insulin sensitivity. Slightly increase carbs to fuel higher-energy sessions.",
+    phaseFollicularWorkout: "Great time to push intensity \u2014 strength training, intervals, and new exercises respond well.",
+    phaseOvulationNutrition: "Peak performance window. Maintain protein and carbs. Zinc (pumpkin seeds, meat) supports hormonal balance.",
+    phaseOvulationWorkout: "Peak strength and energy. Ideal for PRs, HIIT, and high-volume sessions. Warm up well \u2014 laxity increases near ovulation.",
+    phaseLutealNutrition: "Cravings and hunger increase \u2014 prioritise magnesium (dark chocolate, nuts, seeds) and fibre to manage them. You need ~100\u2013300 kcal more.",
+    phaseLutealWorkout: "Moderate your intensity as progesterone rises. Strength is maintained but recovery takes longer \u2014 prioritise sleep and rest days.",
   },
   workouts: {
     filterByMuscle: "Filter exercises by muscle group", exercise: "Exercise", recommended: "Recommended",
