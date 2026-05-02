@@ -1971,11 +1971,34 @@ function formatFastingDuration(ms: number): string {
   return `${h}h ${String(m).padStart(2, "0")}m`;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Toast notification (mirrored from WorkoutsPage)
+// ─────────────────────────────────────────────────────────────────────────────
+function useNutritionToast() {
+  const [msg, setMsg] = useState<string | null>(null);
+  const show = (message: string) => {
+    setMsg(message);
+    setTimeout(() => setMsg(null), 3000);
+  };
+  return { msg, show };
+}
+
+function NutritionToastBanner({ msg }: { msg: string | null }) {
+  if (!msg) return null;
+  return (
+    <div className="fixed bottom-20 right-4 z-50 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 md:bottom-6 md:right-6">
+      <span className="text-green-400">✓</span>
+      {msg}
+    </div>
+  );
+}
+
 // ── Main Nutrition page ───────────────────────────────────────────────────────
 export default function NutritionPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { hash } = useLocation();
+  const toast = useNutritionToast();
 
   // Scroll to water section when navigated with #water hash
   useEffect(() => {
@@ -2292,6 +2315,12 @@ export default function NutritionPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Auto-refresh when AI chat or another component logs food
+  useEffect(() => {
+    window.addEventListener("fitai:food-logged", load);
+    return () => window.removeEventListener("fitai:food-logged", load);
+  }, [load]);
+
   const deleteLog = async (id: number) => {
     if (!confirm("Remove this entry?")) return;
     setDeleting(id);
@@ -2300,6 +2329,7 @@ export default function NutritionPage() {
       // Re-fetch from server so totals are always accurate
       await load();
       window.dispatchEvent(new Event("fitai:food-logged"));
+      toast.show("Entry removed");
     } catch (e: any) {
       alert(e.response?.data?.error || "Failed to delete entry. Please try again.");
     } finally { setDeleting(null); }
@@ -2348,6 +2378,7 @@ export default function NutritionPage() {
       await foodApi.log({ foodName: fav.foodName, calories: fav.calories, protein: fav.protein ?? undefined, carbs: fav.carbs ?? undefined, fats: fav.fats ?? undefined, quantity: fav.quantity ?? 1, unit: fav.unit ?? "serving", date });
       await load();
       window.dispatchEvent(new Event("fitai:food-logged"));
+      toast.show(`${fav.foodName} logged ✓`);
     } catch { /* silent */ }
   };
   const [relogging,     setRelogging]     = useState<string | null>(null);
@@ -2412,6 +2443,7 @@ export default function NutritionPage() {
       });
       await load();
       window.dispatchEvent(new Event("fitai:food-logged"));
+      toast.show(`${food.foodName} logged ✓`);
     } catch { /* silent */ }
     finally { setRelogging(null); }
   };
@@ -3198,7 +3230,7 @@ export default function NutritionPage() {
         <LogFoodForm
           selectedDate={date}
           editItem={editItem}
-          onSave={() => { setShowForm(false); setEditItem(null); load(); window.dispatchEvent(new Event("fitai:food-logged")); }}
+          onSave={() => { setShowForm(false); setEditItem(null); load(); window.dispatchEvent(new Event("fitai:food-logged")); toast.show(editItem ? "Entry updated ✓" : "Food logged ✓"); }}
           onClose={() => { setShowForm(false); setEditItem(null); }}
         />
       </Modal>
@@ -3208,7 +3240,7 @@ export default function NutritionPage() {
         open={showMealPlan}
         onClose={() => setShowMealPlan(false)}
         selectedDate={date}
-        onLogged={() => { load(); window.dispatchEvent(new Event("fitai:food-logged")); }}
+        onLogged={() => { load(); window.dispatchEvent(new Event("fitai:food-logged")); toast.show("Meal plan logged ✓"); }}
       />
 
       {/* Bowl / dish builder modal */}
@@ -3216,7 +3248,7 @@ export default function NutritionPage() {
         open={showDish}
         onClose={() => setShowDish(false)}
         selectedDate={date}
-        onSaved={() => { setShowDish(false); load(); window.dispatchEvent(new Event("fitai:food-logged")); }}
+        onSaved={() => { setShowDish(false); load(); window.dispatchEvent(new Event("fitai:food-logged")); toast.show("Dish saved ✓"); }}
       />
 
       {/* ── My Foods panel ─────────────────────────────────────────────────── */}
@@ -3344,6 +3376,8 @@ export default function NutritionPage() {
           &#9878;&#65039;
         </button>
       </div>
+
+      <NutritionToastBanner msg={toast.msg} />
     </div>
   );
 }

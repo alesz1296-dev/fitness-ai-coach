@@ -1237,10 +1237,10 @@ function AddExercisePanel({
 // Workout detail modal — view, edit exercises inline, add exercises
 // ─────────────────────────────────────────────────────────────────────────────
 function WorkoutDetail({
-  workout, onClose, onEdit, onDelete, onRefresh,
+  workout, onClose, onEdit, onDelete, onRefresh, onToast,
 }: {
   workout: Workout; onClose: () => void; onEdit: () => void;
-  onDelete: () => void; onRefresh: () => void;
+  onDelete: () => void; onRefresh: () => void; onToast?: (msg: string) => void;
 }) {
   const { t } = useTranslation();
   type ExerciseEditData = Pick<WorkoutExercise, "sets" | "reps"> & { exerciseName?: string; weight: number | null; rpe: number | null };
@@ -1297,6 +1297,7 @@ function WorkoutDetail({
       setExercises((prev) => prev.map((e) => e.id === id ? { ...e, ...editData } : e));
       setEditing(null); setEditData(null);
       onRefresh();
+      onToast?.("Exercise updated ✓");
     } finally { setSaving(false); }
   };
 
@@ -1305,6 +1306,7 @@ function WorkoutDetail({
     await workoutsApi.deleteExercise(id);
     setExercises((prev) => prev.filter((e) => e.id !== id));
     onRefresh();
+    onToast?.("Exercise removed");
   };
 
   const handleDeleteWorkout = async () => {
@@ -1318,6 +1320,7 @@ function WorkoutDetail({
     setExercises((prev) => [...prev, ex]);
     setShowAddPanel(false);
     onRefresh();
+    onToast?.("Exercise added ✓");
   };
 
   return (
@@ -3866,6 +3869,7 @@ export default function WorkoutsPage() {
             onEdit={() => { setEditing(selected); setSelected(null); }}
             onDelete={() => { setSelected(null); load(page > 1 && workouts.length === 1 ? page - 1 : page); toast.show("Workout deleted."); }}
             onRefresh={() => load(page)}
+            onToast={toast.show}
           />
         )}
       </Modal>
