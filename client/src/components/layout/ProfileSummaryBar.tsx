@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { dashboardApi } from "../../api";
+import { APP_EVENTS } from "../../lib/appEvents";
 import { useAuthStore } from "../../store/authStore";
 
 interface SummaryData {
@@ -45,9 +46,13 @@ export function ProfileSummaryBar() {
 
   useEffect(() => {
     fetchData();
-    // Re-fetch whenever a food is logged anywhere in the app
-    window.addEventListener("fitai:food-logged", fetchData);
-    return () => window.removeEventListener("fitai:food-logged", fetchData);
+    const syncSummary = () => fetchData();
+    window.addEventListener(APP_EVENTS.nutritionSync, syncSummary);
+    window.addEventListener(APP_EVENTS.foodLogged, syncSummary);
+    return () => {
+      window.removeEventListener(APP_EVENTS.nutritionSync, syncSummary);
+      window.removeEventListener(APP_EVENTS.foodLogged, syncSummary);
+    };
   }, [fetchData]);
 
   if (!data) return null;

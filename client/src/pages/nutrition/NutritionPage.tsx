@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import { fmtMonthDay, fmtWeekdayLongDate } from "../../lib/dateFormat";
+import { APP_EVENTS, emitNutritionSync } from "../../lib/appEvents";
 import { useNavigate, useLocation } from "react-router-dom";
 import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi, customFoodsApi, weightApi, workoutsApi,
 } from "../../api";
@@ -2206,23 +2207,49 @@ export default function NutritionPage() {
   const [addingWater, setAddingWater] = useState(false);
   const [waterError,  setWaterError]  = useState("");
 
-  // Re-sync trackWater if the user changes it in Settings (same session)
+  // Re-sync trackWater if the user changes it in Settings (same session or another tab)
   useEffect(() => {
-    const onStorage = () => setTrackWater(getTrackWaterPref());
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    const syncTrackWater = () => setTrackWater(getTrackWaterPref());
+    syncTrackWater();
+    window.addEventListener("storage", syncTrackWater);
+    window.addEventListener(APP_EVENTS.appPrefsChanged, syncTrackWater);
+    return () => {
+      window.removeEventListener("storage", syncTrackWater);
+      window.removeEventListener(APP_EVENTS.appPrefsChanged, syncTrackWater);
+    };
   }, []);
 
-  const loadWater = useCallback(async () => {
+  const refreshNutrition = useCallback(async () => {
     try {
-      const res = await waterApi.getToday(date);
-      setWaterLogs(res.data.logs);
-      setWaterTotal(res.data.totalMl);
-      setWaterTarget(res.data.targetMl);
+      const [foodRes, goalRes, burnedRes, waterRes] = await Promise.all([
+        foodApi.getToday(date),
+        calorieGoalsApi.getActive().catch(() => ({ data: { goal: null } })),
+        workoutsApi.getCaloriesBurned(date).catch(() => ({ data: { totalBurned: 0, workouts: [] } })),
+        waterApi.getToday(date).catch(() => ({ data: { logs: [], totalMl: 0, targetMl: user?.waterTargetMl ?? 2000 } })),
+      ]);
+      setLogs(foodRes.data.logs);
+      setTotals(foodRes.data.totals);
+      setActiveGoal(goalRes.data.goal);
+      setCaloriesBurned(burnedRes.data.totalBurned ?? 0);
+      setBurnedWorkouts(
+        (burnedRes.data.workouts ?? [])
+          .filter((w: any) => w.caloriesBurned > 0)
+          .map((w: any) => ({ id: w.id as number, name: w.name as string, caloriesBurned: w.caloriesBurned as number }))
+      );
+      setWaterLogs(waterRes.data.logs);
+      setWaterTotal(waterRes.data.totalMl);
+      setWaterTarget(waterRes.data.targetMl);
     } catch { /* silent */ }
-  }, [date]);
+  }, [date, user?.waterTargetMl]);
 
-  useEffect(() => { loadWater(); }, [loadWater]);
+  const bootstrapLoad = useCallback(async () => {
+    setLoading(true);
+    try {
+      await refreshNutrition();
+    } catch {
+      setLogs([]); setTotals({ calories: 0, protein: 0, carbs: 0, fats: 0 }); setCaloriesBurned(0); setBurnedWorkouts([]);
+    } finally { setLoading(false); }
+  }, [refreshNutrition]);
 
   const handleAddWater = async (ml: number) => {
     if (addingWater) return;
@@ -2230,7 +2257,7 @@ export default function NutritionPage() {
     setWaterError("");
     try {
       await waterApi.log(ml, date);
-      await loadWater();
+      emitNutritionSync("water");
     } catch (e: any) {
       const msg = e?.response?.data?.error || "Failed to log water — try again";
       setWaterError(msg);
@@ -2241,7 +2268,7 @@ export default function NutritionPage() {
     setWaterError("");
     try {
       await waterApi.delete(id);
-      await loadWater();
+      emitNutritionSync("water");
     } catch (e: any) {
       setWaterError(e?.response?.data?.error || "Failed to remove entry");
     }
@@ -2335,22 +2362,28 @@ export default function NutritionPage() {
     } catch { /* silent */ }
   }, [date]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { bootstrapLoad(); }, [bootstrapLoad]);
 
-  // Auto-refresh silently when AI chat or another component logs food
+  // Auto-refresh when anything nutrition-related changes elsewhere in the app
   useEffect(() => {
-    window.addEventListener("fitai:food-logged", silentLoad);
-    return () => window.removeEventListener("fitai:food-logged", silentLoad);
-  }, [silentLoad]);
+    const syncNutrition = () => { void refreshNutrition(); };
+    window.addEventListener(APP_EVENTS.nutritionSync, syncNutrition);
+    window.addEventListener(APP_EVENTS.foodLogged, syncNutrition);
+    window.addEventListener(APP_EVENTS.weightLogged, syncNutrition);
+    return () => {
+      window.removeEventListener(APP_EVENTS.nutritionSync, syncNutrition);
+      window.removeEventListener(APP_EVENTS.foodLogged, syncNutrition);
+      window.removeEventListener(APP_EVENTS.weightLogged, syncNutrition);
+    };
+  }, [refreshNutrition]);
 
   const deleteLog = async (id: number) => {
     if (!confirm("Remove this entry?")) return;
     setDeleting(id);
     try {
       await foodApi.delete(id);
-      window.dispatchEvent(new Event("fitai:food-logged"));
+      emitNutritionSync("food");
       toast.show("Entry removed");
-      await silentLoad();
     } catch (e: any) {
       alert(e.response?.data?.error || "Failed to delete entry. Please try again.");
     } finally { setDeleting(null); }
@@ -2397,9 +2430,8 @@ export default function NutritionPage() {
   const relogFav = async (fav: FoodLog) => {
     try {
       await foodApi.log({ foodName: fav.foodName, calories: fav.calories, protein: fav.protein ?? undefined, carbs: fav.carbs ?? undefined, fats: fav.fats ?? undefined, quantity: fav.quantity ?? 1, unit: fav.unit ?? "serving", date });
-      window.dispatchEvent(new Event("fitai:food-logged"));
+      emitNutritionSync("favorite");
       toast.show(`${fav.foodName} logged ✓`);
-      await silentLoad();
     } catch { /* silent */ }
   };
   const [relogging,     setRelogging]     = useState<string | null>(null);
@@ -2416,7 +2448,7 @@ export default function NutritionPage() {
       setWeightSaved(true);
       setWeightVal("");
       setTimeout(() => { setShowWeightFab(false); setWeightSaved(false); }, 800);
-      window.dispatchEvent(new CustomEvent("fitai:weight-logged", { detail: { weight: w } }));
+      window.dispatchEvent(new CustomEvent(APP_EVENTS.weightLogged, { detail: { weight: w } }));
       toast.show(`Weight logged: ${w} kg ✓`);
     } catch { /* ignore */ }
     finally { setSavingWeight(false); }
@@ -2464,9 +2496,8 @@ export default function NutritionPage() {
         ...(food.meal && { meal: food.meal as FoodLog["meal"] }),
         date,
       });
-      window.dispatchEvent(new Event("fitai:food-logged"));
+      emitNutritionSync("food");
       toast.show(`${food.foodName} logged ✓`);
-      await silentLoad();
     } catch { /* silent */ }
     finally { setRelogging(null); }
   };
@@ -3253,7 +3284,7 @@ export default function NutritionPage() {
         <LogFoodForm
           selectedDate={date}
           editItem={editItem}
-          onSave={() => { const msg = editItem ? "Entry updated ✓" : "Food logged ✓"; setShowForm(false); setEditItem(null); toast.show(msg); window.dispatchEvent(new Event("fitai:food-logged")); silentLoad(); }}
+          onSave={() => { const msg = editItem ? "Entry updated ✓" : "Food logged ✓"; setShowForm(false); setEditItem(null); toast.show(msg); emitNutritionSync("manual"); }}
           onClose={() => { setShowForm(false); setEditItem(null); }}
         />
       </Modal>
@@ -3263,7 +3294,7 @@ export default function NutritionPage() {
         open={showMealPlan}
         onClose={() => setShowMealPlan(false)}
         selectedDate={date}
-        onLogged={() => { toast.show("Meal plan logged ✓"); window.dispatchEvent(new Event("fitai:food-logged")); silentLoad(); }}
+        onLogged={() => { toast.show("Meal plan logged ✓"); emitNutritionSync("meal-plan"); }}
       />
 
       {/* Bowl / dish builder modal */}
@@ -3271,7 +3302,7 @@ export default function NutritionPage() {
         open={showDish}
         onClose={() => setShowDish(false)}
         selectedDate={date}
-        onSaved={() => { setShowDish(false); toast.show("Dish saved ✓"); window.dispatchEvent(new Event("fitai:food-logged")); silentLoad(); }}
+        onSaved={() => { setShowDish(false); toast.show("Dish saved ✓"); emitNutritionSync("dish"); }}
       />
 
       {/* ── My Foods panel ─────────────────────────────────────────────────── */}

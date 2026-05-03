@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { applyDark, readDarkPref } from "../../hooks/useDarkMode";
+import { APP_EVENTS, emitAppPrefsChanged } from "../../lib/appEvents";
 import { useTranslation, LANG_LABELS, t as _t } from "../../i18n";
 import type { SupportedLang } from "../../i18n";
 import { usersApi, calorieGoalsApi } from "../../api";
@@ -129,7 +130,7 @@ function ProfileForm() {
 
       // Notify other tabs/components that weight changed
       if (newWeight && newWeight !== oldWeight) {
-        window.dispatchEvent(new CustomEvent("fitai:weight-logged", { detail: { weight: newWeight } }));
+        window.dispatchEvent(new CustomEvent(APP_EVENTS.weightLogged, { detail: { weight: newWeight } }));
         toast.show(`Weight updated to ${newWeight} kg ✓`);
       }
 
@@ -659,6 +660,7 @@ function AppPreferencesForm() {
       const next = { ...prev, [key]: !prev[key] };
       try { localStorage.setItem("app_prefs_v1", JSON.stringify(next)); } catch { /* ignore */ }
       if (key === "darkMode") applyDark(next.darkMode);
+      emitAppPrefsChanged();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       return next;
