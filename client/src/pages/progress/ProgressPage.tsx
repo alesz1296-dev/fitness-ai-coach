@@ -6,7 +6,7 @@ import {
   CartesianGrid, LineChart, Line, Legend, ComposedChart, Bar,
   ReferenceLine, ReferenceArea,
 } from "recharts";
-import { weightApi, workoutsApi, predictionsApi, analyticsApi } from "../../api";
+import { weightApi, workoutsApi, predictionsApi, analyticsApi, weeklyReviewApi, calorieGoalsApi } from "../../api";
 import { useTranslation } from "../../i18n";
 import type { AnalyticsData } from "../../api";
 import type { WeightLog, WeightStats, ExerciseProgression } from "../../types";
@@ -17,7 +17,7 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
-import { emitWeightLogged } from "../../lib/appEvents";
+import { emitDataChanged, emitWeightLogged } from "../../lib/appEvents";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
@@ -492,11 +492,23 @@ function AdherenceGauge({ score, label }: { score: number; label: string }) {
 
 function PredictionCard({ data, loading }: { data: any | null; loading: boolean }) {
   const isDark      = useIsDark();
+  const [applying, setApplying] = useState(false);
   const chartGrid   = isDark ? "#374151" : "#f0f0f0";
   const chartTick   = isDark ? "#9ca3af" : "#9ca3af";
   const chartBg     = isDark ? "#1f2937" : "#ffffff";
   const chartBorder = isDark ? "#374151" : "#e5e7eb";
   const chartText   = isDark ? "#f3f4f6" : "#111827";
+
+  useEffect(() => {
+    const adjustment = data?.recommendedAdjustment;
+    if (!adjustment?.canAutoApply || !adjustment.targetGoalId || !adjustment.nextDailyCalories) return;
+    const key = `fitai:auto-adjust:${adjustment.targetGoalId}:${adjustment.nextDailyCalories}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    calorieGoalsApi.update(adjustment.targetGoalId, { dailyCalories: adjustment.nextDailyCalories } as any)
+      .then(() => emitDataChanged("auto-adjust"))
+      .catch(() => sessionStorage.removeItem(key));
+  }, [data]);
   if (loading) {
     return (
       <Card>
@@ -545,6 +557,7 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
       kcal:     w.avgCalories,
       trend:    null as number | null,
       ideal:    null as number | null,
+      adaptive: null as number | null,
       bandLow:  null as number | null,
       bandHi:   null as number | null,
     }));
@@ -552,14 +565,17 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
   const lastActual: number | null = histPoints.length > 0 ? histPoints[histPoints.length - 1].actual : null;
 
   const projections = data.projections ?? [];
+  const adaptiveByWeek = new Map((data.adaptivePath ?? []).map((p: any) => [p.week, p.weight]));
+  const bandByWeek = new Map((data.toleranceBand ?? []).map((p: any) => [p.week, p]));
   const projPoints = projections.map((p: any) => ({
     label:   p.week === 0 ? "Now" : `+${p.week}w`,
     // Only carry actual on week=0 if there is no histPoints (avoids duplicate dot)
     actual:  p.week === 0 && histPoints.length === 0 ? lastActual : null,
     trend:   p.trendWeight as number | null,
     ideal:   p.idealWeight as number | null,
-    bandLow: p.trendLow as number | null,
-    bandHi:  p.trendHigh as number | null,
+    adaptive: adaptiveByWeek.get(p.week) as number | null,
+    bandLow: (bandByWeek.get(p.week) as any)?.low ?? p.trendLow ?? null,
+    bandHi:  (bandByWeek.get(p.week) as any)?.high ?? p.trendHigh ?? null,
   }));
 
   // Bridge: copy trend/ideal values from "Now" onto the last historical point so
@@ -570,6 +586,7 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
     const last = histPoints[histPoints.length - 1];
     last.trend   = week0Proj.trendWeight ?? null;
     last.ideal   = week0Proj.idealWeight ?? null;
+    last.adaptive = adaptiveByWeek.get(0) as number | null;
     last.bandLow = week0Proj.trendLow    ?? null;
     last.bandHi  = week0Proj.trendHigh   ?? null;
   }
@@ -596,6 +613,18 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
     insufficient: "text-gray-400 bg-gray-50",
   };
   const conf = (data.realTrend?.confidence ?? "insufficient") as string;
+  const challenge = data.goalChallenge;
+  const adjustment = data.recommendedAdjustment;
+  const applyAdjustment = async () => {
+    if (!adjustment?.targetGoalId || !adjustment?.nextDailyCalories) return;
+    setApplying(true);
+    try {
+      await calorieGoalsApi.update(adjustment.targetGoalId, { dailyCalories: adjustment.nextDailyCalories } as any);
+      emitDataChanged("plan-adjustment");
+    } finally {
+      setApplying(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -635,6 +664,16 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
             R² = {data.realTrend.r2.toFixed(3)} · slope from {data.daysLogged} logged days
           </span>
         )}
+        {challenge?.status && (
+          <span className="text-xs text-brand-700 bg-brand-50 px-2.5 py-1 rounded-full">
+            Plan status: {String(challenge.status).replaceAll("_", " ")}
+          </span>
+        )}
+        {data.etaDrift != null && (
+          <span className="text-xs text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
+            ETA drift: {data.etaDrift > 0 ? "+" : ""}{data.etaDrift} days
+          </span>
+        )}
         {data.proteinAdequate === false && (
           <span className="text-xs text-orange-500 bg-orange-50 px-2.5 py-1 rounded-full">
             ⚠️ Avg protein below 1.6 g/kg — muscle retention at risk
@@ -645,8 +684,8 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
       {/* ── Main projection chart ───────────────────────────────────────────── */}
       <Card>
         <CardHeader
-          title="Weight Trajectory — Actual vs Projected"
-          subtitle="Green = real data · Blue dashed = trend forecast · Orange dashed = calorie-balance model"
+          title="Weight Trajectory: Ideal vs Actual vs Adaptive"
+          subtitle="Green = actual data · blue = current trend · orange = ideal plan · teal = adaptive forecast"
         />
         <ResponsiveContainer width="100%" height={270}>
           <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: -20, bottom: 0 }}>
@@ -660,14 +699,15 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
                 const labels: Record<string, string> = {
                   actual: "Actual (avg/wk)",
                   trend:  "Trend forecast",
-                  ideal:  "Calorie model",
+                  ideal:  "Ideal plan",
+                  adaptive: "Adaptive forecast",
                   bandLow: "Lower bound",
                   bandHi:  "Upper bound",
                 };
                 return [`${Number(v).toFixed(1)} kg`, labels[name] ?? name];
               }}
             />
-            <Legend formatter={(v) => ({ actual: "Actual", trend: "Trend", ideal: "Calorie Model" } as Record<string, string>)[v] ?? v}
+            <Legend formatter={(v) => ({ actual: "Actual", trend: "Trend", ideal: "Ideal Plan", adaptive: "Adaptive Forecast" } as Record<string, string>)[v] ?? v}
               wrapperStyle={{ fontSize: "11px" }} />
             {/* Confidence band — upper & lower as thin lines */}
             <Line dataKey="bandHi"  stroke="#bfdbfe" strokeWidth={1} dot={false} legendType="none" name="bandHi"  connectNulls />
@@ -681,11 +721,59 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
             {/* Calorie model (dashed orange) */}
             <Line dataKey="ideal" stroke="#f59e0b" strokeWidth={2}
               strokeDasharray="4 4" dot={false} connectNulls name="ideal" />
+            <Line dataKey="adaptive" stroke="#14b8a6" strokeWidth={2.5}
+              strokeDasharray="2 3" dot={false} connectNulls name="adaptive" />
             <ReferenceLine x="Now" stroke="#94a3b8" strokeDasharray="3 3"
               label={{ value: "Today", position: "top", fontSize: 10, fill: "#94a3b8" }} />
           </ComposedChart>
         </ResponsiveContainer>
       </Card>
+
+      {adjustment && (
+        <Card>
+          <CardHeader
+            title="Coach Recommendation"
+            subtitle={`Mode: ${String(adjustment.mode ?? "suggest")} · Action: ${String(adjustment.action ?? "hold").replaceAll("_", " ")}`}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1">Recommendation</p>
+              <p className="font-semibold text-gray-800 dark:text-gray-100">{adjustment.reason}</p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1">Calorie nudge</p>
+              <p className="font-semibold text-gray-800 dark:text-gray-100">
+                {adjustment.calorieDelta ? `${adjustment.calorieDelta > 0 ? "+" : ""}${adjustment.calorieDelta} kcal/day` : "No change"}
+              </p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
+              <p className="text-xs text-gray-400 mb-1">Date suggestion</p>
+              <p className="font-semibold text-gray-800 dark:text-gray-100">
+                {adjustment.suggestedTargetDate ?? "No date change"}
+              </p>
+            </div>
+          </div>
+          {Array.isArray(data.insights) && (
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {data.insights.map((insight: string) => (
+                <p key={insight} className="text-xs bg-brand-50 text-brand-800 rounded-lg px-3 py-2">
+                  {insight}
+                </p>
+              ))}
+            </div>
+          )}
+          {adjustment.mode === "confirm" && adjustment.targetGoalId && adjustment.nextDailyCalories && (
+            <Button className="mt-4" loading={applying} onClick={applyAdjustment}>
+              Apply calorie adjustment
+            </Button>
+          )}
+          {adjustment.mode === "auto" && adjustment.canAutoApply && (
+            <p className="mt-4 text-xs text-green-600">
+              Auto-adjust is enabled. This calorie target will be applied automatically when this forecast loads.
+            </p>
+          )}
+        </Card>
+      )}
 
       {/* ── Body composition projection ─────────────────────────────────────── */}
       {bfProj.length > 0 && (
@@ -862,9 +950,15 @@ function AnalyticsTab() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    window.addEventListener("fitai:data-changed", load);
+    return () => window.removeEventListener("fitai:data-changed", load);
+  }, [load]);
+
   const summary = data?.summary;
   const daily   = data?.dailySeries ?? [];
   const weekly  = data?.workoutTrend ?? [];
+  const diagnostics = data?.diagnostics;
 
   // Thin out x-axis labels for readability depending on range
   const tickInterval = days <= 14 ? 1 : days <= 30 ? 3 : days <= 90 ? 6 : 14;
@@ -909,6 +1003,19 @@ function AnalyticsTab() {
               <StatBadge label="Total Workouts" value={String(summary.totalWorkouts)} sub={`last ${days}d`} color="text-brand-700 dark:text-brand-400" />
               <StatBadge label="Total Burned"  value={`${summary.totalBurned.toLocaleString()} kcal`} sub="from workouts" color="text-red-500" />
             </div>
+          )}
+
+          {diagnostics && (
+            <Card>
+              <CardHeader title="Diagnostic Signals" subtitle="Why the trend is moving the way it is" />
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <StatBadge label="Calorie Adherence" value={diagnostics.calorieAdherence != null ? `${diagnostics.calorieAdherence}%` : "--"} sub={diagnostics.targetCalories ? `${diagnostics.targetCalories} kcal target` : "no active target"} color="text-orange-600" />
+                <StatBadge label="Protein Adherence" value={diagnostics.proteinAdherence != null ? `${diagnostics.proteinAdherence}%` : "--"} sub={diagnostics.targetProtein ? `${diagnostics.targetProtein}g target` : "no active target"} color="text-blue-600" />
+                <StatBadge label="Workout Adherence" value={diagnostics.workoutAdherence != null ? `${diagnostics.workoutAdherence}%` : "--"} color="text-brand-600" />
+                <StatBadge label="Weight Velocity" value={diagnostics.weightVelocity != null ? `${diagnostics.weightVelocity > 0 ? "+" : ""}${diagnostics.weightVelocity} kg/wk` : "--"} color="text-purple-600" />
+                <StatBadge label="Confidence" value={diagnostics.trendConfidence} sub={`${diagnostics.loggingConsistency}% logging`} />
+              </div>
+            </Card>
           )}
 
           {/* Calorie intake + 7-day rolling avg */}
@@ -1062,6 +1169,51 @@ function AnalyticsTab() {
   );
 }
 
+function WeeklyReviewPanel() {
+  const [data, setData] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    weeklyReviewApi.current()
+      .then((r) => setData(r.data.review ?? r.data.computed))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    window.addEventListener("fitai:data-changed", load);
+    return () => window.removeEventListener("fitai:data-changed", load);
+  }, [load]);
+
+  if (loading) {
+    return (
+      <Card>
+        <div className="py-8 text-center text-sm text-gray-400">Building weekly review...</div>
+      </Card>
+    );
+  }
+  if (!data) return null;
+
+  const status = String(data.planStatus ?? "needs_more_data").replaceAll("_", " ");
+  return (
+    <Card>
+      <CardHeader title="Weekly Coach Review" subtitle={`${data.weekStart} to ${data.weekEnd} · ${status}`} />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <StatBadge label="Avg Weight" value={data.averageWeight ? `${data.averageWeight} kg` : "--"} />
+        <StatBadge label="Calories" value={data.calorieAdherence != null ? `${data.calorieAdherence}%` : "--"} sub="adherence" color="text-orange-600" />
+        <StatBadge label="Protein" value={data.proteinAdherence != null ? `${data.proteinAdherence}%` : "--"} sub="adherence" color="text-blue-600" />
+        <StatBadge label="Training" value={`${data.workoutsCompleted ?? 0}${data.plannedWorkouts ? ` / ${data.plannedWorkouts}` : ""}`} sub="sessions" color="text-brand-600" />
+        <StatBadge label="Trend" value={String(data.performanceTrend ?? "unknown")} />
+      </div>
+      <div className="mt-4 rounded-xl bg-brand-50 dark:bg-brand-900/20 px-4 py-3 text-sm text-brand-800 dark:text-brand-200">
+        {data.recommendation}
+      </div>
+    </Card>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Progress page
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1097,6 +1249,14 @@ export default function ProgressPage() {
     } finally { setLoading(false); }
   }, [days]);
 
+  const loadPredictions = useCallback(() => {
+    setPredLoading(true);
+    predictionsApi.get()
+      .then((r) => setPredData(r.data))
+      .catch(() => setPredData(null))
+      .finally(() => setPredLoading(false));
+  }, []);
+
   useEffect(() => { load(); }, [load]);
 
   // Auto-refresh weight chart when shared data changes anywhere else
@@ -1108,12 +1268,17 @@ export default function ProgressPage() {
   // Load predictions when Predictions tab is opened (lazy — only fetched once per session)
   useEffect(() => {
     if (tab !== "predictions" || predData !== null) return;
-    setPredLoading(true);
-    predictionsApi.get()
-      .then((r) => setPredData(r.data))
-      .catch(() => setPredData(null))
-      .finally(() => setPredLoading(false));
-  }, [tab]);
+    loadPredictions();
+  }, [tab, predData, loadPredictions]);
+
+  useEffect(() => {
+    const handler = () => {
+      if (tab === "predictions") loadPredictions();
+      else setPredData(null);
+    };
+    window.addEventListener("fitai:data-changed", handler);
+    return () => window.removeEventListener("fitai:data-changed", handler);
+  }, [tab, loadPredictions]);
 
   const deleteLog = async (id: number) => {
     if (!confirm("Delete this weight entry?")) return;
@@ -1262,6 +1427,8 @@ export default function ProgressPage() {
               </div>
             )}
           </Card>
+
+          <WeeklyReviewPanel />
 
           {/* Body composition card */}
           <BodyCompositionCard

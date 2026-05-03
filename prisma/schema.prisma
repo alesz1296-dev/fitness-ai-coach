@@ -32,6 +32,7 @@ model User {
   cycleLength          Int?     // menstrual cycle length in days (default 28)
   waterTargetMl        Float    @default(2000) // daily water target in ml
   emailVerified        Boolean  @default(false)
+  planAdjustmentMode   String   @default("suggest") // "suggest" | "confirm" | "auto"
   createdAt            DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -50,8 +51,39 @@ model User {
   calendarDays   WorkoutCalendarDay[]
   customFoods      CustomFood[]
   customExercises  CustomExercise[]
+  weeklyReviews    WeeklyReview[]
 
   @@index([email])
+}
+
+model WeeklyReview {
+  id                  Int      @id @default(autoincrement())
+  userId              Int
+  weekStart           String
+  weekEnd             String
+  averageWeight       Float?
+  calorieAdherence    Float?
+  proteinAdherence    Float?
+  workoutsCompleted   Int      @default(0)
+  plannedWorkouts     Int?
+  performanceTrend    String?
+  planStatus          String
+  recommendation      String
+  recommendedAdjustment String?
+  fatigue             Int?
+  soreness            Int?
+  hunger              Int?
+  sleepQuality        Int?
+  stress              Int?
+  perceivedPerformance Int?
+  adjustmentStatus    String   @default("suggested")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart])
+  @@index([userId])
 }
 
 // ── Goals ─────────────────────────────────────────────────────────────────────

@@ -181,6 +181,12 @@ export interface Translation {
     login: string; register: string; logout: string; email: string; password: string;
     confirmPassword: string; forgotPassword: string; resetPassword: string;
     noAccount: string; haveAccount: string; signUp: string; signIn: string; verifyEmail: string;
+    createAccount: string; createAccountDesc: string; welcomeBack: string; signInDesc: string;
+    firstName: string; lastName: string; username: string; rememberMe: string; passwordRequirements: string;
+    serverUnavailable: string; invalidCredentials: string; tooManyAttempts: string; sessionExpired: string;
+    emailRequired: string; validEmail: string; usernameRequired: string; usernameLength: string;
+    usernameChars: string; passwordRequired: string; passwordMinLength: string; confirmPasswordRequired: string;
+    passwordsDoNotMatch: string;
   };
   offline: {
     noConnection: string; readOnlyMode: string; offline: string; backOnline: string;
@@ -721,6 +727,23 @@ const en: Translation = {
     forgotPassword: "Forgot password?", resetPassword: "Reset password",
     noAccount: "Don't have an account?", haveAccount: "Already have an account?",
     signUp: "Sign up", signIn: "Sign in", verifyEmail: "Verify your email",
+    createAccount: "Create your account", createAccountDesc: "Start your fitness journey today",
+    welcomeBack: "Welcome back", signInDesc: "Sign in to your FitAI Coach account",
+    firstName: "First name", lastName: "Last name", username: "Username", rememberMe: "Remember me (30 days)",
+    passwordRequirements: "At least 8 characters",
+    serverUnavailable: "Cannot reach the server. Make sure the backend is running on port 3000.",
+    invalidCredentials: "Incorrect email or password.",
+    tooManyAttempts: "Too many attempts. Please wait a moment and try again.",
+    sessionExpired: "Your session has expired. Please sign in again.",
+    emailRequired: "Email is required",
+    validEmail: "Enter a valid email address",
+    usernameRequired: "Username is required",
+    usernameLength: "At least 3 characters",
+    usernameChars: "Letters, numbers, and underscores only",
+    passwordRequired: "Password is required",
+    passwordMinLength: "Password must be at least 8 characters",
+    confirmPasswordRequired: "Please confirm your password",
+    passwordsDoNotMatch: "Passwords do not match",
   },
   offline: {
     noConnection: "No internet connection",

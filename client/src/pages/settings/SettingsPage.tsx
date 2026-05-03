@@ -25,6 +25,7 @@ type ProfileUpdatePayload = {
   goal?: string;
   trainingDaysPerWeek?: number | null;
   trainingHoursPerDay?: number | null;
+  planAdjustmentMode?: User["planAdjustmentMode"];
 };
 
 // ── Toast ────────────────────────────────────────────────────────────────────
@@ -90,6 +91,7 @@ function ProfileForm() {
     goal:                user?.goal               ?? "",
     trainingDaysPerWeek: String(user?.trainingDaysPerWeek ?? ""),
     trainingHoursPerDay: String(user?.trainingHoursPerDay ?? ""),
+    planAdjustmentMode:  user?.planAdjustmentMode ?? "suggest",
   });
 
   const [saving,  setSaving]  = useState(false);
@@ -117,6 +119,7 @@ function ProfileForm() {
       goal:                user.goal               ?? "",
       trainingDaysPerWeek: String(user.trainingDaysPerWeek ?? ""),
       trainingHoursPerDay: String(user.trainingHoursPerDay ?? ""),
+      planAdjustmentMode:  user.planAdjustmentMode ?? "suggest",
     });
   // Only re-sync when key scheduling fields change — avoids fighting the user mid-edit
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -142,6 +145,7 @@ function ProfileForm() {
     goal: form.goal || undefined,
     trainingDaysPerWeek: form.trainingDaysPerWeek ? Number(form.trainingDaysPerWeek) : null,
     trainingHoursPerDay: form.trainingHoursPerDay ? Number(form.trainingHoursPerDay) : null,
+    planAdjustmentMode: form.planAdjustmentMode as User["planAdjustmentMode"],
   });
 
   const commitSave = async (payload: ProfileUpdatePayload) => {
@@ -322,6 +326,21 @@ function ProfileForm() {
             { value: "advanced",     label: "Advanced (3+ years)" },
           ]}
         />
+
+        <Select
+          label="Adaptive plan adjustments"
+          value={form.planAdjustmentMode}
+          onChange={set("planAdjustmentMode")}
+          placeholder="Choose adjustment mode"
+          options={[
+            { value: "suggest", label: "Suggest only" },
+            { value: "confirm", label: "One-click apply with confirmation" },
+            { value: "auto", label: "Auto-adjust calories/macros" },
+          ]}
+        />
+        <p className="text-xs text-gray-500 dark:text-gray-400 -mt-3">
+          Auto mode can tune calories and macros when confidence is high, but goal dates are only suggested for approval.
+        </p>
 
         <div>
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">

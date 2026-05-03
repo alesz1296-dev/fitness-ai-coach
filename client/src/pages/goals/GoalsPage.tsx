@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { fmtMonthDayYear } from "../../lib/dateFormat";
-import { calorieGoalsApi } from "../../api";
+import { calorieGoalsApi, predictionsApi } from "../../api";
 import { useTranslation, t as _t } from "../../i18n";
 import type { CalorieGoal } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
@@ -445,6 +445,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
   const [loading,      setLoading]     = useState(true);
   const [showForm,     setShowForm]    = useState(false);
   const [editingGoal,  setEditingGoal] = useState<CalorieGoal | null>(null);
+  const [prediction,   setPrediction]  = useState<any | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -455,6 +456,14 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    predictionsApi.get().then((r) => setPrediction(r.data)).catch(() => setPrediction(null));
+  }, []);
+  useEffect(() => {
+    const handler = () => predictionsApi.get().then((r) => setPrediction(r.data)).catch(() => setPrediction(null));
+    window.addEventListener("fitai:data-changed", handler);
+    return () => window.removeEventListener("fitai:data-changed", handler);
+  }, []);
 
   const deactivate = async (id: number) => {
     await calorieGoalsApi.update(id, { active: false });
@@ -563,6 +572,42 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
                   </div>
                 ))}
               </div>
+
+              {prediction?.goalChallenge && (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+                  <div className="bg-brand-50 dark:bg-brand-900/20 rounded-xl p-3">
+                    <p className="text-xs text-brand-500 font-medium">Goal realism</p>
+                    <p className="font-bold text-brand-800 dark:text-brand-200 capitalize">
+                      {String(prediction.goalAggressiveness ?? "reasonable")}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
+                    <p className="text-xs text-gray-400">Required pace</p>
+                    <p className="font-bold text-gray-800 dark:text-gray-100">
+                      {prediction.goalChallenge.requiredWeeklyPct > 0 ? "+" : ""}{prediction.goalChallenge.requiredWeeklyPct}% BW/wk
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
+                    <p className="text-xs text-gray-400">Current pace</p>
+                    <p className="font-bold text-gray-800 dark:text-gray-100">
+                      {prediction.goalChallenge.currentWeeklyPct > 0 ? "+" : ""}{prediction.goalChallenge.currentWeeklyPct}% BW/wk
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
+                    <p className="text-xs text-gray-400">Adaptive ETA</p>
+                    <p className="font-bold text-gray-800 dark:text-gray-100">
+                      {prediction.adaptiveGoalDate ?? "Needs more data"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {prediction?.goalChallenge?.suggestedPostponedDate && (
+                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  This deadline looks aggressive based on the adaptive model. Suggested postponed date:{" "}
+                  <strong>{prediction.goalChallenge.suggestedPostponedDate}</strong>.
+                </div>
+              )}
 
               <CardHeader
                 title={t("goals.progressToDate")}

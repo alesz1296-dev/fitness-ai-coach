@@ -2080,3 +2080,29 @@ Info chip shown when a frequency match exists: "Showing plans for N×/week — m
 ### Notes
 - This pass focused on everyday foods people actually type: exact single-item names, packaged convenience foods, sandwiches, seafood, dairy, and dairy alternatives.
 - The version stamp on Nutrition helps confirm that the newest catalog build is loaded after a deploy or cache refresh.
+
+---
+
+## 2026-05-03 - Adaptive goals, predictions, analytics, and weekly coach review
+
+### Goal
+- Turn Goals/Progress/Predictions/Analytics into a plan-vs-reality system that works for everyday users while exposing optional elite-athlete diagnostics as more data is logged.
+
+### Files modified
+- `src/controllers/predictionController.ts` - added timezone-aware day bucketing plus `idealPath`, `actualPath`, `smoothedActualPath`, `adaptivePath`, `toleranceBand`, `responseFactor`, `planDeviation`, `etaDrift`, `trendConfidence`, `goalAggressiveness`, `goalChallenge`, `recommendedAdjustment`, and `insights`
+- `src/controllers/analyticsController.ts` - added timezone-aware grouping and diagnostic outputs for calorie adherence, protein adherence, workout adherence, logging consistency, weight velocity, and trend confidence
+- `src/controllers/weeklyReviewController.ts` and `src/routes/weeklyReview.ts` - added current/history/save/apply weekly review endpoints
+- `prisma/schema.prisma` and `src/lib/runMigrations.ts` - added `User.planAdjustmentMode` and `WeeklyReview`
+- `client/src/pages/progress/ProgressPage.tsx` - added adaptive forecast line, coach recommendation panel, diagnostic cards, prediction refresh on shared data changes, and weekly coach review card
+- `client/src/pages/goals/GoalsPage.tsx` - added goal realism, required pace, current pace, adaptive ETA, and aggressive-date warning
+- `client/src/pages/settings/SettingsPage.tsx` - added adaptive adjustment mode setting: `suggest`, `confirm`, `auto`
+- `client/src/api/index.ts` and `client/src/types/index.ts` - added weekly review API client, analytics diagnostics type, and `planAdjustmentMode`
+- `src/ai/context.ts` and `src/ai/prompts.ts` - included adjustment mode in AI context
+
+### Behavior changes
+- The ideal goal model stays separate from the adaptive model so users can see both the original plan and how their body is responding in practice.
+- The Predictions tab can now show actual trend, ideal plan, and adaptive forecast as separate lines.
+- Confirm mode can apply a calorie adjustment after explicit user action.
+- Auto mode can apply bounded calorie/macro adjustments when confidence is high, but it never changes goal dates automatically.
+- Goal date postponement is suggestion-only and appears when the adaptive model says the current deadline is too aggressive.
+- Weekly coach review is computed mostly from existing daily logs, with optional athlete-level recovery fields supported by the backend.

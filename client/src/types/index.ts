@@ -20,6 +20,7 @@ export interface User {
   periodStart?: string | null;        // ISO date of last period (females)
   cycleLength?: number | null;        // cycle length in days
   waterTargetMl?: number | null;      // daily water target in ml
+  planAdjustmentMode?: "suggest" | "confirm" | "auto" | null;
   createdAt?: string;
 }
 

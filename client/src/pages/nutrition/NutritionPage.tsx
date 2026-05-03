@@ -508,6 +508,13 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
     !myFoodsQuery.trim() || f.name.toLowerCase().includes(myFoodsQuery.toLowerCase())
   );
 
+  const searchDebugLabels: Record<string, string> = {
+    "english-name": "English name",
+    alias: "Alias",
+    "localized-name": "Localized name",
+    "ai-translated-query": "AI-translated query",
+  };
+
   return (
     <div className="space-y-2">
       {/* Tab switcher */}
@@ -661,6 +668,11 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                         {displayCal} kcal &middot; {f.defaultQty} {f.defaultUnit} &nbsp;|&nbsp;
                         P: {displayP}g &nbsp;C: {displayC}g &nbsp;F: {displayF}g
+                        {f.searchDebug?.matchSource && (
+                          <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-300 dark:text-gray-600">
+                            {searchDebugLabels[f.searchDebug.matchSource] ?? f.searchDebug.matchSource}
+                          </span>
+                        )}
                       </p>
                     </li>
                   );

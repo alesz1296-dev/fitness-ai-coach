@@ -14,6 +14,7 @@ export interface UserContext {
   trainingHoursPerDay?: number | null;
   injuries?: string | null;
   waterTargetMl?: number | null;
+  planAdjustmentMode?: "suggest" | "confirm" | "auto" | string | null;
   /** ISO 639-1 language code — "en" | "es" */
   language?: string | null;
 }
@@ -33,6 +34,8 @@ const buildUserContext = (user: UserContext): string => {
     parts.push(`Training Days/Week: ${user.trainingDaysPerWeek}`);
   if (user.trainingHoursPerDay)
     parts.push(`Hours/Session: ${user.trainingHoursPerDay}`);
+  if (user.planAdjustmentMode)
+    parts.push(`Plan Adjustment Mode: ${user.planAdjustmentMode}`);
   if (user.injuries) parts.push(`Injuries: ${user.injuries}`);
   if (user.waterTargetMl)
     parts.push(`Water Target: ${user.waterTargetMl}ml/day`);

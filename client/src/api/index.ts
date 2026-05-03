@@ -402,6 +402,15 @@ export const predictionsApi = {
   get: () => api.get<any>("/predictions"),
 };
 
+export const weeklyReviewApi = {
+  current: () => api.get<any>("/weekly-review/current"),
+  history: () => api.get<any>("/weekly-review/history"),
+  save: (data?: Record<string, number | null>) =>
+    api.post<any>("/weekly-review", data ?? {}),
+  applyAdjustment: (id: number) =>
+    api.post<any>(`/weekly-review/${id}/apply-adjustment`),
+};
+
 // ── Water ─────────────────────────────────────────────────────────────────────
 export const waterApi = {
   log: (amount: number, date?: string) =>
@@ -469,12 +478,24 @@ export interface AnalyticsSummary {
   totalBurned: number;
 }
 
+export interface AnalyticsDiagnostics {
+  calorieAdherence: number | null;
+  proteinAdherence: number | null;
+  workoutAdherence: number | null;
+  loggingConsistency: number;
+  weightVelocity: number | null;
+  trendConfidence: "insufficient" | "low" | "medium" | "high";
+  targetCalories: number | null;
+  targetProtein: number | null;
+}
+
 export interface AnalyticsData {
   days: number;
   dailySeries: AnalyticsDayPoint[];
   workoutTrend: AnalyticsWeekPoint[];
   summary: AnalyticsSummary;
-  weightSeries?: Array<{ label: string; weight: number }>;
+  diagnostics?: AnalyticsDiagnostics;
+  weightSeries?: Array<{ date?: string; label: string; weight: number }>;
 }
 
 export const analyticsApi = {

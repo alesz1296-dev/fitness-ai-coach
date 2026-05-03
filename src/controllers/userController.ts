@@ -39,6 +39,7 @@ export const getProfile = async (
         injuries: true,
         periodStart: true,
         cycleLength: true,
+        planAdjustmentMode: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -83,6 +84,7 @@ export const updateProfile = async (
       injuries,
       periodStart,
       cycleLength,
+      planAdjustmentMode,
     } = req.body;
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -112,6 +114,7 @@ export const updateProfile = async (
         ...(cycleLength !== undefined && {
           cycleLength: cycleLength === null ? null : Math.min(45, Math.max(20, Number(cycleLength))),
         }),
+        ...(planAdjustmentMode !== undefined && { planAdjustmentMode }),
       };
 
       await tx.user.update({
@@ -149,6 +152,7 @@ export const updateProfile = async (
           injuries: true,
           periodStart: true,
           cycleLength: true,
+          planAdjustmentMode: true,
           updatedAt: true,
         },
       });

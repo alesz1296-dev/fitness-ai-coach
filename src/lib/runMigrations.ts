@@ -163,6 +163,35 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
       FOREIGN KEY ("dayId") REFERENCES "MealPlanDay"("id") ON DELETE CASCADE
     )`,
   },
+  {
+    table: "WeeklyReview",
+    sql: `CREATE TABLE IF NOT EXISTS "WeeklyReview" (
+      "id" SERIAL PRIMARY KEY,
+      "userId" INTEGER NOT NULL,
+      "weekStart" TEXT NOT NULL,
+      "weekEnd" TEXT NOT NULL,
+      "averageWeight" DOUBLE PRECISION,
+      "calorieAdherence" DOUBLE PRECISION,
+      "proteinAdherence" DOUBLE PRECISION,
+      "workoutsCompleted" INTEGER NOT NULL DEFAULT 0,
+      "plannedWorkouts" INTEGER,
+      "performanceTrend" TEXT,
+      "planStatus" TEXT NOT NULL,
+      "recommendation" TEXT NOT NULL,
+      "recommendedAdjustment" TEXT,
+      "fatigue" INTEGER,
+      "soreness" INTEGER,
+      "hunger" INTEGER,
+      "sleepQuality" INTEGER,
+      "stress" INTEGER,
+      "perceivedPerformance" INTEGER,
+      "adjustmentStatus" TEXT NOT NULL DEFAULT 'suggested',
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,
+      UNIQUE ("userId", "weekStart")
+    )`,
+  },
 ];
 
 // Column migrations
@@ -188,6 +217,8 @@ const MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
     sql: `ALTER TABLE "User" ADD COLUMN "waterTargetMl" DOUBLE PRECISION NOT NULL DEFAULT 2000` },
   { table: "User", column: "emailVerified",
     sql: `ALTER TABLE "User" ADD COLUMN "emailVerified" BOOLEAN NOT NULL DEFAULT FALSE` },
+  { table: "User", column: "planAdjustmentMode",
+    sql: `ALTER TABLE "User" ADD COLUMN "planAdjustmentMode" TEXT NOT NULL DEFAULT 'suggest'` },
   { table: "FoodLog", column: "isCheatMeal",
     sql: `ALTER TABLE "FoodLog" ADD COLUMN "isCheatMeal" BOOLEAN NOT NULL DEFAULT FALSE` },
   { table: "FoodItem", column: "aliases",
@@ -239,6 +270,8 @@ const INDEX_MIGRATIONS: Array<{ name: string; sql: string }> = [
     sql: `CREATE INDEX IF NOT EXISTS "idx_customfood_name" ON "CustomFood" ("name")` },
   { name: "idx_fooditem_name",
     sql: `CREATE INDEX IF NOT EXISTS "idx_fooditem_name" ON "FoodItem" ("name")` },
+  { name: "idx_weeklyreview_userid_weekstart",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_weeklyreview_userid_weekstart" ON "WeeklyReview" ("userId", "weekStart")` },
   { name: "idx_exerciseitem_name",
     sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_name" ON "ExerciseItem" ("name")` },
   { name: "idx_exerciseitem_primarymuscle",

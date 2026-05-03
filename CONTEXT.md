@@ -932,3 +932,22 @@ Updated `AGENT_TOOLS`:
 ### Behavior changes
 - Food search should better match the way users actually type common items.
 - The catalog is now easier to verify by version, and the Nutrition page can surface that version directly in the UI.
+
+## Session 2026-05-03 - Adaptive goals, predictions, analytics, and weekly coach review
+
+### What changed
+- Extended `src/controllers/predictionController.ts` with separate ideal, actual, smoothed actual, and adaptive forecast paths.
+- Added `responseFactor`, `planDeviation`, `etaDrift`, `trendConfidence`, `goalAggressiveness`, `goalChallenge`, `recommendedAdjustment`, and coach `insights` to the predictions response.
+- Updated `src/controllers/analyticsController.ts` with timezone-aware bucketing and diagnostic outputs for adherence, velocity, confidence, and logging consistency.
+- Added `src/controllers/weeklyReviewController.ts` and `src/routes/weeklyReview.ts` for computed weekly review current/history/save/apply endpoints.
+- Added `User.planAdjustmentMode` and `WeeklyReview` to `prisma/schema.prisma`, plus startup migration support in `src/lib/runMigrations.ts`.
+- Updated `client/src/pages/progress/ProgressPage.tsx` so Predictions shows ideal vs actual vs adaptive forecast, Analytics shows diagnostic cards, and Body/Weight shows a weekly coach review card.
+- Updated `client/src/pages/goals/GoalsPage.tsx` with goal realism, required pace, current pace, adaptive ETA, and aggressive-date warnings.
+- Updated `client/src/pages/settings/SettingsPage.tsx` with adaptive adjustment modes: `suggest`, `confirm`, and `auto`.
+
+### Behavior changes
+- Goals now define the intended plan, while Progress/Predictions can compare the plan against actual body response.
+- Adaptive forecasts stay separate from ideal forecasts so the user can see whether real-world response is matching the plan.
+- Confirm mode can apply calorie adjustments after explicit user action.
+- Auto mode can apply bounded calorie/macro adjustments when confidence is high, but date changes remain suggestion-only.
+- Weekly coach review uses existing daily logs first; optional elite-athlete recovery fields are supported without becoming required daily tracking.

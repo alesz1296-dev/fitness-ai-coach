@@ -86,6 +86,7 @@ export const updateProfileSchema = z.object({
     .max(4, "Maximum 4 hours")
     .nullable()
     .optional(),
+  planAdjustmentMode: z.enum(["suggest", "confirm", "auto"]).optional(),
 });
 
 export const changePasswordSchema = z.object({

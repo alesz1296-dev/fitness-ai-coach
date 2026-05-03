@@ -41,6 +41,7 @@ export async function buildUserContext(
       trainingHoursPerDay: true,
       injuries: true,
       waterTargetMl: true,
+      planAdjustmentMode: true,
     },
   });
 

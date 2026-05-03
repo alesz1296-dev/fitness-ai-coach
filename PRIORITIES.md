@@ -44,6 +44,11 @@ _Last updated: 2026-05-03_
 | - | Profile weight sync - profile/settings weight now logs today's weight, confirms before save, and stays aligned with dashboard/nutrition/progress | UX | P1 | Done |
 | - | Food localization layer - `localizedNames` stored in DB; search prefers selected-language names before AI fallback | i18n/AI | P2 | Done |
 | - | Meal planner duration support - week/month/multi-month plans now supported end-to-end | Meal Planner | P1 | Done |
+| - | Adaptive predictions - separate ideal, actual, smoothed actual, and adaptive forecast paths with response factor, ETA drift, confidence, and recommendations | Analytics/Goals | P1 | Done |
+| - | Weekly coach review - computed review endpoints and Progress card using average weight, adherence, training completion, and recommendation | Analytics/UX | P1 | Done |
+| - | Plan adjustment modes - Settings support for `suggest`, `confirm`, and `auto`; confirm can apply calorie adjustments, auto never changes goal dates | Goals/UX | P1 | Done |
+| - | Goals realism diagnostics - active goal required pace, current pace, adaptive ETA, aggressive-date warning, and suggested postponed date | Goals/Analytics | P1 | Done |
+| - | Analytics diagnostic layer - calorie/protein/workout adherence, weight velocity, logging consistency, and trend confidence | Analytics | P1 | Done |
 
 ---
 
@@ -57,8 +62,8 @@ Foundation work is complete. The roadmap below only shows live dependencies and 
 
 | # | Task | Category | Pri | Status |
 |---|------|----------|-----|--------|
-| 108 | Goals page visual overhaul - progress ring, days countdown, weekly pace, gradient cards, empty state CTA | UX | P1 | Pending |
-| 109 | Goals - real-time projection chart in EditGoalModal (actual trend vs old plan vs new plan, debounced) | Feature | P1 | Pending |
+| 108 | Goals page visual overhaul - progress ring, days countdown, gradient cards, empty state CTA | UX | P1 | Pending |
+| 109 | Goals - EditGoalModal comparison chart (old plan vs proposed plan, debounced) | Feature | P1 | Pending |
 | 110 | Goals - realistic goal validator with inline warnings (below BMR, >1%/wk loss, >1000 kcal deficit) | Feature/Safety | P1 | Pending |
 | 111 | Goals - calorie & macro impact panel: current vs new plan, color-coded diffs, live-updating | Feature | P1 | Pending |
 | 113 | Goals - multi-step creation wizard: body stats -> goal type -> target + live chart -> macro split -> save | Feature | P1 | Pending |
@@ -93,7 +98,7 @@ Foundation work is complete. The roadmap below only shows live dependencies and 
 
 | # | Task | Category | Pri | Status |
 |---|------|----------|-----|--------|
-| 71 | Add dynamic editable weight prediction graph to ProgressPage | Feature | P2 | Pending |
+| 71 | Add dynamic editable controls to Progress prediction graph (scenario sliders / manual what-if editing) | Feature | P2 | Pending |
 | 106 | Pagination - food log history, date-cursor based (before=DATE, keeps day groups intact) | Infra/UX | P2 | Pending |
 | 107 | Pagination - workout history, standard offset (page + limit on History tab) | Infra/UX | P2 | Pending |
 | 127 | Add visible "+ Custom exercise" button as primary entry point in WorkoutsPage (not just no-results state) | UX | P2 | Pending |

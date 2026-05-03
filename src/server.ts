@@ -28,6 +28,7 @@ import reportRoutes    from "./routes/reports.js";
 import dashboardRoutes  from "./routes/dashboard.js";
 import searchRoutes     from "./routes/search.js";
 import weeklyPlanRoutes  from "./routes/weeklyPlan.js";
+import weeklyReviewRoutes from "./routes/weeklyReview.js";
 import predictionRoutes  from "./routes/predictions.js";
 import waterRoutes       from "./routes/water.js";
 import mealPlanRoutes    from "./routes/mealPlans.js";
@@ -55,7 +56,7 @@ app.use(cors({
     callback(new Error(`CORS: origin '${origin}' not allowed`));
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Timezone", "X-Language"],
   credentials: true,
 }));
 app.options("*", cors());
@@ -117,6 +118,7 @@ app.use("/api/reports",    reportRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/search",      searchRoutes);
 app.use("/api/weekly-plan", weeklyPlanRoutes);
+app.use("/api/weekly-review", weeklyReviewRoutes);
 app.use("/api/predictions", predictionRoutes);
 app.use("/api/water",       waterRoutes);
 app.use("/api/meal-plans",  mealPlanRoutes);

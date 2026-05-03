@@ -106,11 +106,31 @@ function round(v: number, dp = 2): number {
   return Math.round(v * 10 ** dp) / 10 ** dp;
 }
 
-/** Return ISO date string for Date offset by N days */
-function offsetDate(base: Date, days: number): string {
+function timezoneFromHeaders(req: AuthRequest): string {
+  const raw = req.headers["x-timezone"];
+  const tz = Array.isArray(raw) ? raw[0] : raw;
+  return typeof tz === "string" && /^[A-Za-z0-9_+\-./]+$/.test(tz)
+    ? tz
+    : "UTC";
+}
+
+function dayKey(date: Date | string, timezone: string): string {
+  const d = date instanceof Date ? date : new Date(date);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "01";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/** Return local date string for Date offset by N days */
+function offsetDate(base: Date, days: number, timezone = "UTC"): string {
   const d = new Date(base);
   d.setDate(d.getDate() + days);
-  return d.toISOString().split("T")[0];
+  return dayKey(d, timezone);
 }
 
 /** Classify a day string into week bucket (0-indexed from the earliest day) */
@@ -160,6 +180,7 @@ export const getPredictions = async (
 ): Promise<void> => {
   try {
     const userId = req.user!.id;
+    const timezone = timezoneFromHeaders(req);
 
     // ── 1. Fetch all data ────────────────────────────────────────────────────
 
@@ -170,6 +191,7 @@ export const getPredictions = async (
           weight: true, height: true, age: true, sex: true,
           activityLevel: true, goal: true, proteinMultiplier: true,
           trainingDaysPerWeek: true, trainingHoursPerDay: true,
+          planAdjustmentMode: true,
         },
       }),
       prisma.weightLog.findMany({
@@ -186,8 +208,9 @@ export const getPredictions = async (
         where:   { userId, active: true },
         orderBy: { createdAt: "desc" },
         select:  {
-          type: true, targetWeight: true, targetDate: true,
+          id: true, type: true, targetWeight: true, targetDate: true,
           dailyCalories: true, tdee: true, proteinGrams: true, weeklyChange: true,
+          carbsGrams: true, fatsGrams: true,
         },
       }),
     ]);
@@ -197,7 +220,7 @@ export const getPredictions = async (
       { day: string; totalCal: number; totalProtein: number; entries: number }[]
     >(
       `SELECT
-         "date"::date AS day,
+         ("date" AT TIME ZONE '${timezone}')::date AS day,
          SUM(calories) AS "totalCal",
          SUM(COALESCE(protein, 0)) AS "totalProtein",
          COUNT(*) AS entries
@@ -206,6 +229,9 @@ export const getPredictions = async (
        GROUP BY "date"::date
        ORDER BY day ASC`
     );
+    for (const row of foodAggs as Array<{ day: string | Date }>) {
+      row.day = row.day instanceof Date ? dayKey(row.day, timezone) : String(row.day).slice(0, 10);
+    }
 
     // ── 2. Early-exit if insufficient data ──────────────────────────────────
 
@@ -254,9 +280,9 @@ export const getPredictions = async (
     // ── 4. Build weekly snapshots ────────────────────────────────────────────
 
     const allDates = [
-      ...weightLogs.map((w) => w.date.toISOString().split("T")[0]),
+      ...weightLogs.map((w) => dayKey(w.date, timezone)),
       ...foodAggs.map((f) => f.day),
-      ...workouts.map((w) => w.date.toISOString().split("T")[0]),
+      ...workouts.map((w) => dayKey(w.date, timezone)),
     ].sort();
     const minDate = allDates[0];
     const maxDate = allDates[allDates.length - 1];
@@ -268,13 +294,13 @@ export const getPredictions = async (
     // Index weight by day (if multiple readings same day, use last)
     const weightByDay = new Map<string, number>();
     for (const w of weightLogs) {
-      weightByDay.set(w.date.toISOString().split("T")[0], w.weight);
+      weightByDay.set(dayKey(w.date, timezone), w.weight);
     }
 
     // Index workouts by day
     const workoutsByDay = new Map<string, { count: number; cals: number }>();
     for (const w of workouts) {
-      const d = w.date.toISOString().split("T")[0];
+      const d = dayKey(w.date, timezone);
       const existing = workoutsByDay.get(d) ?? { count: 0, cals: 0 };
       workoutsByDay.set(d, {
         count: existing.count + 1,
@@ -299,7 +325,7 @@ export const getPredictions = async (
       let totalExerciseCals = 0;
 
       for (let d = 0; d < 7; d++) {
-        const dayStr = offsetDate(weekStartDate, d);
+        const dayStr = offsetDate(weekStartDate, d, timezone);
         if (dayStr > maxDate) break;
 
         const wt = weightByDay.get(dayStr);
@@ -329,8 +355,8 @@ export const getPredictions = async (
 
       weeklySnapshots.push({
         weekNum:  w + 1,
-        weekStart: weekStartDate.toISOString().split("T")[0],
-        weekEnd:   weekEndDate.toISOString().split("T")[0],
+        weekStart: dayKey(weekStartDate, timezone),
+        weekEnd:   dayKey(weekEndDate, timezone),
         avgWeight,
         weightChange,
         avgCalories,
@@ -436,7 +462,7 @@ export const getPredictions = async (
     // ── 8. Build 12-week projection ──────────────────────────────────────────
 
     const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
+    const todayStr = dayKey(today, timezone);
     const projections: ProjectionPoint[] = [];
 
     // Regression x-value for today (days since first weight log)
@@ -454,7 +480,7 @@ export const getPredictions = async (
     let cumulativeFatChange  = 0;
 
     for (let w = 0; w <= 12; w++) {
-      const projDate = offsetDate(today, w * 7);
+      const projDate = offsetDate(today, w * 7, timezone);
 
       // Trend projection (linear regression extrapolated)
       const trendWeight = confidence !== "insufficient"
@@ -514,14 +540,14 @@ export const getPredictions = async (
       if (slopePerWeek !== 0 && confidence !== "insufficient") {
         const weeksNeeded = weightGap / slopePerWeek;
         if (weeksNeeded > 0 && weeksNeeded < 260) { // <5 years
-          estimatedGoalDate = offsetDate(today, Math.round(weeksNeeded * 7));
+          estimatedGoalDate = offsetDate(today, Math.round(weeksNeeded * 7), timezone);
         }
       }
 
       if (theoreticalWeeklyChange !== 0) {
         const weeksNeeded = weightGap / theoreticalWeeklyChange;
         if (weeksNeeded > 0 && weeksNeeded < 260) {
-          idealGoalDate = offsetDate(today, Math.round(weeksNeeded * 7));
+          idealGoalDate = offsetDate(today, Math.round(weeksNeeded * 7), timezone);
         }
       }
     }
@@ -543,6 +569,148 @@ export const getPredictions = async (
       ((workoutAdherence ?? 70) * 0.2)
     );
 
+    const requiredWeeklyChange = activeGoal?.weeklyChange ?? theoreticalWeeklyChange;
+    const canCompareModels =
+      confidence !== "insufficient" &&
+      Math.abs(theoreticalWeeklyChange) >= 0.05;
+    const rawResponseFactor = canCompareModels
+      ? slopePerWeek / theoreticalWeeklyChange
+      : null;
+    const responseFactor = rawResponseFactor == null
+      ? null
+      : round(Math.max(-2, Math.min(2, rawResponseFactor)), 2);
+    const adaptiveWeeklyChange = responseFactor != null
+      ? round(theoreticalWeeklyChange * responseFactor, 3)
+      : slopePerWeek;
+
+    const actualPath = weightLogs.map((w) => ({
+      date: dayKey(w.date, timezone),
+      weight: w.weight,
+    }));
+    const smoothedActualPath = actualPath.map((point, i, arr) => {
+      const window = arr.slice(Math.max(0, i - 6), i + 1);
+      const avg = window.reduce((s, p) => s + p.weight, 0) / window.length;
+      return { ...point, weight: round(avg, 1) };
+    });
+    const idealPath = projections.map((p) => ({
+      week: p.week,
+      date: p.date,
+      weight: p.idealWeight,
+    }));
+    const adaptivePath = projections.map((p) => ({
+      week: p.week,
+      date: p.date,
+      weight: round(currentWeight + adaptiveWeeklyChange * p.week, 1),
+    }));
+    const toleranceBand = idealPath.map((p) => {
+      const idealWeight = p.weight ?? currentWeight;
+      const tolerance = Math.max(0.4, currentWeight * 0.005);
+      return {
+        week: p.week,
+        date: p.date,
+        low: round(idealWeight - tolerance, 1),
+        high: round(idealWeight + tolerance, 1),
+      };
+    });
+
+    const safeWeeklyPct =
+      goalType === "cut" ? { min: -1.0, max: -0.25 } :
+      goalType === "bulk" ? { min: 0.1, max: 0.5 } :
+      { min: -0.25, max: 0.25 };
+    const requiredWeeklyPct = currentWeight
+      ? round((requiredWeeklyChange / currentWeight) * 100, 2)
+      : 0;
+    const currentWeeklyPct = currentWeight
+      ? round((slopePerWeek / currentWeight) * 100, 2)
+      : 0;
+    const goalAggressiveness =
+      requiredWeeklyPct < safeWeeklyPct.min || requiredWeeklyPct > safeWeeklyPct.max
+        ? "aggressive"
+        : Math.abs(requiredWeeklyPct) < 0.1
+          ? "conservative"
+          : "reasonable";
+
+    const planDeviation = round(slopePerWeek - requiredWeeklyChange, 3);
+    const isBehind =
+      goalType === "cut"
+        ? slopePerWeek > requiredWeeklyChange + 0.1
+        : goalType === "bulk"
+          ? slopePerWeek < requiredWeeklyChange - 0.1
+          : Math.abs(slopePerWeek) > 0.15;
+    const isTooAggressive =
+      goalAggressiveness === "aggressive" ||
+      (goalType === "cut" && slopePerWeek < -currentWeight * 0.0125) ||
+      (goalType === "bulk" && slopePerWeek > currentWeight * 0.0075);
+    const planStatus =
+      confidence === "insufficient" ? "needs_more_data" :
+      isTooAggressive ? "too_aggressive" :
+      isBehind ? "behind" :
+      Math.abs(planDeviation) <= 0.1 ? "on_track" :
+      "ahead";
+
+    const adaptiveGoalDate = (() => {
+      if (!targetWeight || adaptiveWeeklyChange === 0) return null;
+      const weeksNeeded = (targetWeight - currentWeight) / adaptiveWeeklyChange;
+      return weeksNeeded > 0 && weeksNeeded < 260
+        ? offsetDate(today, Math.round(weeksNeeded * 7), timezone)
+        : null;
+    })();
+    const etaDrift =
+      activeGoal?.targetDate && adaptiveGoalDate
+        ? Math.round(
+            (new Date(adaptiveGoalDate).getTime() -
+              new Date(activeGoal.targetDate).getTime()) / 86400000
+          )
+        : null;
+    const suggestedPostponedDate =
+      etaDrift != null && etaDrift > 7 ? adaptiveGoalDate : null;
+
+    const calorieNudge =
+      planStatus === "behind"
+        ? goalType === "cut" ? -150 : goalType === "bulk" ? 150 : 0
+        : planStatus === "too_aggressive"
+          ? goalType === "cut" ? 150 : goalType === "bulk" ? -100 : 0
+          : 0;
+    const adjustmentMode = (user as any)?.planAdjustmentMode ?? "suggest";
+    const recommendedAdjustment = {
+      mode: adjustmentMode,
+      targetGoalId: activeGoal?.id ?? null,
+      action:
+        confidence === "insufficient" ? "improve_logging" :
+        calorieNudge !== 0 ? "adjust_calories" :
+        suggestedPostponedDate ? "suggest_date_change" :
+        "hold",
+      calorieDelta: calorieNudge,
+      nextDailyCalories: activeGoal?.dailyCalories && calorieNudge !== 0
+        ? Math.max(1200, Math.round(activeGoal.dailyCalories + calorieNudge))
+        : null,
+      suggestedTargetDate: suggestedPostponedDate,
+      reason:
+        confidence === "insufficient"
+          ? "More consistent weight and food logs are needed before changing the plan."
+          : planStatus === "behind"
+            ? "Your adaptive trend is behind the ideal plan."
+            : planStatus === "too_aggressive"
+              ? "The current pace may be too aggressive for performance or adherence."
+              : "Your trend is close enough to the plan to hold steady.",
+      canAutoApply:
+        adjustmentMode === "auto" &&
+        confidence === "high" &&
+        calorieNudge !== 0,
+    };
+
+    const insights = [
+      `Current trend: ${slopePerWeek >= 0 ? "+" : ""}${slopePerWeek} kg/week (${currentWeeklyPct >= 0 ? "+" : ""}${currentWeeklyPct}% BW/week).`,
+      `Plan requires: ${requiredWeeklyChange >= 0 ? "+" : ""}${round(requiredWeeklyChange, 2)} kg/week (${requiredWeeklyPct >= 0 ? "+" : ""}${requiredWeeklyPct}% BW/week).`,
+      `Trend confidence is ${confidence}.`,
+      proteinAdequate
+        ? "Protein is adequate for preserving or gaining lean mass."
+        : "Average protein is below the 1.6 g/kg minimum often used for muscle retention.",
+      workoutAdherence == null
+        ? "Set planned training days to improve workout adherence diagnostics."
+        : `Workout adherence is ${workoutAdherence}%.`,
+    ];
+
     // ── 11. Respond ──────────────────────────────────────────────────────────
 
     res.json({
@@ -560,11 +728,31 @@ export const getPredictions = async (
 
       weeklyHistory: weeklySnapshots,
       projections,
+      idealPath,
+      actualPath,
+      smoothedActualPath,
+      adaptivePath,
+      toleranceBand,
+      responseFactor,
+      planDeviation,
+      etaDrift,
+      trendConfidence: confidence,
+      goalAggressiveness,
+      goalChallenge: {
+        status: planStatus,
+        safeWeeklyPct,
+        requiredWeeklyPct,
+        currentWeeklyPct,
+        suggestedPostponedDate,
+      },
+      recommendedAdjustment,
+      insights,
 
       estimatedGoalDate,
       idealGoalDate,
+      adaptiveGoalDate,
       scheduledGoalDate: activeGoal?.targetDate
-        ? new Date(activeGoal.targetDate).toISOString().split("T")[0]
+        ? dayKey(activeGoal.targetDate, timezone)
         : null,
 
       adherenceScore,

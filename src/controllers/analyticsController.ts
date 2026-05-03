@@ -2,21 +2,41 @@ import { Response, NextFunction } from "express";
 import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 
+function timezoneFromHeaders(req: AuthRequest): string {
+  const raw = req.headers["x-timezone"];
+  const tz = Array.isArray(raw) ? raw[0] : raw;
+  return typeof tz === "string" && /^[A-Za-z0-9_+\-./]+$/.test(tz)
+    ? tz
+    : "UTC";
+}
+
+function dayKey(date: Date | string, timezone: string): string {
+  const d = date instanceof Date ? date : new Date(date);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "01";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
 // Returns the Monday-week label "Mon Apr 7" for a given date
-function weekLabel(date: Date): string {
+function weekLabel(date: Date, timezone: string): string {
   const d = new Date(date);
   const day = d.getDay(); // 0=Sun
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", { timeZone: timezone, month: "short", day: "numeric" });
 }
 
-function weekKey(date: Date): string {
+function weekKey(date: Date, timezone: string): string {
   const d = new Date(date);
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
-  return d.toISOString().split("T")[0];
+  return dayKey(d, timezone);
 }
 
 // GET /api/analytics?days=90
@@ -26,10 +46,11 @@ export const getAnalytics = async (
   try {
     const days    = Math.min(Math.max(Number(req.query.days) || 90, 7), 365);
     const userId  = req.user!.id;
+    const timezone = timezoneFromHeaders(req);
     const since   = new Date();
     since.setDate(since.getDate() - days);
 
-    const [workouts, foodLogs, weightLogs] = await Promise.all([
+    const [workouts, foodLogs, weightLogs, activeGoal, user] = await Promise.all([
       prisma.workout.findMany({
         where:   { userId, date: { gte: since } },
         select:  { date: true, duration: true, caloriesBurned: true },
@@ -45,13 +66,22 @@ export const getAnalytics = async (
         select:  { date: true, weight: true },
         orderBy: { date: "asc" },
       }).catch(() => []) : Promise.resolve([]),
+      prisma.calorieGoal.findFirst({
+        where: { userId, active: true },
+        orderBy: { createdAt: "desc" },
+        select: { dailyCalories: true, proteinGrams: true, weeklyChange: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { trainingDaysPerWeek: true },
+      }),
     ]);
 
     // ── Workout trend — grouped by calendar week ──────────────────────────────
     const byWeek: Record<string, { key: string; label: string; count: number; totalDuration: number; burned: number }> = {};
     for (const w of workouts) {
-      const key   = weekKey(w.date);
-      const label = weekLabel(w.date);
+      const key   = weekKey(w.date, timezone);
+      const label = weekLabel(w.date, timezone);
       if (!byWeek[key]) byWeek[key] = { key, label, count: 0, totalDuration: 0, burned: 0 };
       byWeek[key].count++;
       byWeek[key].totalDuration += w.duration ?? 0;
@@ -64,14 +94,14 @@ export const getAnalytics = async (
     // ── Calorie balance — grouped by day ──────────────────────────────────────
     const burnedByDay: Record<string, number> = {};
     for (const w of workouts) {
-      const day = w.date.toISOString().split("T")[0];
+      const day = dayKey(w.date, timezone);
       burnedByDay[day] = (burnedByDay[day] ?? 0) + (w.caloriesBurned ?? 0);
     }
 
     // ── Macro trend — grouped by day ──────────────────────────────────────────
     const macroByDay: Record<string, { calories: number; protein: number; carbs: number; fats: number }> = {};
     for (const f of foodLogs) {
-      const day = f.date.toISOString().split("T")[0];
+      const day = dayKey(f.date, timezone);
       if (!macroByDay[day]) macroByDay[day] = { calories: 0, protein: 0, carbs: 0, fats: 0 };
       macroByDay[day].calories += f.calories;
       macroByDay[day].protein  += f.protein ?? 0;
@@ -117,15 +147,57 @@ export const getAnalytics = async (
 
     // Build weight series
     const weightSeries = (weightLogs as any[]).map((w: any) => ({
-      label:  new Date(w.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      label:  new Date(w.date).toLocaleDateString("en-US", { timeZone: timezone, month: "short", day: "numeric" }),
+      date: dayKey(w.date, timezone),
       weight: Number(w.weight),
     }));
+    const firstWeight = weightSeries[0]?.weight ?? null;
+    const lastWeight = weightSeries.at(-1)?.weight ?? null;
+    const weightVelocity = firstWeight != null && lastWeight != null && weightSeries.length > 1
+      ? Math.round(((lastWeight - firstWeight) / Math.max(1, days / 7)) * 100) / 100
+      : null;
+    const targetDays = activeGoal?.dailyCalories
+      ? dailySeries.filter((d) => d.calories > 0).length
+      : 0;
+    const calorieAdherence = activeGoal?.dailyCalories && targetDays
+      ? Math.round(
+          dailySeries
+            .filter((d) => d.calories > 0)
+            .reduce((s, d) => s + Math.max(0, 100 - Math.abs(d.calories - activeGoal.dailyCalories) / activeGoal.dailyCalories * 100), 0) / targetDays
+        )
+      : null;
+    const proteinAdherence = activeGoal?.proteinGrams && targetDays
+      ? Math.round(
+          dailySeries
+            .filter((d) => d.calories > 0)
+            .reduce((s, d) => s + Math.min(100, (d.protein / activeGoal.proteinGrams) * 100), 0) / targetDays
+        )
+      : null;
+    const workoutAdherence = user?.trainingDaysPerWeek
+      ? Math.round((workouts.length / Math.max(1, Math.ceil(days / 7) * user.trainingDaysPerWeek)) * 100)
+      : null;
+    const loggingConsistency = Math.round((tracked.length / Math.max(1, days)) * 100);
+    const trendConfidence =
+      weightSeries.length >= 10 && loggingConsistency >= 70 ? "high" :
+      weightSeries.length >= 5 && loggingConsistency >= 40 ? "medium" :
+      weightSeries.length >= 3 ? "low" :
+      "insufficient";
 
     res.json({
       days,
       dailySeries:   withRolling,
       workoutTrend,
       weightSeries,
+      diagnostics: {
+        calorieAdherence,
+        proteinAdherence,
+        workoutAdherence,
+        loggingConsistency,
+        weightVelocity,
+        trendConfidence,
+        targetCalories: activeGoal?.dailyCalories ?? null,
+        targetProtein: activeGoal?.proteinGrams ?? null,
+      },
       summary: { avgCalories, avgProtein, totalWorkouts, totalBurned: Math.round(totalBurned) },
     });
   } catch (error) { next(error); }

@@ -48,6 +48,39 @@ function parseJsonObject(raw: string | null | undefined): Record<string, string>
 
 const LANG_CACHE_TTL = 3600; // 1 hour for translations
 
+type FoodSearchMatchSource = "english-name" | "alias" | "localized-name" | "ai-translated-query";
+
+function includesQuery(value: string | undefined, query: string): boolean {
+  return Boolean(query && value?.toLowerCase().includes(query.toLowerCase()));
+}
+
+function getFoodSearchMatchSource(
+  food: { name: string; aliases?: string[]; localizedNames?: Record<string, string> },
+  rawQuery: string,
+  translatedQuery: string,
+  langKey: string
+): FoodSearchMatchSource | undefined {
+  const localized = food.localizedNames?.[langKey];
+  const aliases = food.aliases ?? [];
+
+  if (langKey !== "en" && includesQuery(localized, rawQuery)) return "localized-name";
+
+  if (
+    langKey !== "en" &&
+    translatedQuery &&
+    translatedQuery.toLowerCase() !== rawQuery.toLowerCase() &&
+    (includesQuery(food.name, translatedQuery) || aliases.some((alias) => includesQuery(alias, translatedQuery)))
+  ) {
+    return "ai-translated-query";
+  }
+
+  if (includesQuery(food.name, rawQuery) || includesQuery(food.name, translatedQuery)) return "english-name";
+  if (aliases.some((alias) => includesQuery(alias, rawQuery) || includesQuery(alias, translatedQuery))) return "alias";
+  if (includesQuery(localized, translatedQuery)) return "localized-name";
+
+  return undefined;
+}
+
 /**
  * Translate a search query from any language → English using the configured AI provider.
  * Returns the original query on any error so search always works.
@@ -144,9 +177,10 @@ export const foodSearch = async (
 
     // Translate query to English when user is searching in another language
     const q = (langKey !== "en" && rawQ) ? await translateQueryToEnglish(rawQ, langKey) : rawQ;
+    const searchTerms = Array.from(new Set([q, rawQ].map((term) => term.trim()).filter(Boolean)));
 
     // ── Redis cache — keyed by translated English query (lang-neutral) ──────
-    const cacheKey = `search:food:${q}:${tags.join("|")}:${limit}:${offset}`;
+    const cacheKey = `search:food:${langKey}:${rawQ}:${q}:${tags.join("|")}:${limit}:${offset}`;
     const cached   = await cacheGet(cacheKey);
 
     // ── Helper: translate result names when lang !== "en" ────────────────────
@@ -177,12 +211,12 @@ export const foodSearch = async (
     if (dbCount > 0) {
       const where: Record<string, any> = {};
 
-      if (q) {
-        where.OR = [
-          { name:    { contains: q } },
-          { aliases: { contains: q } },
-          { localizedNames: { contains: q } },
-        ];
+      if (searchTerms.length > 0) {
+        where.OR = searchTerms.flatMap((term) => [
+          { name:    { contains: term } },
+          { aliases: { contains: term } },
+          { localizedNames: { contains: term } },
+        ]);
       }
       if (tags.length > 0) {
         // AND logic: item must have ALL selected tags
@@ -194,19 +228,29 @@ export const foodSearch = async (
         db.foodItem.count({ where }),
       ]);
 
-      const mapped = results.map((f: any) => ({
-        id:          f.id,
-        name:        f.name,
-        calories:    f.calories,
-        protein:     f.protein,
-        carbs:       f.carbs,
-        fats:        f.fats,
-        defaultQty:  f.defaultQty,
-        defaultUnit: f.defaultUnit,
-        tags:        parseJsonArray(f.tags),
-        aliases:     parseJsonArray(f.aliases),
-        localizedNames: parseJsonObject(f.localizedNames),
-      }));
+      const mapped = results.map((f: any) => {
+        const item = {
+          id:          f.id,
+          name:        f.name,
+          calories:    f.calories,
+          protein:     f.protein,
+          carbs:       f.carbs,
+          fats:        f.fats,
+          defaultQty:  f.defaultQty,
+          defaultUnit: f.defaultUnit,
+          tags:        parseJsonArray(f.tags),
+          aliases:     parseJsonArray(f.aliases),
+          localizedNames: parseJsonObject(f.localizedNames),
+        };
+        return {
+          ...item,
+          searchDebug: {
+            matchSource: getFoodSearchMatchSource(item, rawQ, q, langKey),
+            originalQuery: rawQ,
+            translatedQuery: q !== rawQ ? q : undefined,
+          },
+        };
+      });
 
       // Cache English results, translate on the way out
       const payload = { results: mapped, total, source: "db" };
@@ -218,7 +262,19 @@ export const foodSearch = async (
     }
 
     // ── Fallback: static array ────────────────────────────────────────────────
-      const rawResults = searchFoods(q, limit, tags);
+      const rawResults = (searchTerms.length > 0
+        ? Array.from(new Map(searchTerms.flatMap((term) => searchFoods(term, limit, tags)).map((food) => [food.id, food])).values())
+        : searchFoods("", limit, tags)
+      )
+        .map((f) => ({
+          ...f,
+          searchDebug: {
+            matchSource: getFoodSearchMatchSource(f, rawQ, q, langKey),
+            originalQuery: rawQ,
+            translatedQuery: q !== rawQ ? q : undefined,
+          },
+        }))
+        .slice(0, limit);
       const translatedResults = await applyTranslation(rawResults);
     res.json({ results: translatedResults, total: FOOD_DB.length, source: "static" });
   } catch (e) {
