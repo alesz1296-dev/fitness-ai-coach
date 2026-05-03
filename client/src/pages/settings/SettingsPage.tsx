@@ -121,7 +121,7 @@ function ProfileForm() {
       trainingHoursPerDay: String(user.trainingHoursPerDay ?? ""),
       planAdjustmentMode:  user.planAdjustmentMode ?? "suggest",
     });
-  // Only re-sync when key scheduling fields change â€” avoids fighting the user mid-edit
+  // Only re-sync when key scheduling fields change - avoids fighting the user mid-edit
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.trainingDaysPerWeek, user?.trainingHoursPerDay]);
 
@@ -269,7 +269,7 @@ function ProfileForm() {
           />
         </div>
 
-        {/* Training schedule â€” drives precise TDEE when both are filled */}
+        {/* Training schedule - drives precise TDEE when both are filled */}
         <div>
           <p className="text-sm font-medium text-gray-700 mb-2">{t("settings.trainingSchedule")}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -322,7 +322,7 @@ function ProfileForm() {
           placeholder={t("settings.selectFitnessLevel")}
           options={[
             { value: "beginner",     label: "Beginner (< 1 year training)" },
-            { value: "intermediate", label: "Intermediate (1â€“3 years)" },
+              { value: "intermediate", label: "Intermediate (1-3 years)" },
             { value: "advanced",     label: "Advanced (3+ years)" },
           ]}
         />
@@ -346,7 +346,7 @@ function ProfileForm() {
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
             Active Goal
             {form.goal && (
-              <span className="ml-2 text-xs font-normal text-gray-400">(set from Goals tab â€” edit freely)</span>
+              <span className="ml-2 text-xs font-normal text-gray-400">(set from Goals tab - edit freely)</span>
             )}
           </label>
           <textarea
@@ -360,7 +360,7 @@ function ProfileForm() {
 
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-sm text-blue-700 dark:text-blue-300">
           <p className="font-semibold mb-1">{t("settings.whyMatters")}</p>
-          <p>Age, weight, height, and sex are used for Mifflin-St Jeor BMR. When you set your <strong>training days and session duration</strong>, calorie goals switch to a precise MET-based TDEE that accounts for actual exercise calories burned â€” more accurate than the activity multiplier alone. All goal calculations, nutrition targets, and progress projections depend on this.</p>
+          <p>Age, weight, height, and sex are used for Mifflin-St Jeor BMR. When you set your <strong>training days and session duration</strong>, calorie goals switch to a precise MET-based TDEE that accounts for actual exercise calories burned - more accurate than the activity multiplier alone. All goal calculations, nutrition targets, and progress projections depend on this.</p>
         </div>
 
         <Button loading={saving} onClick={save} className="w-full">{t("profile.saveProfile")}</Button>
@@ -476,11 +476,11 @@ function NutritionPreferencesForm() {
         <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 text-sm text-gray-600 dark:text-gray-300 space-y-1">
           <p className="font-semibold text-gray-700 dark:text-gray-200 mb-2">{t("settings.commonRanges")}</p>
           {[
-            { range: "0.8 â€“ 1.0", label: "Sedentary / general health (RDA minimum)" },
-            { range: "1.2 â€“ 1.6", label: "Recreational fitness, moderate training" },
-            { range: "1.6 â€“ 2.0", label: "Strength / hypertrophy training (recommended)" },
-            { range: "2.0 â€“ 2.5", label: "Cutting phase â€” high-protein to preserve muscle" },
-            { range: "2.5 â€“ 3.0", label: "Advanced athletes / aggressive cut (elite use)" },
+            { range: "0.8 - 1.0", label: "Sedentary / general health (RDA minimum)" },
+            { range: "1.2 - 1.6", label: "Recreational fitness, moderate training" },
+            { range: "1.6 - 2.0", label: "Strength / hypertrophy training (recommended)" },
+            { range: "2.0 - 2.5", label: "Cutting phase - high-protein to preserve muscle" },
+            { range: "2.5 - 3.0", label: "Advanced athletes / aggressive cut (elite use)" },
           ].map((row) => (
             <div key={row.range} className="flex gap-3">
               <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{row.range}</span>
@@ -671,9 +671,9 @@ function CycleTrackingForm() {
             <p className="text-xs mt-1 opacity-80">
               {{
                 Menstruation: "Focus on iron-rich foods (red meat, lentils, spinach), anti-inflammatory foods, and gentle movement. Rest more if needed.",
-                Follicular:   "Rising oestrogen boosts energy and mood â€” great time for higher intensity training and increasing carbs slightly.",
+                Follicular:   "Rising oestrogen boosts energy and mood - great time for higher intensity training and increasing carbs slightly.",
                 Ovulation:    "Peak energy and strength. Push harder in the gym. Great time for new PRs and high-intensity cardio.",
-                Luteal:       "Progesterone rises â€” you may crave carbs and feel more fatigued. Increase magnesium (dark chocolate, nuts, seeds) and prioritise sleep.",
+                Luteal:       "Progesterone rises - you may crave carbs and feel more fatigued. Increase magnesium (dark chocolate, nuts, seeds) and prioritise sleep.",
               }[phase.name]}
             </p>
           </div>
@@ -863,9 +863,9 @@ function PasswordForm() {
       {error   && <p className="text-sm text-red-600   bg-red-50   rounded-xl px-3 py-2 mb-4">{error}</p>}
       {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
       <div className="space-y-4">
-        <Input label={t("settings.currentPassword")} type="password" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
-        <Input label={t("settings.newPassword")}     type="password" value={next}    onChange={(e) => setNext(e.target.value)}    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" hint={t("settings.passwordHint")} />
-        <Input label={t("settings.confirmPasswordField")} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
+        <Input label={t("settings.currentPassword")} type="password" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="••••••••" />
+        <Input label={t("settings.newPassword")}     type="password" value={next}    onChange={(e) => setNext(e.target.value)}    placeholder="••••••••" hint={t("settings.passwordHint")} />
+        <Input label={t("settings.confirmPasswordField")} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" />
         <Button loading={saving} onClick={save} className="w-full">{t("settings.updatePassword")}</Button>
       </div>
     </Card>
@@ -951,7 +951,7 @@ export default function SettingsPage() {
                 });
             }}
           >
-            â¬‡ Download my data
+            ↓ Download my data
           </Button>
         </div>
       </Card>
