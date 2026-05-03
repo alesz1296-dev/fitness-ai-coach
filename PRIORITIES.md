@@ -55,6 +55,9 @@ _Last updated: 2026-05-03_
 | - | Goals What-if persistence cleanup - Apply preview now persists workout schedule inputs as well as calories/macros/date | Goals/UX | P1 | Done |
 | - | Goals forecast localization + sparse-data diagnostics - localized forecast/analytics UI plus visible sparse-data fallback and refresh/debug status | Goals/i18n | P1 | Done |
 | - | Food DB localized search cleanup - DB search now parses `localizedNames` and ranks English / alias / localized / AI-translated matches explicitly | Nutrition/i18n | P1 | Done |
+| - | Progress mobile tab polish - horizontally scrollable tab strip, renamed embedded Plan tab, Goals deep-link to plan review, and compact month/day target-date display | Progress/Goals UX | P1 | Done |
+| - | Nutrition library polish - `Add New Food` CTA moved to the left side of My Foods and protein shake supplements now appear as `Protein Shake` in macro food/meal breakdowns | Nutrition/UX | P1 | Done |
+| - | Theme and language preference polish - added `Black + Golden` and `White + Green` theme options and fixed the language-change toast so it appears in the newly selected language | Settings/UX | P1 | Done |
 
 ---
 
@@ -108,6 +111,9 @@ Foundation work is complete. The roadmap below only shows live dependencies and 
 | 106 | Pagination - food log history, date-cursor based (before=DATE, keeps day groups intact) | Infra/UX | P2 | Pending |
 | 107 | Pagination - workout history, standard offset (page + limit on History tab) | Infra/UX | P2 | Pending |
 | 127 | Add visible "+ Custom exercise" button as primary entry point in WorkoutsPage (not just no-results state) | UX | P2 | Pending |
+| - | Coaching mode - coaches can share workout or nutrition plans via link for clients to import | Platform | P2 | Pending |
+| - | Developer/Admin mode - privileged support, ops, and content-management surface | Internal | P2 | Pending |
+| - | Advanced workout structures - stretching, warm-up, circuits, and supersets across builder/templates/logging | Workouts | P2 | Pending |
 | - | Stretching & Mobility + Warm-up as dedicated workout categories (filter, builder, rest timer skip) | Feature | P2 | Pending |
 | - | CI/CD pipeline - GitHub Actions: lint -> `tsc --noEmit` -> `prisma validate` -> build | DevOps | P2 | Pending |
 | - | DB indexes - `@@index` on `FoodLog(userId,date)`, `Workout(userId,date)`, `WeightEntry(userId,date)` | Backend | P2 | Pending |
@@ -128,11 +134,11 @@ Foundation work is complete. The roadmap below only shows live dependencies and 
 | # | Task | Category | Pri | Status | Notes |
 |---|------|----------|-----|--------|-------|
 | B1 | Apple Health / HealthKit integration - steps, HR, active calories, sleep | Health Platform | P2 | Deferred | Requires Capacitor plugin or RN rewrite |
-| B2 | Apple Watch companion app - log sets in-session from wrist | Wearable | P3 | Deferred | Requires native WatchKit + Capacitor or full RN rewrite |
+| B2 | Apple Watch companion app - log sets in-session from wrist | Wearable | P2 | Pending | High-priority wearable follow-up once core roadmap work stabilises |
 | B3 | Samsung Health integration - Android equivalent of B1 | Health Platform | P2 | Pending | Samsung Health SDK + Capacitor plugin |
-| B4 | Barcode scanner for food - camera -> Open Food Facts API -> auto-fill macros | Nutrition | P2 | Pending | Low priority since manual search works |
+| B4 | Barcode scanner for food - camera -> Open Food Facts API -> auto-fill macros | Nutrition | P3 | Deferred | Lowest-priority nutrition convenience feature after core roadmap work |
 | B5 | Larger food database - wire up external API (Open Food Facts primary, USDA FoodData Central fallback). Backend proxy endpoint + Redis cache + graceful fallback to internal seed. Replaces/supplements current seed | Nutrition | P2 | Pending | Recommended: Open Food Facts (free, 3M+ items, barcode support) + USDA FoodData Central (free, 600K+) as fallback. Nutritionix is paid but has restaurant data. |
-| B6 | AI image -> food macro analysis - photo of meal -> GPT-4o Vision estimates macros | Nutrition/AI | P2 | Pending | New endpoint + camera UI in Nutrition page |
+| B6 | AI image -> food macro analysis - photo of meal -> GPT-4o Vision estimates macros | Nutrition/AI | P3 | Deferred | Lowest-priority food-detection feature after scanner, coaching, and wearable work |
 | B7 | Android APK build - React Native / Expo EAS build for Samsung Galaxy Store + Play Store | Mobile | P2 | In Progress | iOS/PWA on Railway. APK via `eas build --platform android`. Expo scaffold already in `/mobile` |
 | B8 | External exercise database API - Wger REST API (free, self-hostable) or ExerciseDB via RapidAPI (1300+ exercises with GIFs, muscle diagrams). Supplements current seed | Workouts | P2 | Pending | Recommended: Wger as primary (free, no rate limit if self-hosted, Apache 2.0). ExerciseDB for GIFs/images. |
 
@@ -160,8 +166,9 @@ Completed prerequisites already done: `#124`, `#114`, `#115`, `#126`.
 | 1 | #108, #109, #110, #111, #113, #112 | Finish goals overhaul now that shared goal UI is already complete |
 | 2 | #116, #117, #122, #123 | Ship specialist AI agents and split the coach UI into clear tabs |
 | 3 | #118, #125, #119, #120, #121 | Finish proactive notifications end to end |
-| 4 | #71, #85, #106, #107, #127, request timeout, OpenAI error handling, SSE streaming, optimistic UI, suggested JSON persistence, DB indexes, connection pooling | Close the remaining infra and UX reliability gaps |
-| 5 | #B3, #B4, #B5, #B6, #B7, #B8 | Tack on the next wave of platform and integration work |
+| 4 | #71, #85, #106, #107, #127, request timeout, OpenAI error handling, SSE streaming, optimistic UI, suggested JSON persistence, DB indexes, connection pooling, coaching mode, developer/admin mode, advanced workout structures | Close the remaining infra, UX, and coaching-platform gaps |
+| 5 | #B2, #B3, #B5, #B7, #B8 | Tackle the next wave of wearable, platform, and integration work |
+| 6 | #B4, #B6 | Leave scanner and AI food-photo detection as the final nutrition-convenience wave |
 
 ---
 
@@ -170,5 +177,6 @@ Completed prerequisites already done: `#124`, `#114`, `#115`, `#126`.
 - Start with Goals Overhaul: `#108` plus the chart/validator/panel/wizard items now that their shared UI foundation is done.
 - Then move to AI agents and the AI Coach split, since those depend on the agent/tool work that is already complete.
 - After that, finish the proactive engine so notifications, preferences, and the notification center can land together.
-- Keep infra polish as the next hardening lane: pagination, timeouts, OpenAI error handling, SSE, optimistic UI, suggested JSON persistence, DB indexes, and pooling.
-- Leave the big external integrations and mobile APK work for a later sprint once the core product loops are stable.
+- Keep infra polish as the next hardening lane: pagination, timeouts, OpenAI error handling, SSE, optimistic UI, suggested JSON persistence, DB indexes, pooling, and CI/CD.
+- Once the core loops are stable, move the next high-priority expansion lane to coaching mode, developer/admin tooling, advanced workout structures, and Apple Watch support.
+- Leave barcode scanning and AI food-photo detection as the final nutrition-convenience wave.

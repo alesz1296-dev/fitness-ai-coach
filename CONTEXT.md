@@ -982,3 +982,23 @@ Updated `AGENT_TOOLS`:
 - Spanish/localized food search is more reliable because DB results can match parsed `localizedNames` directly before falling back to AI-translated queries.
 - Goals What-if Apply now keeps the workout-side variables users edited instead of silently dropping them.
 - The Goals forecast is easier to diagnose when adaptive data is sparse, and it refreshes more naturally after shared data changes elsewhere in the app.
+
+## Session 2026-05-03 - Progress mobile polish + nutrition CTA/itemization + theme prefs
+
+### What changed
+- Updated `client/src/pages/progress/ProgressPage.tsx` so the internal Progress tabs can scroll horizontally on mobile instead of letting `Predictions` and the embedded plan-review tab overflow off-screen.
+- Renamed the embedded Progress `Goals` tab to `Plan` and added query-param syncing so other pages can deep-link directly into that tab.
+- Updated `client/src/pages/goals/GoalsPage.tsx` with a dedicated button that opens the Progress `Plan` tab, and tightened the active-goal header layout so mobile action buttons wrap more safely.
+- Shortened target-date display in Progress/Goals plan-review surfaces to month + day only, avoiding long year-based labels that were pushing controls outside the viewport.
+- Updated `client/src/pages/nutrition/NutritionPage.tsx` so the green custom-food CTA now reads `Add New Food` and sits on the left side of the My Foods header alongside the personal-food-library context.
+- Added virtual macro-view entries for enabled protein shake supplements so they appear as `Protein Shake` inside the macro food/meal breakdown views instead of only inflating aggregate totals.
+- Updated `client/src/pages/settings/SettingsPage.tsx`, `client/src/hooks/useDarkMode.ts`, `client/src/index.css`, and `client/tailwind.config.js` with selectable `Black + Golden` and `White + Green` color themes stored in app preferences.
+- Fixed the language-change toast so it renders using the newly selected locale instead of the old one.
+- Updated `client/src/i18n/locales/en.ts` and `client/src/i18n/locales/es.ts` with the new Progress/Goals/Settings/Nutrition labels introduced by this polish pass.
+- Updated `PRIORITIES.md` so Coaching Mode, Developer/Admin mode, advanced workout structures, and Apple Watch support are raised above barcode scanning and AI food-photo detection.
+
+### Behavior changes
+- On mobile, the Progress tab strip should now stay usable without losing access to `Predictions` or `Plan`.
+- The main Goals page remains the goal-management surface, while Progress `Plan` acts as the embedded plan-review / trajectory tab.
+- Nutrition macro rings and macro breakdown tables should now show protein shake supplements as visible food sources instead of only silent macro boosts.
+- Users can now choose between the default palette, `Black + Golden`, and `White + Green` from app preferences, and the language-update confirmation toast should switch immediately into the newly selected language.

@@ -259,6 +259,26 @@ function getFoodTypeTags(t: (k: string) => string) {
   ];
 }
 
+function getFoodCategoryOptions(t: (k: string) => string) {
+  return [
+    ...getCuisineTags(t).map(({ tag, label, emoji }) => ({
+      tag,
+      emoji,
+      label: `${t("nutrition.cuisine")}: ${label}`,
+    })),
+    ...getDietaryTags(t).map(({ tag, label, emoji }) => ({
+      tag,
+      emoji,
+      label: `${t("nutrition.dietaryCategory")}: ${label}`,
+    })),
+    ...getFoodTypeTags(t).map(({ tag, label, emoji }) => ({
+      tag,
+      emoji,
+      label: `${t("nutrition.foodType")}: ${label}`,
+    })),
+  ];
+}
+
 // Flat list for backward-compat tag display in food rows (TAG_COLORS still used)
 const TAG_FILTERS = [
   { tag: "", label: "All", emoji: "🍽️" },
@@ -452,10 +472,12 @@ function CustomFoodModal({
 function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
   const { t, i18n } = useTranslation();
   const [tab,       setTab]       = useState<"all" | "mine">("all");
+  const [browseMode, setBrowseMode] = useState<"search" | "category">("search");
   const [query,     setQuery]     = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [results,   setResults]   = useState<any[]>([]);
   const [open,      setOpen]      = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   const [myFoods,       setMyFoods]       = useState<CustomFood[]>([]);
   const [myFoodsQuery,  setMyFoodsQuery]  = useState("");
@@ -477,6 +499,18 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
 
   useEffect(() => {
     if (tab !== "all") return;
+    if (browseMode === "category") {
+      if (!selectedCategory) {
+        setResults([]);
+        setOpen(false);
+        return;
+      }
+      searchApi.foods("", 250, [selectedCategory], i18n.language).then((r) => {
+        setResults(r.data.results);
+        setOpen(false);
+      }).catch(() => {});
+      return;
+    }
     const q = query.trim();
     if (!q && activeTags.length === 0) { setResults([]); setOpen(false); return; }
     const t = setTimeout(() => {
@@ -486,7 +520,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
       }).catch(() => {});
     }, q ? 200 : 0);
     return () => clearTimeout(t);
-  }, [query, activeTags, tab, i18n.language]);
+  }, [query, activeTags, browseMode, selectedCategory, tab, i18n.language]);
 
   const handleTagClick = (tag: string, e: React.MouseEvent) => {
     // Ignore the 2nd click of a double-click sequence (e.detail === 2);
@@ -509,6 +543,8 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
   const filteredMyFoods = myFoods.filter((f) =>
     !myFoodsQuery.trim() || f.name.toLowerCase().includes(myFoodsQuery.toLowerCase())
   );
+
+  const categoryOptions = getFoodCategoryOptions(t as (k: string) => string);
 
   const searchDebugLabels: Record<string, string> = {
     "english-name": "English name",
@@ -555,6 +591,45 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
       {/* All Foods (global DB) */}
       {tab === "all" && (
         <>
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-800/60 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">
+              {t("nutrition.searchModeLabel")}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setBrowseMode("search");
+                  setSelectedCategory("");
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                  browseMode === "search"
+                    ? "bg-brand-600 text-white border-brand-600"
+                    : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400"
+                }`}
+              >
+                {t("nutrition.searchBasedMode")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setBrowseMode("category");
+                  setQuery("");
+                  setActiveTags([]);
+                  setOpen(false);
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                  browseMode === "category"
+                    ? "bg-brand-600 text-white border-brand-600"
+                    : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-brand-400"
+                }`}
+              >
+                {t("nutrition.categoryBrowseMode")}
+              </button>
+            </div>
+          </div>
+          {browseMode === "search" ? (
+          <>
           <div className="space-y-1.5">
             <button
               type="button"
@@ -687,6 +762,52 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               </div>
             )}
           </div>
+          </>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t("nutrition.chooseFoodCategory")}</span>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                >
+                  <option value="">{t("nutrition.selectCategoryPlaceholder")}</option>
+                  {categoryOptions.map((option) => (
+                    <option key={option.tag} value={option.tag}>
+                      {option.emoji} {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t("nutrition.chooseFoodFromCategory")}</span>
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const item = results.find((result) => String(result.id) === e.target.value);
+                    if (!item) return;
+                    onSelect(item);
+                  }}
+                  disabled={!selectedCategory || results.length === 0}
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-60"
+                >
+                  <option value="">
+                    {!selectedCategory
+                      ? t("nutrition.selectCategoryPlaceholder")
+                      : results.length > 0
+                        ? t("nutrition.selectFoodPlaceholder")
+                        : t("nutrition.noFoodsInCategory")}
+                  </option>
+                  {results.map((item) => (
+                    <option key={item.id} value={String(item.id)}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
         </>
       )}
 
@@ -2231,6 +2352,7 @@ export default function NutritionPage() {
   };
   const [editItem,    setEditItem]    = useState<FoodLog | null>(null);
   const [deleting,    setDeleting]    = useState<number | null>(null);
+  const [clearingFoods, setClearingFoods] = useState(false);
   const [showMealPlan, setShowMealPlan] = useState(false);
   const [showDish,     setShowDish]     = useState(false);
   const [activeGoal,  setActiveGoal]  = useState<CalorieGoal | null>(null);
@@ -2561,6 +2683,23 @@ export default function NutritionPage() {
     } finally { setDeleting(null); }
   };
 
+  const clearDailyFoods = async () => {
+    if (logs.length === 0 || clearingFoods) return;
+    if (!confirm(t("nutrition.clearLoggedFoodsConfirm"))) return;
+    setClearingFoods(true);
+    try {
+      for (const log of logs) {
+        await foodApi.delete(log.id);
+      }
+      emitNutritionSync("food");
+      toast.show(t("nutrition.clearLoggedFoodsDone"));
+    } catch (e: any) {
+      alert(e?.response?.data?.error || t("nutrition.failedClearFoods"));
+    } finally {
+      setClearingFoods(false);
+    }
+  };
+
   // Merge food log totals with active supplement macros
   const effectiveTotals = {
     calories: totals.calories + suppMacros.calories + customSuppMacros.calories,
@@ -2568,6 +2707,30 @@ export default function NutritionPage() {
     carbs:    totals.carbs    + suppMacros.carbs    + customSuppMacros.carbs,
     fats:     totals.fats     + suppMacros.fats     + customSuppMacros.fats,
   };
+
+  const supplementFoodLogs: FoodLog[] = (["whey", "casein", "plant"] as SuppId[])
+    .filter((id) => supplements[id].enabled && supplements[id].qty > 0)
+    .map((id, index) => {
+      const def = SUPPLEMENT_DEFS[id];
+      const qty = supplements[id].qty;
+      const mult = qty / def.defaultQty;
+      const macros = getSuppMacros(id);
+      return {
+        id: -1000 - index,
+        userId: 0,
+        date,
+        foodName: t("nutrition.proteinShakeFood"),
+        calories: macros.cal * mult,
+        protein: macros.p * mult,
+        carbs: macros.c * mult,
+        fats: macros.f * mult,
+        quantity: qty,
+        unit: def.unit,
+        meal: "snack",
+      };
+    });
+
+  const macroLogs = [...logs, ...supplementFoodLogs];
 
   const totalMacroG = effectiveTotals.protein + effectiveTotals.carbs + effectiveTotals.fats;
   const hasGoal = activeGoal != null;
@@ -2578,6 +2741,12 @@ export default function NutritionPage() {
     const key = log.meal ?? "other";
     if (!grouped[key]) grouped[key] = [];
     grouped[key].push(log);
+  }
+  const macroGrouped: Record<string, FoodLog[]> = {};
+  for (const log of macroLogs) {
+    const key = log.meal ?? "other";
+    if (!macroGrouped[key]) macroGrouped[key] = [];
+    macroGrouped[key].push(log);
   }
   const mealOrder = ["breakfast", "lunch", "dinner", "snack", "snack1", "snack2", "snack3", "pre_workout", "other"];
   const isToday   = date === getEffectiveToday();
@@ -2842,12 +3011,12 @@ export default function NutritionPage() {
 
               {/* 🍽️ By Meal — per-meal stacked bars */}
               {macroView === "by-meal" && (
-                <MacroByMeal grouped={grouped} mealOrder={mealOrder} />
+                <MacroByMeal grouped={macroGrouped} mealOrder={mealOrder} />
               )}
 
               {/* 🔍 By Food — per-food macro source table */}
               {macroView === "by-food" && (
-                <MacroByFood logs={logs} />
+                <MacroByFood logs={macroLogs} />
               )}
 
               {/* 🎯 vs Goals — progress bars against calorie goal targets */}
@@ -2895,6 +3064,15 @@ export default function NutritionPage() {
       {/* Action buttons — below macros for immediate access */}
       <div className="flex items-center gap-2 flex-wrap">
         <Button onClick={() => { setEditItem(null); setShowForm(true); }}>+ {t("nutrition.logFood")}</Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={clearDailyFoods}
+          disabled={logs.length === 0 || clearingFoods}
+          className="border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+        >
+          {clearingFoods ? t("common.loading") : t("nutrition.clearLoggedFoods")}
+        </Button>
         <Button
           variant="secondary"
           size="sm"
@@ -3485,15 +3663,17 @@ export default function NutritionPage() {
           <div className="relative bg-white dark:bg-gray-900 w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh]">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-              <div>
-                <h2 className="font-bold text-gray-900 dark:text-white text-lg">📋 {t("nutrition.myFoods")}</h2>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t("nutrition.yourFoodLibrary")}</p>
-              </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setMyFoodsPanelEdit(null); setShowMyFoodsCreate(true); }}
                   className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-green-500 text-white hover:bg-green-600 transition-colors"
                 >+ {t("nutrition.newFoodBtn")}</button>
+                <div>
+                <h2 className="font-bold text-gray-900 dark:text-white text-lg">📋 {t("nutrition.myFoods")}</h2>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t("nutrition.yourFoodLibrary")}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
                 <button onClick={() => setShowMyFoodsPanel(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 text-lg font-bold">×</button>
               </div>
             </div>

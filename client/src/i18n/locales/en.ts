@@ -61,7 +61,7 @@ export interface Translation {
     fastingTimer: string; startFast: string; stopFast: string; fastingFor: string;
     surplus: string; deficit: string; onTarget: string; includesSupps: string;
     autoEstimated: string; resetEstimate: string;
-    addSupplement2: string; addIngredient: string; adding: string; askNutritionist: string; buildDish: string; calorieComposition: string; caloriesKcal: string; caloriesFromMacros: string; clearAll: string; cookingExtras: string; cookingOil: string; createFirstFood: string; cuisine: string; defaultQty: string; defaultUnit: string; dietaryCategory: string; dishName: string; editMacros: string; emojiField: string; entries: string; filterMyFoods: string; filtering: string; foodName: string; foodType: string; getAiMealPlan: string; goalExceeded: string; goalMet: string; grams: string; ingredient: string; logAllMeals: string; logFirstMeal: string; logFoodMacros: string; logIngredientsSep: string; logTodayWeight: string; macronutrients: string; macrosPerServing: string; mealsLoggedSuccess: string; noCustomFoods: string; noFoodsLoggedToday: string; noItems: string; noResultsEnter: string; noResultsTryName: string; nothingLogged: string; nutritionistBuilding: string; pinFavourites: string; quantity: string; removeFromFavourites: string; removeSupplement: string; rightOnTarget: string; searchFoodDb: string; searchMyFoods: string; searchFoodPlaceholder: string; selectMealOptional: string; setCalorieGoal: string; startFromFood: string; supplementName: string; suggestedMealPlan: string; buildDishBowl: string; chatNutritionist: string; yourFoodLibrary: string; tdee: string; tapPhaseNutrition: string; within80Kcal: string; tryAgain: string; total: string; note: string; unit: string; meal: string; meals: string;
+    addSupplement2: string; addIngredient: string; adding: string; askNutritionist: string; buildDish: string; calorieComposition: string; caloriesKcal: string; caloriesFromMacros: string; clearAll: string; clearLoggedFoods: string; clearLoggedFoodsConfirm: string; clearLoggedFoodsDone: string; failedClearFoods: string; searchModeLabel: string; searchBasedMode: string; categoryBrowseMode: string; chooseFoodCategory: string; chooseFoodFromCategory: string; selectCategoryPlaceholder: string; selectFoodPlaceholder: string; noFoodsInCategory: string; cookingExtras: string; cookingOil: string; createFirstFood: string; cuisine: string; defaultQty: string; defaultUnit: string; dietaryCategory: string; dishName: string; editMacros: string; emojiField: string; entries: string; filterMyFoods: string; filtering: string; foodName: string; foodType: string; getAiMealPlan: string; goalExceeded: string; goalMet: string; grams: string; ingredient: string; logAllMeals: string; logFirstMeal: string; logFoodMacros: string; logIngredientsSep: string; logTodayWeight: string; macronutrients: string; macrosPerServing: string; mealsLoggedSuccess: string; noCustomFoods: string; noFoodsLoggedToday: string; noItems: string; noResultsEnter: string; noResultsTryName: string; nothingLogged: string; nutritionistBuilding: string; pinFavourites: string; quantity: string; removeFromFavourites: string; removeSupplement: string; rightOnTarget: string; searchFoodDb: string; searchMyFoods: string; searchFoodPlaceholder: string; selectMealOptional: string; setCalorieGoal: string; startFromFood: string; supplementName: string; suggestedMealPlan: string; buildDishBowl: string; chatNutritionist: string; yourFoodLibrary: string; tdee: string; tapPhaseNutrition: string; within80Kcal: string; tryAgain: string; total: string; note: string; unit: string; meal: string; meals: string;
     mealOther: string; foodDatabase: string; createNewFood: string; editCustomFood: string; createCustomFood: string;
     saveChanges: string; createFood: string; nameRequired: string; caloriesReq: string; caloriesPositive: string;
     defaultQtyPositive: string; defaultUnitRequired: string; failedSaveCustomFood: string;
@@ -79,7 +79,7 @@ export interface Translation {
     surplusTitle: string; surplusBulk: string; surplusDefault: string;
     deficitLargeTitle: string; deficitLargeCut: string; deficitLargeDefault: string;
     deficitTitle: string; deficitCut: string; deficitDefault: string;
-    suppCreatine: string; suppOmega3: string; suppWhey: string;
+    suppCreatine: string; suppOmega3: string; suppWhey: string; proteinShakeFood: string;
     suppCasein: string; suppPlant: string; suppMassGainer: string;
     macrosPerUnit: string; addCustomSupp: string;
     favourites: string; addToFavourites: string; pinFavouritesHint: string; quickRelog: string;
@@ -147,6 +147,11 @@ export interface Translation {
     title: string; bodyWeight: string; logWeight: string; weightHistory: string;
     goalWeight: string; currentWeight: string; startWeight: string;
     projection: string; bodyFat: string; analytics: string; noWeightData: string;
+    bodyTab: string; strengthTab: string; analyticsTab: string; predictionsTab: string; planTab: string;
+    subtitle: string; currentStat: string; startingStat: string; changeStat: string; lowestStat: string; highestStat: string;
+    lastDays: string; noWeightDataHelp: string; estimatedFatPct: string; invalidWeight: string; failedLogWeight: string;
+    deleteWeightConfirm: string; weightNotesPlaceholder: string;
+    rangeDay: string; rangeWeek: string; rangeWeeks: string; rangeMonth: string; rangeMonths: string; rangeYear: string;
   };
   goals: {
     title: string; activeGoal: string; noGoal: string; createGoal: string;
@@ -174,7 +179,11 @@ export interface Translation {
     normalizedOverlayHint: string;
     aggressivenessAggressive: string; aggressivenessConservative: string; aggressivenessReasonable: string;
     statusNeedsMoreData: string; statusTooAggressive: string; statusBehind: string; statusAhead: string; statusOnTrack: string;
-    daysVsTarget: string;
+    daysVsTarget: string; openPlanTab: string;
+    enableMacroCycling: string; macroCyclingHelp: string; macroCyclingBasedOn: string; macroCyclingSettingsHint: string;
+    calculating: string; previewPlan: string; fillRequiredTargets: string; recalcFailed: string; failedSave: string;
+    recalculating: string; recalculateTargets: string; dailyTargets: string; autoFilledOverride: string; editManually: string;
+    kcalFromMacrosMismatch: string; kcalFromMacrosMatch: string;
   };
   profile: {
     title: string; personalInfo: string; firstName: string; lastName: string;
@@ -194,7 +203,7 @@ export interface Translation {
   };
   settings: {
     equipment: string; difficulty: string; instructions: string; searchFood: string;
-    savePreferences: string; saveInjuries: string; saveCycleSettings: string; updatePassword: string; currentPassword: string; newPassword: string; confirmPasswordField: string; selectActivityLevel: string; selectFitnessLevel: string; selectSex: string; selectDays: string; selectDuration: string; daysPerWeek: string; hoursPerSession: string; fitnessLevel: string; proteinTarget: string; appliedToCalc: string; whyMatters: string; usedByAI: string; showWaterWidget: string; switchDarkMode: string; controlsAppearance: string; preferenceSaved: string; downloadDataDesc: string; irreversibleActions: string; memberSince: string; account: string; username: string; cycleLength: string; firstDayPeriod: string; menstrualCycleTracking: string; cyclePersonalises: string; avgCycleLength: string; commonRanges: string; injuriesExercises: string; trainingSchedule: string; goToPlan: string; goalDescription: string; passwordHint: string; activityLevel: string;
+    savePreferences: string; saveInjuries: string; saveCycleSettings: string; updatePassword: string; currentPassword: string; newPassword: string; confirmPasswordField: string; selectActivityLevel: string; selectFitnessLevel: string; selectSex: string; selectDays: string; selectDuration: string; daysPerWeek: string; hoursPerSession: string; fitnessLevel: string; proteinTarget: string; appliedToCalc: string; whyMatters: string; usedByAI: string; showWaterWidget: string; switchDarkMode: string; controlsAppearance: string; preferenceSaved: string; colorTheme: string; colorThemeHelp: string; themeOptionDefault: string; themeOptionBlackGold: string; themeOptionWhiteGreen: string; downloadDataDesc: string; irreversibleActions: string; memberSince: string; account: string; username: string; cycleLength: string; firstDayPeriod: string; menstrualCycleTracking: string; cyclePersonalises: string; avgCycleLength: string; commonRanges: string; injuriesExercises: string; trainingSchedule: string; goToPlan: string; goalDescription: string; passwordHint: string; activityLevel: string; injuriesSaved: string; injurySelectHelp: string; activeLimitations: string; injuryWarning: string; injuryLowerBack: string; injuryUpperBack: string; injuryKneeLeft: string; injuryKneeRight: string; injuryShoulderLeft: string; injuryShoulderRight: string; injuryHip: string; injuryElbowLeft: string; injuryElbowRight: string; injuryWristLeft: string; injuryWristRight: string; injuryAnkleLeft: string; injuryAnkleRight: string; injuryRotatorCuff: string; injuryHamstring: string; injuryItBand: string; injuryPlantarFascia: string;
   };
   auth: {
     login: string; register: string; logout: string; email: string; password: string;
@@ -370,6 +379,18 @@ const en: Translation = {
     caloriesKcal: "Calories (kcal)",
     caloriesFromMacros: "Calories from macros",
     clearAll: "Clear all",
+    clearLoggedFoods: "Clear today's foods",
+    clearLoggedFoodsConfirm: "Clear all foods logged for this day?",
+    clearLoggedFoodsDone: "Today's foods cleared",
+    failedClearFoods: "Failed to clear today's foods",
+    searchModeLabel: "Food lookup mode",
+    searchBasedMode: "Search",
+    categoryBrowseMode: "Browse category",
+    chooseFoodCategory: "Choose category",
+    chooseFoodFromCategory: "Choose food",
+    selectCategoryPlaceholder: "Select a category",
+    selectFoodPlaceholder: "Select a food",
+    noFoodsInCategory: "No foods found in this category",
     cookingExtras: "Cooking extras",
     cookingOil: "Cooking oil",
     createFirstFood: "Create First Food",
@@ -478,7 +499,7 @@ const en: Translation = {
     viewGoals: "Goals",
     logSeparate: "Log ingredients separately",
     myFoodsCustom: "your custom foods",
-    newFoodBtn: "New Food",
+    newFoodBtn: "Add New Food",
     surplusLargeTitle: "⚠ {{pct}}% over your {{target}} kcal goal ({{kcal}} kcal surplus).",
     surplusLargeBulk: "Even for a bulk, this surplus is large — excess may convert to fat.",
     surplusLargeDefault: "This significantly exceeds your daily target and will impact your progress.",
@@ -494,6 +515,7 @@ const en: Translation = {
     suppCreatine: "Creatine Monohydrate",
     suppOmega3: "Omega-3 Fish Oil",
     suppWhey: "Whey Protein Shake",
+    proteinShakeFood: "Protein Shake",
     suppCasein: "Casein Protein Shake",
     suppPlant: "Plant Protein Shake",
     suppMassGainer: "Mass Gainer Shake",
@@ -651,6 +673,30 @@ const en: Translation = {
     currentWeight: "Current Weight", startWeight: "Start Weight",
     projection: "Projection", bodyFat: "Body Fat %", analytics: "Analytics",
     noWeightData: "No weight data yet",
+    bodyTab: "Body & Weight",
+    strengthTab: "Strength",
+    analyticsTab: "Analytics",
+    predictionsTab: "Predictions",
+    planTab: "Plan",
+    subtitle: "Body composition, weight trend, strength, and calorie goals",
+    currentStat: "Current",
+    startingStat: "Starting",
+    changeStat: "Change",
+    lowestStat: "Lowest",
+    highestStat: "Highest",
+    lastDays: "Last {{days}} days",
+    noWeightDataHelp: "Tap \"+ Log Weight\" to add your first entry. Your trend chart will appear once you have data.",
+    estimatedFatPct: "Est. Fat%",
+    invalidWeight: "Enter a valid weight (20–500 kg)",
+    failedLogWeight: "Failed to log weight",
+    deleteWeightConfirm: "Delete this weight entry?",
+    weightNotesPlaceholder: "Morning weight, after gym…",
+    rangeDay: "day",
+    rangeWeek: "week",
+    rangeWeeks: "weeks",
+    rangeMonth: "month",
+    rangeMonths: "months",
+    rangeYear: "year",
   },
   goals: {
     title: "Goals", activeGoal: "Active Goal", noGoal: "No active goal",
@@ -729,6 +775,23 @@ const en: Translation = {
     statusAhead: "Ahead",
     statusOnTrack: "On track",
     daysVsTarget: "days vs target",
+    openPlanTab: "Open plan review",
+    enableMacroCycling: "Enable Macro Cycling",
+    macroCyclingHelp: "Eat more on training days (~+350 kcal) and less on rest days, keeping your weekly average the same. Great for performance and body composition.",
+    macroCyclingBasedOn: "Based on your {{days}} training days/week.",
+    macroCyclingSettingsHint: "Set training days/week in Settings for best accuracy.",
+    calculating: "Calculating…",
+    previewPlan: "Preview Plan",
+    fillRequiredTargets: "Fill current weight, target weight and target date",
+    recalcFailed: "Recalculation failed",
+    failedSave: "Failed to save",
+    recalculating: "Recalculating…",
+    recalculateTargets: "Recalculate macros from these targets",
+    dailyTargets: "Daily Targets",
+    autoFilledOverride: "auto-filled — edit to override",
+    editManually: "edit manually",
+    kcalFromMacrosMismatch: "⚠️ doesn't match calorie target",
+    kcalFromMacrosMatch: "✓",
   },
   profile: {
     title: "Profile", personalInfo: "Personal information", firstName: "First name",
@@ -782,6 +845,32 @@ const en: Translation = {
     switchDarkMode: "Switch the app to a dark colour scheme",
     controlsAppearance: "Controls appearance and tracking features",
     preferenceSaved: "Preferences saved",
+    colorTheme: "Color theme",
+    colorThemeHelp: "Pick a base accent palette for the app",
+    themeOptionDefault: "Default",
+    themeOptionBlackGold: "Black + Golden",
+    themeOptionWhiteGreen: "White + Green",
+    injuriesSaved: "Injuries saved!",
+    injurySelectHelp: "Select any areas where you have pain, discomfort, or are recovering from injury:",
+    activeLimitations: "Active limitations: {{count}} area(s)",
+    injuryWarning: "Workout suggestions and exercise replacement options will avoid stressing these areas. Always consult a physiotherapist before returning to full training.",
+    injuryLowerBack: "Lower Back",
+    injuryUpperBack: "Upper Back / Neck",
+    injuryKneeLeft: "Knee (Left)",
+    injuryKneeRight: "Knee (Right)",
+    injuryShoulderLeft: "Shoulder (Left)",
+    injuryShoulderRight: "Shoulder (Right)",
+    injuryHip: "Hip",
+    injuryElbowLeft: "Elbow (Left)",
+    injuryElbowRight: "Elbow (Right)",
+    injuryWristLeft: "Wrist (Left)",
+    injuryWristRight: "Wrist (Right)",
+    injuryAnkleLeft: "Ankle (Left)",
+    injuryAnkleRight: "Ankle (Right)",
+    injuryRotatorCuff: "Rotator Cuff",
+    injuryHamstring: "Hamstring",
+    injuryItBand: "IT Band",
+    injuryPlantarFascia: "Plantar Fascia",
     downloadDataDesc: "Download a complete copy of your fitness data",
     irreversibleActions: "Irreversible actions — proceed with caution",
     memberSince: "Member since",

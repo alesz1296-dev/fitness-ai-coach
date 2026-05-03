@@ -3,6 +3,47 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --brand-50: 240 253 244;
+    --brand-100: 220 252 231;
+    --brand-200: 187 247 208;
+    --brand-300: 134 239 172;
+    --brand-400: 74 222 128;
+    --brand-500: 34 197 94;
+    --brand-600: 22 163 74;
+    --brand-700: 21 128 61;
+    --brand-800: 22 101 52;
+    --brand-900: 20 83 45;
+  }
+
+  :root[data-color-theme="black-gold"] {
+    --brand-50: 255 251 235;
+    --brand-100: 254 243 199;
+    --brand-200: 253 230 138;
+    --brand-300: 252 211 77;
+    --brand-400: 251 191 36;
+    --brand-500: 245 158 11;
+    --brand-600: 217 119 6;
+    --brand-700: 180 83 9;
+    --brand-800: 146 64 14;
+    --brand-900: 120 53 15;
+    color-scheme: dark;
+  }
+
+  :root[data-color-theme="white-green"] {
+    --brand-50: 240 253 244;
+    --brand-100: 220 252 231;
+    --brand-200: 187 247 208;
+    --brand-300: 134 239 172;
+    --brand-400: 74 222 128;
+    --brand-500: 34 197 94;
+    --brand-600: 22 163 74;
+    --brand-700: 21 128 61;
+    --brand-800: 22 101 52;
+    --brand-900: 20 83 45;
+    color-scheme: light;
+  }
+
   * {
     box-sizing: border-box;
   }
@@ -10,5 +51,14 @@
     font-family: "Inter", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  html[data-color-theme="black-gold"] body {
+    background: linear-gradient(180deg, #0b0b0c 0%, #151515 100%);
+    color: #f7f2d3;
+  }
+
+  html[data-color-theme="white-green"] body {
+    background: linear-gradient(180deg, #fcfffd 0%, #f4fff7 100%);
   }
 }

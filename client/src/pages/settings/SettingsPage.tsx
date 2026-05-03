@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { applyDark, readDarkPref } from "../../hooks/useDarkMode";
+import { applyColorTheme, applyDark, readColorThemePref, readDarkPref } from "../../hooks/useDarkMode";
 import { emitAppPrefsChanged, emitWeightLogged } from "../../lib/appEvents";
 import { useTranslation, LANG_LABELS, t as _t } from "../../i18n";
 import type { SupportedLang } from "../../i18n";
@@ -497,23 +497,23 @@ function NutritionPreferencesForm() {
 
 // ── Injury tracking ───────────────────────────────────────────────────────────
 const INJURY_AREAS = [
-  { id: "lower_back",       label: "Lower Back" },
-  { id: "upper_back",       label: "Upper Back / Neck" },
-  { id: "knee_left",        label: "Knee (Left)" },
-  { id: "knee_right",       label: "Knee (Right)" },
-  { id: "shoulder_left",    label: "Shoulder (Left)" },
-  { id: "shoulder_right",   label: "Shoulder (Right)" },
-  { id: "hip",              label: "Hip" },
-  { id: "elbow_left",       label: "Elbow (Left)" },
-  { id: "elbow_right",      label: "Elbow (Right)" },
-  { id: "wrist_left",       label: "Wrist (Left)" },
-  { id: "wrist_right",      label: "Wrist (Right)" },
-  { id: "ankle_left",       label: "Ankle (Left)" },
-  { id: "ankle_right",      label: "Ankle (Right)" },
-  { id: "rotator_cuff",     label: "Rotator Cuff" },
-  { id: "hamstring",        label: "Hamstring" },
-  { id: "it_band",          label: "IT Band" },
-  { id: "plantar_fascia",   label: "Plantar Fascia" },
+  { id: "lower_back",       key: "settings.injuryLowerBack" },
+  { id: "upper_back",       key: "settings.injuryUpperBack" },
+  { id: "knee_left",        key: "settings.injuryKneeLeft" },
+  { id: "knee_right",       key: "settings.injuryKneeRight" },
+  { id: "shoulder_left",    key: "settings.injuryShoulderLeft" },
+  { id: "shoulder_right",   key: "settings.injuryShoulderRight" },
+  { id: "hip",              key: "settings.injuryHip" },
+  { id: "elbow_left",       key: "settings.injuryElbowLeft" },
+  { id: "elbow_right",      key: "settings.injuryElbowRight" },
+  { id: "wrist_left",       key: "settings.injuryWristLeft" },
+  { id: "wrist_right",      key: "settings.injuryWristRight" },
+  { id: "ankle_left",       key: "settings.injuryAnkleLeft" },
+  { id: "ankle_right",      key: "settings.injuryAnkleRight" },
+  { id: "rotator_cuff",     key: "settings.injuryRotatorCuff" },
+  { id: "hamstring",        key: "settings.injuryHamstring" },
+  { id: "it_band",          key: "settings.injuryItBand" },
+  { id: "plantar_fascia",   key: "settings.injuryPlantarFascia" },
 ];
 
 function InjuryForm() {
@@ -534,7 +534,7 @@ function InjuryForm() {
     try {
       const res = await usersApi.updateProfile({ injuries: selected } as any);
       updateUser(res.data.user);
-      setSuccess("Injuries saved!");
+      setSuccess(t("settings.injuriesSaved"));
       setTimeout(() => setSuccess(""), 3000);
     } catch (e: any) {
       setError(parseApiError(e));
@@ -543,16 +543,16 @@ function InjuryForm() {
 
   return (
     <Card>
-      <CardHeader title={t("profile.injuriesForm")} subtitle="Exercises and templates will avoid movements that stress affected areas" />
+      <CardHeader title={t("profile.injuriesForm")} subtitle={t("settings.injuriesExercises")} />
 
       {error   && <p className="text-sm text-red-600   bg-red-50   rounded-xl px-3 py-2 mb-4">{error}</p>}
       {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
 
       <div className="space-y-4">
-        <p className="text-sm text-gray-500 dark:text-gray-400">Select any areas where you have pain, discomfort, or are recovering from injury:</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{t("settings.injurySelectHelp")}</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {INJURY_AREAS.map(({ id, label }) => {
+          {INJURY_AREAS.map(({ id, key }) => {
             const active = selected.includes(id);
             return (
               <button
@@ -568,7 +568,7 @@ function InjuryForm() {
                 <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${active ? "border-red-400 bg-red-400" : "border-gray-300 dark:border-gray-500"}`}>
                   {active && <span className="text-white text-[10px] leading-none">✓</span>}
                 </span>
-                {label}
+                {t(key as any)}
               </button>
             );
           })}
@@ -576,10 +576,9 @@ function InjuryForm() {
 
         {selected.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-            <p className="font-medium mb-1">⚠️ Active limitations: {selected.length} area{selected.length !== 1 ? "s" : ""}</p>
+            <p className="font-medium mb-1">⚠️ {t("settings.activeLimitations", { count: selected.length })}</p>
             <p className="text-xs text-amber-600">
-              Workout suggestions and exercise replacement options will avoid stressing these areas.
-              Always consult a physiotherapist before returning to full training.
+              {t("settings.injuryWarning")}
             </p>
           </div>
         )}
@@ -699,7 +698,7 @@ function LanguagePicker() {
   const handleLangChange = (code: SupportedLang) => {
     if (code === i18n.language) return;
     i18n.changeLanguage(code);
-    toast.show(t("dashboard.languageChanged"));
+    toast.show(_t("dashboard.languageChanged"));
   };
 
   return (
@@ -732,16 +731,16 @@ function LanguagePicker() {
 }
 
 // ── App Preferences ───────────────────────────────────────────────────────────
-type AppPrefs = { trackWater: boolean; darkMode: boolean };
+type AppPrefs = { trackWater: boolean; darkMode: boolean; colorTheme: "default" | "black-gold" | "white-green" };
 
 function AppPreferencesForm() {
   const { t } = useTranslation();
   const initPrefs = (): AppPrefs => {
     try {
       const s = localStorage.getItem("app_prefs_v1");
-      if (s) return { trackWater: true, darkMode: readDarkPref(), ...JSON.parse(s) };
+      if (s) return { trackWater: true, darkMode: readDarkPref(), colorTheme: readColorThemePref(), ...JSON.parse(s) };
     } catch { /* ignore */ }
-    return { trackWater: true, darkMode: readDarkPref() };
+    return { trackWater: true, darkMode: readDarkPref(), colorTheme: readColorThemePref() };
   };
   const [prefs, setPrefs] = useState<AppPrefs>(initPrefs);
   const [saved, setSaved] = useState(false);
@@ -751,6 +750,19 @@ function AppPreferencesForm() {
       const next = { ...prev, [key]: !prev[key] };
       try { localStorage.setItem("app_prefs_v1", JSON.stringify(next)); } catch { /* ignore */ }
       if (key === "darkMode") applyDark(next.darkMode);
+      applyColorTheme(next.colorTheme);
+      emitAppPrefsChanged();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      return next;
+    });
+  };
+
+  const updateColorTheme = (value: AppPrefs["colorTheme"]) => {
+    setPrefs((prev) => {
+      const next = { ...prev, colorTheme: value };
+      try { localStorage.setItem("app_prefs_v1", JSON.stringify(next)); } catch { /* ignore */ }
+      applyColorTheme(next.colorTheme);
       emitAppPrefsChanged();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -772,8 +784,8 @@ function AppPreferencesForm() {
 
   return (
     <Card>
-      <CardHeader title={t("profile.appPreferences")} subtitle="Controls appearance and tracking features" />
-      {saved && <p className="text-sm text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-xl px-3 py-2 mb-4">Preferences saved</p>}
+      <CardHeader title={t("profile.appPreferences")} subtitle={t("settings.controlsAppearance")} />
+      {saved && <p className="text-sm text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-xl px-3 py-2 mb-4">{t("settings.preferenceSaved")}</p>}
       <div className="space-y-1">
 
         {/* Dark mode */}
@@ -787,6 +799,24 @@ function AppPreferencesForm() {
 
         {/* Language picker */}
         <LanguagePicker />
+
+        <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 gap-4">
+          <div>
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{t("settings.colorTheme")}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.colorThemeHelp")}</p>
+          </div>
+          <div className="w-44 shrink-0">
+            <Select
+              value={prefs.colorTheme}
+              onChange={(e) => updateColorTheme(e.target.value as AppPrefs["colorTheme"])}
+              options={[
+                { value: "default", label: t("settings.themeOptionDefault") },
+                { value: "black-gold", label: t("settings.themeOptionBlackGold") },
+                { value: "white-green", label: t("settings.themeOptionWhiteGreen") },
+              ]}
+            />
+          </div>
+        </div>
 
         {/* Water tracking */}
         <div className="flex items-center justify-between py-3">

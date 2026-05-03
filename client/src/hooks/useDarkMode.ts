@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 const PREF_KEY = "app_prefs_v1";
+export type ColorTheme = "default" | "black-gold" | "white-green";
 
 /** Reads the stored dark-mode preference, falling back to the OS setting. */
 export function readDarkPref(): boolean {
@@ -15,9 +16,27 @@ export function readDarkPref(): boolean {
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
 }
 
+export function readColorThemePref(): ColorTheme {
+  try {
+    const s = localStorage.getItem(PREF_KEY);
+    if (s) {
+      const parsed = JSON.parse(s);
+      if (parsed.colorTheme === "black-gold" || parsed.colorTheme === "white-green") {
+        return parsed.colorTheme;
+      }
+    }
+  } catch { /* ignore */ }
+  return "default";
+}
+
 /** Adds or removes the `dark` class on <html>. */
 export function applyDark(dark: boolean) {
   document.documentElement.classList.toggle("dark", dark);
+}
+
+export function applyColorTheme(theme: ColorTheme) {
+  if (theme === "default") document.documentElement.removeAttribute("data-color-theme");
+  else document.documentElement.setAttribute("data-color-theme", theme);
 }
 
 /**
@@ -28,6 +47,7 @@ export function applyDark(dark: boolean) {
 export function useDarkModeInit() {
   useEffect(() => {
     applyDark(readDarkPref());
+    applyColorTheme(readColorThemePref());
   }, []);
 }
 

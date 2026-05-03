@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import {
   ResponsiveContainer,
@@ -11,7 +12,7 @@ import {
   Line,
   ReferenceLine,
 } from "recharts";
-import { fmtMonthDayYear } from "../../lib/dateFormat";
+import { fmtMonthDay, fmtMonthDayYear } from "../../lib/dateFormat";
 import { analyticsApi, calorieGoalsApi, predictionsApi, usersApi } from "../../api";
 import { useTranslation, t as _t } from "../../i18n";
 import type { CalorieGoal } from "../../types";
@@ -347,7 +348,7 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
 
       <div className="border-t border-gray-100 dark:border-gray-700 pt-4 space-y-4">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide -mb-1">
-          Customise
+          {t("goals.customise")}
         </p>
 
         {error && (
@@ -357,27 +358,27 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
         )}
 
         <Input
-          label="Goal Name (optional)"
+          label={t("goals.goalNameOptional")}
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={t("goals.goalNamePlaceholder")}
         />
         <div className="grid grid-cols-2 gap-3">
           <Input
-            label="Current Weight (kg)" type="number" step="0.1"
+            label={t("goals.currentWeightKg")} type="number" step="0.1"
             value={currentWeight}
             onChange={(e) => { setCurrentWeight(e.target.value); setPreview(null); setActivePreset(null); }}
             placeholder="75"
           />
           <Input
-            label="Target Weight (kg)" type="number" step="0.1"
+            label={t("goals.targetWeightKg")} type="number" step="0.1"
             value={targetWeight}
             onChange={(e) => { setTargetWeight(e.target.value); setPreview(null); setActivePreset(null); }}
             placeholder="70"
           />
         </div>
         <Input
-          label="Target Date" type="date"
+          label={t("goals.targetDate")} type="date"
           value={targetDate}
           onChange={(e) => { setTargetDate(e.target.value); setPreview(null); setActivePreset(null); }}
           min={new Date().toISOString().split("T")[0]}
@@ -400,16 +401,15 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
             />
           </div>
           <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-            🔄 Enable Macro Cycling
+            🔄 {t("goals.enableMacroCycling")}
           </span>
         </label>
         {macrosCycling && (
           <p className="text-xs text-indigo-600 dark:text-indigo-400 leading-relaxed">
-            Eat more on training days (~+350 kcal) and less on rest days, keeping your weekly
-            average the same. Great for performance and body composition.
+            {t("goals.macroCyclingHelp")}
             {user?.trainingDaysPerWeek
-              ? ` Based on your ${user.trainingDaysPerWeek} training days/week.`
-              : " Set training days/week in Settings for best accuracy."}
+              ? ` ${t("goals.macroCyclingBasedOn", { days: user.trainingDaysPerWeek })}`
+              : ` ${t("goals.macroCyclingSettingsHint")}`}
           </p>
         )}
       </div>
@@ -417,7 +417,7 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
       {/* ── Preview / Save section ── */}
       {!preview ? (
         <Button className="w-full" variant="secondary" loading={loading} onClick={() => getPreview()}>
-          {loading ? "Calculating…" : "Preview Plan"}
+          {loading ? t("goals.calculating") : t("goals.previewPlan")}
         </Button>
       ) : (
         <div className="space-y-4">
@@ -448,7 +448,7 @@ function GoalForm({ onSave, onClose }: { onSave: () => void; onClose: () => void
               Back
             </Button>
             <Button className="flex-1" loading={saving} onClick={save}>
-              Save Goal
+              {t("goals.createGoal")}
             </Button>
           </div>
         </div>
@@ -493,7 +493,7 @@ function EditGoalModal({
     const cw = Number(currentWeight);
     const tw = Number(targetWeight);
     if (!cw || !tw || !targetDate) {
-      setError("Fill current weight, target weight and target date");
+      setError(t("goals.fillRequiredTargets"));
       return;
     }
     setRecalcLoading(true); setError(""); setCalcPreview(null);
@@ -514,7 +514,7 @@ function EditGoalModal({
       setCarbs(String(Math.round(calc.carbsGrams)));
       setFats(String(Math.round(calc.fatsGrams)));
     } catch (e: any) {
-      setError(e.response?.data?.error || "Recalculation failed");
+      setError(e.response?.data?.error || t("goals.recalcFailed"));
     } finally { setRecalcLoading(false); }
   };
 
@@ -534,7 +534,7 @@ function EditGoalModal({
       });
       onSave();
     } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to save");
+      setError(e.response?.data?.error || t("goals.failedSave"));
     } finally { setSaving(false); }
   };
 
@@ -549,7 +549,7 @@ function EditGoalModal({
       )}
 
       <Input
-        label="Goal Name (optional)"
+        label={t("goals.goalNameOptional")}
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder={t("goals.goalNamePlaceholder")}
@@ -558,22 +558,22 @@ function EditGoalModal({
       {/* ── Targets ── */}
       <div className="space-y-3">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-          Targets
+          {t("goals.targets")}
         </p>
         <div className="grid grid-cols-2 gap-3">
           <Input
-            label="Current Weight (kg)" type="number" step="0.1"
+            label={t("goals.currentWeightKg")} type="number" step="0.1"
             value={currentWeight}
             onChange={(e) => { setCurrentWeight(e.target.value); setCalcPreview(null); }}
           />
           <Input
-            label="Target Weight (kg)" type="number" step="0.1"
+            label={t("goals.targetWeightKg")} type="number" step="0.1"
             value={targetWeight}
             onChange={(e) => { setTargetWeight(e.target.value); setCalcPreview(null); }}
           />
         </div>
         <Input
-          label="Target Date" type="date"
+          label={t("goals.targetDate")} type="date"
           value={targetDate}
           onChange={(e) => { setTargetDate(e.target.value); setCalcPreview(null); }}
           min={new Date().toISOString().split("T")[0]}
@@ -583,7 +583,7 @@ function EditGoalModal({
           disabled={recalcLoading}
           className="w-full py-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-sm font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors disabled:opacity-50"
         >
-          {recalcLoading ? "Recalculating…" : "🔄 Recalculate macros from these targets"}
+          {recalcLoading ? t("goals.recalculating") : `🔄 ${t("goals.recalculateTargets")}`}
         </button>
       </div>
 
@@ -614,24 +614,24 @@ function EditGoalModal({
       {/* ── Manual macro override ── */}
       <div className="space-y-3 border-t border-gray-100 dark:border-gray-700 pt-3">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-          Daily Targets{calcPreview ? " (auto-filled — edit to override)" : " (edit manually)"}
+          {t("goals.dailyTargets")}{calcPreview ? ` (${t("goals.autoFilledOverride")})` : ` (${t("goals.editManually")})`}
         </p>
         <Input
-          label="Daily Calories (kcal)" type="number"
+          label={`${t("goals.dailyCalories")} (kcal)`} type="number"
           value={dailyCalories}
           onChange={(e) => setDailyCalories(e.target.value)}
         />
         <div className="grid grid-cols-3 gap-2">
-          <Input label="Protein (g)" type="number" value={protein} onChange={(e) => setProtein(e.target.value)} />
-          <Input label="Carbs (g)"   type="number" value={carbs}   onChange={(e) => setCarbs(e.target.value)} />
-          <Input label="Fats (g)"    type="number" value={fats}    onChange={(e) => setFats(e.target.value)} />
+          <Input label={t("goals.proteinG")} type="number" value={protein} onChange={(e) => setProtein(e.target.value)} />
+          <Input label={t("goals.carbsG")}   type="number" value={carbs}   onChange={(e) => setCarbs(e.target.value)} />
+          <Input label={t("goals.fatsG")}    type="number" value={fats}    onChange={(e) => setFats(e.target.value)} />
         </div>
         {protein && carbs && fats && (() => {
           const fromMacros = Math.round(Number(protein) * 4 + Number(carbs) * 4 + Number(fats) * 9);
           const delta      = Math.abs(fromMacros - Number(dailyCalories));
           return (
             <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
-              {fromMacros} kcal from macros{delta > 50 ? " ⚠️ doesn't match calorie target" : " ✓"}
+              {fromMacros} {t("common.kcal")} {delta > 50 ? t("goals.kcalFromMacrosMismatch") : t("goals.kcalFromMacrosMatch")}
             </p>
           );
         })()}
@@ -642,10 +642,10 @@ function EditGoalModal({
           onClick={onClose}
           className="flex-1 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <Button className="flex-1" loading={saving} onClick={save}>
-          Save Changes
+          {t("nutrition.saveChanges")}
         </Button>
       </div>
     </div>
@@ -655,6 +655,7 @@ function EditGoalModal({
 // ── Main Goals page ───────────────────────────────────────────────────────────
 export default function GoalsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const updateUser = useAuthStore((s) => s.updateUser);
   const [goals,        setGoals]       = useState<CalorieGoal[]>([]);
   const [loading,      setLoading]     = useState(true);
@@ -835,14 +836,19 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
     <div className={embedded ? "p-4 sm:p-6 max-w-5xl mx-auto space-y-6" : "p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6"}>
       {/* ── Page header ── */}
       {!embedded ? (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("goals.title")}</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
               {t("goals.calorieTargetsDesc")}
             </p>
           </div>
-          <Button onClick={() => setShowForm(true)}>+ {t("goals.createGoal")}</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={() => navigate("/progress?tab=plan")}>
+              {t("goals.openPlanTab")}
+            </Button>
+            <Button onClick={() => setShowForm(true)}>+ {t("goals.createGoal")}</Button>
+          </div>
         </div>
       ) : (
         <div className="flex items-center justify-between">
@@ -875,7 +881,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
           {/* Active goal */}
           {activeGoal && (
             <Card>
-              <div className="flex items-start justify-between mb-4">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" />
@@ -889,10 +895,10 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                     {activeGoal.currentWeight}kg → {activeGoal.targetWeight}kg
                     {" "}by{" "}
-                    {fmtMonthDayYear(parseISO(activeGoal.targetDate))}
+                    {fmtMonthDay(parseISO(activeGoal.targetDate))}
                   </p>
                 </div>
-                <div className="flex gap-2 shrink-0">
+                <div className="flex flex-wrap gap-2 shrink-0 sm:justify-end">
                   <Button variant="secondary" size="sm" onClick={() => setEditingGoal(activeGoal)}>{t("common.edit")}</Button>
                   <Button variant="secondary" size="sm" onClick={() => deactivate(activeGoal.id)}>{t("goals.pause")}</Button>
                   <Button variant="danger"    size="sm" onClick={() => deleteGoal(activeGoal.id)}>{t("common.delete")}</Button>

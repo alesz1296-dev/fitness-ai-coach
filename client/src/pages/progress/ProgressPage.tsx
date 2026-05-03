@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { fmtMonthDay, fmtMonthDayYear } from "../../lib/dateFormat";
 import {
@@ -166,23 +167,40 @@ function LogWeightForm({ onSave, onClose }: { onSave: () => void; onClose: () =>
 
   const submit = async () => {
     const w = Number(weight);
-    if (!w || w < 20 || w > 500) { setError("Enter a valid weight (20–500 kg)"); return; }
+    if (!w || w < 20 || w > 500) { setError(t("progress.invalidWeight")); return; }
     setLoading(true); setError("");
     try {
       await weightApi.log({ weight: w, notes: notes || undefined, date });
       emitWeightLogged(w);
       onSave();
     } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to log weight");
+      setError(e.response?.data?.error || t("progress.failedLogWeight"));
     } finally { setLoading(false); }
   };
 
+  /* const TABS: { id: TabId; label: string; icon: string }[] = [
+    { id: "body",        label: t("progress.bodyTab"),        icon: "âš–ï¸" },
+    { id: "strength",    label: t("progress.strengthTab"),    icon: "ðŸ‹ï¸" },
+    { id: "analytics",   label: t("progress.analyticsTab"),   icon: "ðŸ“ˆ" },
+    { id: "predictions", label: t("progress.predictionsTab"), icon: "ðŸ”®" },
+    { id: "plan",        label: t("progress.planTab"),        icon: "ðŸŽ¯" },
+  ]; */
+
+  const TABS: { id: TabId; label: string; icon: string }[] = [
+    { id: "body",        label: t("progress.bodyTab"),        icon: "⚖️" },
+    { id: "strength",    label: t("progress.strengthTab"),    icon: "🏋️" },
+    { id: "analytics",   label: t("progress.analyticsTab"),   icon: "📈" },
+    { id: "predictions", label: t("progress.predictionsTab"), icon: "🔮" },
+    { id: "plan",        label: t("progress.planTab"),        icon: "🎯" },
+  ];
+
   return (
     <div className="space-y-4">
+      <span className="hidden">{TABS.length}</span>
       {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
-      <Input label="Weight (kg)" type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="75.5" />
-      <Input label="Date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-      <Input label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Morning weight, after gym…" />
+      <Input label={t("profile.weightKg")} type="number" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="75.5" />
+      <Input label={t("common.date")} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      <Input label={`${t("common.notes")} (${t("common.optional")})`} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("progress.weightNotesPlaceholder")} />
       <div className="flex gap-2">
         <Button variant="secondary" className="flex-1" onClick={onClose}>{t("common.cancel")}</Button>
         <Button className="flex-1" loading={loading} onClick={submit}>{t("progress.logWeight")}</Button>
@@ -900,9 +918,9 @@ function PredictionCard({ data, loading }: { data: any | null; loading: boolean 
         {data.estimatedGoalDate && data.targetWeight && (
           <div className="mt-3 bg-brand-50 rounded-xl px-4 py-3 text-sm text-brand-800">
             🎯 At your current real pace you should reach <span className="font-semibold">{data.targetWeight} kg</span> by{" "}
-            <span className="font-semibold">{data.estimatedGoalDate}</span>
+            <span className="font-semibold">{compactDisplayDate(data.estimatedGoalDate) ?? data.estimatedGoalDate}</span>
             {data.scheduledGoalDate && data.scheduledGoalDate !== data.estimatedGoalDate && (
-              <span className="text-brand-500 text-xs ml-1">(goal deadline: {data.scheduledGoalDate})</span>
+              <span className="text-brand-500 text-xs ml-1">(goal deadline: {compactDisplayDate(data.scheduledGoalDate) ?? data.scheduledGoalDate})</span>
             )}.
           </div>
         )}
@@ -959,6 +977,10 @@ function AnalyticsTab() {
   const daily   = data?.dailySeries ?? [];
   const weekly  = data?.workoutTrend ?? [];
   const diagnostics = data?.diagnostics;
+  const rangeOptions = PROGRESS_RANGE_VALUES.map((value) => ({
+    value,
+    label: getProgressRangeLabel(value, t),
+  }));
 
   // Thin out x-axis labels for readability depending on range
   const tickInterval = days <= 14 ? 1 : days <= 30 ? 3 : days <= 90 ? 6 : 14;
@@ -975,11 +997,9 @@ function AnalyticsTab() {
           onChange={(e) => setDays(Number(e.target.value))}
           className="border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
         >
-          <option value={14}>14 days</option>
-          <option value={30}>30 days</option>
-          <option value={90}>90 days</option>
-          <option value={180}>6 months</option>
-          <option value={365}>1 year</option>
+          {rangeOptions.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
         </select>
       </div>
 
@@ -1217,24 +1237,58 @@ function WeeklyReviewPanel() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Progress page
 // ─────────────────────────────────────────────────────────────────────────────
-type TabId = "body" | "strength" | "predictions" | "analytics" | "goals";
+type TabId = "body" | "strength" | "predictions" | "analytics" | "plan";
+
+function normalizeProgressTab(value: string | null): TabId {
+  if (value === "body" || value === "strength" || value === "predictions" || value === "analytics" || value === "plan") {
+    return value;
+  }
+  if (value === "goals") return "plan";
+  return "body";
+}
+
+function compactDisplayDate(value?: string | null): string | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) return fmtMonthDay(parsed);
+  return value.replace(/,\s*\d{4}$/, "").replace(/\s+\d{4}$/, "");
+}
+
+const PROGRESS_RANGE_VALUES = [1, 7, 14, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 365] as const;
+
+function getProgressRangeLabel(
+  days: number,
+  t: (key: any, vars?: Record<string, string | number>) => string,
+): string {
+  if (days === 1) return `1 ${t("progress.rangeDay")}`;
+  if (days === 7) return `1 ${t("progress.rangeWeek")}`;
+  if (days === 14) return `2 ${t("progress.rangeWeeks")}`;
+  if (days === 365) return `1 ${t("progress.rangeYear")}`;
+  const months = Math.round(days / 30);
+  return `${months} ${months === 1 ? t("progress.rangeMonth") : t("progress.rangeMonths")}`;
+}
 
 export default function ProgressPage() {
   const { t } = useTranslation();
   const { user }                   = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isDark   = useIsDark();
   const chartGrid   = isDark ? "#374151" : "#f0f0f0";
   const chartTick   = isDark ? "#9ca3af" : "#9ca3af";
   const chartBg     = isDark ? "#1f2937" : "#ffffff";
   const chartBorder = isDark ? "#374151" : "#e5e7eb";
   const chartText   = isDark ? "#f3f4f6" : "#111827";
+  const rangeOptions = PROGRESS_RANGE_VALUES.map((value) => ({
+    value,
+    label: getProgressRangeLabel(value, t),
+  }));
 
   const [logs,     setLogs]        = useState<WeightLog[]>([]);
   const [stats,    setStats]       = useState<WeightStats | null>(null);
   const [loading,  setLoading]     = useState(true);
   const [showForm, setShowForm]    = useState(false);
   const [days,     setDays]        = useState(90);
-  const [tab,      setTab]         = useState<TabId>("body");
+  const [tab,      setTab]         = useState<TabId>(() => normalizeProgressTab(searchParams.get("tab")));
 
   // Prediction data
   const [predData,    setPredData]    = useState<any | null>(null);
@@ -1281,7 +1335,7 @@ export default function ProgressPage() {
   }, [tab, loadPredictions]);
 
   const deleteLog = async (id: number) => {
-    if (!confirm("Delete this weight entry?")) return;
+    if (!confirm(t("progress.deleteWeightConfirm"))) return;
     await weightApi.delete(id);
     emitWeightLogged();
     load();
@@ -1320,13 +1374,35 @@ export default function ProgressPage() {
     weight: l.weight,
   }));
 
+  useEffect(() => {
+    const nextTab = normalizeProgressTab(searchParams.get("tab"));
+    setTab((current) => current === nextTab ? current : nextTab);
+  }, [searchParams]);
+
+  const handleTabChange = (nextTab: TabId) => {
+    setTab(nextTab);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set("tab", nextTab);
+      return next;
+    }, { replace: true });
+  };
+
   const TABS: { id: TabId; label: string; icon: string }[] = [
+    { id: "body",        label: t("progress.bodyTab"),        icon: "⚖️" },
+    { id: "strength",    label: t("progress.strengthTab"),    icon: "🏋️" },
+    { id: "analytics",   label: t("progress.analyticsTab"),   icon: "📈" },
+    { id: "predictions", label: t("progress.predictionsTab"), icon: "🔮" },
+    { id: "plan",        label: t("progress.planTab"),        icon: "🎯" },
+  ];
+
+  /* const LEGACY_TABS: { id: TabId; label: string; icon: string }[] = [
     { id: "body",        label: "Body & Weight",       icon: "⚖️" },
     { id: "strength",    label: "Strength",            icon: "🏋️" },
     { id: "analytics",   label: "Analytics",           icon: "📈" },
     { id: "predictions", label: "Predictions",         icon: "🔮" },
     { id: "goals",       label: "Goals",               icon: "🎯" },
-  ];
+  ]; */
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
@@ -1334,7 +1410,7 @@ export default function ProgressPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("progress.title")}</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">Body composition, weight trend, strength, and calorie goals</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{t("progress.subtitle")}</p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
           {tab === "body" && (
@@ -1343,23 +1419,23 @@ export default function ProgressPage() {
               onChange={(e) => setDays(Number(e.target.value))}
               className="border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
-              <option value={14}>14 days</option>
-              <option value={30}>30 days</option>
-              <option value={90}>90 days</option>
-              <option value={365}>1 year</option>
+              {rangeOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
             </select>
           )}
-          <Button onClick={() => setShowForm(true)}>+ Log Weight</Button>
+          <Button onClick={() => setShowForm(true)}>+ {t("progress.logWeight")}</Button>
         </div>
       </div>
 
       {/* Tab switcher */}
-      <div className="flex gap-2 border-b border-gray-100 dark:border-gray-700 pb-0">
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="flex min-w-max gap-2 border-b border-gray-100 dark:border-gray-700 pb-0">
         {TABS.map((t) => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-xl border-b-2 transition-all ${
+            onClick={() => handleTabChange(t.id)}
+            className={`flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2.5 text-sm font-medium rounded-t-xl border-b-2 transition-all ${
               tab === t.id
                 ? "border-brand-600 text-brand-700 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20"
                 : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -1369,6 +1445,7 @@ export default function ProgressPage() {
             <span>{t.label}</span>
           </button>
         ))}
+        </div>
       </div>
 
       {/* ── Body & Weight tab ─────────────────────────────────────────────── */}
@@ -1378,12 +1455,12 @@ export default function ProgressPage() {
           {stats && (
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
               {[
-                { label: "Current",  value: `${stats.latest} kg`,  color: "text-gray-900 dark:text-white dark:drop-shadow-[0_0_10px_rgba(255,255,255,0.75)]" },
-                { label: "Starting", value: `${stats.starting} kg`, color: "text-gray-500 dark:text-gray-300" },
-                { label: "Change",   value: `${stats.change > 0 ? "+" : ""}${stats.change.toFixed(1)} kg`,
+                { label: t("progress.currentStat"),  value: `${stats.latest} kg`,  color: "text-gray-900 dark:text-white dark:drop-shadow-[0_0_10px_rgba(255,255,255,0.75)]" },
+                { label: t("progress.startingStat"), value: `${stats.starting} kg`, color: "text-gray-500 dark:text-gray-300" },
+                { label: t("progress.changeStat"),   value: `${stats.change > 0 ? "+" : ""}${stats.change.toFixed(1)} kg`,
                   color: stats.change < 0 ? "text-green-600" : stats.change > 0 ? "text-red-600" : "text-gray-500" },
-                { label: "Lowest",   value: `${stats.min} kg`,     color: "text-blue-600" },
-                { label: "Highest",  value: `${stats.max} kg`,     color: "text-orange-600" },
+                { label: t("progress.lowestStat"),   value: `${stats.min} kg`,     color: "text-blue-600" },
+                { label: t("progress.highestStat"),  value: `${stats.max} kg`,     color: "text-orange-600" },
               ].map((s) => (
                 <Card key={s.label} className="text-center py-3">
                   <p className="text-xs text-gray-400">{s.label}</p>
@@ -1395,7 +1472,7 @@ export default function ProgressPage() {
 
           {/* Body weight trend chart */}
           <Card>
-            <CardHeader title={t("progress.bodyWeight")} subtitle={`Last ${days} days`} />
+            <CardHeader title={t("progress.bodyWeight")} subtitle={t("progress.lastDays", { days })} />
             {loading ? (
               <div className="flex justify-center py-12">
                 <div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" />
@@ -1414,7 +1491,7 @@ export default function ProgressPage() {
                   <YAxis tick={{ fontSize: 11, fill: chartTick }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
                   <Tooltip
                     contentStyle={{ borderRadius: "12px", border: `1px solid ${chartBorder}`, backgroundColor: chartBg, color: chartText, fontSize: "13px" }}
-                    formatter={(v: number) => [`${v} kg`, "Weight"]}
+                    formatter={(v: number) => [`${v} kg`, t("common.weight")]}
                   />
                   <Area type="monotone" dataKey="weight" stroke="#22c55e" strokeWidth={2.5} fill="url(#wGrad)" dot={{ fill: "#22c55e", r: 3 }} />
                 </AreaChart>
@@ -1423,7 +1500,7 @@ export default function ProgressPage() {
               <div className="text-center py-12">
                 <div className="text-4xl mb-3">⚖️</div>
                 <p className="font-semibold text-gray-700 dark:text-gray-200 mb-1">{t("progress.noWeightData")}</p>
-                <p className="text-sm text-gray-400 max-w-xs mx-auto">Tap "+ Log Weight" to add your first entry. Your trend chart will appear once you have data.</p>
+                <p className="text-sm text-gray-400 max-w-xs mx-auto">{t("progress.noWeightDataHelp")}</p>
               </div>
             )}
           </Card>
@@ -1449,8 +1526,8 @@ export default function ProgressPage() {
                     <tr className="border-b border-gray-100 dark:border-gray-700">
                       <th className="text-left py-2 text-xs text-gray-400 font-medium">{t("common.date")}</th>
                       <th className="text-right py-2 text-xs text-gray-400 font-medium">{t("common.weight")}</th>
-                      <th className="text-right py-2 text-xs text-gray-400 font-medium">Est. Fat%</th>
-                      <th className="text-right py-2 text-xs text-gray-400 font-medium">Change</th>
+                      <th className="text-right py-2 text-xs text-gray-400 font-medium">{t("progress.estimatedFatPct")}</th>
+                      <th className="text-right py-2 text-xs text-gray-400 font-medium">{t("progress.changeStat")}</th>
                       <th className="text-left py-2 text-xs text-gray-400 font-medium pl-4">{t("common.notes")}</th>
                       <th className="w-10"></th>
                     </tr>
@@ -1482,12 +1559,12 @@ export default function ProgressPage() {
                               <button
                                 onClick={() => openEdit(log)}
                                 className="text-gray-400 hover:text-brand-500 transition-colors text-xs px-2 py-1 rounded"
-                                title="Edit entry"
+                                title={t("common.edit")}
                               >✏️</button>
                               <button
                                 onClick={() => deleteLog(log.id)}
                                 className="text-gray-300 hover:text-red-400 transition-colors text-xs px-2 py-1 rounded"
-                                title="Delete entry"
+                                title={t("common.delete")}
                               >✕</button>
                             </div>
                           </td>
@@ -1512,7 +1589,7 @@ export default function ProgressPage() {
       {tab === "predictions" && <PredictionCard data={predData} loading={predLoading} />}
 
       {/* ── Goals tab ─────────────────────────────────────────────────────── */}
-      {tab === "goals" && (
+      {tab === "plan" && (
         <div className="-mx-4 sm:-mx-6 lg:-mx-8">
           <GoalsPage embedded />
         </div>
@@ -1527,7 +1604,7 @@ export default function ProgressPage() {
       <Modal open={editingLog !== null} onClose={() => setEditingLog(null)} title={t("common.edit") + " " + t("common.weight")}>
         <div className="space-y-4">
           <Input
-            label="Weight (kg)"
+            label={t("profile.weightKg")}
             type="number"
             step="0.1"
             value={editWeight}
@@ -1535,16 +1612,16 @@ export default function ProgressPage() {
             placeholder="75.5"
           />
           <Input
-            label="Date"
+            label={t("common.date")}
             type="date"
             value={editDate}
             onChange={(e) => setEditDate(e.target.value)}
           />
           <Input
-            label="Notes (optional)"
+            label={`${t("common.notes")} (${t("common.optional")})`}
             value={editNotes}
             onChange={(e) => setEditNotes(e.target.value)}
-            placeholder="Morning weight, after gym…"
+            placeholder={t("progress.weightNotesPlaceholder")}
           />
           <div className="flex gap-2">
             <Button variant="secondary" className="flex-1" onClick={() => setEditingLog(null)}>{t("common.cancel")}</Button>

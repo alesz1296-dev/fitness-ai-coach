@@ -2146,3 +2146,25 @@ Info chip shown when a frequency match exists: "Showing plans for N×/week — m
 - Goals What-if Apply now persists workout schedule inputs instead of dropping them.
 - Goals sparse-data mode now stays visible and explains why adaptive forecasting is limited.
 - Food localization is more reliable for queries like `huevo` because parsed DB-localized names can match before AI fallback.
+
+---
+
+## 2026-05-03 - Progress mobile polish + nutrition CTA/itemization + theme prefs
+
+### Goal
+- Fix the remaining mobile UX rough edges in Progress, clean up Nutrition’s custom-food entry point, make protein shake supplements show up in macro food breakdowns, and polish app preference feedback/theme controls.
+
+### Files modified
+- `client/src/pages/progress/ProgressPage.tsx` - made the Progress tab strip horizontally scrollable on mobile, renamed the embedded Goals tab to `Plan`, added query-param tab syncing, and compacted prediction target dates to month/day only
+- `client/src/pages/goals/GoalsPage.tsx` - added a link button from the main Goals page into the Progress `Plan` tab and tightened the active-goal header for mobile
+- `client/src/pages/nutrition/NutritionPage.tsx` - moved the `Add New Food` button to the left side of the My Foods header and mapped protein-shake supplements into macro meal/food breakdown data as `Protein Shake`
+- `client/src/pages/settings/SettingsPage.tsx` - fixed the language-change toast to render in the newly selected locale and added the new color-theme dropdown
+- `client/src/hooks/useDarkMode.ts`, `client/src/index.css`, and `client/tailwind.config.js` - added shared color-theme persistence and `Black + Golden` / `White + Green` accent palettes
+- `client/src/i18n/locales/en.ts` and `client/src/i18n/locales/es.ts` - added the new Progress/Goals/Settings/Nutrition labels needed by this polish pass
+- `PRIORITIES.md` - raised coaching mode, developer/admin mode, advanced workout structures, and Apple Watch support while pushing scanner / AI food-photo features to the lowest-priority lane
+
+### Notes
+- The Progress tabs should now stay reachable on mobile instead of pushing `Predictions` and `Plan` off-screen.
+- `Plan` is now the embedded plan-review surface inside Progress, while the dedicated `Goals` page remains the place to create and manage goals.
+- Protein shake supplements now contribute visible food rows in the macro meal/food breakdown views instead of only inflating totals silently.
+- Theme selection is stored alongside the existing app preferences so Dashboard, Nutrition, Progress, and the rest of the app can share the same palette choice.
