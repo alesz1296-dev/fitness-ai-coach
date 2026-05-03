@@ -84,8 +84,8 @@ export interface Translation {
     kcalLabel: string; proteinG: string; carbsG: string; fatG: string;
     protShort: string; carbsShort: string; fatShort: string; defaultQtyLabel: string;
     logWeight: string; savedConfirm: string; customDish: string;
-    tagAsian: string; tagJapanese: string; tagItalian: string; tagMexican: string; tagCaribbean: string; tagMiddleEastern: string; tagKorean: string;
-    tagFit: string; tagKeto: string; tagHighProtein: string; tagVegan: string; tagVegetarian: string;
+    tagAsian: string; tagLatin: string; tagJapanese: string; tagItalian: string; tagMexican: string; tagCaribbean: string; tagIndian: string; tagSouthAsian: string; tagMiddleEastern: string; tagKorean: string;
+    tagFit: string; tagKeto: string; tagHighProtein: string; tagVegan: string; tagVegetarian: string; tagGlutenFree: string;
     tagFastFood: string; tagDesserts: string; tagWholeGrain: string; tagLowCarb: string; tagHighSugar: string;
     tagMeats: string; tagSeafood: string; tagCheese: string; tagSoups: string; tagSausages: string;
     tagVegetables: string; tagFruits: string; tagSmoothies: string; tagSalads: string; tagPasta: string; tagDairy: string;
@@ -485,11 +485,11 @@ const en: Translation = {
     logWeight: "Log Weight",
     savedConfirm: "Saved!",
     customDish: "Custom Dish",
-    tagAsian: "Asian", tagJapanese: "Japanese", tagItalian: "Italian", tagMexican: "Mexican",
-    tagCaribbean: "Caribbean",
+    tagAsian: "Asian", tagLatin: "Latin / Hispanic", tagJapanese: "Japanese", tagItalian: "Italian", tagMexican: "Mexican",
+    tagCaribbean: "Caribbean", tagIndian: "Indian", tagSouthAsian: "South Asian",
     tagMiddleEastern: "Middle Eastern", tagKorean: "Korean",
     tagFit: "Fit", tagKeto: "Keto", tagHighProtein: "High-Protein",
-    tagVegan: "Vegan", tagVegetarian: "Vegetarian", tagFastFood: "Fast Food",
+    tagVegan: "Vegan", tagVegetarian: "Vegetarian", tagGlutenFree: "Gluten-Free", tagFastFood: "Fast Food",
     tagDesserts: "Desserts", tagWholeGrain: "Whole Grain", tagLowCarb: "Low-Carb", tagHighSugar: "High-Sugar",
     tagMeats: "Meats", tagSeafood: "Seafood", tagCheese: "Cheese", tagSoups: "Soups",
     tagSausages: "Sausages", tagVegetables: "Vegetables", tagFruits: "Fruits",

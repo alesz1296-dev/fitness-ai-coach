@@ -4,6 +4,43 @@ Most recent session first.
 
 ---
 
+## 2026-05-03 — Session: Latin / Indian staples + branded supermarket foods
+
+### Goal
+Expand the food DB again with the kinds of foods people actually search and type: Latin/Hispanic staples, Indian/South Asian staples, and more branded supermarket-style convenience items like cereal cups, snack packs, and frozen meals.
+
+### Files modified
+- `src/data/foods.ts` — added a new cuisine/convenience block; bumped `FOOD_DB_VERSION` to `2026-05-03-staples-v5`
+- `client/src/pages/nutrition/NutritionPage.tsx` — added `Latin / Hispanic`, `Indian`, and `South Asian` cuisine filter chips
+- `client/src/i18n/locales/en.ts` — added `nutrition.tagLatin`, `nutrition.tagIndian`, `nutrition.tagSouthAsian`
+- `client/src/i18n/locales/es.ts` — added the same new tag labels in Spanish
+
+### Notes
+- The new foods lean into high-frequency user queries rather than niche items.
+- Latin/Hispanic coverage now includes tacos, enchiladas, empanadas, tamales, pupusas, arepas, bowls, and rice/bean staples.
+- Indian/South Asian coverage now includes curries, dal, biryani, naan, roti, samosas, paneer dishes, dosa, and idli.
+- The branded supermarket pass covers cereal cups, oatmeal cups, yogurt tubes, pudding cups, microwave popcorn, snack packs, frozen burritos, and frozen pizza slices.
+
+---
+
+## 2026-05-03 — Session: Food catalog expansion + gluten-free filters + DB version stamp
+
+### Goal
+Expand the food catalog with the kinds of items users actually type, especially convenience foods, packaged grab-and-go snacks, sandwiches, seafood, dairy alternatives, and gluten-free staples. Add a small Nutrition page version stamp so it is obvious when the newest food DB is loaded.
+
+### Files modified
+- `src/data/foods.ts` — added a large new block of common staples and convenience foods, plus aliases and more `gluten-free` tags; exported `FOOD_DB_VERSION` and `FOOD_DB_LABEL`
+- `client/src/pages/nutrition/NutritionPage.tsx` — added a small food DB version note under the page header; added the `gluten-free` filter chip
+- `client/src/i18n/locales/en.ts` — added `nutrition.tagGlutenFree`
+- `client/src/i18n/locales/es.ts` — added `nutrition.tagGlutenFree`
+
+### Notes
+- The new catalog pass focuses on real user query forms like sandwiches, cups, bowls, snack packs, wraps, and frozen convenience meals.
+- Gluten-free is now an explicit filter tag in Nutrition, not just a hidden food attribute.
+- The Nutrition header now shows the current food DB version and item count for quick verification after deploys.
+
+---
+
 ---
 
 ## 2026-05-02 — Session: Offline + Caching Mode

@@ -14,6 +14,23 @@ A full-stack AI-powered fitness coaching web app.
 
 ---
 
+## Session 2026-05-03 — Latin / Indian staples + branded supermarket foods
+
+### What changed
+- Expanded `src/data/foods.ts` with a new high-frequency user-query pass:
+  - Latin / Hispanic staples
+  - Indian / South Asian staples
+  - branded supermarket-style convenience foods
+- Added `Latin / Hispanic`, `Indian`, and `South Asian` cuisine filters in Nutrition so the new foods are discoverable from the UI.
+- Bumped the food DB version stamp to `2026-05-03-staples-v5` so deployed builds can be verified quickly from the Nutrition page.
+
+### Catalog coverage added
+- Latin / Hispanic: tacos, enchiladas, empanadas, tamales, pupusas, arepas, arroz con pollo, rice and beans, bowls
+- Indian / South Asian: butter chicken, tikka masala, chana masala, dal, biryani, naan, roti, samosas, paneer dishes, dosa, idli
+- Supermarket / convenience: cereal cups, oatmeal cups, yogurt tubes, applesauce pouches, pudding cups, microwave popcorn, snack packs, frozen burritos, frozen pizza slices
+
+---
+
 ## Project Structure
 
 ```
@@ -682,6 +699,21 @@ eas build --platform all --profile production
 - `client/src/api/axios.ts` — `X-Timezone` header injected on every request via existing interceptor.
 - `dashboardController`, `foodController`, `waterController` — all converted to `getDayBounds(tz)`. Historical date browsing (explicit date param) still uses UTC midnight — intentional, correct for past-day browsing.
 - `NutritionPage.tsx` — `getEffectiveToday()` client helper for date state init, `isToday`, date picker max.
+
+---
+
+## Session 2026-05-03 — Food catalog expansion + gluten-free filters + DB version stamp
+
+### What changed
+- Expanded `src/data/foods.ts` with a much larger set of everyday foods users actually type: convenience cups, packaged snacks, sandwich staples, seafood, dairy alternatives, and gluten-free staples.
+- Added more aliases so search matches user phrasing like `breakfast sandwich`, `tuna pouch`, `rice crackers`, `gluten-free bagel`, `protein yogurt drink`, and similar real-world queries.
+- Added `gluten-free` as a visible Nutrition filter tag in the UI and locales.
+- Added a small Nutrition page footer-style note showing the current food DB version so deployed builds can be verified quickly.
+
+### Current food catalog posture
+- Built-in foods remain the shared seed catalog in `src/data/foods.ts`.
+- Custom foods are still per-user and remain isolated through `CustomFood.userId`.
+- Food search continues to use aliases and tag filters so the new convenience items are discoverable by the names users actually type.
 
 **Supplements reset correctly** because they're stored in localStorage keyed by date string and cleared when `getEffectiveToday()` changes — no backend change needed.
 

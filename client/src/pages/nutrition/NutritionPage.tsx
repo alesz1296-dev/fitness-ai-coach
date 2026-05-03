@@ -114,6 +114,8 @@ function getSweetenerOptions(t: (k: string) => string): Record<string, { label: 
   };
 }
 
+const FOOD_DB_LABEL = "Food DB v2026-05-03-staples-v5 • 710 items";
+
 // ── Food-type detection helpers ───────────────────────────────────────────────
 // These decide which "cooking extras" make sense for the selected food.
 
@@ -211,10 +213,13 @@ function calcMacro(
 function getCuisineTags(t: (k: string) => string) {
   return [
     { tag: "asian",         label: t("nutrition.tagAsian"),       emoji: "🥡" },
+    { tag: "latin",         label: t("nutrition.tagLatin"),       emoji: "🌮" },
     { tag: "japanese",       label: t("nutrition.tagJapanese"),     emoji: "🍱" },
     { tag: "italian",        label: t("nutrition.tagItalian"),      emoji: "🍝" },
     { tag: "mexican",        label: t("nutrition.tagMexican"),      emoji: "🌮" },
     { tag: "caribbean",      label: t("nutrition.tagCaribbean"),   emoji: "🌴" },
+    { tag: "indian",         label: t("nutrition.tagIndian"),      emoji: "🍛" },
+    { tag: "south-asian",    label: t("nutrition.tagSouthAsian"),  emoji: "🥘" },
     { tag: "middle-eastern", label: t("nutrition.tagMiddleEastern"),emoji: "🧆" },
     { tag: "korean",         label: t("nutrition.tagKorean"),       emoji: "🥢" },
   ];
@@ -227,6 +232,7 @@ function getDietaryTags(t: (k: string) => string) {
     { tag: "high-protein", label: t("nutrition.tagHighProtein"), emoji: "🍗" },
     { tag: "vegan",        label: t("nutrition.tagVegan"),       emoji: "🌱" },
     { tag: "vegetarian",   label: t("nutrition.tagVegetarian"),  emoji: "🥦" },
+    { tag: "gluten-free",  label: t("nutrition.tagGlutenFree"),  emoji: "🌾" },
     { tag: "fast-food",    label: t("nutrition.tagFastFood"),    emoji: "🍔" },
     { tag: "dessert",      label: t("nutrition.tagDesserts"),    emoji: "🍰" },
     { tag: "integral",     label: t("nutrition.tagWholeGrain"),  emoji: "🌾" },
@@ -267,6 +273,7 @@ const TAG_COLORS: Record<string, string> = {
   dessert:          "bg-purple-100 text-purple-700",
   vegan:            "bg-green-100 text-green-700",
   vegetarian:       "bg-emerald-100 text-emerald-700",
+  "gluten-free":    "bg-slate-100 text-slate-700",
   integral:         "bg-amber-100 text-amber-700",
   fruit:            "bg-pink-100 text-pink-600",
   vegetable:        "bg-lime-100 text-lime-700",
@@ -277,6 +284,9 @@ const TAG_COLORS: Record<string, string> = {
   meat:             "bg-red-100 text-red-800",
   sushi:            "bg-rose-100 text-rose-600",
   asian:            "bg-slate-100 text-slate-700",
+  latin:            "bg-orange-100 text-orange-800",
+  indian:           "bg-amber-100 text-amber-800",
+  "south-asian":    "bg-yellow-100 text-yellow-800",
   "middle-eastern": "bg-amber-100 text-amber-800",
   caribbean:        "bg-emerald-100 text-emerald-800",
   soup:             "bg-orange-50 text-orange-700",
@@ -2508,6 +2518,7 @@ export default function NutritionPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("nutrition.title")}</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{fmtWeekdayLongDate(parseISO(date))}</p>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">{FOOD_DB_LABEL}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm"
