@@ -512,10 +512,12 @@ export const updateCalendarDaySchema = z.object({
 export const createMealPlanSchema = z.object({
   name: z.string().trim().min(1, "Plan name is required").max(200),
   weekStart: calendarDateString,
+  durationWeeks: z.coerce.number().int().min(1).max(52).optional(),
 });
 
 export const updateMealPlanSchema = z.object({
   name: z.string().trim().min(1).max(200),
+  durationWeeks: z.coerce.number().int().min(1).max(52).optional(),
 });
 
 export const addMealPlanEntrySchema = z.object({

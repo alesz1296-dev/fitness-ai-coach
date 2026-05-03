@@ -20,9 +20,7 @@ export function emitNutritionSync(source: NutritionSyncSource) {
   window.dispatchEvent(
     new CustomEvent(APP_EVENTS.nutritionSync, { detail: { source } }),
   );
-  window.dispatchEvent(
-    new CustomEvent(APP_EVENTS.dataChanged, { detail: { source } }),
-  );
+  emitDataChanged(source);
   window.dispatchEvent(new Event(APP_EVENTS.foodLogged));
 }
 
@@ -35,18 +33,20 @@ export function emitWeightLogged(weight?: number) {
     window.dispatchEvent(
       new CustomEvent(APP_EVENTS.weightLogged, { detail: { weight } }),
     );
-    window.dispatchEvent(
-      new CustomEvent(APP_EVENTS.dataChanged, { detail: { source: "weight" } }),
-    );
+    emitDataChanged("weight");
     return;
   }
 
   window.dispatchEvent(new Event(APP_EVENTS.weightLogged));
-  window.dispatchEvent(
-    new CustomEvent(APP_EVENTS.dataChanged, { detail: { source: "weight" } }),
-  );
+  emitDataChanged("weight");
 }
 
 export function emitAppPrefsChanged() {
   window.dispatchEvent(new Event(APP_EVENTS.appPrefsChanged));
+}
+
+export function emitDataChanged(source: string) {
+  window.dispatchEvent(
+    new CustomEvent(APP_EVENTS.dataChanged, { detail: { source } }),
+  );
 }

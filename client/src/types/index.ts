@@ -248,7 +248,7 @@ export interface MealPlanEntry {
 export interface MealPlanDay {
   id: number;
   planId: number;
-  dayIndex: number;  // 0=Mon … 6=Sun
+  dayIndex: number;  // 0-based index across the plan
   notes?: string | null;
   entries: MealPlanEntry[];
   createdAt: string;
@@ -259,6 +259,7 @@ export interface MealPlan {
   userId: number;
   name: string;
   weekStart: string;  // ISO date "YYYY-MM-DD"
+  durationWeeks: number;
   days: MealPlanDay[];
   createdAt: string;
   updatedAt: string;

@@ -63,18 +63,20 @@ export const createPlan = async (
 ): Promise<void> => {
   try {
     const { name, weekStart } = req.body;
+    const durationWeeks = Math.max(1, Number(req.body.durationWeeks ?? 1));
     if (!name || !weekStart) {
       return next(createError("name and weekStart are required", 400));
     }
 
-    // Create plan with 7 pre-built day slots in a single transaction
+    // Create plan with a configurable number of week blocks in a single transaction
     const plan = await db.mealPlan.create({
       data: {
         userId:    req.user!.id,
         name,
         weekStart,
+        durationWeeks,
         days: {
-          create: Array.from({ length: 7 }, (_, i) => ({ dayIndex: i })),
+          create: Array.from({ length: durationWeeks * 7 }, (_, i) => ({ dayIndex: i })),
         },
       },
       include: {
@@ -100,13 +102,18 @@ export const updatePlan = async (
   try {
     const id = Number(req.params.id);
     const { name, weekStart } = req.body;
+    const durationWeeks = req.body.durationWeeks != null ? Math.max(1, Number(req.body.durationWeeks)) : undefined;
 
     const existing = await db.mealPlan.findFirst({ where: { id, userId: req.user!.id } });
     if (!existing) return next(createError("Meal plan not found", 404));
 
     await db.mealPlan.update({
       where: { id },
-      data:  { ...(name !== undefined && { name }), ...(weekStart !== undefined && { weekStart }) },
+      data:  {
+        ...(name !== undefined && { name }),
+        ...(weekStart !== undefined && { weekStart }),
+        ...(durationWeeks !== undefined && { durationWeeks }),
+      },
     });
 
     const full = await loadPlan(id, req.user!.id);

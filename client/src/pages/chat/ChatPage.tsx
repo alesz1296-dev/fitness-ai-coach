@@ -5,6 +5,7 @@ import type { Conversation } from "../../types";
 import { Button } from "../../components/ui/Button";
 import { useTranslation, t } from "../../i18n";
 import type { TKey } from "../../i18n";
+import { emitDataChanged } from "../../lib/appEvents";
 
 type AgentType = "coach" | "nutritionist" | "general";
 
@@ -478,9 +479,11 @@ export default function ChatPage() {
       targetPlanId: mealPlan.targetPlanId ?? null,
       name: mealPlan.name,
       weekStart: mealPlan.weekStart,
+      durationWeeks: mealPlan.durationWeeks,
       days: mealPlan.days,
       meals: mealPlan.meals,
     });
+    emitDataChanged("meal-plan");
     showToast(
       mealPlan.mode === "replace"
         ? t("chat.toastMealUpdated")

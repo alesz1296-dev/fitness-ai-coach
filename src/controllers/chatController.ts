@@ -38,6 +38,7 @@ interface DayBlock   { dayIndex: number; meals?: MealBlock[] }
 interface MealPlanPayload {
   days?:  DayBlock[];
   meals?: MealBlock[];
+  durationWeeks?: number;
 }
 
 interface EntryRow {
@@ -614,25 +615,37 @@ export const saveMealPlanFromChat = async (
       return;
     }
 
-    const plan = await prisma.mealPlan.create({
-      data: {
-        userId: req.user!.id,
-        name: name || "AI Suggested Meal Plan",
-        weekStart: weekStart || parseMondayDate(),
-        days: {
-          create: Array.from({ length: 7 }, (_, dayIndex) => ({
-            dayIndex,
-            entries: {
-              create: (entriesByDay.get(dayIndex) ?? []).map(
-                (entry: EntryRow, i: number) => ({
-                  ...entry,
-                  order: i,
-                }),
-              ),
-            },
-          })),
-        },
+    const inferredDays = normalizedDays.length > 0
+      ? Math.max(...normalizedDays.map((day) => Number(day.dayIndex))) + 1
+      : 7;
+    const requestedWeeks = Number(req.body.durationWeeks ?? 0);
+    const durationWeeks = Number.isFinite(requestedWeeks) && requestedWeeks > 0
+      ? Math.max(1, Math.floor(requestedWeeks))
+      : Math.max(1, Math.ceil(inferredDays / 7));
+    const totalDays = Math.max(durationWeeks * 7, inferredDays);
+
+    const planData: any = {
+      userId: req.user!.id,
+      name: name || "AI Suggested Meal Plan",
+      weekStart: weekStart || parseMondayDate(),
+      durationWeeks,
+      days: {
+        create: Array.from({ length: totalDays }, (_, dayIndex) => ({
+          dayIndex,
+          entries: {
+            create: (entriesByDay.get(dayIndex) ?? []).map(
+              (entry: EntryRow, i: number) => ({
+                ...entry,
+                order: i,
+              }),
+            ),
+          },
+        })),
       },
+    };
+
+    const plan = await prisma.mealPlan.create({
+      data: planData,
       include: {
         days: {
           orderBy: { dayIndex: "asc" },

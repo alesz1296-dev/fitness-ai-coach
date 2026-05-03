@@ -425,9 +425,9 @@ export const waterApi = {
 export const mealPlansApi = {
   getAll: () => api.get<{ plans: MealPlan[] }>("/meal-plans"),
   getOne: (id: number) => api.get<{ plan: MealPlan }>(`/meal-plans/${id}`),
-  create: (data: { name: string; weekStart: string }) =>
+  create: (data: { name: string; weekStart: string; durationWeeks?: number }) =>
     api.post<{ plan: MealPlan }>("/meal-plans", data),
-  update: (id: number, data: { name?: string; weekStart?: string }) =>
+  update: (id: number, data: { name?: string; weekStart?: string; durationWeeks?: number }) =>
     api.put<{ plan: MealPlan }>(`/meal-plans/${id}`, data),
   delete: (id: number) => api.delete(`/meal-plans/${id}`),
   addEntry: (planId: number, dayId: number, data: Partial<MealPlanEntry>) =>

@@ -13,6 +13,20 @@ import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
 import { Modal } from "../../components/ui/Modal";
 
+type ProfileUpdatePayload = {
+  firstName?: string;
+  lastName?: string;
+  age?: number;
+  weight?: number;
+  height?: number;
+  sex?: User["sex"];
+  activityLevel?: User["activityLevel"];
+  fitnessLevel?: string;
+  goal?: string;
+  trainingDaysPerWeek?: number | null;
+  trainingHoursPerDay?: number | null;
+};
+
 // ── Toast ────────────────────────────────────────────────────────────────────
 function useToast() {
   const [msg, setMsg] = useState<string | null>(null);
@@ -55,7 +69,7 @@ function ProfileForm() {
   const navigate = useNavigate();
   const [activeGoalId, setActiveGoalId] = useState<number | null>(null);
   const [weightConfirmOpen, setWeightConfirmOpen] = useState(false);
-  const [pendingProfile, setPendingProfile] = useState<Partial<User> & Record<string, any> | null>(null);
+  const [pendingProfile, setPendingProfile] = useState<ProfileUpdatePayload | null>(null);
 
   // Load active goal ID once so we can sync trainingDaysPerWeek to it on save
   useEffect(() => {
@@ -116,21 +130,21 @@ function ProfileForm() {
     }));
   }, [user?.weight]);
 
-  const buildPayload = () => ({
-    firstName:           form.firstName           || undefined,
-    lastName:            form.lastName            || undefined,
-    age:                 form.age                 ? Number(form.age)                 : undefined,
-    weight:              form.weight              ? Number(form.weight)              : undefined,
-    height:              form.height              ? Number(form.height)              : undefined,
-    sex:                 (form.sex as any)        || undefined,
-    activityLevel:       (form.activityLevel as any) || undefined,
-    fitnessLevel:        form.fitnessLevel        || undefined,
-    goal:                form.goal                || undefined,
+  const buildPayload = (): ProfileUpdatePayload => ({
+    firstName: form.firstName || undefined,
+    lastName: form.lastName || undefined,
+    age: form.age ? Number(form.age) : undefined,
+    weight: form.weight ? Number(form.weight) : undefined,
+    height: form.height ? Number(form.height) : undefined,
+    sex: (form.sex as User["sex"]) || undefined,
+    activityLevel: (form.activityLevel as User["activityLevel"]) || undefined,
+    fitnessLevel: form.fitnessLevel || undefined,
+    goal: form.goal || undefined,
     trainingDaysPerWeek: form.trainingDaysPerWeek ? Number(form.trainingDaysPerWeek) : null,
     trainingHoursPerDay: form.trainingHoursPerDay ? Number(form.trainingHoursPerDay) : null,
   });
 
-  const commitSave = async (payload: ReturnType<typeof buildPayload>) => {
+  const commitSave = async (payload: ProfileUpdatePayload) => {
     setSaving(true); setError(""); setSuccess(""); setPlanNudge(null);
     try {
       const newDays = payload.trainingDaysPerWeek ?? null;

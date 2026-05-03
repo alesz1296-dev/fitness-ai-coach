@@ -6,8 +6,10 @@ import type { MealPlan, MealPlanDay, MealPlanEntry } from "../../types";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
+import { Select } from "../../components/ui/Select";
 import { Modal } from "../../components/ui/Modal";
 import { useTranslation } from "../../i18n";
+import { APP_EVENTS } from "../../lib/appEvents";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
@@ -54,6 +56,20 @@ function dayTotals(day: MealPlanDay) {
     }),
     { calories: 0, protein: 0, carbs: 0, fats: 0 }
   );
+}
+
+const PLAN_LENGTH_OPTIONS = [
+  { value: "1", label: "1 week" },
+  { value: "4", label: "4 weeks" },
+  { value: "8", label: "8 weeks" },
+  { value: "12", label: "12 weeks" },
+];
+
+function formatPlanLength(weeks: number) {
+  if (weeks === 4) return "4 weeks (about 1 month)";
+  if (weeks === 8) return "8 weeks (about 2 months)";
+  if (weeks === 12) return "12 weeks (about 3 months)";
+  return `${weeks} week${weeks === 1 ? "" : "s"}`;
 }
 
 // ── Food search modal ─────────────────────────────────────────────────────────
@@ -385,7 +401,9 @@ function PlanList({
           >
             <div>
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{p.name}</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">{t("mealPlanner.weekOf")} {p.weekStart}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">
+                {t("mealPlanner.weekOf")} {p.weekStart} · {formatPlanLength(p.durationWeeks ?? 1)}
+              </p>
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(p.id); }}
@@ -401,10 +419,11 @@ function PlanList({
 }
 
 // ── Create plan modal ─────────────────────────────────────────────────────────
-function CreatePlanModal({ onSave, onClose }: { onSave: (name: string, weekStart: string) => Promise<void>; onClose: () => void }) {
+function CreatePlanModal({ onSave, onClose }: { onSave: (name: string, weekStart: string, durationWeeks: number) => Promise<void>; onClose: () => void }) {
   const { t } = useTranslation();
   const [name, setName]           = useState(t("mealPlanner.defaultPlanName"));
   const [weekStart, setWeekStart] = useState(getMondayOfWeek(new Date()));
+  const [durationWeeks, setDurationWeeks] = useState("1");
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState("");
 
@@ -413,7 +432,7 @@ function CreatePlanModal({ onSave, onClose }: { onSave: (name: string, weekStart
     setSaving(true);
     setError("");
     try {
-      await onSave(name.trim(), weekStart);
+      await onSave(name.trim(), weekStart, Number(durationWeeks));
     } catch (e: any) {
       setError(e?.response?.data?.error ?? e?.message ?? t("mealPlanner.createFailed"));
       setSaving(false);
@@ -429,6 +448,12 @@ function CreatePlanModal({ onSave, onClose }: { onSave: (name: string, weekStart
           type="date"
           value={weekStart}
           onChange={(e) => setWeekStart(e.target.value)}
+        />
+        <Select
+          label={t("mealPlanner.planLength")}
+          value={durationWeeks}
+          onChange={(e) => setDurationWeeks(e.target.value)}
+          options={PLAN_LENGTH_OPTIONS}
         />
         {error && <p className="text-sm text-red-500">{error}</p>}
         <Button className="w-full" onClick={handleSubmit} disabled={!name || !weekStart || saving} loading={saving}>
@@ -464,6 +489,23 @@ export default function MealPlannerPage() {
 
   useEffect(() => { loadPlans(); }, [loadPlans]);
 
+  useEffect(() => {
+    const handleDataChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ source?: string }>).detail;
+      if (detail?.source === "meal-plan" || detail?.source) {
+        loadPlans();
+        if (activePlan) {
+          void selectPlan(activePlan.id);
+        }
+      }
+    };
+
+    window.addEventListener(APP_EVENTS.dataChanged, handleDataChanged);
+    return () => {
+      window.removeEventListener(APP_EVENTS.dataChanged, handleDataChanged);
+    };
+  }, [activePlan, loadPlans, selectPlan]);
+
   // ── Select a plan ──────────────────────────────────────────────────────────
   const selectPlan = useCallback(async (id: number) => {
     setLoadingPlan(true);
@@ -476,8 +518,8 @@ export default function MealPlannerPage() {
   }, []);
 
   // ── Create plan ────────────────────────────────────────────────────────────
-  const handleCreate = async (name: string, weekStart: string): Promise<void> => {
-    const res = await mealPlansApi.create({ name, weekStart });
+  const handleCreate = async (name: string, weekStart: string, durationWeeks: number): Promise<void> => {
+    const res = await mealPlansApi.create({ name, weekStart, durationWeeks });
     setPlans((prev) => [res.data.plan, ...prev]);
     setActivePlan(res.data.plan);
     setShowCreate(false);
@@ -532,7 +574,7 @@ export default function MealPlannerPage() {
 
   // ── Weekly plan dates ──────────────────────────────────────────────────────
   const weekDates = activePlan
-    ? Array.from({ length: 7 }, (_, i) =>
+    ? Array.from({ length: activePlan.days.length }, (_, i) =>
         addDays(parseISO(activePlan.weekStart), i)
       )
     : [];
@@ -552,7 +594,7 @@ export default function MealPlannerPage() {
   );
 
   const avgCalories = weeklyTotals && activePlan?.days.length
-    ? weeklyTotals.calories / 7
+    ? weeklyTotals.calories / activePlan.days.length
     : 0;
 
   return (
@@ -599,7 +641,7 @@ export default function MealPlannerPage() {
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">{activePlan.name}</h2>
                   <p className="text-sm text-gray-400 dark:text-gray-500 dark:text-gray-400">
-                    {fmtMonthDay(parseISO(activePlan.weekStart))} — {fmtMonthDay(addDays(parseISO(activePlan.weekStart), 6))}
+                    {fmtMonthDay(parseISO(activePlan.weekStart))} — {fmtMonthDay(addDays(parseISO(activePlan.weekStart), activePlan.days.length - 1))}
                   </p>
                 </div>
                 {weeklyTotals && weeklyTotals.calories > 0 && (
@@ -609,7 +651,7 @@ export default function MealPlannerPage() {
                       <div className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">{t("mealPlanner.avgKcalDay")}</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-sm font-bold text-purple-600">{Math.round(weeklyTotals.protein / 7)}g</div>
+                      <div className="text-sm font-bold text-purple-600">{Math.round(weeklyTotals.protein / activePlan.days.length)}g</div>
                       <div className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-400">{t("mealPlanner.avgProtein")}</div>
                     </div>
                   </div>
@@ -625,7 +667,7 @@ export default function MealPlannerPage() {
                     <DayColumn
                       key={day.id}
                       day={day}
-                      dayName={DAY_NAMES_T[day.dayIndex]}
+                      dayName={DAY_NAMES_T[day.dayIndex % 7]}
                       date={date ?? new Date()}
                       isToday={dateStr === today}
                       onAddFood={(meal) => setAddFor({ dayId: day.id, defaultMeal: meal })}

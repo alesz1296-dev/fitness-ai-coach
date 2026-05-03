@@ -63,6 +63,7 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
       "userId"    INTEGER NOT NULL,
       "name"      TEXT NOT NULL,
       "weekStart" TEXT NOT NULL,
+      "durationWeeks" INTEGER NOT NULL DEFAULT 1,
       "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
@@ -193,6 +194,8 @@ const MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
     sql: `ALTER TABLE "FoodItem" ADD COLUMN "aliases" TEXT NOT NULL DEFAULT '[]'` },
   { table: "FoodItem", column: "localizedNames",
     sql: `ALTER TABLE "FoodItem" ADD COLUMN "localizedNames" TEXT NOT NULL DEFAULT '{}'` },
+  { table: "MealPlan", column: "durationWeeks",
+    sql: `ALTER TABLE "MealPlan" ADD COLUMN "durationWeeks" INTEGER NOT NULL DEFAULT 1` },
   { table: "Workout", column: "trainingType",
     sql: `ALTER TABLE "Workout" ADD COLUMN "trainingType" TEXT` },
   { table: "CalorieGoal", column: "macrosCycling",
