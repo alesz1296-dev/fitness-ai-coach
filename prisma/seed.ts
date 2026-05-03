@@ -31,6 +31,7 @@ async function seedFoods(): Promise<number> {
         defaultQty:  f.defaultQty,
         defaultUnit: f.defaultUnit,
         tags:        JSON.stringify(f.tags ?? []),
+        aliases:     JSON.stringify(f.aliases ?? []),
       },
       create: {
         id:          f.id,
@@ -42,6 +43,7 @@ async function seedFoods(): Promise<number> {
         defaultQty:  f.defaultQty,
         defaultUnit: f.defaultUnit,
         tags:        JSON.stringify(f.tags ?? []),
+        aliases:     JSON.stringify(f.aliases ?? []),
       },
     });
     upserted++;

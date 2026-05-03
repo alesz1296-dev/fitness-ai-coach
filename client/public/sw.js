@@ -8,7 +8,7 @@
  *                 when offline; this SW signals the app to flush on reconnect
  */
 
-const SHELL_CACHE = "fitai-shell-v2";
+const SHELL_CACHE = "fitai-shell-v3";
 const API_CACHE   = "fitai-api-v1";
 
 // API response TTL — serve stale after this window (ms)
@@ -61,7 +61,25 @@ self.addEventListener("fetch", (event) => {
 
   // API GETs: stale-while-revalidate
   if (url.pathname.startsWith("/api/")) {
+    const isCurrentDayEndpoint =
+      url.pathname === "/api/dashboard" ||
+      url.pathname === "/api/calorie-goals/active" ||
+      url.pathname === "/api/foods" ||
+      url.pathname === "/api/water/today" ||
+      (url.pathname === "/api/workouts/calories-burned" && !url.searchParams.has("date"));
+
+    if (isCurrentDayEndpoint) {
+      event.respondWith(networkFirst(request));
+      return;
+    }
+
     event.respondWith(staleWhileRevalidate(request));
+    return;
+  }
+
+  // Navigations: network-first so deploys pick up the latest app shell quickly.
+  if (request.mode === "navigate" || url.pathname === "/" || url.pathname === "/index.html") {
+    event.respondWith(networkFirst(request));
     return;
   }
 
@@ -116,6 +134,21 @@ async function staleWhileRevalidate(request) {
     JSON.stringify({ error: "You are offline", offline: true }),
     { status: 503, headers: { "Content-Type": "application/json" } }
   );
+}
+
+async function networkFirst(request) {
+  const cache = await caches.open(SHELL_CACHE);
+  try {
+    const res = await fetch(request);
+    if (res.ok) {
+      const clone = res.clone();
+      cache.put(request, clone);
+    }
+    return res;
+  } catch {
+    const cached = await cache.match(request) || await caches.match("/index.html");
+    return cached ?? new Response("Offline", { status: 503 });
+  }
 }
 
 async function cacheFirst(request) {

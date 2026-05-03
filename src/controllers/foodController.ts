@@ -14,7 +14,7 @@ export const getFoodLogs = async (
   try {
     const dateStr = req.query.date as string;
 
-    // Use timezone-aware 4am rollover boundaries.
+    // Use timezone-aware midnight rollover boundaries.
     // Client sends X-Timezone header; if a specific date is requested use UTC
     // day boundaries for that historical date (user is browsing, not "today").
     let startOfDay: Date;
@@ -26,7 +26,7 @@ export const getFoodLogs = async (
       endOfDay        = new Date(`${dateStr}T23:59:59.999Z`);
       resolvedDateStr = dateStr;
     } else {
-      // "Today" — use user's local timezone + 4am rollover
+      // "Today" — use user's local timezone + midnight rollover
       const tz = tzFromRequest(req.headers as Record<string, string | string[] | undefined>);
       ({ start: startOfDay, end: endOfDay, dateStr: resolvedDateStr } = getDayBounds(tz));
     }

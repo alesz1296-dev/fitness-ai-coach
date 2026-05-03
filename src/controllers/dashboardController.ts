@@ -157,7 +157,7 @@ export const getDashboard = async (
     const now    = new Date();
     const tz     = tzFromRequest(req.headers as Record<string, string | string[] | undefined>);
 
-    // ── Date helpers (timezone-aware, 4am rollover) ──────────────────────────
+    // ── Date helpers (timezone-aware, midnight rollover) ─────────────────────
     const { start: startOfToday, end: endOfToday, dateStr: todayStr } = getDayBounds(tz);
 
     const startOf90Days = new Date(startOfToday);

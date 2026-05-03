@@ -433,6 +433,7 @@ model FoodItem {
   defaultQty  Float
   defaultUnit String
   tags        String  @default("[]") // JSON array of tag strings
+  aliases     String  @default("[]") // JSON array of search aliases
 
   @@index([name])
 }

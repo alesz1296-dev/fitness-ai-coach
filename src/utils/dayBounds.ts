@@ -1,16 +1,16 @@
 /**
  * getDayBounds — timezone-aware day boundary with configurable rollover hour.
  *
- * "Today" for a user runs from 04:00 local time to 03:59:59 the next morning.
- * Entries logged between midnight and 04:00 belong to the previous day.
+ * "Today" for a user runs from 00:00 local time to 23:59:59.
+ * Entries logged after midnight belong to the current day.
  *
  * @param tz          IANA timezone string (e.g. "America/New_York"). Falls back to UTC.
- * @param rolloverHour Hour at which the new day starts (default 4).
+ * @param rolloverHour Hour at which the new day starts (default 0).
  * @returns { start, end, dateStr } — UTC Date range + "YYYY-MM-DD" effective date label.
  */
 export function getDayBounds(
   tz: string = "UTC",
-  rolloverHour = 4,
+  rolloverHour = 0,
 ): { start: Date; end: Date; dateStr: string } {
   const now = new Date();
 

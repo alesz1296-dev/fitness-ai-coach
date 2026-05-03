@@ -210,9 +210,11 @@ function calcMacro(
 // ── Food tag filter chips — grouped into 3 categories ────────────────────────
 function getCuisineTags(t: (k: string) => string) {
   return [
+    { tag: "asian",         label: t("nutrition.tagAsian"),       emoji: "🥡" },
     { tag: "japanese",       label: t("nutrition.tagJapanese"),     emoji: "🍱" },
     { tag: "italian",        label: t("nutrition.tagItalian"),      emoji: "🍝" },
     { tag: "mexican",        label: t("nutrition.tagMexican"),      emoji: "🌮" },
+    { tag: "caribbean",      label: t("nutrition.tagCaribbean"),   emoji: "🌴" },
     { tag: "middle-eastern", label: t("nutrition.tagMiddleEastern"),emoji: "🧆" },
     { tag: "korean",         label: t("nutrition.tagKorean"),       emoji: "🥢" },
   ];
@@ -274,7 +276,9 @@ const TAG_COLORS: Record<string, string> = {
   seafood:          "bg-cyan-100 text-cyan-700",
   meat:             "bg-red-100 text-red-800",
   sushi:            "bg-rose-100 text-rose-600",
+  asian:            "bg-slate-100 text-slate-700",
   "middle-eastern": "bg-amber-100 text-amber-800",
+  caribbean:        "bg-emerald-100 text-emerald-800",
   soup:             "bg-orange-50 text-orange-700",
   cheese:           "bg-yellow-100 text-yellow-800",
   sausage:          "bg-red-100 text-red-700",
@@ -2011,30 +2015,25 @@ export default function NutritionPage() {
     }
   }, [hash]);
   const { user } = useAuthStore();
-  // 4am rollover: entries logged before 4am belong to the previous calendar day
+  // Midnight rollover: entries logged before midnight belong to the previous calendar day
   const getEffectiveToday = () => {
     const now = new Date();
-    if (now.getHours() < 4) {
-      const yesterday = new Date(now);
-      yesterday.setDate(yesterday.getDate() - 1);
-      return yesterday.toISOString().split("T")[0];
-    }
     return now.toISOString().split("T")[0];
   };
 
-  const [date,     setDate]     = useState(() => sessionStorage.getItem("nutrition_date") ?? getEffectiveToday());
+  const [date,     setDate]     = useState(() => {
+    const today = getEffectiveToday();
+    const saved = sessionStorage.getItem("nutrition_date");
+    return saved === today ? saved : today;
+  });
   const setDatePersist = (d: string) => { sessionStorage.setItem("nutrition_date", d); setDate(d); };
 
-  // Reset date if saved date is more than 7 days in the past
+  // Keep the nutrition tab anchored to the current day so totals reset automatically.
   useEffect(() => {
-    const saved = sessionStorage.getItem("nutrition_date");
-    if (saved) {
-      const diff = Math.abs(new Date().getTime() - new Date(saved).getTime());
-      if (diff > 7 * 24 * 3600 * 1000) {
-        const today = getEffectiveToday();
-        sessionStorage.setItem("nutrition_date", today);
-        setDate(today);
-      }
+    const today = getEffectiveToday();
+    if (date !== today) {
+      sessionStorage.setItem("nutrition_date", today);
+      setDate(today);
     }
   }, []);
   const [logs,          setLogs]          = useState<FoodLog[]>([]);
@@ -3394,7 +3393,14 @@ export default function NutritionPage() {
       )}
 
       {/* ── Weight FAB ────────────────────────────────────────────────────── */}
-      <div className="fixed bottom-32 right-4 z-50 flex flex-col items-end gap-3 md:bottom-8 md:right-8">
+      <div
+        className="fixed z-50 flex flex-col items-end gap-3"
+        style={{
+          right: "calc(1rem + env(safe-area-inset-right))",
+          left: "auto",
+          bottom: "calc(8rem + env(safe-area-inset-bottom))",
+        }}
+      >
         {showWeightFab && (
           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">&#9878;&#65039; {t("nutrition.logWeight")}</p>

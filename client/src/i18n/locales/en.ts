@@ -84,7 +84,7 @@ export interface Translation {
     kcalLabel: string; proteinG: string; carbsG: string; fatG: string;
     protShort: string; carbsShort: string; fatShort: string; defaultQtyLabel: string;
     logWeight: string; savedConfirm: string; customDish: string;
-    tagJapanese: string; tagItalian: string; tagMexican: string; tagMiddleEastern: string; tagKorean: string;
+    tagAsian: string; tagJapanese: string; tagItalian: string; tagMexican: string; tagCaribbean: string; tagMiddleEastern: string; tagKorean: string;
     tagFit: string; tagKeto: string; tagHighProtein: string; tagVegan: string; tagVegetarian: string;
     tagFastFood: string; tagDesserts: string; tagWholeGrain: string; tagLowCarb: string; tagHighSugar: string;
     tagMeats: string; tagSeafood: string; tagCheese: string; tagSoups: string; tagSausages: string;
@@ -485,7 +485,8 @@ const en: Translation = {
     logWeight: "Log Weight",
     savedConfirm: "Saved!",
     customDish: "Custom Dish",
-    tagJapanese: "Japanese", tagItalian: "Italian", tagMexican: "Mexican",
+    tagAsian: "Asian", tagJapanese: "Japanese", tagItalian: "Italian", tagMexican: "Mexican",
+    tagCaribbean: "Caribbean",
     tagMiddleEastern: "Middle Eastern", tagKorean: "Korean",
     tagFit: "Fit", tagKeto: "Keto", tagHighProtein: "High-Protein",
     tagVegan: "Vegan", tagVegetarian: "Vegetarian", tagFastFood: "Fast Food",

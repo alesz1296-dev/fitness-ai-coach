@@ -157,7 +157,12 @@ export const foodSearch = async (
     if (dbCount > 0) {
       const where: Record<string, any> = {};
 
-      if (q)   where.name = { contains: q };
+      if (q) {
+        where.OR = [
+          { name:    { contains: q } },
+          { aliases: { contains: q } },
+        ];
+      }
       if (tags.length > 0) {
         // AND logic: item must have ALL selected tags
         where.AND = tags.map((t) => ({ tags: { contains: `"${t}"` } }));
@@ -178,6 +183,7 @@ export const foodSearch = async (
         defaultQty:  f.defaultQty,
         defaultUnit: f.defaultUnit,
         tags:        parseJsonArray(f.tags),
+        aliases:     parseJsonArray(f.aliases),
       }));
 
       // Cache English results, translate on the way out
