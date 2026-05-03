@@ -221,7 +221,7 @@ export interface Translation {
     searchFood: string; servings: string; logAll: string; logDay: string;
     calories: string; planSaved: string; savePlan: string;
     copyFromLast: string; aiGenerate: string; myPlans: string; newPlan: string; noPlans: string; noPlansDesc: string;
-    createFirst: string; createPlan: string; planName: string; weekStarting: string;
+    createFirst: string; createPlan: string; planLength: string; planName: string; weekStarting: string;
     createFailed: string; planNamePlaceholder: string; weekOf: string; selectPlan: string;
     subtitle: string; addToMeal: string; avgKcalDay: string; avgProtein: string;
     noFoods: string; quantity: string; unit: string; deletePlan: string;

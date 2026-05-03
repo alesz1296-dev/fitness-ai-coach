@@ -489,6 +489,17 @@ export default function MealPlannerPage() {
 
   useEffect(() => { loadPlans(); }, [loadPlans]);
 
+  // ── Select a plan ──────────────────────────────────────────────────────────
+  const selectPlan = useCallback(async (id: number) => {
+    setLoadingPlan(true);
+    try {
+      const res = await mealPlansApi.getOne(id);
+      setActivePlan(res.data.plan);
+    } finally {
+      setLoadingPlan(false);
+    }
+  }, []);
+
   useEffect(() => {
     const handleDataChanged = (event: Event) => {
       const detail = (event as CustomEvent<{ source?: string }>).detail;
@@ -505,17 +516,6 @@ export default function MealPlannerPage() {
       window.removeEventListener(APP_EVENTS.dataChanged, handleDataChanged);
     };
   }, [activePlan, loadPlans, selectPlan]);
-
-  // ── Select a plan ──────────────────────────────────────────────────────────
-  const selectPlan = useCallback(async (id: number) => {
-    setLoadingPlan(true);
-    try {
-      const res = await mealPlansApi.getOne(id);
-      setActivePlan(res.data.plan);
-    } finally {
-      setLoadingPlan(false);
-    }
-  }, []);
 
   // ── Create plan ────────────────────────────────────────────────────────────
   const handleCreate = async (name: string, weekStart: string, durationWeeks: number): Promise<void> => {
