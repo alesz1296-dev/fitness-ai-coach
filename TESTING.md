@@ -24,13 +24,19 @@ Open `http://localhost:5173` in your browser.
 - [ ] Dashboard: stat cards show calories, protein, weight, weekly workouts
 - [ ] Dashboard: ⚖️ FAB logs weight and refreshes chart
 - [ ] Nutrition: search and log a food under each meal section
+- [ ] Nutrition: Food Database can switch between search mode and category-browse mode
+- [ ] Nutrition: `Add New Food` CTA is left-aligned with the food-library context and opens the custom-food flow
+- [ ] Nutrition: `Clear today's foods` removes only the selected day’s logged foods
 - [ ] Nutrition: Quick Re-log strip appears after first food is logged
 - [ ] Workouts: log a workout, view detail, delete it
+- [ ] Workouts: newly logged or edited workouts appear without manual refresh or tab switching
 - [ ] Workouts: browse Templates tab, fork a system template
 - [ ] Chat: send a message to AI Coach, switch agents
 - [ ] Goals: create a calorie goal, confirm Dashboard updates
+- [ ] Progress: range selector supports `1 day`, `1 week`, `2 weeks`, `1 month`, and longer monthly windows up to `1 year`
 - [ ] Settings: update profile, change protein multiplier slider
-- [ ] Dark mode: toggle in Settings → App Preferences
+- [ ] Settings: switch language to Spanish and Ukrainian, confirm shared layout labels and high-visibility screens update cleanly
+- [ ] Dark mode / theme prefs: toggle in Settings → App Preferences
 
 ### Dark mode
 Toggled in **Settings → App Preferences → Dark Mode**. Stored in `localStorage("app_prefs_v1")`. To reset: open DevTools → Application → Local Storage → delete `app_prefs_v1`.

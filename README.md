@@ -9,12 +9,18 @@ FitAI Coach is a full-stack fitness coaching application that combines intellige
 ### What it does
 
 - **Workout planning** — monthly calendar planner with rest day picker, template library (PPL, Upper/Lower, 5/3/1, endurance, and more), and a full workout builder with exercise search, sets/reps tracking, and an inline rest timer
-- **Nutrition tracking** — food logging by meal, macro rings with goal progress, calorie deficit/surplus banner, quick re-log for frequent foods, macro breakdown by food source
-- **Progress & predictions** — weight trend charts, body composition estimates (Deurenberg), exercise progression graphs, and a weight prediction model that projects future progress based on current deficit/surplus and flags whether you're on track, ahead, or behind
+- **Nutrition tracking** — food logging by meal, macro rings with goal progress, calorie deficit/surplus banner, quick re-log for frequent foods, macro breakdown by food source, AI meal-plan handoff to Meal Planner, and a seeded food database with both search and category-browse fallback
+- **Progress & predictions** — weight trend charts, body composition estimates (Deurenberg), exercise progression graphs, adaptive goal forecasting, and plan-vs-actual prediction views that compare ideal path, actual trend, and adaptive forecast
 - **AI coaching** — three agents (Coach, Nutritionist, General) with live tool-calling access to your workouts, nutrition, weight trend, and goals. Structured responses can be saved directly into the app as workout templates or calorie plans
 - **Weekly planning** — assign workout types to days of the week, sync to the monthly calendar across 1–3 months
 - **Monthly reports** — AI-generated summaries of training volume, nutrition averages, and weight change
 - **Goals & calorie targets** — TDEE-based calorie and macro goal setup with 6 preset templates (Fat Loss, Lean Bulk, Maintenance, Recomp, etc.)
+
+### Supported languages
+
+- English (`en`)
+- Spanish (`es`)
+- Ukrainian (`uk`) — locale is wired through the app and safe to select; some deeper feature copy still falls back to English until the full translation pass is completed
 
 ## Tech Stack
 
@@ -45,7 +51,7 @@ fitness_ai_coach/
 │   └── lib/                    # prisma, redis, tokenBlocklist, calorieCalculator
 ├── prisma/
 │   ├── schema.prisma           # Canonical schema — edit only this file
-│   └── seed.ts                 # Seeds 366 foods + 105 exercises into DB
+│   └── seed.ts                 # Seeds the built-in food and exercise catalog into DB
 ├── client/                     # Vite + React frontend
 │   └── src/
 │       ├── api/index.ts        # All Axios API calls

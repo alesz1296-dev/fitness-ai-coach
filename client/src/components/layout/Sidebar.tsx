@@ -5,30 +5,34 @@ import { useTranslation } from "../../i18n";
 
 export function Sidebar() {
   const { user, logout } = useAuthStore();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
+
   const navItems = [
-    { to: "/dashboard",    icon: "⊞",  label: t("nav.dashboard") },
-    { to: "/workouts",     icon: "🏋️", label: t("nav.workouts") },
-    { to: "/nutrition",    icon: "🥗", label: t("nav.nutrition") },
-    { to: "/goals",        icon: "🎯", label: t("nav.goals") },
-    { to: "/chat",         icon: "🤖", label: "AI Coach" },
-    { to: "/meal-planner", icon: "📅", label: "Meal Planner" },
-    { to: "/progress",     icon: "📈", label: t("nav.progress") },
-    { to: "/reports",      icon: "📊", label: "Reports" },
-    { to: "/settings",     icon: "⚙️", label: t("nav.profile") },
+    { to: "/dashboard", icon: "⊞", label: t("nav.dashboard") },
+    { to: "/workouts", icon: "🏋️", label: t("nav.workouts") },
+    { to: "/nutrition", icon: "🥗", label: t("nav.nutrition") },
+    { to: "/goals", icon: "🎯", label: t("nav.goals") },
+    { to: "/chat", icon: "🤖", label: t("nav.aiCoach") },
+    { to: "/meal-planner", icon: "📋", label: t("nav.mealPlanner") },
+    { to: "/progress", icon: "📈", label: t("nav.progress") },
+    { to: "/reports", icon: "📊", label: t("nav.reports") },
+    { to: "/settings", icon: "⚙️", label: t("nav.settings") },
   ];
 
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem("refreshToken") ?? undefined;
-    try { await authApi.logout(refreshToken); } catch { /* best-effort */ }
+    try {
+      await authApi.logout(refreshToken);
+    } catch {
+      /* best-effort */
+    }
     logout();
     navigate("/login");
   };
 
   return (
     <aside className="hidden md:flex md:flex-col w-60 min-h-screen bg-gray-900 shrink-0">
-      {/* Logo */}
       <div className="px-6 py-5 border-b border-gray-800">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">F</div>
@@ -36,7 +40,6 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* User */}
       <div className="px-6 py-4 border-b border-gray-800">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-brand-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
@@ -49,7 +52,6 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         {navItems.map((item) => (
           <NavLink
@@ -69,14 +71,13 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Logout */}
       <div className="px-3 py-4 border-t border-gray-800">
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
         >
           <span className="text-base">🚪</span>
-          {i18n.language === "es" ? "Cerrar sesión" : "Logout"}
+          {t("auth.logout")}
         </button>
       </div>
     </aside>

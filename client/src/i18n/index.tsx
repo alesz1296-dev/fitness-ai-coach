@@ -14,13 +14,14 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
 import en from "./locales/en";
 import es from "./locales/es";
+import uk from "./locales/uk";
 import type { Translation } from "./locales/en";
 import { setDateFormatLang } from "../lib/dateFormat";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-export type SupportedLang = "en" | "es";
+export type SupportedLang = "en" | "es" | "uk";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type NestedKeyOf<T, Prefix extends string = ""> = {
@@ -34,11 +35,12 @@ export type TKey = NestedKeyOf<Translation>;
 // ─────────────────────────────────────────────────────────────────────────────
 // Translation data
 // ─────────────────────────────────────────────────────────────────────────────
-const LOCALES: Record<SupportedLang, Translation> = { en, es };
+const LOCALES: Record<SupportedLang, Translation> = { en, es, uk };
 
 export const LANG_LABELS: Record<SupportedLang, string> = {
   en: "English",
   es: "Español",
+  uk: "Українська",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -92,9 +94,10 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 function getInitialLang(): SupportedLang {
   try {
     const stored = localStorage.getItem("lang");
-    if (stored === "en" || stored === "es") return stored;
+    if (stored === "en" || stored === "es" || stored === "uk") return stored;
     const browser = navigator.language.split("-")[0];
     if (browser === "es") return "es";
+    if (browser === "uk") return "uk";
   } catch { /* ignore */ }
   return "en";
 }

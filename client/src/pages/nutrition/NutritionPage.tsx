@@ -582,9 +582,9 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
         <button
           type="button"
           onClick={() => { setEditingFood(null); setShowCreateModal(true); }}
-          className="ml-auto px-2.5 py-1.5 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/30 transition-all font-semibold"
+          className="px-2.5 py-1.5 rounded-full text-xs font-medium bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900/30 transition-all font-semibold"
         >
-          + {t("nutrition.createNewFood")}
+          + {t("nutrition.newFoodBtn")}
         </button>
       </div>
 
@@ -2865,6 +2865,15 @@ export default function NutritionPage() {
           <Button variant="secondary" size="sm"
             disabled={isToday}
             onClick={() => setDatePersist(addDays(parseISO(date), 1).toISOString().split("T")[0])}>→</Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={clearDailyFoods}
+            disabled={logs.length === 0 || clearingFoods}
+            className="border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+          >
+            {clearingFoods ? t("common.loading") : t("nutrition.clearLoggedFoods")}
+          </Button>
         </div>
       </div>
 

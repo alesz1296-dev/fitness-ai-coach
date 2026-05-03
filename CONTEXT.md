@@ -1002,3 +1002,19 @@ Updated `AGENT_TOOLS`:
 - The main Goals page remains the goal-management surface, while Progress `Plan` acts as the embedded plan-review / trajectory tab.
 - Nutrition macro rings and macro breakdown tables should now show protein shake supplements as visible food sources instead of only silent macro boosts.
 - Users can now choose between the default palette, `Black + Golden`, and `White + Green` from app preferences, and the language-update confirmation toast should switch immediately into the newly selected language.
+
+## Session 2026-05-03 - Nutrition browse mode + progress ranges + Ukrainian locale wiring
+
+### What changed
+- Updated `client/src/pages/nutrition/NutritionPage.tsx` so the Food Database picker can switch between search mode and a category-browse fallback with two dropdowns: category first, then food.
+- Added a visible Nutrition action to clear all logged foods for the selected day without touching supplements or other nutrition preferences.
+- Expanded `client/src/pages/progress/ProgressPage.tsx` time-range options to include `1 day`, `1 week`, `2 weeks`, `1 month`, monthly steps through `1 year`, and reused those broader ranges in the Progress analytics views.
+- Added Ukrainian locale wiring through `client/src/i18n/locales/uk.ts` and `client/src/i18n/index.tsx`, including the `Українська` language option and `uk` locale detection / persistence support.
+- Updated shared layout navigation in `client/src/components/layout/BottomNav.tsx` and `client/src/components/layout/Sidebar.tsx` so the newly wired locale can render through the translation layer instead of relying on hardcoded labels.
+- Tightened the Nutrition custom-food CTA alignment so `Add New Food` sits on the left alongside `Food Database` / `My Foods`, and moved the clear-day food action into the main Nutrition header area where it is easier to find.
+
+### Behavior changes
+- Nutrition database lookup now has a category-browse fallback when free-text search is unreliable or when the user prefers browsing by tag/category.
+- Users can clear the current day’s food logs directly from the Nutrition page without manually deleting each logged item.
+- Progress history, predictions, and analytics can now be inspected over shorter and longer ranges, from a single day up to a full year.
+- Ukrainian is now a first-class selectable app language at the wiring level, with the UI able to load safely under the `uk` locale even before a full deep translation pass is finished.

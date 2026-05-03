@@ -2168,3 +2168,24 @@ Info chip shown when a frequency match exists: "Showing plans for N×/week — m
 - `Plan` is now the embedded plan-review surface inside Progress, while the dedicated `Goals` page remains the place to create and manage goals.
 - Protein shake supplements now contribute visible food rows in the macro meal/food breakdown views instead of only inflating totals silently.
 - Theme selection is stored alongside the existing app preferences so Dashboard, Nutrition, Progress, and the rest of the app can share the same palette choice.
+
+---
+
+## 2026-05-03 - Nutrition browse mode + progress ranges + Ukrainian locale wiring
+
+### Goal
+- Add a more reliable Nutrition food-database fallback, make it easier to clear a day of logged foods, broaden the Progress time windows, and wire Ukrainian as a selectable app locale.
+
+### Files modified
+- `client/src/pages/nutrition/NutritionPage.tsx` - added search/category browse-mode switching for the Food Database picker, left-aligned the `Add New Food` CTA with the library tabs, and surfaced a visible clear-day food action in the Nutrition header
+- `client/src/pages/progress/ProgressPage.tsx` - expanded time-range options to `1 day`, `1 week`, `2 weeks`, `1 month`, then monthly steps through `1 year` and reused those ranges in analytics views
+- `client/src/i18n/locales/en.ts` and `client/src/i18n/locales/es.ts` - added the labels needed by the Nutrition browse mode, new Progress ranges, and related UI polish
+- `client/src/i18n/locales/uk.ts` - added a new wired Ukrainian locale file with core overrides and safe English fallback coverage
+- `client/src/i18n/index.tsx` - registered `uk`, locale detection, and the `Українська` language option
+- `client/src/components/layout/BottomNav.tsx` and `client/src/components/layout/Sidebar.tsx` - removed remaining hardcoded labels so the new locale can render through the translation layer
+
+### Notes
+- Nutrition now supports both free-text search and category-first browsing for the seeded food database.
+- The clear-day action removes logged foods for the selected day without wiping unrelated nutrition preferences.
+- Progress can now be inspected over both much shorter and much longer windows, from a single day through one year.
+- Ukrainian is now wired end to end as a selectable locale, even though some deeper page strings still need a later full translation pass.

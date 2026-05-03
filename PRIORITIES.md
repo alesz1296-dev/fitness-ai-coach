@@ -65,6 +65,12 @@ _Last updated: 2026-05-03_
 
 Foundation work is complete. The roadmap below only shows live dependencies and remaining work.
 
+Recently cleared:
+- Nutrition food database now supports both free-text search and category-browse fallback with a category -> food selector path.
+- Nutrition now exposes a visible clear-day food action in the main header instead of forcing one-by-one deletion.
+- Progress now supports broader time windows from `1 day` through `1 year`.
+- Ukrainian locale wiring is in place across the app shell and language picker; a deeper translation pass still remains as follow-up product polish.
+
 ---
 
 ## PENDING - GOALS OVERHAUL
@@ -115,6 +121,7 @@ Foundation work is complete. The roadmap below only shows live dependencies and 
 | - | Developer/Admin mode - privileged support, ops, and content-management surface | Internal | P2 | Pending |
 | - | Advanced workout structures - stretching, warm-up, circuits, and supersets across builder/templates/logging | Workouts | P2 | Pending |
 | - | Stretching & Mobility + Warm-up as dedicated workout categories (filter, builder, rest timer skip) | Feature | P2 | Pending |
+| - | Full Ukrainian localization pass - translate deeper page copy, analytics labels, and AI-adjacent UI beyond the initial locale wiring | Localization | P2 | Pending |
 | - | CI/CD pipeline - GitHub Actions: lint -> `tsc --noEmit` -> `prisma validate` -> build | DevOps | P2 | Pending |
 | - | DB indexes - `@@index` on `FoodLog(userId,date)`, `Workout(userId,date)`, `WeightEntry(userId,date)` | Backend | P2 | Pending |
 | - | Request timeout middleware - 503 after 30 s (OpenAI calls can hang) | Backend | P2 | Pending |
