@@ -12,25 +12,6 @@ A full-stack AI-powered fitness coaching web app.
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS, Zustand auth store, Recharts, React Router v6
 - **AI**: 3 chat agents (coach, nutritionist, general) via OpenAI with tool-calling (MAX_TOOL_ROUNDS=5). Agents embed structured fenced blocks (`workout-json`, `nutrition-json`, `meal-plan-json`) in responses so the frontend can offer save/log actions.
 
----
-
-## Session 2026-05-03 — Latin / Indian staples + branded supermarket foods
-
-### What changed
-- Expanded `src/data/foods.ts` with a new high-frequency user-query pass:
-  - Latin / Hispanic staples
-  - Indian / South Asian staples
-  - branded supermarket-style convenience foods
-- Added `Latin / Hispanic`, `Indian`, and `South Asian` cuisine filters in Nutrition so the new foods are discoverable from the UI.
-- Bumped the food DB version stamp to `2026-05-03-staples-v5` so deployed builds can be verified quickly from the Nutrition page.
-
-### Catalog coverage added
-- Latin / Hispanic: tacos, enchiladas, empanadas, tamales, pupusas, arepas, arroz con pollo, rice and beans, bowls
-- Indian / South Asian: butter chicken, tikka masala, chana masala, dal, biryani, naan, roti, samosas, paneer dishes, dosa, idli
-- Supermarket / convenience: cereal cups, oatmeal cups, yogurt tubes, applesauce pouches, pudding cups, microwave popcorn, snack packs, frozen burritos, frozen pizza slices
-
----
-
 ## Project Structure
 
 ```
@@ -248,6 +229,8 @@ Full codebase audit run before production hardening. Fix in order of priority.
 
 ### 🔴 Active bugs / gaps
 
+- **Cleared since the audit:** A, B, C, D, F, G, I, J, K, M, N, O, P, Q, R, T.
+- **Still open from that audit:** E (stale duplicate file), H (request timeout middleware), L (optimistic UI), S (streaming chat responses).
 - _(All Phase 3 items resolved in Session 8 — see LOG.md)_
 - _(All Phase 4 feature polish items resolved — see LOG.md)_
 - ✅ **i18n — fully dynamic across all pages** — All UI strings on all pages (Dashboard, WorkoutsPage, ChatPage, NutritionPage, SettingsPage, GoalsPage, ReportsPage, MealPlannerPage, WeeklyPlanWidget, TemplatesPage, ProgressPage) use `t()` hook calls. Day-of-week abbreviations use `Intl.DateTimeFormat({ weekday: 'short' })` (locale-aware, no hardcoded strings). Chat suggested prompts translated per locale. No module-level string constants remain that would be stuck at boot-time language.
@@ -979,3 +962,59 @@ Updated `AGENT_TOOLS`:
 - Sprint 2: `#116` (nutrition agent) + `#117` (workout agent) → `#122` (AI Coach page tabs)
 - Sprint 3: Goals overhaul `#108` → `#109` `#110` `#111` `#113`
 - `B5` Food DB API (Open Food Facts + USDA)
+
+## Session 2026-05-03 - Weight sync overhaul
+
+### What changed
+- Added `src/lib/weightSync.ts` so weight logging, same-day overwrite behavior, and current-user syncing all use the same rules.
+- Updated `src/controllers/weightController.ts` so posting a weight now overwrites the existing log for that day and always syncs `User.weight` to the latest log.
+- Updated `src/controllers/userController.ts` so profile weight edits log today’s weight instead of acting like a loose profile-only field.
+- Added a confirmation modal in `client/src/pages/settings/SettingsPage.tsx` that asks: `Are you sure you want to log this as your current weight?`
+- Wired `client/src/pages/dashboard/Dashboard.tsx`, `client/src/pages/nutrition/NutritionPage.tsx`, and `client/src/pages/progress/ProgressPage.tsx` to emit shared weight sync events after log/edit/delete actions.
+- Added a layout-level listener in `client/src/components/layout/Layout.tsx` so the auth profile store refreshes whenever a weight sync event fires.
+
+### Behavior changes
+- The user’s current weight is now treated as a daily log source of truth, not a separate profile-only value.
+- Same-day weight logs overwrite the previous entry instead of creating multiple rows for the same day.
+- The profile/settings page, dashboard, nutrition tab, and progress tab should now stay aligned after any weight change.
+
+## Session 2026-05-03 - Dynamic refresh + food localization
+
+### What changed
+- Added exact single-item foods and beverage staples to `src/data/foods.ts`, including `Egg (whole, 1)`, `Egg White (1)`, `Apple Juice (1 cup)`, and `Coffee (black)`.
+- Added optional `localizedNames` to the food catalog and DB schema so food names can be rendered from stored locale-specific values before falling back to AI translation.
+- Updated `src/controllers/searchController.ts` so the selected UI language gets a translated food-name layer automatically.
+- Added a shared `fitai:data-changed` event in `client/src/lib/appEvents.ts` so tabs can refresh off a single broadcast instead of relying on narrow manual refresh wiring.
+- Wired `client/src/components/layout/Layout.tsx`, `client/src/components/layout/ProfileSummaryBar.tsx`, `client/src/pages/dashboard/Dashboard.tsx`, and `client/src/pages/progress/ProgressPage.tsx` to the shared refresh signal.
+
+### Behavior changes
+- Food search is now more exact for common single-item logs and drinks.
+- Food names can be localized from stored DB data when present, which is a better long-term path than pure ad hoc translation.
+- Core tabs should stay in sync more naturally after nutrition or weight changes elsewhere in the app.
+
+## Session 2026-05-03 - Latin / Indian staples + branded supermarket foods
+
+### What changed
+- Expanded `src/data/foods.ts` with a new high-frequency user-query pass:
+  - Latin / Hispanic staples
+  - Indian / South Asian staples
+  - branded supermarket-style convenience foods
+- Added `Latin / Hispanic`, `Indian`, and `South Asian` cuisine filters in `client/src/pages/nutrition/NutritionPage.tsx` so the new foods are discoverable from the UI.
+- Bumped the food DB version stamp to `2026-05-03-staples-v5` so deployed builds can be verified quickly from the Nutrition page.
+
+### Catalog coverage added
+- Latin / Hispanic: tacos, enchiladas, empanadas, tamales, pupusas, arepas, arroz con pollo, rice and beans, bowls
+- Indian / South Asian: butter chicken, tikka masala, chana masala, dal, biryani, naan, roti, samosas, paneer dishes, dosa, idli
+- Supermarket / convenience: cereal cups, oatmeal cups, yogurt tubes, applesauce pouches, pudding cups, microwave popcorn, snack packs, frozen burritos, frozen pizza slices
+
+## Session 2026-05-03 - Food catalog expansion + gluten-free filters + DB version stamp
+
+### What changed
+- Expanded `src/data/foods.ts` with a much larger everyday food pass: sandwiches, wraps, seafood, dairy, dairy alternatives, packaged snacks, convenience meals, and additional gluten-free staples.
+- Added `gluten-free` as a visible filter chip in `client/src/pages/nutrition/NutritionPage.tsx`.
+- Added a small Nutrition page version stamp so the loaded food DB version can be checked quickly after deploys or cache refreshes.
+- Bumped the catalog version again so the UI can confirm the latest seed is loaded.
+
+### Behavior changes
+- Food search should better match the way users actually type common items.
+- The catalog is now easier to verify by version, and the Nutrition page can surface that version directly in the UI.

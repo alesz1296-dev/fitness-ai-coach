@@ -109,7 +109,8 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
       "defaultQty"  DOUBLE PRECISION NOT NULL,
       "defaultUnit" TEXT NOT NULL,
       "tags"        TEXT NOT NULL DEFAULT '[]',
-      "aliases"     TEXT NOT NULL DEFAULT '[]'
+      "aliases"     TEXT NOT NULL DEFAULT '[]',
+      "localizedNames" TEXT NOT NULL DEFAULT '{}'
     )`,
   },
   {
@@ -190,6 +191,8 @@ const MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
     sql: `ALTER TABLE "FoodLog" ADD COLUMN "isCheatMeal" BOOLEAN NOT NULL DEFAULT FALSE` },
   { table: "FoodItem", column: "aliases",
     sql: `ALTER TABLE "FoodItem" ADD COLUMN "aliases" TEXT NOT NULL DEFAULT '[]'` },
+  { table: "FoodItem", column: "localizedNames",
+    sql: `ALTER TABLE "FoodItem" ADD COLUMN "localizedNames" TEXT NOT NULL DEFAULT '{}'` },
   { table: "Workout", column: "trainingType",
     sql: `ALTER TABLE "Workout" ADD COLUMN "trainingType" TEXT` },
   { table: "CalorieGoal", column: "macrosCycling",

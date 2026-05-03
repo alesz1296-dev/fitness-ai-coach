@@ -3,6 +3,12 @@ import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
 import logger from "../lib/logger.js";
+import {
+  getTodayWeightDateStr,
+  normalizeWeightDateInput,
+  findWeightLogForDay,
+  syncLatestWeight,
+} from "../lib/weightSync.js";
 
 // GET /api/weight
 export const getWeightLogs = async (
@@ -56,19 +62,33 @@ export const logWeight = async (
       return next(createError("weight is required", 400));
     }
 
-    const log = await prisma.weightLog.create({
-      data: {
-        userId: req.user!.id,
-        weight: Number(weight),
-        ...(notes && { notes }),
-        ...(date && { date: new Date(date) }),
-      },
-    });
+    const todayStr = getTodayWeightDateStr(req.headers as Record<string, string | string[] | undefined>);
+    const { dateStr, date: logDate } = normalizeWeightDateInput(date, todayStr);
 
-    // Also update the user's current weight
-    await prisma.user.update({
-      where: { id: req.user!.id },
-      data: { weight: Number(weight) },
+    const log = await prisma.$transaction(async (tx) => {
+      const existing = await findWeightLogForDay(tx, req.user!.id, dateStr);
+      const payload: Record<string, any> = {
+        weight: Number(weight),
+        date: logDate,
+      };
+      if (notes !== undefined) {
+        payload.notes = notes;
+      }
+
+      const entry = existing
+        ? await tx.weightLog.update({
+            where: { id: existing.id },
+            data: payload,
+          })
+        : await tx.weightLog.create({
+            data: {
+              userId: req.user!.id,
+              ...payload,
+            } as any,
+          });
+
+      await syncLatestWeight(tx, req.user!.id);
+      return entry;
     });
 
     logger.info(`Weight logged for user ${req.user!.id}: ${weight}kg`);
@@ -87,18 +107,39 @@ export const updateWeightLog = async (
   try {
     const logId = Number(req.params.id);
     const { weight, notes, date } = req.body;
-    const existing = await prisma.weightLog.findFirst({
-      where: { id: logId, userId: req.user!.id },
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const existing = await tx.weightLog.findFirst({
+        where: { id: logId, userId: req.user!.id },
+      });
+      if (!existing) return null;
+
+      const todayStr = getTodayWeightDateStr(req.headers as Record<string, string | string[] | undefined>);
+      const baseDateStr = date !== undefined
+        ? normalizeWeightDateInput(date, todayStr).dateStr
+        : existing.date.toISOString().split("T")[0];
+      const { date: logDate } = normalizeWeightDateInput(date ?? existing.date.toISOString(), baseDateStr);
+
+      const target = await findWeightLogForDay(tx, req.user!.id, baseDateStr, existing.id);
+      if (target) {
+        await tx.weightLog.delete({ where: { id: target.id } });
+      }
+
+      const payload: Record<string, any> = {};
+      if (weight !== undefined) payload.weight = Number(weight);
+      if (notes !== undefined) payload.notes = notes;
+      if (date !== undefined || target) payload.date = logDate;
+
+      const updatedLog = await tx.weightLog.update({
+        where: { id: existing.id },
+        data: payload,
+      });
+
+      await syncLatestWeight(tx, req.user!.id);
+      return updatedLog;
     });
-    if (!existing) return next(createError("Weight log entry not found", 404));
-    const updated = await prisma.weightLog.update({
-      where: { id: logId },
-      data: {
-        ...(weight !== undefined && { weight: Number(weight) }),
-        ...(notes !== undefined && { notes }),
-        ...(date  !== undefined && { date: new Date(date) }),
-      },
-    });
+
+    if (!updated) return next(createError("Weight log entry not found", 404));
     res.json({ message: "Weight log updated", log: updated });
   } catch (error) {
     next(error);
@@ -113,15 +154,24 @@ export const deleteWeightLog = async (
 ): Promise<void> => {
   try {
     const logId = Number(req.params.id);
-    const existing = await prisma.weightLog.findFirst({
-      where: { id: logId, userId: req.user!.id },
+    const deleted = await prisma.$transaction(async (tx) => {
+      const existing = await tx.weightLog.findFirst({
+        where: { id: logId, userId: req.user!.id },
+      });
+
+      if (!existing) {
+        return null;
+      }
+
+      await tx.weightLog.delete({ where: { id: logId } });
+      await syncLatestWeight(tx, req.user!.id);
+      return existing;
     });
 
-    if (!existing) {
+    if (!deleted) {
       return next(createError("Weight log entry not found", 404));
     }
 
-    await prisma.weightLog.delete({ where: { id: logId } });
     res.json({ message: "Weight log entry deleted" });
   } catch (error) {
     next(error);

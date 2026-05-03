@@ -4,6 +4,11 @@ import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
 import logger from "../lib/logger.js";
+import {
+  getTodayWeightDateStr,
+  upsertWeightLogForDay,
+  syncLatestWeight,
+} from "../lib/weightSync.js";
 
 // GET /api/users/profile
 export const getProfile = async (
@@ -80,19 +85,16 @@ export const updateProfile = async (
       cycleLength,
     } = req.body;
 
-    const updated = await (prisma.user.update as any)({
-      where: { id: req.user!.id },
-      data: {
-        ...(firstName         !== undefined && { firstName }),
-        ...(lastName          !== undefined && { lastName }),
-        ...(age               !== undefined && { age: Number(age) }),
-        ...(weight            !== undefined && { weight: Number(weight) }),
-        ...(height            !== undefined && { height: Number(height) }),
-        ...(sex               !== undefined && { sex }),
-        ...(activityLevel     !== undefined && { activityLevel }),
-        ...(fitnessLevel      !== undefined && { fitnessLevel }),
-        ...(goal              !== undefined && { goal }),
-        // Mark profile as complete whenever a goal is explicitly set
+    const updated = await prisma.$transaction(async (tx) => {
+      const userData = {
+        ...(firstName !== undefined && { firstName }),
+        ...(lastName !== undefined && { lastName }),
+        ...(age !== undefined && { age: Number(age) }),
+        ...(height !== undefined && { height: Number(height) }),
+        ...(sex !== undefined && { sex }),
+        ...(activityLevel !== undefined && { activityLevel }),
+        ...(fitnessLevel !== undefined && { fitnessLevel }),
+        ...(goal !== undefined && { goal }),
         ...(goal != null && { profileComplete: true }),
         ...(proteinMultiplier !== undefined && {
           proteinMultiplier: Math.min(3.0, Math.max(0.8, Number(proteinMultiplier))),
@@ -110,35 +112,52 @@ export const updateProfile = async (
         ...(cycleLength !== undefined && {
           cycleLength: cycleLength === null ? null : Math.min(45, Math.max(20, Number(cycleLength))),
         }),
-      },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        age: true,
-        weight: true,
-        height: true,
-        sex: true,
-        activityLevel: true,
-        fitnessLevel: true,
-        goal: true,
-        profileComplete: true,
-        proteinMultiplier: true,
-        trainingDaysPerWeek: true,
-        trainingHoursPerDay: true,
-        injuries: true,
-        periodStart: true,
-        cycleLength: true,
-        updatedAt: true,
-      },
+      };
+
+      await tx.user.update({
+        where: { id: req.user!.id },
+        data: userData,
+      });
+
+      if (weight !== undefined) {
+        const todayStr = getTodayWeightDateStr(req.headers as Record<string, string | string[] | undefined>);
+        await upsertWeightLogForDay(tx, req.user!.id, todayStr, {
+          weight: Number(weight),
+        });
+        await syncLatestWeight(tx, req.user!.id);
+      }
+
+      return tx.user.findUnique({
+        where: { id: req.user!.id },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          age: true,
+          weight: true,
+          height: true,
+          sex: true,
+          activityLevel: true,
+          fitnessLevel: true,
+          goal: true,
+          profileComplete: true,
+          proteinMultiplier: true,
+          trainingDaysPerWeek: true,
+          trainingHoursPerDay: true,
+          injuries: true,
+          periodStart: true,
+          cycleLength: true,
+          updatedAt: true,
+        },
+      });
     }) as any;
 
     // Parse injuries JSON before sending
     const updatedOut = {
       ...updated,
-      injuries: updated.injuries ? JSON.parse(updated.injuries as string) : [],
+      injuries: updated?.injuries ? JSON.parse(updated.injuries as string) : [],
     };
 
     logger.info(`Profile updated for user ${req.user!.id}`);
@@ -268,6 +287,7 @@ export const resetUserData = async (
       prisma.workout.deleteMany({ where: { userId } }),
       prisma.weightLog.deleteMany({ where: { userId } }),
       (prisma as any).calorieGoal.deleteMany({ where: { userId } }),
+      prisma.user.update({ where: { id: userId }, data: { weight: null } }),
     ]);
     logger.info(`User ${userId} reset all data`);
     res.json({ message: "All data has been reset successfully." });

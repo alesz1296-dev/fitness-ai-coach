@@ -3,14 +3,16 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
 import { useAuthStore } from "../../store/authStore";
+import { usersApi } from "../../api";
 import { OnboardingModal } from "../OnboardingModal";
 import { useDarkModeInit } from "../../hooks/useDarkMode";
 import { ProfileSummaryBar } from "./ProfileSummaryBar";
 import { OfflineBanner } from "./OfflineBanner";
+import { APP_EVENTS } from "../../lib/appEvents";
 
 export function Layout() {
   useDarkModeInit();
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
@@ -25,6 +27,15 @@ export function Layout() {
       return () => clearTimeout(t);
     }
   }, [user?.id, user?.profileComplete]);
+
+  useEffect(() => {
+    const syncProfile = () => {
+      usersApi.getProfile().then((r) => updateUser(r.data.user)).catch(() => {});
+    };
+
+    window.addEventListener(APP_EVENTS.dataChanged, syncProfile);
+    return () => window.removeEventListener(APP_EVENTS.dataChanged, syncProfile);
+  }, [updateUser]);
 
   const dismiss = () => {
     if (user) localStorage.setItem(`fitai_onboarded_${user.id}`, "true");

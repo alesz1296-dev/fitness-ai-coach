@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import { fmtMonthDay, fmtWeekdayLongDate } from "../../lib/dateFormat";
-import { APP_EVENTS, emitNutritionSync } from "../../lib/appEvents";
+import { APP_EVENTS, emitNutritionSync, emitWeightLogged } from "../../lib/appEvents";
 import { useNavigate, useLocation } from "react-router-dom";
 import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi, customFoodsApi, weightApi, workoutsApi,
 } from "../../api";
@@ -114,7 +114,7 @@ function getSweetenerOptions(t: (k: string) => string): Record<string, { label: 
   };
 }
 
-const FOOD_DB_LABEL = "Food DB v2026-05-03-staples-v5 • 710 items";
+const FOOD_DB_LABEL = "Food DB v2026-05-03-staples-v6 • 714 items";
 
 // ── Food-type detection helpers ───────────────────────────────────────────────
 // These decide which "cooking extras" make sense for the selected food.
@@ -2457,7 +2457,7 @@ export default function NutritionPage() {
       setWeightSaved(true);
       setWeightVal("");
       setTimeout(() => { setShowWeightFab(false); setWeightSaved(false); }, 800);
-      window.dispatchEvent(new CustomEvent(APP_EVENTS.weightLogged, { detail: { weight: w } }));
+      emitWeightLogged(w);
       toast.show(`Weight logged: ${w} kg ✓`);
     } catch { /* ignore */ }
     finally { setSavingWeight(false); }

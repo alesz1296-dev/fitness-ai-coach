@@ -31,6 +31,19 @@ function parseJsonArray(raw: string | null | undefined): string[] {
   try { return JSON.parse(raw) as string[]; } catch { return []; }
 }
 
+function parseJsonObject(raw: string | null | undefined): Record<string, string> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, string>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
 // ─── AI translation helpers ───────────────────────────────────────────────────
 
 const LANG_CACHE_TTL = 3600; // 1 hour for translations
@@ -140,8 +153,15 @@ export const foodSearch = async (
     async function applyTranslation(items: any[]): Promise<any[]> {
       if (lang === "en" || !items.length) return items;
       const names = items.map((f) => f.name as string);
+      const byLocalized = items.map((f) => {
+        const localized = f.localizedNames?.[lang];
+        return typeof localized === "string" && localized.trim() ? localized : null;
+      });
       const translated = await translateFoodNames(names, lang);
-      return items.map((f, i) => ({ ...f, name: translated[i] ?? f.name }));
+      return items.map((f, i) => ({
+        ...f,
+        name: byLocalized[i] ?? translated[i] ?? f.name,
+      }));
     }
 
     if (cached) {
@@ -184,6 +204,7 @@ export const foodSearch = async (
         defaultUnit: f.defaultUnit,
         tags:        parseJsonArray(f.tags),
         aliases:     parseJsonArray(f.aliases),
+        localizedNames: parseJsonObject(f.localizedNames),
       }));
 
       // Cache English results, translate on the way out
@@ -196,8 +217,8 @@ export const foodSearch = async (
     }
 
     // ── Fallback: static array ────────────────────────────────────────────────
-    const rawResults = searchFoods(q, limit, tags);
-    const translatedResults = await applyTranslation(rawResults);
+      const rawResults = searchFoods(q, limit, tags);
+      const translatedResults = await applyTranslation(rawResults);
     res.json({ results: translatedResults, total: FOOD_DB.length, source: "static" });
   } catch (e) {
     next(e);

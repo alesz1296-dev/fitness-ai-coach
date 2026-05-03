@@ -20,6 +20,7 @@ export interface FoodItem {
   defaultUnit: string;
   tags?: string[];
   aliases?: string[];
+  localizedNames?: Record<string, string>;
 }
 
 export const FOOD_DB: FoodItem[] = [
@@ -35,7 +36,9 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f009", name: "Turkey Breast (cooked)",    calories: 135, protein: 30, carbs: 0,  fats: 1,   defaultQty: 150, defaultUnit: "g",       tags: ["fit","high-protein","keto","low-carb"], aliases: ["turkey", "turkey breast", "deli turkey", "turkey slices"] },
   { id: "f010", name: "Pork Loin (cooked)",        calories: 187, protein: 29, carbs: 0,  fats: 7,   defaultQty: 150, defaultUnit: "g",       tags: ["high-protein","keto","low-carb"] },
   { id: "f011", name: "Eggs (2 large)",            calories: 155, protein: 13, carbs: 1,  fats: 11,  defaultQty: 2,   defaultUnit: "large",   tags: ["high-protein","keto","low-carb","vegetarian"], aliases: ["egg", "eggs", "whole egg", "whole eggs", "1 egg", "1 large egg"] },
+  { id: "f011a", name: "Egg (whole, 1)",           calories: 78,  protein: 6,  carbs: 0.6,fats: 5,   defaultQty: 1,   defaultUnit: "egg",     tags: ["high-protein","keto","low-carb","vegetarian","egg"], aliases: ["1 egg (whole)", "single egg", "whole egg", "egg whole"], localizedNames: { es: "Huevo (1)" } },
   { id: "f012", name: "Egg Whites (100 g)",        calories: 52,  protein: 11, carbs: 1,  fats: 0.2, defaultQty: 100, defaultUnit: "g",       tags: ["fit","high-protein","keto","low-carb","vegetarian"], aliases: ["egg white", "egg whites", "1 egg white", "1 egg whites", "liquid egg whites"] },
+  { id: "f012a", name: "Egg White (1)",            calories: 17,  protein: 3.6,carbs: 0.2,fats: 0,   defaultQty: 1,   defaultUnit: "white",    tags: ["fit","high-protein","keto","low-carb","vegetarian","egg"], aliases: ["1 egg white", "single egg white", "white egg"], localizedNames: { es: "Clara de huevo (1)" } },
   { id: "f013", name: "Greek Yogurt (0% fat)",     calories: 59,  protein: 10, carbs: 4,  fats: 0.4, defaultQty: 200, defaultUnit: "g",       tags: ["fit","high-protein","vegetarian","dairy"], aliases: ["plain greek yogurt", "greek yogurt", "0% greek yogurt", "fat free greek yogurt", "fat-free greek yogurt", "greek yogurt cup"] },
   { id: "f014", name: "Greek Yogurt (2% fat)",     calories: 73,  protein: 9,  carbs: 5,  fats: 2,   defaultQty: 200, defaultUnit: "g",       tags: ["high-protein","vegetarian","dairy"], aliases: ["greek yogurt", "plain greek yogurt", "2% greek yogurt", "greek yogurt cup"] },
   { id: "f015", name: "Cottage Cheese (low fat)",  calories: 72,  protein: 12, carbs: 3,  fats: 1,   defaultQty: 200, defaultUnit: "g",       tags: ["fit","high-protein","vegetarian","dairy"] },
@@ -125,13 +128,14 @@ export const FOOD_DB: FoodItem[] = [
   { id: "f104", name: "Sushi Roll (8pc)",          calories: 255, protein: 9,   carbs: 38, fats: 7,   defaultQty: 1,   defaultUnit: "roll",   tags: [] },
 
   // ── Beverages ─────────────────────────────────────────────────────────────
-  { id: "f110", name: "Orange Juice",              calories: 45,  protein: 0.7, carbs: 10, fats: 0.2, defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","fruit"] },
-  { id: "f111", name: "Whole Milk",                calories: 61,  protein: 3.2, carbs: 5,  fats: 3.3, defaultQty: 250, defaultUnit: "ml",     tags: ["vegetarian","dairy"] },
-  { id: "f112", name: "Sports Drink (Gatorade)",  calories: 26,  protein: 0,   carbs: 7,  fats: 0,   defaultQty: 500, defaultUnit: "ml",     tags: ["vegan","vegetarian"] },
-  { id: "f113", name: "Protein Shake (mixed)",    calories: 200, protein: 30,  carbs: 15, fats: 3,   defaultQty: 1,   defaultUnit: "serving",tags: ["fit","high-protein"] },
-  { id: "f114", name: "Black Coffee",             calories: 2,   protein: 0.3, carbs: 0,  fats: 0,   defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","keto","low-carb","fit"] },
-  { id: "f115", name: "Latte (whole milk)",       calories: 100, protein: 6,   carbs: 10, fats: 4,   defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian","dairy"] },
-  { id: "f116", name: "Beer (regular)",           calories: 43,  protein: 0.5, carbs: 3.6,fats: 0,   defaultQty: 330, defaultUnit: "ml",     tags: ["vegan","vegetarian"] },
+  { id: "f110", name: "Orange Juice (1 cup)",      calories: 45,  protein: 0.7, carbs: 10, fats: 0.2, defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","fruit"], aliases: ["orange juice", "oj", "1 cup orange juice"], localizedNames: { es: "Jugo de naranja" } },
+  { id: "f111", name: "Apple Juice (1 cup)",       calories: 46,  protein: 0.1, carbs: 11, fats: 0.1, defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","fruit"], aliases: ["apple juice", "1 cup apple juice", "juice apple"], localizedNames: { es: "Jugo de manzana" } },
+  { id: "f112", name: "Coffee (black)",            calories: 2,   protein: 0.3, carbs: 0,  fats: 0,   defaultQty: 250, defaultUnit: "ml",     tags: ["vegan","vegetarian","keto","low-carb","fit"], aliases: ["coffee", "black coffee", "plain coffee"], localizedNames: { es: "Café negro" } },
+  { id: "f113", name: "Whole Milk",                calories: 61,  protein: 3.2, carbs: 5,  fats: 3.3, defaultQty: 250, defaultUnit: "ml",     tags: ["vegetarian","dairy"], aliases: ["milk", "whole milk", "1 cup milk"] },
+  { id: "f114", name: "Sports Drink (Gatorade)",   calories: 26,  protein: 0,   carbs: 7,  fats: 0,   defaultQty: 500, defaultUnit: "ml",     tags: ["vegan","vegetarian"] },
+  { id: "f115", name: "Protein Shake (mixed)",     calories: 200, protein: 30,  carbs: 15, fats: 3,   defaultQty: 1,   defaultUnit: "serving",tags: ["fit","high-protein"] },
+  { id: "f116", name: "Latte (whole milk)",        calories: 100, protein: 6,   carbs: 10, fats: 4,   defaultQty: 1,   defaultUnit: "medium", tags: ["vegetarian","dairy"], aliases: ["latte", "coffee latte"] },
+  { id: "f117", name: "Beer (regular)",            calories: 43,  protein: 0.5, carbs: 3.6,fats: 0,   defaultQty: 330, defaultUnit: "ml",     tags: ["vegan","vegetarian"] },
 
   // ── Snacks / Misc ─────────────────────────────────────────────────────────
   { id: "f120", name: "Rice Cakes",               calories: 387, protein: 8,   carbs: 82, fats: 3,   defaultQty: 2,   defaultUnit: "cakes",  tags: ["vegan","vegetarian","fit"], aliases: ["rice cakes", "rice cracker", "rice crackers", "rice cookie", "rice cookies"] },
@@ -826,7 +830,7 @@ export const FOOD_DB: FoodItem[] = [
 
 ];
 
-export const FOOD_DB_VERSION = "2026-05-03-staples-v5";
+export const FOOD_DB_VERSION = "2026-05-03-staples-v6";
 export const FOOD_DB_LABEL = `Food DB v${FOOD_DB_VERSION} • ${FOOD_DB.length} items`;
 
 /**

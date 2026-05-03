@@ -2,6 +2,49 @@
 
 Most recent session first.
 
+## 2026-05-03 - Session: dynamic refresh + food localization
+
+### Goal
+Make the core tabs refresh through shared app events and expand the food catalog with more exact single-item staples plus a database-backed localization layer.
+
+### Files modified
+- `src/data/foods.ts` - added exact single-item foods and beverage staples; bumped `FOOD_DB_VERSION` to `2026-05-03-staples-v6`
+- `src/controllers/searchController.ts` - added locale-aware food name output with DB-backed localized names and AI fallback
+- `src/lib/appEvents.ts` - added a shared `dataChanged` event used to fan out refreshes
+- `client/src/components/layout/Layout.tsx` - now refreshes the auth profile on shared data changes
+- `client/src/components/layout/ProfileSummaryBar.tsx` - now refetches on shared data changes
+- `client/src/pages/dashboard/Dashboard.tsx` - now refreshes on shared data changes
+- `client/src/pages/progress/ProgressPage.tsx` - now refreshes on shared data changes
+- `client/src/pages/settings/SettingsPage.tsx` - weight changes still confirm before logging as current weight
+
+### Notes
+- Added exact entries for `Egg (whole, 1)`, `Egg White (1)`, `Apple Juice (1 cup)`, and `Coffee (black)`.
+- The food catalog now stores optional localized names so the API can prefer a translated DB string before falling back to AI translation.
+- Shared `dataChanged` events reduce the amount of page-specific manual refresh glue.
+
+---
+
+## 2026-05-03 - Session: weight sync overhaul
+
+### Goal
+Make the profile weight, dashboard weight FAB, nutrition weight FAB, and progress weight logs all behave like one shared current-weight source of truth.
+
+### Files modified
+- `src/lib/weightSync.ts` - added shared helpers for current-day weight logging, day normalization, duplicate-day lookup, and latest-weight syncing
+- `src/controllers/weightController.ts` - same-day weight logs now overwrite the existing entry for that day, and create/update/delete now resync `User.weight`
+- `src/controllers/userController.ts` - profile weight changes now log today's weight instead of only writing the profile field directly
+- `client/src/pages/settings/SettingsPage.tsx` - added a confirmation modal before logging a new current weight from profile settings
+- `client/src/pages/dashboard/Dashboard.tsx` - emits shared weight sync events after log/edit/delete
+- `client/src/pages/progress/ProgressPage.tsx` - emits shared weight sync events after log/edit/delete
+- `client/src/pages/nutrition/NutritionPage.tsx` - emits shared weight sync events after logging weight
+- `client/src/components/layout/Layout.tsx` - listens for weight sync events and refreshes the auth profile store
+- `client/src/lib/appEvents.ts` - made `emitWeightLogged()` usable with or without a weight payload
+
+### Notes
+- Weight logging is now treated as a daily overwrite flow instead of a loose profile field edit.
+- Same-day logs are collapsed into one entry, and the latest log always becomes the user's current profile weight.
+- Settings now asks for confirmation with: `Are you sure you want to log this as your current weight?`
+
 ---
 
 ## 2026-05-03 — Session: Latin / Indian staples + branded supermarket foods
@@ -1957,3 +2000,83 @@ Info chip shown when a frequency match exists: "Showing plans for N×/week — m
 | `client/src/components/goals/ProjectionChart.tsx` | locale dates |
 | `src/data/foods.ts` | 409 → 521 items |
 | `src/controllers/searchController.ts` | AI food translation, lang param |
+---
+
+## 2026-05-03 - Weight sync overhaul
+
+### Goal
+- Make the profile weight, dashboard weight FAB, nutrition weight FAB, and progress weight logs all behave like one shared current-weight source of truth.
+
+### Files modified
+- `src/lib/weightSync.ts` - added shared helpers for current-day weight logging, day normalization, duplicate-day lookup, and latest-weight syncing
+- `src/controllers/weightController.ts` - same-day weight logs now overwrite the existing entry for that day, and create/update/delete now resync `User.weight`
+- `src/controllers/userController.ts` - profile weight changes now log today’s weight instead of only writing the profile field directly
+- `client/src/pages/settings/SettingsPage.tsx` - added a confirmation modal before logging a new current weight from profile settings
+- `client/src/pages/dashboard/Dashboard.tsx` - emits shared weight sync events after log/edit/delete
+- `client/src/pages/progress/ProgressPage.tsx` - emits shared weight sync events after log/edit/delete
+- `client/src/pages/nutrition/NutritionPage.tsx` - emits shared weight sync events after logging weight
+- `client/src/components/layout/Layout.tsx` - listens for weight sync events and refreshes the auth profile store
+- `client/src/lib/appEvents.ts` - made `emitWeightLogged()` usable with or without a weight payload
+
+### Notes
+- Weight logging is now treated as a daily overwrite flow instead of a loose profile field edit.
+- Same-day logs are collapsed into one entry, and the latest log always becomes the user’s current profile weight.
+- Settings now asks for confirmation with: `Are you sure you want to log this as your current weight?`
+
+---
+
+## 2026-05-03 - Dynamic refresh + food localization
+
+### Goal
+- Make the core tabs refresh through shared app events and expand the food catalog with more exact single-item staples plus a database-backed localization layer.
+
+### Files modified
+- `src/data/foods.ts` - added exact single-item foods and beverage staples; bumped `FOOD_DB_VERSION` to `2026-05-03-staples-v6`
+- `src/controllers/searchController.ts` - added locale-aware food name output with DB-backed localized names and AI fallback
+- `src/lib/appEvents.ts` - added a shared `dataChanged` event used to fan out refreshes
+- `client/src/components/layout/Layout.tsx` - now refreshes the auth profile on shared data changes
+- `client/src/components/layout/ProfileSummaryBar.tsx` - now refetches on shared data changes
+- `client/src/pages/dashboard/Dashboard.tsx` - now refreshes on shared data changes
+- `client/src/pages/progress/ProgressPage.tsx` - now refreshes on shared data changes
+- `client/src/pages/settings/SettingsPage.tsx` - weight changes still confirm before logging as current weight
+
+### Notes
+- Added exact entries for `Egg (whole, 1)`, `Egg White (1)`, `Apple Juice (1 cup)`, and `Coffee (black)`.
+- The food catalog now stores optional localized names so the API can prefer a translated DB string before falling back to AI translation.
+- Shared `dataChanged` events reduce the amount of page-specific manual refresh glue.
+
+---
+
+## 2026-05-03 - Latin / Indian staples + branded supermarket foods
+
+### Goal
+- Expand the food DB again with the kinds of foods people actually search and type: Latin/Hispanic staples, Indian/South Asian staples, and more branded supermarket-style convenience items like cereal cups, snack packs, and frozen meals.
+
+### Files modified
+- `src/data/foods.ts` - added a new cuisine/convenience block; bumped `FOOD_DB_VERSION` to `2026-05-03-staples-v5`
+- `client/src/pages/nutrition/NutritionPage.tsx` - added `Latin / Hispanic`, `Indian`, and `South Asian` cuisine filter chips
+- `client/src/i18n/locales/en.ts` - added `nutrition.tagLatin`, `nutrition.tagIndian`, `nutrition.tagSouthAsian`
+- `client/src/i18n/locales/es.ts` - added the same new tag labels in Spanish
+
+### Notes
+- The new foods lean into high-frequency user queries rather than niche items.
+- Latin/Hispanic coverage now includes tacos, enchiladas, empanadas, tamales, pupusas, arepas, bowls, and rice/bean staples.
+- Indian/South Asian coverage now includes curries, dal, biryani, naan, roti, samosas, paneer dishes, dosa, and idli.
+- The branded supermarket pass covers cereal cups, oatmeal cups, yogurt tubes, applesauce pouches, pudding cups, microwave popcorn, snack packs, frozen burritos, and frozen pizza slices.
+
+---
+
+## 2026-05-03 - Food catalog expansion + gluten-free filters + DB version stamp
+
+### Goal
+- Expand the food catalog with the kinds of items users actually type, especially convenience foods, packaged grab-and-go snacks, sandwiches, seafood, dairy alternatives, and gluten-free staples. Add a small Nutrition page version stamp so it is obvious when the newest food DB is loaded.
+
+### Files modified
+- `src/data/foods.ts` - added a large new block of common staples and convenience foods, plus aliases and more `gluten-free` tags; exported `FOOD_DB_VERSION` and `FOOD_DB_LABEL`
+- `client/src/pages/nutrition/NutritionPage.tsx` - added a small food DB version note under the page header; added the `gluten-free` filter chip
+- `client/src/i18n/locales/en.ts` - added `nutrition.tagGlutenFree`
+- `client/src/i18n/locales/es.ts` - added `nutrition.tagGlutenFree`
+
+### Notes
+- This pass focused on everyday foods people actually type: exact single-item names, packaged convenience foods, sandwiches, seafood, dairy, and dairy alternatives.
+- The version stamp on Nutrition helps confirm that the newest catalog build is loaded after a deploy or cache refresh.

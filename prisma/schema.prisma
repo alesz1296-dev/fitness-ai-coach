@@ -434,6 +434,7 @@ model FoodItem {
   defaultUnit String
   tags        String  @default("[]") // JSON array of tag strings
   aliases     String  @default("[]") // JSON array of search aliases
+  localizedNames String @default("{}") // JSON map of locale → translated name
 
   @@index([name])
 }

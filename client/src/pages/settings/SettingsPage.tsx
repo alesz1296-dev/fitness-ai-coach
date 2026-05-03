@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { applyDark, readDarkPref } from "../../hooks/useDarkMode";
-import { APP_EVENTS, emitAppPrefsChanged } from "../../lib/appEvents";
+import { emitAppPrefsChanged, emitWeightLogged } from "../../lib/appEvents";
 import { useTranslation, LANG_LABELS, t as _t } from "../../i18n";
 import type { SupportedLang } from "../../i18n";
 import { usersApi, calorieGoalsApi } from "../../api";
@@ -11,6 +11,7 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
+import { Modal } from "../../components/ui/Modal";
 
 // ── Toast ────────────────────────────────────────────────────────────────────
 function useToast() {
@@ -53,6 +54,8 @@ function ProfileForm() {
   const { user, updateUser } = useAuthStore();
   const navigate = useNavigate();
   const [activeGoalId, setActiveGoalId] = useState<number | null>(null);
+  const [weightConfirmOpen, setWeightConfirmOpen] = useState(false);
+  const [pendingProfile, setPendingProfile] = useState<Partial<User> & Record<string, any> | null>(null);
 
   // Load active goal ID once so we can sync trainingDaysPerWeek to it on save
   useEffect(() => {
@@ -105,39 +108,46 @@ function ProfileForm() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.trainingDaysPerWeek, user?.trainingHoursPerDay]);
 
-  const save = async () => {
+  useEffect(() => {
+    if (!user) return;
+    setForm((prev) => ({
+      ...prev,
+      weight: String(user.weight ?? ""),
+    }));
+  }, [user?.weight]);
+
+  const buildPayload = () => ({
+    firstName:           form.firstName           || undefined,
+    lastName:            form.lastName            || undefined,
+    age:                 form.age                 ? Number(form.age)                 : undefined,
+    weight:              form.weight              ? Number(form.weight)              : undefined,
+    height:              form.height              ? Number(form.height)              : undefined,
+    sex:                 (form.sex as any)        || undefined,
+    activityLevel:       (form.activityLevel as any) || undefined,
+    fitnessLevel:        form.fitnessLevel        || undefined,
+    goal:                form.goal                || undefined,
+    trainingDaysPerWeek: form.trainingDaysPerWeek ? Number(form.trainingDaysPerWeek) : null,
+    trainingHoursPerDay: form.trainingHoursPerDay ? Number(form.trainingHoursPerDay) : null,
+  });
+
+  const commitSave = async (payload: ReturnType<typeof buildPayload>) => {
     setSaving(true); setError(""); setSuccess(""); setPlanNudge(null);
     try {
-      const newDays = form.trainingDaysPerWeek ? Number(form.trainingDaysPerWeek) : null;
+      const newDays = payload.trainingDaysPerWeek ?? null;
       const oldDays = user?.trainingDaysPerWeek ?? null;
-      const payload: Partial<User> & Record<string, any> = {
-        firstName:           form.firstName           || undefined,
-        lastName:            form.lastName            || undefined,
-        age:                 form.age                 ? Number(form.age)                 : undefined,
-        weight:              form.weight              ? Number(form.weight)              : undefined,
-        height:              form.height              ? Number(form.height)              : undefined,
-        sex:                 (form.sex as any)        || undefined,
-        activityLevel:       (form.activityLevel as any) || undefined,
-        fitnessLevel:        form.fitnessLevel        || undefined,
-        goal:                form.goal                || undefined,
-        trainingDaysPerWeek: newDays,
-        trainingHoursPerDay: form.trainingHoursPerDay ? Number(form.trainingHoursPerDay) : null,
-      };
       const oldWeight = user?.weight ?? null;
       const newWeight = payload.weight ?? null;
+
       const res = await usersApi.updateProfile(payload);
       updateUser(res.data.user);
 
-      // Notify other tabs/components that weight changed
       if (newWeight && newWeight !== oldWeight) {
-        window.dispatchEvent(new CustomEvent(APP_EVENTS.weightLogged, { detail: { weight: newWeight } }));
-        toast.show(`Weight updated to ${newWeight} kg ✓`);
+        emitWeightLogged(newWeight);
+        toast.show(`Logged ${newWeight} kg as your current weight ✓`);
       }
 
-      // If training days changed — sync to calorieGoal + show toast
       if (newDays && newDays !== oldDays) {
         try { localStorage.setItem("fitai_plan_days_hint", String(newDays)); } catch { /* ignore */ }
-        // Sync training days to the active calorie goal so WorkoutsPage stays in sync
         if (activeGoalId) {
           calorieGoalsApi.update(activeGoalId, { trainingDaysPerWeek: newDays }).catch(() => {});
         }
@@ -150,7 +160,37 @@ function ProfileForm() {
       }
     } catch (e: any) {
       setError(parseApiError(e));
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const save = async () => {
+    setError(""); setSuccess(""); setPlanNudge(null);
+    const payload = buildPayload();
+    const oldWeight = user?.weight ?? null;
+    const newWeight = payload.weight ?? null;
+
+    if (newWeight && newWeight !== oldWeight) {
+      setPendingProfile(payload);
+      setWeightConfirmOpen(true);
+      return;
+    }
+
+    await commitSave(payload);
+  };
+
+  const confirmWeightSave = async () => {
+    if (!pendingProfile) return;
+    const payload = pendingProfile;
+    setPendingProfile(null);
+    setWeightConfirmOpen(false);
+    await commitSave(payload);
+  };
+
+  const cancelWeightSave = () => {
+    setPendingProfile(null);
+    setWeightConfirmOpen(false);
   };
 
   return (
@@ -291,6 +331,24 @@ function ProfileForm() {
         </div>
 
         <Button loading={saving} onClick={save} className="w-full">{t("profile.saveProfile")}</Button>
+        <Modal open={weightConfirmOpen} onClose={cancelWeightSave} title="Confirm weight log" size="sm">
+          <div className="space-y-4">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Are you sure you want to log this as your current weight?
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              This will save your updated profile and overwrite today&apos;s weight entry if one already exists.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1" onClick={cancelWeightSave}>
+                Cancel
+              </Button>
+              <Button className="flex-1" loading={saving} onClick={confirmWeightSave}>
+                Log weight
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
       <ToastBanner msg={toast.msg} />
     </Card>

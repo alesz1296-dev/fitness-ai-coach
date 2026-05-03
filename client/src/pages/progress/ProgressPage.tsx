@@ -17,6 +17,7 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
+import { emitWeightLogged } from "../../lib/appEvents";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────
@@ -169,7 +170,7 @@ function LogWeightForm({ onSave, onClose }: { onSave: () => void; onClose: () =>
     setLoading(true); setError("");
     try {
       await weightApi.log({ weight: w, notes: notes || undefined, date });
-      window.dispatchEvent(new CustomEvent("fitai:weight-logged", { detail: { weight: w } }));
+      emitWeightLogged(w);
       onSave();
     } catch (e: any) {
       setError(e.response?.data?.error || "Failed to log weight");
@@ -1098,10 +1099,10 @@ export default function ProgressPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Auto-refresh weight chart when weight is logged from any page
+  // Auto-refresh weight chart when shared data changes anywhere else
   useEffect(() => {
-    window.addEventListener("fitai:weight-logged", load);
-    return () => window.removeEventListener("fitai:weight-logged", load);
+    window.addEventListener("fitai:data-changed", load);
+    return () => window.removeEventListener("fitai:data-changed", load);
   }, [load]);
 
   // Load predictions when Predictions tab is opened (lazy — only fetched once per session)
@@ -1117,6 +1118,7 @@ export default function ProgressPage() {
   const deleteLog = async (id: number) => {
     if (!confirm("Delete this weight entry?")) return;
     await weightApi.delete(id);
+    emitWeightLogged();
     load();
   };
 
@@ -1142,6 +1144,7 @@ export default function ProgressPage() {
     try {
       await weightApi.update(editingLog.id, { weight: w, date: editDate, notes: editNotes || undefined });
       setEditingLog(null);
+      emitWeightLogged(w);
       load();
     } catch { /* silent */ }
     finally { setSavingEdit(false); }

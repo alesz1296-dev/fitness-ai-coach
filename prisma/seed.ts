@@ -32,6 +32,7 @@ async function seedFoods(): Promise<number> {
         defaultUnit: f.defaultUnit,
         tags:        JSON.stringify(f.tags ?? []),
         aliases:     JSON.stringify(f.aliases ?? []),
+        localizedNames: JSON.stringify(f.localizedNames ?? {}),
       },
       create: {
         id:          f.id,
@@ -44,6 +45,7 @@ async function seedFoods(): Promise<number> {
         defaultUnit: f.defaultUnit,
         tags:        JSON.stringify(f.tags ?? []),
         aliases:     JSON.stringify(f.aliases ?? []),
+        localizedNames: JSON.stringify(f.localizedNames ?? {}),
       },
     });
     upserted++;

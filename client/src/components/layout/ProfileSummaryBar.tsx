@@ -47,11 +47,9 @@ export function ProfileSummaryBar() {
   useEffect(() => {
     fetchData();
     const syncSummary = () => fetchData();
-    window.addEventListener(APP_EVENTS.nutritionSync, syncSummary);
-    window.addEventListener(APP_EVENTS.foodLogged, syncSummary);
+    window.addEventListener(APP_EVENTS.dataChanged, syncSummary);
     return () => {
-      window.removeEventListener(APP_EVENTS.nutritionSync, syncSummary);
-      window.removeEventListener(APP_EVENTS.foodLogged, syncSummary);
+      window.removeEventListener(APP_EVENTS.dataChanged, syncSummary);
     };
   }, [fetchData]);
 

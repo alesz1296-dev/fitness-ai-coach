@@ -14,6 +14,7 @@ import { Button } from "../../components/ui/Button";
 import WeeklyPlanWidget from "../../components/WeeklyPlanWidget";
 import { useIsDark } from "../../hooks/useDarkMode";
 import type { DashboardData } from "../../types";
+import { emitWeightLogged } from "../../lib/appEvents";
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, color, icon, onClick }: {
@@ -108,7 +109,11 @@ export default function Dashboard() {
 
   const handleDeleteWeight = async (id: number) => {
     if (!confirm("Delete this weight entry?")) return;
-    try { await weightApi.delete(id); refreshDash(); } catch { /* silent */ }
+    try {
+      await weightApi.delete(id);
+      emitWeightLogged();
+      refreshDash();
+    } catch { /* silent */ }
   };
   const handleEditWeight = async () => {
     if (!editingLog) return;
@@ -118,6 +123,7 @@ export default function Dashboard() {
     try {
       await weightApi.update(editingLog.id, { weight: w });
       setEditingLog(null);
+      emitWeightLogged(w);
       refreshDash();
     } catch { /* silent */ }
     finally { setSavingEdit(false); }
@@ -145,7 +151,7 @@ export default function Dashboard() {
       setWeightVal("");
       setTimeout(() => { setShowWeightFab(false); setWeightSaved(false); }, 800);
       showToast(`Weight logged: ${w} kg ✓`);
-      window.dispatchEvent(new CustomEvent("fitai:weight-logged", { detail: { weight: w } }));
+      emitWeightLogged(w);
       // Refresh dashboard AND projection — projection seeds from latest weight so must re-fetch
       dashboardApi.get().then((r) => {
         setData(r.data);
@@ -174,13 +180,13 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Re-fetch when weight is logged from any page (NutritionPage FAB, SettingsPage, ProgressPage)
+  // Re-fetch when any shared nutrition/weight data changes
   useEffect(() => {
     const handler = () => {
       refreshDash();
     };
-    window.addEventListener("fitai:weight-logged", handler);
-    return () => window.removeEventListener("fitai:weight-logged", handler);
+    window.addEventListener("fitai:data-changed", handler);
+    return () => window.removeEventListener("fitai:data-changed", handler);
   }, []);
 
   if (loading) {
