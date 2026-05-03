@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, Tooltip,
@@ -809,53 +808,50 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Weight FAB — rendered via portal so position:fixed is always viewport-relative ── */}
-      {createPortal(
-        <div className="fixed bottom-32 right-4 z-50 flex flex-col items-end gap-3 md:bottom-8 md:right-8">
-          {showWeightFab && (
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">⚖️ {t("dashboard.logWeight")}</p>
-              {weightSaved ? (
-                <p className="text-center text-green-600 font-medium text-sm py-1">✅ {t("dashboard.saved")}</p>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="20"
-                      max="400"
-                      placeholder="e.g. 80.5"
-                      value={weightVal}
-                      onChange={(e) => setWeightVal(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleLogWeight()}
-                      className="flex-1 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                      autoFocus
-                    />
-                    <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">kg</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="secondary" className="flex-1" onClick={() => { setShowWeightFab(false); setWeightVal(""); }}>
-                      Cancel
-                    </Button>
-                    <Button size="sm" className="flex-1" loading={savingWeight} onClick={handleLogWeight}>
-                      Save
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-          <button
-            onClick={() => setShowWeightFab((v) => !v)}
-            style={{ width: "3.5rem", height: "3.5rem", borderRadius: "9999px", background: "#16a34a", color: "#fff", fontSize: "1.5rem", boxShadow: "0 4px 12px rgba(0,0,0,0.25)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-            title="Log today's weight"
-          >
-            ⚖️
-          </button>
-        </div>,
-        document.body
-      )}
+      {/* ── Weight FAB ── */}
+      <div className="fixed bottom-32 right-4 z-50 flex flex-col items-end gap-3 md:bottom-8 md:right-8">
+        {showWeightFab && (
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">⚖️ {t("dashboard.logWeight")}</p>
+            {weightSaved ? (
+              <p className="text-center text-green-600 font-medium text-sm py-1">✅ {t("dashboard.saved")}</p>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="20"
+                    max="400"
+                    placeholder="e.g. 80.5"
+                    value={weightVal}
+                    onChange={(e) => setWeightVal(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogWeight()}
+                    className="flex-1 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    autoFocus
+                  />
+                  <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">kg</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="secondary" className="flex-1" onClick={() => { setShowWeightFab(false); setWeightVal(""); }}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" className="flex-1" loading={savingWeight} onClick={handleLogWeight}>
+                    Save
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        <button
+          onClick={() => setShowWeightFab((v) => !v)}
+          style={{ width: "3.5rem", height: "3.5rem", borderRadius: "9999px", background: "#16a34a", color: "#fff", fontSize: "1.5rem", boxShadow: "0 4px 12px rgba(0,0,0,0.25)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          title="Log today's weight"
+        >
+          ⚖️
+        </button>
+      </div>
 
       {/* Toast banner */}
       {toastMsg && (
