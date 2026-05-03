@@ -2025,10 +2025,22 @@ export default function NutritionPage() {
     }
   }, [hash]);
   const { user } = useAuthStore();
+  const getBrowserTimeZone = () => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {
+      return "UTC";
+    }
+  };
+
   // Midnight rollover: entries logged before midnight belong to the previous calendar day
   const getEffectiveToday = () => {
-    const now = new Date();
-    return now.toISOString().split("T")[0];
+    const tz = getBrowserTimeZone();
+    try {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
+    } catch {
+      return new Date().toISOString().split("T")[0];
+    }
   };
 
   const [date,     setDate]     = useState(() => {
@@ -2045,6 +2057,32 @@ export default function NutritionPage() {
       sessionStorage.setItem("nutrition_date", today);
       setDate(today);
     }
+  }, []);
+
+  // Also re-check while the tab stays open so the page flips to the new day at midnight.
+  useEffect(() => {
+    const syncToday = () => {
+      const today = getEffectiveToday();
+      setDate((current) => {
+        if (current === today) return current;
+        sessionStorage.setItem("nutrition_date", today);
+        return today;
+      });
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") syncToday();
+    };
+
+    const timer = window.setInterval(syncToday, 60_000);
+    window.addEventListener("focus", syncToday);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", syncToday);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
   const [logs,          setLogs]          = useState<FoodLog[]>([]);
   const [totals,        setTotals]        = useState<FoodTotals>({ calories: 0, protein: 0, carbs: 0, fats: 0 });

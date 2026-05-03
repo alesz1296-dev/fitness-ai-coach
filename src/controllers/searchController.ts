@@ -136,14 +136,14 @@ export const foodSearch = async (
 ): Promise<void> => {
   try {
     const rawQ   = String(req.query.q     || "").trim();
-    const lang   = String(req.query.lang  || "en").toLowerCase().slice(0, 5);
+    const langKey = String(req.query.lang  || "en").toLowerCase().split("-")[0];
     const tagsParam = req.query.tags ? String(req.query.tags) : (req.query.tag ? String(req.query.tag) : undefined);
     const tags   = tagsParam ? tagsParam.split(",").map((t) => t.trim()).filter(Boolean) : [];
     const limit  = Math.min(Number(req.query.limit  || 20), 50);
     const offset = Math.max(Number(req.query.offset ||  0),  0);
 
     // Translate query to English when user is searching in another language
-    const q = (lang !== "en" && rawQ) ? await translateQueryToEnglish(rawQ, lang) : rawQ;
+    const q = (langKey !== "en" && rawQ) ? await translateQueryToEnglish(rawQ, langKey) : rawQ;
 
     // ── Redis cache — keyed by translated English query (lang-neutral) ──────
     const cacheKey = `search:food:${q}:${tags.join("|")}:${limit}:${offset}`;
@@ -151,13 +151,13 @@ export const foodSearch = async (
 
     // ── Helper: translate result names when lang !== "en" ────────────────────
     async function applyTranslation(items: any[]): Promise<any[]> {
-      if (lang === "en" || !items.length) return items;
+      if (langKey === "en" || !items.length) return items;
       const names = items.map((f) => f.name as string);
       const byLocalized = items.map((f) => {
-        const localized = f.localizedNames?.[lang];
+        const localized = f.localizedNames?.[langKey];
         return typeof localized === "string" && localized.trim() ? localized : null;
       });
-      const translated = await translateFoodNames(names, lang);
+      const translated = await translateFoodNames(names, langKey);
       return items.map((f, i) => ({
         ...f,
         name: byLocalized[i] ?? translated[i] ?? f.name,
@@ -181,6 +181,7 @@ export const foodSearch = async (
         where.OR = [
           { name:    { contains: q } },
           { aliases: { contains: q } },
+          { localizedNames: { contains: q } },
         ];
       }
       if (tags.length > 0) {

@@ -853,12 +853,12 @@ export function searchFoods(query: string, limit = 20, tags?: string | string[])
 
   const scored = pool
     .filter((f) => {
-      const haystack = [f.name, ...(f.aliases ?? [])].map((value) => value.toLowerCase());
+      const haystack = [f.name, ...(f.aliases ?? []), ...(Object.values(f.localizedNames ?? {}))].map((value) => value.toLowerCase());
       return haystack.some((value) => value.includes(q));
     })
     .map((f) => ({
       item:  f,
-      score: [f.name, ...(f.aliases ?? [])].some((value) => value.toLowerCase().startsWith(q)) ? 2 : 1,
+      score: [f.name, ...(f.aliases ?? []), ...(Object.values(f.localizedNames ?? {}))].some((value) => value.toLowerCase().startsWith(q)) ? 2 : 1,
     }));
 
   scored.sort((a, b) => b.score - a.score || a.item.name.localeCompare(b.item.name));
