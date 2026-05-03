@@ -179,11 +179,11 @@ function LogWeightForm({ onSave, onClose }: { onSave: () => void; onClose: () =>
   };
 
   /* const TABS: { id: TabId; label: string; icon: string }[] = [
-    { id: "body",        label: t("progress.bodyTab"),        icon: "âš–ï¸" },
-    { id: "strength",    label: t("progress.strengthTab"),    icon: "ðŸ‹ï¸" },
-    { id: "analytics",   label: t("progress.analyticsTab"),   icon: "ðŸ“ˆ" },
-    { id: "predictions", label: t("progress.predictionsTab"), icon: "ðŸ”®" },
-    { id: "plan",        label: t("progress.planTab"),        icon: "ðŸŽ¯" },
+    { id: "body",        label: t("progress.bodyTab"),        icon: "⚖️" },
+    { id: "strength",    label: t("progress.strengthTab"),    icon: "🏋️" },
+    { id: "analytics",   label: t("progress.analyticsTab"),   icon: "📈" },
+    { id: "predictions", label: t("progress.predictionsTab"), icon: "🔮" },
+    { id: "plan",        label: t("progress.planTab"),        icon: "🎯" },
   ]; */
 
   const TABS: { id: TabId; label: string; icon: string }[] = [

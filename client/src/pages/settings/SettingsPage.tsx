@@ -42,7 +42,7 @@ function ToastBanner({ msg }: { msg: string | null }) {
   if (!msg) return null;
   return (
     <div className="fixed bottom-20 right-4 z-50 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 md:bottom-6 md:right-6">
-      <span className="text-green-400">âœ“</span>
+      <span className="text-green-400">✓</span>
       {msg}
     </div>
   );
@@ -54,11 +54,11 @@ function parseApiError(e: any): string {
   const data = e?.response?.data;
   if (!data) return e?.message || "Request failed";
   if (data.details?.length) {
-    return data.details.map((d: any) => `${d.field ? d.field + ": " : ""}${d.message}`).join(" Â· ");
+    return data.details.map((d: any) => `${d.field ? d.field + ": " : ""}${d.message}`).join(" · ");
   }
   const base = data.error || "Something went wrong";
   if ((import.meta as any).env?.DEV && data.detail && data.detail !== base) {
-    return `${base} â€” [dev: ${data.errorName ? data.errorName + ": " : ""}${data.detail}]`;
+    return `${base} — [dev: ${data.errorName ? data.errorName + ": " : ""}${data.detail}]`;
   }
   return base;
 }
@@ -161,7 +161,7 @@ function ProfileForm() {
 
       if (newWeight && newWeight !== oldWeight) {
         emitWeightLogged(newWeight);
-        toast.show(`Logged ${newWeight} kg as your current weight âœ“`);
+        toast.show(`Logged ${newWeight} kg as your current weight ✓`);
       }
 
       if (newDays && newDays !== oldDays) {
@@ -171,7 +171,7 @@ function ProfileForm() {
         }
         setPlanNudge(newDays);
         setTimeout(() => setPlanNudge(null), 8000);
-        if (!newWeight || newWeight === oldWeight) toast.show(`Training days updated to ${newDays}! ðŸ’ª`);
+        if (!newWeight || newWeight === oldWeight) toast.show(`Training days updated to ${newDays}! 💪`);
       } else if (!newWeight || newWeight === oldWeight) {
         setSuccess("Profile saved!");
         setTimeout(() => setSuccess(""), 3000);
@@ -220,13 +220,13 @@ function ProfileForm() {
       {planNudge && (
         <div className="flex items-center gap-3 bg-brand-50 border border-brand-200 rounded-xl px-3 py-2 mb-4">
           <span className="text-sm text-brand-700 flex-1">
-            âœ… Profile saved â€” training days changed to <strong>{planNudge}</strong>. Update your weekly schedule to match.
+            ✅ Profile saved — training days changed to <strong>{planNudge}</strong>. Update your weekly schedule to match.
           </span>
           <button
             onClick={() => navigate("/dashboard")}
             className="text-sm font-semibold text-brand-600 hover:text-brand-800 whitespace-nowrap"
           >
-            Go to plan â†’
+            Go to plan →
           </button>
         </div>
       )}
@@ -308,9 +308,9 @@ function ProfileForm() {
           </div>
           {form.trainingDaysPerWeek && form.trainingHoursPerDay && (
             <p className="text-xs text-brand-600 mt-2 font-medium">
-              âœ“ {Number(form.trainingDaysPerWeek)} days Ã— {Number(form.trainingHoursPerDay) < 1
+              ✓ {Number(form.trainingDaysPerWeek)} days × {Number(form.trainingHoursPerDay) < 1
                 ? `${Math.round(Number(form.trainingHoursPerDay) * 60)} min`
-                : `${Number(form.trainingHoursPerDay)} h`} â€” calorie goals will use precise MET-based TDEE
+                : `${Number(form.trainingHoursPerDay)} h`} — calorie goals will use precise MET-based TDEE
             </p>
           )}
         </div>
@@ -460,14 +460,14 @@ function NutritionPreferencesForm() {
           {/* Live preview */}
           {exKg != null && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              At your current weight ({user!.weight} kg) â†’ <span className="font-semibold text-gray-700 dark:text-gray-200">{exKg} g protein / day</span>
+              At your current weight ({user!.weight} kg) → <span className="font-semibold text-gray-700 dark:text-gray-200">{exKg} g protein / day</span>
             </p>
           )}
 
           {/* Warning */}
           {multiplier > 2.5 && (
             <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mt-2">
-              âš ï¸ Values above 2.5 g/kg are at the high end â€” typically only relevant for advanced athletes in aggressive cuts. Make sure overall calories and fat intake aren't being compromised.
+              ⚠️ Values above 2.5 g/kg are at the high end — typically only relevant for advanced athletes in aggressive cuts. Make sure overall calories and fat intake aren't being compromised.
             </p>
           )}
         </div>
@@ -566,7 +566,7 @@ function InjuryForm() {
                 }`}
               >
                 <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${active ? "border-red-400 bg-red-400" : "border-gray-300 dark:border-gray-500"}`}>
-                  {active && <span className="text-white text-[10px] leading-none">âœ“</span>}
+                  {active && <span className="text-white text-[10px] leading-none">✓</span>}
                 </span>
                 {t(key as any)}
               </button>
@@ -576,7 +576,7 @@ function InjuryForm() {
 
         {selected.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-            <p className="font-medium mb-1">âš ï¸ {t("settings.activeLimitations", { count: selected.length })}</p>
+            <p className="font-medium mb-1">⚠️ {t("settings.activeLimitations", { count: selected.length })}</p>
             <p className="text-xs text-amber-600">
               {t("settings.injuryWarning")}
             </p>
@@ -694,7 +694,7 @@ function CycleTrackingForm() {
 function LanguagePicker() {
   const { t, i18n } = useTranslation();
   const toast = useToast();
-  const flags: Record<SupportedLang, string> = { en: "ðŸ‡¬ðŸ‡§", es: "ðŸ‡ªðŸ‡¸", uk: "ðŸ‡ºðŸ‡¦" };
+  const flags: Record<SupportedLang, string> = { en: "🇬🇧", es: "🇪🇸", uk: "🇺🇦" };
 
   const handleLangChange = (code: SupportedLang) => {
     if (code === i18n.language) return;
@@ -792,7 +792,7 @@ function AppPreferencesForm() {
         {/* Dark mode */}
         <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
           <div>
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">ðŸŒ™ Dark Mode</p>
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🌙 Dark Mode</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.switchDarkMode")}</p>
           </div>
           <Toggle on={prefs.darkMode} onClick={() => toggle("darkMode")} />
@@ -822,7 +822,7 @@ function AppPreferencesForm() {
         {/* Water tracking */}
         <div className="flex items-center justify-between py-3">
           <div>
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">ðŸ’§ Water Tracking</p>
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">💧 Water Tracking</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.showWaterWidget")}</p>
           </div>
           <Toggle on={prefs.trackWater} onClick={() => toggle("trackWater")} />
@@ -985,8 +985,8 @@ function DangerZone() {
   return (
     <Card className="border border-red-200 dark:border-red-900/50">
       <CardHeader
-        title={`âš ï¸ ${t("profile.dangerZone")}`}
-        subtitle="Irreversible actions â€” proceed with caution"
+        title={`⚠️ ${t("profile.dangerZone")}`}
+        subtitle="Irreversible actions — proceed with caution"
       />
       <div className="space-y-4">
         {/* Reset all data */}
@@ -999,7 +999,7 @@ function DangerZone() {
             </p>
           </div>
           {resetDone ? (
-            <span className="text-sm text-green-600 font-medium whitespace-nowrap">âœ… {t("profile.resetDataSuccess")}</span>
+            <span className="text-sm text-green-600 font-medium whitespace-nowrap">✅ {t("profile.resetDataSuccess")}</span>
           ) : resetConfirm ? (
             <div className="flex gap-2 shrink-0">
               <Button size="sm" variant="secondary" onClick={() => setResetConfirm(false)}>
