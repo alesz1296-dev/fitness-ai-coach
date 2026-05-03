@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { applyColorTheme, applyDark, readColorThemePref, readDarkPref } from "../../hooks/useDarkMode";
 import { emitAppPrefsChanged, emitWeightLogged } from "../../lib/appEvents";
@@ -28,7 +28,7 @@ type ProfileUpdatePayload = {
   planAdjustmentMode?: User["planAdjustmentMode"];
 };
 
-// ── Toast ────────────────────────────────────────────────────────────────────
+// â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function useToast() {
   const [msg, setMsg] = useState<string | null>(null);
   const show = (message: string) => {
@@ -42,7 +42,7 @@ function ToastBanner({ msg }: { msg: string | null }) {
   if (!msg) return null;
   return (
     <div className="fixed bottom-20 right-4 z-50 bg-gray-900 text-white text-sm px-5 py-3 rounded-xl shadow-xl flex items-center gap-2 md:bottom-6 md:right-6">
-      <span className="text-green-400">✓</span>
+      <span className="text-green-400">âœ“</span>
       {msg}
     </div>
   );
@@ -54,16 +54,16 @@ function parseApiError(e: any): string {
   const data = e?.response?.data;
   if (!data) return e?.message || "Request failed";
   if (data.details?.length) {
-    return data.details.map((d: any) => `${d.field ? d.field + ": " : ""}${d.message}`).join(" · ");
+    return data.details.map((d: any) => `${d.field ? d.field + ": " : ""}${d.message}`).join(" Â· ");
   }
   const base = data.error || "Something went wrong";
   if ((import.meta as any).env?.DEV && data.detail && data.detail !== base) {
-    return `${base} — [dev: ${data.errorName ? data.errorName + ": " : ""}${data.detail}]`;
+    return `${base} â€” [dev: ${data.errorName ? data.errorName + ": " : ""}${data.detail}]`;
   }
   return base;
 }
 
-// ── Profile form ──────────────────────────────────────────────────────────────
+// â”€â”€ Profile form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ProfileForm() {
   const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
@@ -121,7 +121,7 @@ function ProfileForm() {
       trainingHoursPerDay: String(user.trainingHoursPerDay ?? ""),
       planAdjustmentMode:  user.planAdjustmentMode ?? "suggest",
     });
-  // Only re-sync when key scheduling fields change — avoids fighting the user mid-edit
+  // Only re-sync when key scheduling fields change â€” avoids fighting the user mid-edit
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.trainingDaysPerWeek, user?.trainingHoursPerDay]);
 
@@ -161,7 +161,7 @@ function ProfileForm() {
 
       if (newWeight && newWeight !== oldWeight) {
         emitWeightLogged(newWeight);
-        toast.show(`Logged ${newWeight} kg as your current weight ✓`);
+        toast.show(`Logged ${newWeight} kg as your current weight âœ“`);
       }
 
       if (newDays && newDays !== oldDays) {
@@ -171,7 +171,7 @@ function ProfileForm() {
         }
         setPlanNudge(newDays);
         setTimeout(() => setPlanNudge(null), 8000);
-        if (!newWeight || newWeight === oldWeight) toast.show(`Training days updated to ${newDays}! 💪`);
+        if (!newWeight || newWeight === oldWeight) toast.show(`Training days updated to ${newDays}! ðŸ’ª`);
       } else if (!newWeight || newWeight === oldWeight) {
         setSuccess("Profile saved!");
         setTimeout(() => setSuccess(""), 3000);
@@ -213,39 +213,39 @@ function ProfileForm() {
 
   return (
     <Card>
-      <CardHeader title={t("profile.title")} subtitle="Used by the AI and calorie calculator" />
+      <CardHeader title={t("profile.title")} subtitle={t("settings.usedByAI")} />
 
       {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2 mb-4">{error}</p>}
       {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
       {planNudge && (
         <div className="flex items-center gap-3 bg-brand-50 border border-brand-200 rounded-xl px-3 py-2 mb-4">
           <span className="text-sm text-brand-700 flex-1">
-            ✅ Profile saved — training days changed to <strong>{planNudge}</strong>. Update your weekly schedule to match.
+            âœ… Profile saved â€” training days changed to <strong>{planNudge}</strong>. Update your weekly schedule to match.
           </span>
           <button
             onClick={() => navigate("/dashboard")}
             className="text-sm font-semibold text-brand-600 hover:text-brand-800 whitespace-nowrap"
           >
-            Go to plan →
+            Go to plan â†’
           </button>
         </div>
       )}
 
       <div className="space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input label="First Name" value={form.firstName} onChange={set("firstName")} placeholder="Alex" />
-          <Input label="Last Name"  value={form.lastName}  onChange={set("lastName")}  placeholder="Smith" />
+          <Input label={t("profile.firstName")} value={form.firstName} onChange={set("firstName")} placeholder="Alex" />
+          <Input label={t("profile.lastName")}  value={form.lastName}  onChange={set("lastName")}  placeholder="Smith" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Input label="Age" type="number" value={form.age}    onChange={set("age")}    placeholder="25" min="13" max="120" />
-          <Input label="Weight (kg)" type="number" step="0.1" value={form.weight} onChange={set("weight")} placeholder="75" />
-          <Input label="Height (cm)" type="number" value={form.height} onChange={set("height")} placeholder="178" />
+          <Input label={t("profile.age")} type="number" value={form.age}    onChange={set("age")}    placeholder="25" min="13" max="120" />
+          <Input label={t("profile.weightKg")} type="number" step="0.1" value={form.weight} onChange={set("weight")} placeholder="75" />
+          <Input label={t("profile.heightCm")} type="number" value={form.height} onChange={set("height")} placeholder="178" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
-            label="Sex"
+            label={t("settings.selectSex")}
             value={form.sex}
             onChange={set("sex")}
             placeholder={t("settings.selectSex")}
@@ -269,7 +269,7 @@ function ProfileForm() {
           />
         </div>
 
-        {/* Training schedule — drives precise TDEE when both are filled */}
+        {/* Training schedule â€” drives precise TDEE when both are filled */}
         <div>
           <p className="text-sm font-medium text-gray-700 mb-2">{t("settings.trainingSchedule")}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -308,9 +308,9 @@ function ProfileForm() {
           </div>
           {form.trainingDaysPerWeek && form.trainingHoursPerDay && (
             <p className="text-xs text-brand-600 mt-2 font-medium">
-              ✓ {Number(form.trainingDaysPerWeek)} days × {Number(form.trainingHoursPerDay) < 1
+              âœ“ {Number(form.trainingDaysPerWeek)} days Ã— {Number(form.trainingHoursPerDay) < 1
                 ? `${Math.round(Number(form.trainingHoursPerDay) * 60)} min`
-                : `${Number(form.trainingHoursPerDay)} h`} — calorie goals will use precise MET-based TDEE
+                : `${Number(form.trainingHoursPerDay)} h`} â€” calorie goals will use precise MET-based TDEE
             </p>
           )}
         </div>
@@ -322,7 +322,7 @@ function ProfileForm() {
           placeholder={t("settings.selectFitnessLevel")}
           options={[
             { value: "beginner",     label: "Beginner (< 1 year training)" },
-            { value: "intermediate", label: "Intermediate (1–3 years)" },
+            { value: "intermediate", label: "Intermediate (1â€“3 years)" },
             { value: "advanced",     label: "Advanced (3+ years)" },
           ]}
         />
@@ -346,7 +346,7 @@ function ProfileForm() {
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">
             Active Goal
             {form.goal && (
-              <span className="ml-2 text-xs font-normal text-gray-400">(set from Goals tab — edit freely)</span>
+              <span className="ml-2 text-xs font-normal text-gray-400">(set from Goals tab â€” edit freely)</span>
             )}
           </label>
           <textarea
@@ -360,11 +360,11 @@ function ProfileForm() {
 
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-sm text-blue-700 dark:text-blue-300">
           <p className="font-semibold mb-1">{t("settings.whyMatters")}</p>
-          <p>Age, weight, height, and sex are used for Mifflin-St Jeor BMR. When you set your <strong>training days and session duration</strong>, calorie goals switch to a precise MET-based TDEE that accounts for actual exercise calories burned — more accurate than the activity multiplier alone. All goal calculations, nutrition targets, and progress projections depend on this.</p>
+          <p>Age, weight, height, and sex are used for Mifflin-St Jeor BMR. When you set your <strong>training days and session duration</strong>, calorie goals switch to a precise MET-based TDEE that accounts for actual exercise calories burned â€” more accurate than the activity multiplier alone. All goal calculations, nutrition targets, and progress projections depend on this.</p>
         </div>
 
         <Button loading={saving} onClick={save} className="w-full">{t("profile.saveProfile")}</Button>
-        <Modal open={weightConfirmOpen} onClose={cancelWeightSave} title="Confirm weight log" size="sm">
+        <Modal open={weightConfirmOpen} onClose={cancelWeightSave} title={t("common.confirm")} size="sm">
           <div className="space-y-4">
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               Are you sure you want to log this as your current weight?
@@ -388,7 +388,7 @@ function ProfileForm() {
   );
 }
 
-// ── Nutrition preferences ─────────────────────────────────────────────────────
+// â”€â”€ Nutrition preferences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function NutritionPreferencesForm() {
   const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
@@ -460,14 +460,14 @@ function NutritionPreferencesForm() {
           {/* Live preview */}
           {exKg != null && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              At your current weight ({user!.weight} kg) → <span className="font-semibold text-gray-700 dark:text-gray-200">{exKg} g protein / day</span>
+              At your current weight ({user!.weight} kg) â†’ <span className="font-semibold text-gray-700 dark:text-gray-200">{exKg} g protein / day</span>
             </p>
           )}
 
           {/* Warning */}
           {multiplier > 2.5 && (
             <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mt-2">
-              ⚠️ Values above 2.5 g/kg are at the high end — typically only relevant for advanced athletes in aggressive cuts. Make sure overall calories and fat intake aren't being compromised.
+              âš ï¸ Values above 2.5 g/kg are at the high end â€” typically only relevant for advanced athletes in aggressive cuts. Make sure overall calories and fat intake aren't being compromised.
             </p>
           )}
         </div>
@@ -476,11 +476,11 @@ function NutritionPreferencesForm() {
         <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 text-sm text-gray-600 dark:text-gray-300 space-y-1">
           <p className="font-semibold text-gray-700 dark:text-gray-200 mb-2">{t("settings.commonRanges")}</p>
           {[
-            { range: "0.8 – 1.0", label: "Sedentary / general health (RDA minimum)" },
-            { range: "1.2 – 1.6", label: "Recreational fitness, moderate training" },
-            { range: "1.6 – 2.0", label: "Strength / hypertrophy training (recommended)" },
-            { range: "2.0 – 2.5", label: "Cutting phase — high-protein to preserve muscle" },
-            { range: "2.5 – 3.0", label: "Advanced athletes / aggressive cut (elite use)" },
+            { range: "0.8 â€“ 1.0", label: "Sedentary / general health (RDA minimum)" },
+            { range: "1.2 â€“ 1.6", label: "Recreational fitness, moderate training" },
+            { range: "1.6 â€“ 2.0", label: "Strength / hypertrophy training (recommended)" },
+            { range: "2.0 â€“ 2.5", label: "Cutting phase â€” high-protein to preserve muscle" },
+            { range: "2.5 â€“ 3.0", label: "Advanced athletes / aggressive cut (elite use)" },
           ].map((row) => (
             <div key={row.range} className="flex gap-3">
               <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{row.range}</span>
@@ -495,7 +495,7 @@ function NutritionPreferencesForm() {
   );
 }
 
-// ── Injury tracking ───────────────────────────────────────────────────────────
+// â”€â”€ Injury tracking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const INJURY_AREAS = [
   { id: "lower_back",       key: "settings.injuryLowerBack" },
   { id: "upper_back",       key: "settings.injuryUpperBack" },
@@ -566,7 +566,7 @@ function InjuryForm() {
                 }`}
               >
                 <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${active ? "border-red-400 bg-red-400" : "border-gray-300 dark:border-gray-500"}`}>
-                  {active && <span className="text-white text-[10px] leading-none">✓</span>}
+                  {active && <span className="text-white text-[10px] leading-none">âœ“</span>}
                 </span>
                 {t(key as any)}
               </button>
@@ -576,7 +576,7 @@ function InjuryForm() {
 
         {selected.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-            <p className="font-medium mb-1">⚠️ {t("settings.activeLimitations", { count: selected.length })}</p>
+            <p className="font-medium mb-1">âš ï¸ {t("settings.activeLimitations", { count: selected.length })}</p>
             <p className="text-xs text-amber-600">
               {t("settings.injuryWarning")}
             </p>
@@ -589,7 +589,7 @@ function InjuryForm() {
   );
 }
 
-// ── Female cycle tracking ─────────────────────────────────────────────────────
+// â”€â”€ Female cycle tracking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function CycleTrackingForm() {
   const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
@@ -671,9 +671,9 @@ function CycleTrackingForm() {
             <p className="text-xs mt-1 opacity-80">
               {{
                 Menstruation: "Focus on iron-rich foods (red meat, lentils, spinach), anti-inflammatory foods, and gentle movement. Rest more if needed.",
-                Follicular:   "Rising oestrogen boosts energy and mood — great time for higher intensity training and increasing carbs slightly.",
+                Follicular:   "Rising oestrogen boosts energy and mood â€” great time for higher intensity training and increasing carbs slightly.",
                 Ovulation:    "Peak energy and strength. Push harder in the gym. Great time for new PRs and high-intensity cardio.",
-                Luteal:       "Progesterone rises — you may crave carbs and feel more fatigued. Increase magnesium (dark chocolate, nuts, seeds) and prioritise sleep.",
+                Luteal:       "Progesterone rises â€” you may crave carbs and feel more fatigued. Increase magnesium (dark chocolate, nuts, seeds) and prioritise sleep.",
               }[phase.name]}
             </p>
           </div>
@@ -690,10 +690,11 @@ function CycleTrackingForm() {
   );
 }
 
-// ── Language Picker ──────────────────────────────────────────────────────────
+// â”€â”€ Language Picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function LanguagePicker() {
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  const flags: Record<SupportedLang, string> = { en: "ðŸ‡¬ðŸ‡§", es: "ðŸ‡ªðŸ‡¸", uk: "ðŸ‡ºðŸ‡¦" };
 
   const handleLangChange = (code: SupportedLang) => {
     if (code === i18n.language) return;
@@ -721,7 +722,7 @@ function LanguagePicker() {
                   : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-brand-400"
               }`}
             >
-              {code === "en" ? "🇬🇧" : "🇪🇸"} {label}
+              {flags[code]} {label}
             </button>
           ))}
         </div>
@@ -730,7 +731,7 @@ function LanguagePicker() {
   );
 }
 
-// ── App Preferences ───────────────────────────────────────────────────────────
+// â”€â”€ App Preferences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type AppPrefs = { trackWater: boolean; darkMode: boolean; colorTheme: "default" | "black-gold" | "white-green" };
 
 function AppPreferencesForm() {
@@ -791,7 +792,7 @@ function AppPreferencesForm() {
         {/* Dark mode */}
         <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
           <div>
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🌙 Dark Mode</p>
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">ðŸŒ™ Dark Mode</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.switchDarkMode")}</p>
           </div>
           <Toggle on={prefs.darkMode} onClick={() => toggle("darkMode")} />
@@ -821,7 +822,7 @@ function AppPreferencesForm() {
         {/* Water tracking */}
         <div className="flex items-center justify-between py-3">
           <div>
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">💧 Water Tracking</p>
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">ðŸ’§ Water Tracking</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.showWaterWidget")}</p>
           </div>
           <Toggle on={prefs.trackWater} onClick={() => toggle("trackWater")} />
@@ -832,7 +833,7 @@ function AppPreferencesForm() {
   );
 }
 
-// ── Change password form ──────────────────────────────────────────────────────
+// â”€â”€ Change password form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function PasswordForm() {
   const { t } = useTranslation();
   const [current, setCurrent] = useState("");
@@ -862,16 +863,16 @@ function PasswordForm() {
       {error   && <p className="text-sm text-red-600   bg-red-50   rounded-xl px-3 py-2 mb-4">{error}</p>}
       {success && <p className="text-sm text-green-600 bg-green-50 rounded-xl px-3 py-2 mb-4">{success}</p>}
       <div className="space-y-4">
-        <Input label={t("settings.currentPassword")} type="password" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="••••••••" />
-        <Input label={t("settings.newPassword")}     type="password" value={next}    onChange={(e) => setNext(e.target.value)}    placeholder="••••••••" hint={t("settings.passwordHint")} />
-        <Input label={t("settings.confirmPasswordField")} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" />
+        <Input label={t("settings.currentPassword")} type="password" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
+        <Input label={t("settings.newPassword")}     type="password" value={next}    onChange={(e) => setNext(e.target.value)}    placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" hint={t("settings.passwordHint")} />
+        <Input label={t("settings.confirmPasswordField")} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
         <Button loading={saving} onClick={save} className="w-full">{t("settings.updatePassword")}</Button>
       </div>
     </Card>
   );
 }
 
-// ── Account info ──────────────────────────────────────────────────────────────
+// â”€â”€ Account info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AccountInfo() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
@@ -901,7 +902,7 @@ function AccountInfo() {
   );
 }
 
-// ── Main Settings page ────────────────────────────────────────────────────────────────────────
+// â”€â”€ Main Settings page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function SettingsPage() {
   const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
@@ -950,18 +951,18 @@ export default function SettingsPage() {
                 });
             }}
           >
-            ⬇ Download my data
+            â¬‡ Download my data
           </Button>
         </div>
       </Card>
 
-      {/* ── Danger Zone ───────────────────────────────────────────────────── */}
+      {/* â”€â”€ Danger Zone â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <DangerZone />
     </div>
   );
 }
 
-// ── Danger Zone component ─────────────────────────────────────────────────────
+// â”€â”€ Danger Zone component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function DangerZone() {
   const { logout } = useAuthStore();
   const navigate = useNavigate();
@@ -984,8 +985,8 @@ function DangerZone() {
   return (
     <Card className="border border-red-200 dark:border-red-900/50">
       <CardHeader
-        title={`⚠️ ${t("profile.dangerZone")}`}
-        subtitle="Irreversible actions — proceed with caution"
+        title={`âš ï¸ ${t("profile.dangerZone")}`}
+        subtitle="Irreversible actions â€” proceed with caution"
       />
       <div className="space-y-4">
         {/* Reset all data */}
@@ -998,7 +999,7 @@ function DangerZone() {
             </p>
           </div>
           {resetDone ? (
-            <span className="text-sm text-green-600 font-medium whitespace-nowrap">✅ {t("profile.resetDataSuccess")}</span>
+            <span className="text-sm text-green-600 font-medium whitespace-nowrap">âœ… {t("profile.resetDataSuccess")}</span>
           ) : resetConfirm ? (
             <div className="flex gap-2 shrink-0">
               <Button size="sm" variant="secondary" onClick={() => setResetConfirm(false)}>
@@ -1027,3 +1028,4 @@ function DangerZone() {
     </Card>
   );
 }
+
