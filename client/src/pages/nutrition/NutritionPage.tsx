@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { format, parseISO, addDays, subDays } from "date-fns";
 import { fmtMonthDay, fmtWeekdayLongDate } from "../../lib/dateFormat";
-import { APP_EVENTS, emitNutritionSync, emitWeightLogged } from "../../lib/appEvents";
+import { APP_EVENTS, emitDataChanged, emitNutritionSync, emitWeightLogged } from "../../lib/appEvents";
 import { useNavigate, useLocation } from "react-router-dom";
 import { foodApi, chatApi, searchApi, calorieGoalsApi, waterApi, customFoodsApi, weightApi, workoutsApi,
 } from "../../api";
+import type { ChatMealPlanDay, ChatMealPlanMeal, ChatMealPlanPayload } from "../../api";
 import { useAuthStore } from "../../store/authStore";
 import { useTranslation, t as _t } from "../../i18n";
 import type { FoodLog, FoodTotals, CalorieGoal, WaterLog, CustomFood } from "../../types";
@@ -13,6 +14,7 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { Select } from "../../components/ui/Select";
+import { useDraggableWeightFab } from "../../hooks/useDraggableWeightFab";
 
 function getMealOptions(t: (k: string) => string) {
   return [
@@ -1534,8 +1536,81 @@ interface MealPlanItem {
 }
 interface MealPlanMeal { meal: "breakfast" | "lunch" | "dinner" | "snack"; items: MealPlanItem[] }
 interface MealPlanData {
-  meals: MealPlanMeal[];
-  totalCalories: number; totalProtein: number; totalCarbs: number; totalFats: number;
+  name?: string;
+  durationWeeks: number;
+  days: Array<{
+    dayIndex: number;
+    meals: MealPlanMeal[];
+    totalCalories: number;
+    totalProtein: number;
+    totalCarbs: number;
+    totalFats: number;
+  }>;
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFats: number;
+}
+
+function normalizeSuggestedMealPlan(payload: any): MealPlanData | null {
+  if (!payload || typeof payload !== "object") return null;
+
+  const mealsToArray = (meals: any[]): MealPlanMeal[] =>
+    (Array.isArray(meals) ? meals : []).map((meal) => ({
+      meal: meal.meal,
+      items: Array.isArray(meal.items)
+        ? meal.items.map((item: any) => ({
+            foodName: String(item.foodName ?? ""),
+            calories: Number(item.calories ?? 0),
+            protein: item.protein != null ? Number(item.protein) : undefined,
+            carbs: item.carbs != null ? Number(item.carbs) : undefined,
+            fats: item.fats != null ? Number(item.fats) : undefined,
+            quantity: Number(item.quantity ?? 1),
+            unit: String(item.unit ?? "serving"),
+          }))
+        : [],
+    })) as MealPlanMeal[];
+
+  const rawDays = Array.isArray(payload.days) && payload.days.length > 0
+    ? payload.days
+    : [{ dayIndex: 0, meals: payload.meals ?? [] }];
+
+  const days = rawDays.map((day: any) => {
+    const meals = mealsToArray(day.meals ?? []);
+    const totals = meals.flatMap((meal) => meal.items).reduce(
+      (acc, item) => ({
+        totalCalories: acc.totalCalories + Number(item.calories ?? 0),
+        totalProtein: acc.totalProtein + Number(item.protein ?? 0),
+        totalCarbs: acc.totalCarbs + Number(item.carbs ?? 0),
+        totalFats: acc.totalFats + Number(item.fats ?? 0),
+      }),
+      { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFats: 0 },
+    );
+    return {
+      dayIndex: Number(day.dayIndex ?? 0),
+      meals,
+      ...totals,
+    };
+  });
+
+  if (days.length === 0) return null;
+
+  const totals = days.reduce(
+    (acc: { totalCalories: number; totalProtein: number; totalCarbs: number; totalFats: number }, day: MealPlanData["days"][number]) => ({
+      totalCalories: acc.totalCalories + day.totalCalories,
+      totalProtein: acc.totalProtein + day.totalProtein,
+      totalCarbs: acc.totalCarbs + day.totalCarbs,
+      totalFats: acc.totalFats + day.totalFats,
+    }),
+    { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFats: 0 },
+  );
+
+  return {
+    name: typeof payload.name === "string" ? payload.name : undefined,
+    durationWeeks: Math.max(1, Number(payload.durationWeeks ?? (Math.ceil(days.length / 7) || 1))),
+    days,
+    ...totals,
+  };
 }
 
 function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
@@ -1561,8 +1636,9 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
         agentType: "nutritionist",
       });
       setAiText(res.data.message);
-      if (res.data.suggestedMealPlan) {
-        setPlan(res.data.suggestedMealPlan as MealPlanData);
+      const normalized = normalizeSuggestedMealPlan(res.data.suggestedMealPlan);
+      if (normalized) {
+        setPlan(normalized);
         setStatus("preview");
       } else {
         setError(t("nutrition.noStructuredPlan"));
@@ -1574,18 +1650,37 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
     }
   };
 
-  const logAll = async () => {
+  const saveToMealPlanner = async () => {
     if (!plan) return;
     setStatus("logging");
     try {
-      const foods = plan.meals.flatMap((m) =>
-        m.items.map((item) => ({ ...item, meal: m.meal }))
-      );
-      await foodApi.bulk(foods, selectedDate);
+      const payload: ChatMealPlanPayload = {
+        mode: "create",
+        name: plan.name || `${fmtWeekdayLongDate(parseISO(selectedDate))} Meal Plan`,
+        weekStart: selectedDate,
+        durationWeeks: Math.max(1, plan.durationWeeks),
+        days: plan.days.map<ChatMealPlanDay>((day) => ({
+          dayIndex: day.dayIndex,
+          meals: day.meals.map<ChatMealPlanMeal>((meal) => ({
+            meal: meal.meal,
+            items: meal.items.map((item) => ({
+              foodName: item.foodName,
+              calories: item.calories,
+              protein: item.protein,
+              carbs: item.carbs,
+              fats: item.fats,
+              quantity: item.quantity,
+              unit: item.unit,
+            })),
+          })),
+        })),
+      };
+      await chatApi.saveMealPlan(payload);
+      emitDataChanged("meal-plan");
       setStatus("done");
       setTimeout(() => { onLogged(); onClose(); }, 1000);
     } catch (e: any) {
-      setError(e.response?.data?.error || t("nutrition.failedLogMeals"));
+      setError(e.response?.data?.error || t("nutrition.failedSaveMealPlan"));
       setStatus("preview");
     }
   };
@@ -1604,7 +1699,7 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
       {status === "done" && (
         <div className="flex flex-col items-center gap-4 py-10">
           <div className="text-5xl">✅</div>
-          <p className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">{t("nutrition.mealsLoggedSuccess")}</p>
+          <p className="font-semibold text-gray-800 dark:text-gray-100 dark:text-gray-100">{t("nutrition.mealPlanSavedSuccess")}</p>
         </div>
       )}
 
@@ -1620,39 +1715,51 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
 
           {/* Meals */}
           <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-            {plan.meals.map((m) => (
-              <div key={m.meal} className="border border-gray-100 dark:border-gray-700 rounded-xl p-3">
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 capitalize">
-                  {MEAL_ICONS[m.meal] ?? "🍽️"} {t(`mealPlanner.${m.meal}`) || t("mealPlanner.other")}
-                </p>
-                {m.items.length === 0 ? (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{t("nutrition.noItems")}</p>
-                ) : (
-                  <table className="w-full text-xs text-gray-600 dark:text-gray-300 dark:text-gray-300">
-                    <thead>
-                      <tr className="border-b border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-500 dark:text-gray-500">
-                        <th className="text-left pb-1">Food</th>
-                        <th className="text-right pb-1">Qty</th>
-                        <th className="text-right pb-1">Kcal</th>
-                        <th className="text-right pb-1">P</th>
-                        <th className="text-right pb-1">C</th>
-                        <th className="text-right pb-1">F</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {m.items.map((item, i) => (
-                        <tr key={i} className="border-b border-gray-50">
-                          <td className="py-1 font-medium">{item.foodName}</td>
-                          <td className="py-1 text-right">{item.quantity}{item.unit}</td>
-                          <td className="py-1 text-right">{item.calories}</td>
-                          <td className="py-1 text-right">{item.protein ?? "—"}</td>
-                          <td className="py-1 text-right">{item.carbs ?? "—"}</td>
-                          <td className="py-1 text-right">{item.fats ?? "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
+            {plan.days.map((day) => (
+              <div key={day.dayIndex} className="space-y-3 rounded-xl border border-gray-100 dark:border-gray-700 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    {t("common.day")} {day.dayIndex + 1}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {day.totalCalories} kcal · P {Math.round(day.totalProtein)}g · C {Math.round(day.totalCarbs)}g · F {Math.round(day.totalFats)}g
+                  </p>
+                </div>
+                {day.meals.map((m) => (
+                  <div key={`${day.dayIndex}-${m.meal}`} className="border border-gray-100 dark:border-gray-700 rounded-xl p-3">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2 capitalize">
+                      {MEAL_ICONS[m.meal] ?? "🍽️"} {t(`mealPlanner.${m.meal}`) || t("mealPlanner.other")}
+                    </p>
+                    {m.items.length === 0 ? (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 dark:text-gray-500">{t("nutrition.noItems")}</p>
+                    ) : (
+                      <table className="w-full text-xs text-gray-600 dark:text-gray-300 dark:text-gray-300">
+                        <thead>
+                          <tr className="border-b border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-500 dark:text-gray-500">
+                            <th className="text-left pb-1">{t("nutrition.foodName")}</th>
+                            <th className="text-right pb-1">{t("nutrition.quantity")}</th>
+                            <th className="text-right pb-1">{t("common.kcal")}</th>
+                            <th className="text-right pb-1">P</th>
+                            <th className="text-right pb-1">C</th>
+                            <th className="text-right pb-1">F</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {m.items.map((item, i) => (
+                            <tr key={i} className="border-b border-gray-50">
+                              <td className="py-1 font-medium">{item.foodName}</td>
+                              <td className="py-1 text-right">{item.quantity}{item.unit}</td>
+                              <td className="py-1 text-right">{item.calories}</td>
+                              <td className="py-1 text-right">{item.protein ?? "—"}</td>
+                              <td className="py-1 text-right">{item.carbs ?? "—"}</td>
+                              <td className="py-1 text-right">{item.fats ?? "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -1666,8 +1773,8 @@ function SuggestMealPlanModal({ open, onClose, selectedDate, onLogged }: {
             <Button variant="secondary" className="flex-1" onClick={onClose} disabled={status === "logging"}>
               {t("common.cancel")}
             </Button>
-            <Button className="flex-1" loading={status === "logging"} onClick={logAll}>
-              {t("nutrition.logAllMeals")}
+            <Button className="flex-1" loading={status === "logging"} onClick={saveToMealPlanner}>
+              {t("nutrition.addToMealPlanner")}
             </Button>
           </div>
         </div>
@@ -2107,6 +2214,12 @@ export default function NutritionPage() {
   const [weightVal,      setWeightVal]      = useState("");
   const [savingWeight,   setSavingWeight]   = useState(false);
   const [weightSaved,    setWeightSaved]    = useState(false);
+  const {
+    buttonStyle: weightFabButtonStyle,
+    panelStyle: weightFabPanelStyle,
+    buttonProps: weightFabButtonProps,
+    handleButtonClick: handleWeightFabButtonClick,
+  } = useDraggableWeightFab(showWeightFab);
   const [showMyFoodsPanel, setShowMyFoodsPanel] = useState(false);
   const [myFoodsPanelList, setMyFoodsPanelList] = useState<import("../../types").CustomFood[]>([]);
   const [myFoodsPanelLoading, setMyFoodsPanelLoading] = useState(false);
@@ -3354,7 +3467,7 @@ export default function NutritionPage() {
         open={showMealPlan}
         onClose={() => setShowMealPlan(false)}
         selectedDate={date}
-        onLogged={() => { toast.show("Meal plan logged ✓"); emitNutritionSync("meal-plan"); }}
+        onLogged={() => { toast.show(t("nutrition.mealPlanSavedSuccess")); emitDataChanged("meal-plan"); }}
       />
 
       {/* Bowl / dish builder modal */}
@@ -3454,16 +3567,12 @@ export default function NutritionPage() {
       )}
 
       {/* ── Weight FAB ────────────────────────────────────────────────────── */}
-      <div
-        className="fixed z-50 flex flex-col items-end gap-3"
-        style={{
-          right: "calc(1rem + env(safe-area-inset-right))",
-          left: "auto",
-          bottom: "calc(8rem + env(safe-area-inset-bottom))",
-        }}
-      >
+      <div className="fixed inset-0 z-50 pointer-events-none">
         {showWeightFab && (
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
+          <div
+            className="pointer-events-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 flex flex-col gap-3"
+            style={weightFabPanelStyle}
+          >
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">&#9878;&#65039; {t("nutrition.logWeight")}</p>
             {weightSaved ? (
               <p className="text-center text-green-600 font-medium text-sm py-1">&#x2705; {t("nutrition.savedConfirm")}</p>
@@ -3490,9 +3599,11 @@ export default function NutritionPage() {
           </div>
         )}
         <button
-          onClick={() => setShowWeightFab((v) => !v)}
-          className="w-14 h-14 bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white rounded-full shadow-lg flex items-center justify-center text-2xl transition-colors"
-          title="Log today's weight"
+          {...weightFabButtonProps}
+          onClick={() => handleWeightFabButtonClick(() => setShowWeightFab((v) => !v))}
+          className="pointer-events-auto bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white rounded-full shadow-lg flex items-center justify-center text-2xl transition-colors"
+          style={weightFabButtonStyle}
+          title={t("nutrition.logWeight")}
         >
           &#9878;&#65039;
         </button>

@@ -14,6 +14,7 @@ import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { Textarea } from "../../components/ui/Textarea";
 import { Badge } from "../../components/ui/Badge";
+import { APP_EVENTS, emitDataChanged } from "../../lib/appEvents";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MET Activity data (Compendium of Physical Activities, Ainsworth et al.)
@@ -894,6 +895,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
         })),
       };
       const res = await workoutsApi.create(payload);
+      emitDataChanged("workout");
       if (res.data.newPRs?.length) setNewPRs(res.data.newPRs);
       else onSave();
     } catch (e: any) {
@@ -1039,6 +1041,7 @@ function EditWorkoutForm({ workout, onSave, onClose }: { workout: Workout; onSav
         notes: notes || undefined,
         trainingType: trainingType || undefined,
       });
+      emitDataChanged("workout");
       onSave();
     } catch (e: any) {
       setError(e.response?.data?.error || "Failed to update workout");
@@ -1141,6 +1144,7 @@ function AddExercisePanel({
         ...(weight && { weight: Number(weight) }),
         ...(rpe    && { rpe:    Number(rpe) }),
       });
+      emitDataChanged("workout");
       onAdded(res.data.exercise);
     } catch (e: any) {
       setError(e.response?.data?.error || "Failed to add exercise");
@@ -1261,6 +1265,7 @@ function WorkoutDetail({
     setSavingKcal(true);
     try {
       await workoutsApi.update(workout.id, { caloriesBurned: kcalDraft ? Number(kcalDraft) : undefined });
+      emitDataChanged("workout");
       setKcalValue(kcalDraft ? Number(kcalDraft) : null);
       setEditingKcal(false);
     } finally { setSavingKcal(false); }
@@ -1295,6 +1300,7 @@ function WorkoutDetail({
     setSaving(true);
     try {
       await workoutsApi.updateExercise(id, { ...(editData.exerciseName && { exerciseName: editData.exerciseName }), sets: editData.sets, reps: editData.reps, weight: editData.weight ?? undefined, rpe: editData.rpe ?? undefined });
+      emitDataChanged("workout");
       setExercises((prev) => prev.map((e) => e.id === id ? { ...e, ...editData } : e));
       setEditing(null); setEditData(null);
       onRefresh();
@@ -1305,6 +1311,7 @@ function WorkoutDetail({
   const deleteExercise = async (id: number) => {
     if (!confirm("Remove this exercise from the workout?")) return;
     await workoutsApi.deleteExercise(id);
+    emitDataChanged("workout");
     setExercises((prev) => prev.filter((e) => e.id !== id));
     onRefresh();
     onToast?.("Exercise removed");
@@ -1313,7 +1320,7 @@ function WorkoutDetail({
   const handleDeleteWorkout = async () => {
     if (!confirm(`Delete "${workout.name}"? This cannot be undone.`)) return;
     setDeleting(true);
-    try { await workoutsApi.delete(workout.id); onDelete(); }
+    try { await workoutsApi.delete(workout.id); emitDataChanged("workout"); onDelete(); }
     finally { setDeleting(false); }
   };
 
@@ -2028,6 +2035,7 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
     setStarting(template.id);
     try {
       await workoutsApi.startFromTemplate(template.id);
+      emitDataChanged("workout");
       onWorkoutStarted();
     } catch { alert("Failed to start workout"); }
     finally { setStarting(null); }
@@ -2062,6 +2070,7 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
         const dateStr = d.toISOString().split("T")[0];
         await workoutsApi.startFromTemplate(template.id, dateStr);
       }
+      emitDataChanged("workout");
       onWorkoutStarted();
       toast.show(`Scheduled ${pattern.length} workouts this week!`);
     } catch {
@@ -3547,6 +3556,7 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
           notes: e.notes,
         })),
       });
+      emitDataChanged("workout");
       onWorkoutLogged();
     } catch { setError("Failed to save workout."); }
     finally { setSaving(false); }
@@ -3718,6 +3728,18 @@ export default function WorkoutsPage() {
   }, [load, loadAll]);
 
   useEffect(() => { load(1); loadAll(); }, [load, loadAll]);
+
+  useEffect(() => {
+    const handleDataChanged = (event: Event) => {
+      const source = (event as CustomEvent<{ source?: string }>).detail?.source;
+      if (source && source !== "workout") return;
+      load(page);
+      loadAll();
+    };
+
+    window.addEventListener(APP_EVENTS.dataChanged, handleDataChanged as EventListener);
+    return () => window.removeEventListener(APP_EVENTS.dataChanged, handleDataChanged as EventListener);
+  }, [load, loadAll, page]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6">

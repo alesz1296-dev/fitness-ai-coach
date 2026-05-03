@@ -2106,3 +2106,43 @@ Info chip shown when a frequency match exists: "Showing plans for N×/week — m
 - Auto mode can apply bounded calorie/macro adjustments when confidence is high, but it never changes goal dates automatically.
 - Goal date postponement is suggestion-only and appears when the adaptive model says the current deadline is too aggressive.
 - Weekly coach review is computed mostly from existing daily logs, with optional athlete-level recovery fields supported by the backend.
+
+---
+
+## 2026-05-03 - Workout auto-refresh + draggable weight FAB
+
+### Goal
+- Make the Workouts page refresh from shared app events and let the mobile weight FAB be repositioned once by the user and reused across Dashboard and Nutrition.
+
+### Files modified
+- `client/src/pages/workouts/WorkoutsPage.tsx` - listens to `fitai:data-changed` and reloads workout data on workout-affecting writes; emits shared workout refresh events after create/update/delete/exercise/template/AI save flows
+- `client/src/hooks/useDraggableWeightFab.ts` - new shared long-press drag hook with shared localStorage position, viewport clamping, and mobile-first pointer handling
+- `client/src/pages/dashboard/Dashboard.tsx` - swapped fixed weight FAB onto the shared draggable hook
+- `client/src/pages/nutrition/NutritionPage.tsx` - swapped fixed weight FAB onto the shared draggable hook
+
+### Notes
+- A short tap still opens the weight logger, while a 2-second hold enters drag mode.
+- The FAB position is shared between Dashboard and Nutrition and survives reloads.
+- Workouts should now reflect newly logged or edited workouts without a manual refresh.
+
+---
+
+## 2026-05-03 - Meal Planner routing + goals localization + preview persistence cleanup
+
+### Goal
+- Finish the incomplete Nutrition AI meal-plan flow, close the localization gaps in food search and Goals UI, and make Goals What-if Apply persist everything the user edits.
+
+### Files modified
+- `client/src/pages/nutrition/NutritionPage.tsx` - AI meal-plan modal now normalizes day-based plan payloads and saves them to Meal Planner instead of bulk-logging foods into the nutrition diary
+- `client/src/api/index.ts` - added typed client interfaces for AI meal-plan save payloads
+- `src/middleware/schemas.ts` - widened `saveMealPlanFromChatSchema` day indexes for multi-week plans and expanded calorie-goal update validation to support full What-if persistence
+- `src/controllers/searchController.ts` - DB food search now parses `localizedNames` and ranks English/alias/localized/AI-translated matches explicitly instead of using brittle JSON-string matching
+- `client/src/pages/mealplanner/MealPlannerPage.tsx` - food search now passes the selected UI language
+- `client/src/pages/goals/GoalsPage.tsx` - localized forecast/analytics/What-if strings, coordinated What-if Apply persistence across goals + profile, and improved sparse-data fallback/debug status
+- `client/src/i18n/locales/en.ts` and `client/src/i18n/locales/es.ts` - added the missing Goals forecast/analytics/meal-plan CTA strings
+
+### Notes
+- Nutrition AI meal plans from Nutrition now create Meal Planner plans by default.
+- Goals What-if Apply now persists workout schedule inputs instead of dropping them.
+- Goals sparse-data mode now stays visible and explains why adaptive forecasting is limited.
+- Food localization is more reliable for queries like `huevo` because parsed DB-localized names can match before AI fallback.

@@ -265,6 +265,24 @@ export const updateCalorieGoalSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   notes: optionalString,
   active: z.boolean().optional(),
+  type: z.enum(["cut", "bulk", "maintain"]).optional(),
+  targetWeight: z.coerce.number().min(20).max(500).optional(),
+  currentWeight: z.coerce.number().min(20).max(500).optional(),
+  targetDate: dateString.optional(),
+  dailyCalories: z.coerce.number().min(800).max(10000).optional(),
+  proteinGrams: z.coerce.number().min(0).max(1000).optional(),
+  carbsGrams: z.coerce.number().min(0).max(2000).optional(),
+  fatsGrams: z.coerce.number().min(0).max(1000).optional(),
+  weeklyChange: z.coerce.number().min(-10).max(10).optional(),
+  macrosCycling: z.boolean().optional(),
+  trainDayCalories: z.coerce.number().min(0).max(10000).nullable().optional(),
+  trainDayProtein: z.coerce.number().min(0).max(1000).nullable().optional(),
+  trainDayCarbs: z.coerce.number().min(0).max(2000).nullable().optional(),
+  trainDayFats: z.coerce.number().min(0).max(1000).nullable().optional(),
+  restDayCalories: z.coerce.number().min(0).max(10000).nullable().optional(),
+  restDayProtein: z.coerce.number().min(0).max(1000).nullable().optional(),
+  restDayCarbs: z.coerce.number().min(0).max(2000).nullable().optional(),
+  restDayFats: z.coerce.number().min(0).max(1000).nullable().optional(),
 });
 
 export const previewCalorieGoalSchema = z.object({
@@ -343,7 +361,7 @@ export const saveMealPlanFromChatSchema = z
     days: z
       .array(
         z.object({
-          dayIndex: z.coerce.number().int().min(0).max(6),
+          dayIndex: z.coerce.number().int().min(0).max(365),
           meals: z.array(chatMealPlanMealSchema).default([]),
         }),
       )

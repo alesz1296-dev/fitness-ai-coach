@@ -84,6 +84,36 @@ export const searchApi = {
   },
 };
 
+export interface ChatMealPlanItem {
+  foodName: string;
+  calories: number;
+  protein?: number;
+  carbs?: number;
+  fats?: number;
+  quantity?: number;
+  unit?: string;
+}
+
+export interface ChatMealPlanMeal {
+  meal: "breakfast" | "lunch" | "dinner" | "snack";
+  items: ChatMealPlanItem[];
+}
+
+export interface ChatMealPlanDay {
+  dayIndex: number;
+  meals: ChatMealPlanMeal[];
+}
+
+export interface ChatMealPlanPayload {
+  mode?: "create" | "replace" | "append";
+  targetPlanId?: number | null;
+  name?: string;
+  weekStart?: string;
+  durationWeeks?: number;
+  days?: ChatMealPlanDay[];
+  meals?: ChatMealPlanMeal[];
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const authApi = {
   register: (data: {
@@ -357,7 +387,7 @@ export const chatApi = {
   saveWorkout: (data: any) => api.post("/chat/save-workout", data),
   saveCaloriePlan: (data: any) => api.post("/chat/save-calorie-plan", data),
   saveMealPlan: (data: any) =>
-    api.post<{ message: string; plan: MealPlan }>("/chat/save-meal-plan", data),
+    api.post<{ message: string; plan: MealPlan }>("/chat/save-meal-plan", data as ChatMealPlanPayload),
 };
 
 // ── Weekly Plan ───────────────────────────────────────────────────────────────

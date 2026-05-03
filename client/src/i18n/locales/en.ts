@@ -16,6 +16,7 @@ export interface Translation {
     apply: string; name: string; goal: string; weight: string; calories: string;
     protein: string; carbs: string; fats: string; water: string;
     kg: string; lbs: string; kcal: string; min: string;
+    day: string;
     sets: string; reps: string; rpe: string; net: string;
     burned: string; estimated: string; error: string;
     viewAll: string; manage: string;
@@ -68,6 +69,7 @@ export interface Translation {
     macroAutoUpdate: string; cheatMeal: string; showUnitRef: string; hideUnitRef: string;
     breadingCoating: string; sweetenerSugar: string; regenerate: string;
     failedMealPlan: string; failedLogMeals: string; noStructuredPlan: string;
+    addToMealPlanner: string; mealPlanSavedSuccess: string; failedSaveMealPlan: string;
     loggedIndividually: string; loggedAsDish: string; failedSaveDish: string; addOneIngredient: string;
     kCalConsumed: string; kCalOver: string; kCalLeft: string; kCalUnderTarget: string;
     waterTargetReached: string; haveCustomFoods: string; noCustomFoodsCreate: string; noFoodsMatchFilter: string;
@@ -152,10 +154,27 @@ export interface Translation {
     maintenance: string; targetWeight: string; targetDate: string;
     dailyCalories: string; weeklyChange: string; progressToDate: string;
     onTrack: string; behindSchedule: string; ahead: string;
-        goalNameOptional: string; currentWeightKg: string; targetWeightKg: string;
+    goalNameOptional: string; currentWeightKg: string; targetWeightKg: string;
     proteinG: string; carbsG: string; fatsG: string;
     pause: string; reactivate: string; customise: string; targets: string;
     goalNamePlaceholder: string; createCalorieGoalDesc: string; calorieTargetsDesc: string;
+    activeGoalFallback: string; emptyCreateDesc: string; emptyProfileHint: string;
+    goalRealism: string; requiredPace: string; currentPace: string; adaptiveEta: string; needsMoreData: string;
+    aggressiveDeadline: string; aggressiveDeadlineSuggest: string;
+    forecastSubtitle: string; sparseForecastTitle: string; sparseForecastBody: string;
+    sparseForecastDaysLogged: string; sparseForecastStatus: string; fallbackProjection: string;
+    actualWeight: string; idealPlan: string; adaptiveForecast: string; whatIfPreview: string;
+    caloriesEaten: string; workoutDaysPerWeek: string; workoutMinutesPerWeek: string;
+    whatIfPreviewTitle: string; whatIfPreviewSubtitle: string; updatingPreview: string; previewHint: string;
+    previewEta: string; applyPreview: string; applyPreviewConfirm: string;
+    analyticsTitle: string; analyticsSubtitle: string; calorieAdherence: string; macroAdherence: string;
+    workoutAdherence: string; weightVelocity: string; trendConfidence: string; etaDrift: string;
+    plateauRisk: string; planStatus: string; elevated: string; normal: string;
+    forecastStatus: string; fullAdaptiveForecast: string; sparseFallback: string; lastRefresh: string;
+    normalizedOverlayHint: string;
+    aggressivenessAggressive: string; aggressivenessConservative: string; aggressivenessReasonable: string;
+    statusNeedsMoreData: string; statusTooAggressive: string; statusBehind: string; statusAhead: string; statusOnTrack: string;
+    daysVsTarget: string;
   };
   profile: {
     title: string; personalInfo: string; firstName: string; lastName: string;
@@ -265,6 +284,7 @@ const en: Translation = {
     goal: "Goal", weight: "Weight", calories: "Calories", protein: "Protein",
     carbs: "Carbs", fats: "Fats", water: "Water",
     kg: "kg", lbs: "lbs", kcal: "kcal", min: "min",
+    day: "Day",
     sets: "Sets", reps: "Reps", rpe: "RPE", net: "Net",
     burned: "burned", estimated: "estimated", error: "Error",
     viewAll: "View all →", manage: "Manage →",
@@ -436,6 +456,9 @@ const en: Translation = {
     regenerate: "Regenerate",
     failedMealPlan: "Failed to get meal plan suggestion.",
     failedLogMeals: "Failed to log meals.",
+    addToMealPlanner: "Add to Meal Planner",
+    mealPlanSavedSuccess: "Meal plan saved to Meal Planner!",
+    failedSaveMealPlan: "Failed to save the meal plan.",
     noStructuredPlan: "The nutritionist didn't return a structured meal plan. Try again or ask directly in the chat.",
     loggedIndividually: "Each ingredient logged individually",
     loggedAsDish: "Logged as one combined dish entry",
@@ -650,6 +673,62 @@ const en: Translation = {
     goalNamePlaceholder: "e.g. Summer cut",
     createCalorieGoalDesc: "Create a calorie goal to get a personalised macro plan",
     calorieTargetsDesc: "Calorie targets & body composition plans",
+    activeGoalFallback: "Active Goal",
+    emptyCreateDesc: "Create a calorie goal to get a personalised macro plan",
+    emptyProfileHint: "Make sure your profile has age, height, weight, sex and activity level filled in.",
+    goalRealism: "Goal realism",
+    requiredPace: "Required pace",
+    currentPace: "Current pace",
+    adaptiveEta: "Adaptive ETA",
+    needsMoreData: "Needs more data",
+    aggressiveDeadline: "This deadline looks aggressive based on the adaptive model.",
+    aggressiveDeadlineSuggest: "Suggested postponed date",
+    forecastSubtitle: "Ideal plan vs logged trend vs adaptive forecast",
+    sparseForecastTitle: "Adaptive forecast needs more data",
+    sparseForecastBody: "Keep logging weight, meals, and workouts to unlock the full adaptive forecast.",
+    sparseForecastDaysLogged: "Days logged",
+    sparseForecastStatus: "Forecast status",
+    fallbackProjection: "Showing the simpler goal projection until enough adaptive data is available.",
+    actualWeight: "Actual weight",
+    idealPlan: "Ideal plan",
+    adaptiveForecast: "Adaptive forecast",
+    whatIfPreview: "What-if preview",
+    caloriesEaten: "Calories eaten",
+    workoutDaysPerWeek: "Workout days/wk",
+    workoutMinutesPerWeek: "Workout min/wk",
+    whatIfPreviewTitle: "What-if preview",
+    whatIfPreviewSubtitle: "Adjust the plan variables and compare the orange preview line before applying anything.",
+    updatingPreview: "Updating preview...",
+    previewHint: "Change a variable to preview the forecast.",
+    previewEta: "Preview ETA",
+    applyPreview: "Apply preview",
+    applyPreviewConfirm: "Apply this what-if plan to your active goal?",
+    analyticsTitle: "Goal analytics",
+    analyticsSubtitle: "Why the adaptive forecast is moving.",
+    calorieAdherence: "Calorie adherence",
+    macroAdherence: "Macro adherence",
+    workoutAdherence: "Workout adherence",
+    weightVelocity: "Weight velocity",
+    trendConfidence: "Trend confidence",
+    etaDrift: "ETA drift",
+    plateauRisk: "Plateau risk",
+    planStatus: "Plan status",
+    elevated: "Elevated",
+    normal: "Normal",
+    forecastStatus: "Forecast status",
+    fullAdaptiveForecast: "Full adaptive forecast",
+    sparseFallback: "Sparse fallback",
+    lastRefresh: "Last refresh",
+    normalizedOverlayHint: "Nutrition and workout overlays are normalized to 0-100 so they can be compared without distorting the weight scale.",
+    aggressivenessAggressive: "Aggressive",
+    aggressivenessConservative: "Conservative",
+    aggressivenessReasonable: "Reasonable",
+    statusNeedsMoreData: "Needs more data",
+    statusTooAggressive: "Too aggressive",
+    statusBehind: "Behind",
+    statusAhead: "Ahead",
+    statusOnTrack: "On track",
+    daysVsTarget: "days vs target",
   },
   profile: {
     title: "Profile", personalInfo: "Personal information", firstName: "First name",

@@ -81,6 +81,16 @@ function getFoodSearchMatchSource(
   return undefined;
 }
 
+function getFoodSearchMatchRank(source: FoodSearchMatchSource | undefined): number {
+  switch (source) {
+    case "english-name": return 4;
+    case "alias": return 3;
+    case "localized-name": return 2;
+    case "ai-translated-query": return 1;
+    default: return 0;
+  }
+}
+
 /**
  * Translate a search query from any language → English using the configured AI provider.
  * Returns the original query on any error so search always works.
@@ -210,25 +220,14 @@ export const foodSearch = async (
 
     if (dbCount > 0) {
       const where: Record<string, any> = {};
-
-      if (searchTerms.length > 0) {
-        where.OR = searchTerms.flatMap((term) => [
-          { name:    { contains: term } },
-          { aliases: { contains: term } },
-          { localizedNames: { contains: term } },
-        ]);
-      }
       if (tags.length > 0) {
         // AND logic: item must have ALL selected tags
         where.AND = tags.map((t) => ({ tags: { contains: `"${t}"` } }));
       }
 
-      const [results, total] = await Promise.all([
-        db.foodItem.findMany({ where, orderBy: { name: "asc" }, take: limit, skip: offset }),
-        db.foodItem.count({ where }),
-      ]);
+      const dbRows = await db.foodItem.findMany({ where, orderBy: { name: "asc" } });
 
-      const mapped = results.map((f: any) => {
+      const mapped = dbRows.map((f: any) => {
         const item = {
           id:          f.id,
           name:        f.name,
@@ -242,21 +241,37 @@ export const foodSearch = async (
           aliases:     parseJsonArray(f.aliases),
           localizedNames: parseJsonObject(f.localizedNames),
         };
+        const matchSource = rawQ
+          ? getFoodSearchMatchSource(item, rawQ, q, langKey)
+          : undefined;
         return {
           ...item,
           searchDebug: {
-            matchSource: getFoodSearchMatchSource(item, rawQ, q, langKey),
+            matchSource,
             originalQuery: rawQ,
             translatedQuery: q !== rawQ ? q : undefined,
           },
         };
       });
 
+      const filtered = rawQ
+        ? mapped.filter((item: any) => item.searchDebug.matchSource)
+        : mapped;
+      filtered.sort((a: any, b: any) => {
+        const scoreDiff =
+          getFoodSearchMatchRank(b.searchDebug.matchSource) -
+          getFoodSearchMatchRank(a.searchDebug.matchSource);
+        if (scoreDiff !== 0) return scoreDiff;
+        return String(a.name).localeCompare(String(b.name));
+      });
+      const paged = filtered.slice(offset, offset + limit);
+      const total = filtered.length;
+
       // Cache English results, translate on the way out
-      const payload = { results: mapped, total, source: "db" };
+      const payload = { results: paged, total, source: "db" };
       await cacheSet(cacheKey, JSON.stringify(payload));
 
-      payload.results = await applyTranslation(mapped);
+      payload.results = await applyTranslation(paged);
       res.json(payload);
       return;
     }

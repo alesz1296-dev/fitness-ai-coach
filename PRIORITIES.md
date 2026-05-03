@@ -49,6 +49,12 @@ _Last updated: 2026-05-03_
 | - | Plan adjustment modes - Settings support for `suggest`, `confirm`, and `auto`; confirm can apply calorie adjustments, auto never changes goal dates | Goals/UX | P1 | Done |
 | - | Goals realism diagnostics - active goal required pace, current pace, adaptive ETA, aggressive-date warning, and suggested postponed date | Goals/Analytics | P1 | Done |
 | - | Analytics diagnostic layer - calorie/protein/workout adherence, weight velocity, logging consistency, and trend confidence | Analytics | P1 | Done |
+| - | Workout auto-refresh - Workouts tab now listens to shared app events and reloads after workout create/update/delete/template/AI save flows | UX | P1 | Done |
+| - | Draggable mobile weight FAB - Dashboard and Nutrition share a long-press draggable weight button position with viewport clamping | UX | P2 | Done |
+| - | Nutrition AI meal-plan routing - Nutritionist meal plans from Nutrition now save to Meal Planner instead of logging directly into the food diary | Nutrition/Meal Planner | P1 | Done |
+| - | Goals What-if persistence cleanup - Apply preview now persists workout schedule inputs as well as calories/macros/date | Goals/UX | P1 | Done |
+| - | Goals forecast localization + sparse-data diagnostics - localized forecast/analytics UI plus visible sparse-data fallback and refresh/debug status | Goals/i18n | P1 | Done |
+| - | Food DB localized search cleanup - DB search now parses `localizedNames` and ranks English / alias / localized / AI-translated matches explicitly | Nutrition/i18n | P1 | Done |
 
 ---
 

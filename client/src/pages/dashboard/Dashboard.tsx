@@ -13,6 +13,7 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import WeeklyPlanWidget from "../../components/WeeklyPlanWidget";
 import { useIsDark } from "../../hooks/useDarkMode";
+import { useDraggableWeightFab } from "../../hooks/useDraggableWeightFab";
 import type { DashboardData } from "../../types";
 import { emitWeightLogged } from "../../lib/appEvents";
 
@@ -131,6 +132,12 @@ export default function Dashboard() {
 
   // ── Dark mode (must be before any early return — Rules of Hooks) ─────────────
   const isDark = useIsDark();
+  const {
+    buttonStyle: weightFabButtonStyle,
+    panelStyle: weightFabPanelStyle,
+    buttonProps: weightFabButtonProps,
+    handleButtonClick: handleWeightFabButtonClick,
+  } = useDraggableWeightFab(showWeightFab);
 
   // Dynamic chart colors that adapt to dark mode
   const chartColors = {
@@ -815,16 +822,12 @@ export default function Dashboard() {
       </div>
 
       {/* ── Weight FAB ── */}
-      <div
-        className="fixed z-50 flex flex-col items-end gap-3"
-        style={{
-          right: "calc(1rem + env(safe-area-inset-right))",
-          left: "auto",
-          bottom: "calc(8rem + env(safe-area-inset-bottom))",
-        }}
-      >
+      <div className="fixed inset-0 z-50 pointer-events-none">
         {showWeightFab && (
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 w-56 flex flex-col gap-3">
+          <div
+            className="pointer-events-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-4 flex flex-col gap-3"
+            style={weightFabPanelStyle}
+          >
             <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">⚖️ {t("dashboard.logWeight")}</p>
             {weightSaved ? (
               <p className="text-center text-green-600 font-medium text-sm py-1">✅ {t("dashboard.saved")}</p>
@@ -858,9 +861,21 @@ export default function Dashboard() {
           </div>
         )}
         <button
-          onClick={() => setShowWeightFab((v) => !v)}
-          style={{ width: "3.5rem", height: "3.5rem", borderRadius: "9999px", background: "#16a34a", color: "#fff", fontSize: "1.5rem", boxShadow: "0 4px 12px rgba(0,0,0,0.25)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-          title="Log today's weight"
+          {...weightFabButtonProps}
+          onClick={() => handleWeightFabButtonClick(() => setShowWeightFab((v) => !v))}
+          className="pointer-events-auto"
+          style={{
+            ...weightFabButtonStyle,
+            background: "#16a34a",
+            color: "#fff",
+            fontSize: "1.5rem",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+            border: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          title={t("dashboard.logWeight")}
         >
           ⚖️
         </button>

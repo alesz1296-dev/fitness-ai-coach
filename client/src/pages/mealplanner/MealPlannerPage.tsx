@@ -80,7 +80,7 @@ function FoodSearchModal({
   onSelect: (food: any, meal: MealType) => void;
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [query, setQuery]       = useState("");
   const [results, setResults]   = useState<any[]>([]);
   const [loading, setLoading]   = useState(false);
@@ -93,12 +93,12 @@ function FoodSearchModal({
     if (!query.trim()) return;
     setLoading(true);
     try {
-      const res = await searchApi.foods(query, 20);
+      const res = await searchApi.foods(query, 20, undefined, i18n.language);
       setResults(res.data.results);
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, i18n.language]);
 
   useEffect(() => {
     if (query.length > 1) {

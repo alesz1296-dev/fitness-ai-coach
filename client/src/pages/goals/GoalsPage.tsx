@@ -12,7 +12,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { fmtMonthDayYear } from "../../lib/dateFormat";
-import { analyticsApi, calorieGoalsApi, predictionsApi } from "../../api";
+import { analyticsApi, calorieGoalsApi, predictionsApi, usersApi } from "../../api";
 import { useTranslation, t as _t } from "../../i18n";
 import type { CalorieGoal } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
@@ -20,7 +20,7 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { useAuthStore } from "../../store/authStore";
-import { emitDataChanged } from "../../lib/appEvents";
+import { APP_EVENTS, emitDataChanged } from "../../lib/appEvents";
 // ── Shared goal components (single source of truth) ───────────────────────────
 import { ProjectionChart } from "../../components/goals/ProjectionChart";
 import { GoalValidator }   from "../../components/goals/GoalValidator";
@@ -120,15 +120,35 @@ function GoalsForecastChart({
   analytics,
   preview,
   targetWeight,
+  fallbackGoalId,
   visible,
   onToggle,
+  labels,
 }: {
   prediction: any | null;
   analytics: any | null;
   preview: any | null;
   targetWeight: number;
+  fallbackGoalId?: number;
   visible: ForecastSeries;
   onToggle: (key: keyof ForecastSeries) => void;
+  labels: {
+    sparseTitle: string;
+    sparseBody: string;
+    sparseStatus: string;
+    sparseDaysLogged: string;
+    fallbackProjection: string;
+    actualWeight: string;
+    idealPlan: string;
+    adaptiveForecast: string;
+    whatIfPreview: string;
+    caloriesEaten: string;
+    caloriesBurned: string;
+    protein: string;
+    carbs: string;
+    fats: string;
+    normalizedHint: string;
+  };
 }) {
   const dateRows = new Map<string, any>();
   const put = (date: string, values: Record<string, any>) => {
@@ -155,31 +175,38 @@ function GoalsForecastChart({
   );
   const hasMetrics = visible.calories || visible.burned || visible.protein || visible.carbs || visible.fats;
 
-  if (!prediction?.hasEnoughData || chartData.length === 0) {
+  if (chartData.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 p-6 text-center">
-        <p className="font-semibold text-gray-700 dark:text-gray-200">Not enough forecast data yet</p>
-        <p className="text-sm text-gray-400 mt-1">
-          Keep logging weight, meals, and workouts to unlock an adaptive goal forecast.
-        </p>
+        <p className="font-semibold text-gray-700 dark:text-gray-200">{labels.sparseTitle}</p>
+        <p className="text-sm text-gray-400 mt-1">{labels.sparseBody}</p>
       </div>
     );
   }
 
   const toggleItems: Array<{ key: keyof ForecastSeries; label: string }> = [
-    { key: "actual", label: "Actual weight" },
-    { key: "ideal", label: "Ideal plan" },
-    { key: "adaptive", label: "Adaptive forecast" },
-    { key: "preview", label: "What-if preview" },
-    { key: "calories", label: "Calories eaten" },
-    { key: "burned", label: "Calories burned" },
-    { key: "protein", label: "Protein" },
-    { key: "carbs", label: "Carbs" },
-    { key: "fats", label: "Fats" },
+    { key: "actual", label: labels.actualWeight },
+    { key: "ideal", label: labels.idealPlan },
+    { key: "adaptive", label: labels.adaptiveForecast },
+    { key: "preview", label: labels.whatIfPreview },
+    { key: "calories", label: labels.caloriesEaten },
+    { key: "burned", label: labels.caloriesBurned },
+    { key: "protein", label: labels.protein },
+    { key: "carbs", label: labels.carbs },
+    { key: "fats", label: labels.fats },
   ];
 
   return (
     <div className="space-y-3">
+      {!prediction?.hasEnoughData && (
+        <div className="rounded-xl border border-dashed border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="font-semibold">{labels.sparseTitle}</p>
+          <p className="mt-1">{labels.sparseBody}</p>
+          <p className="mt-2 text-xs">
+            {labels.sparseDaysLogged}: {prediction?.daysLogged ?? 0} · {labels.sparseStatus}: {labels.fallbackProjection}
+          </p>
+        </div>
+      )}
       <ResponsiveContainer width="100%" height={260}>
         <ComposedChart data={chartData} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(156,163,175,0.22)" />
@@ -202,18 +229,25 @@ function GoalsForecastChart({
           />
           <Legend wrapperStyle={{ fontSize: 11 }} />
           <ReferenceLine yAxisId="weight" y={targetWeight} stroke="#22c55e" strokeDasharray="4 2" />
-          {visible.ideal && <Line yAxisId="weight" type="monotone" dataKey="ideal" name="Ideal plan" stroke="#3b82f6" strokeWidth={2} dot={false} strokeDasharray="5 3" />}
-          {visible.adaptive && <Line yAxisId="weight" type="monotone" dataKey="adaptive" name="Adaptive forecast" stroke="#14b8a6" strokeWidth={2.5} dot={false} />}
-          {visible.actual && <Line yAxisId="weight" type="monotone" dataKey="actualTrend" name="Actual trend" stroke="#111827" strokeWidth={2.5} dot={false} connectNulls />}
-          {visible.actual && <Line yAxisId="weight" type="monotone" dataKey="actual" name="Logged weight" stroke="#22c55e" strokeWidth={0} dot={{ r: 3, fill: "#22c55e" }} connectNulls={false} />}
-          {visible.preview && preview?.previewPath && <Line yAxisId="weight" type="monotone" dataKey="preview" name="What-if preview" stroke="#f97316" strokeWidth={2.5} dot={false} strokeDasharray="6 3" />}
-          {visible.calories && <Line yAxisId="metric" type="monotone" dataKey="caloriesNorm" name="Calories eaten" stroke="#f97316" strokeWidth={1.8} dot={false} />}
-          {visible.burned && <Line yAxisId="metric" type="monotone" dataKey="burnedNorm" name="Calories burned" stroke="#ef4444" strokeWidth={1.8} dot={false} />}
-          {visible.protein && <Line yAxisId="metric" type="monotone" dataKey="proteinNorm" name="Protein" stroke="#2563eb" strokeWidth={1.8} dot={false} />}
-          {visible.carbs && <Line yAxisId="metric" type="monotone" dataKey="carbsNorm" name="Carbs" stroke="#d97706" strokeWidth={1.8} dot={false} />}
-          {visible.fats && <Line yAxisId="metric" type="monotone" dataKey="fatsNorm" name="Fats" stroke="#db2777" strokeWidth={1.8} dot={false} />}
+          {visible.ideal && <Line yAxisId="weight" type="monotone" dataKey="ideal" name={labels.idealPlan} stroke="#3b82f6" strokeWidth={2} dot={false} strokeDasharray="5 3" />}
+          {visible.adaptive && prediction?.hasEnoughData && <Line yAxisId="weight" type="monotone" dataKey="adaptive" name={labels.adaptiveForecast} stroke="#14b8a6" strokeWidth={2.5} dot={false} />}
+          {visible.actual && <Line yAxisId="weight" type="monotone" dataKey="actualTrend" name={labels.actualWeight} stroke="#111827" strokeWidth={2.5} dot={false} connectNulls />}
+          {visible.actual && <Line yAxisId="weight" type="monotone" dataKey="actual" name={labels.actualWeight} stroke="#22c55e" strokeWidth={0} dot={{ r: 3, fill: "#22c55e" }} connectNulls={false} legendType="none" />}
+          {visible.preview && preview?.previewPath && <Line yAxisId="weight" type="monotone" dataKey="preview" name={labels.whatIfPreview} stroke="#f97316" strokeWidth={2.5} dot={false} strokeDasharray="6 3" />}
+          {visible.calories && <Line yAxisId="metric" type="monotone" dataKey="caloriesNorm" name={labels.caloriesEaten} stroke="#f97316" strokeWidth={1.8} dot={false} />}
+          {visible.burned && <Line yAxisId="metric" type="monotone" dataKey="burnedNorm" name={labels.caloriesBurned} stroke="#ef4444" strokeWidth={1.8} dot={false} />}
+          {visible.protein && <Line yAxisId="metric" type="monotone" dataKey="proteinNorm" name={labels.protein} stroke="#2563eb" strokeWidth={1.8} dot={false} />}
+          {visible.carbs && <Line yAxisId="metric" type="monotone" dataKey="carbsNorm" name={labels.carbs} stroke="#d97706" strokeWidth={1.8} dot={false} />}
+          {visible.fats && <Line yAxisId="metric" type="monotone" dataKey="fatsNorm" name={labels.fats} stroke="#db2777" strokeWidth={1.8} dot={false} />}
         </ComposedChart>
       </ResponsiveContainer>
+
+      {!prediction?.hasEnoughData && fallbackGoalId ? (
+        <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-3">
+          <p className="mb-2 text-xs text-gray-500">{labels.fallbackProjection}</p>
+          <ActiveGoalChart goalId={fallbackGoalId} targetWeight={targetWeight} />
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         {toggleItems.map((item) => (
@@ -225,7 +259,7 @@ function GoalsForecastChart({
       </div>
       {hasMetrics && (
         <p className="text-xs text-gray-400">
-          Nutrition and workout overlays are normalized to 0-100 so they can be compared without distorting the weight scale.
+          {labels.normalizedHint}
         </p>
       )}
     </div>
@@ -621,6 +655,7 @@ function EditGoalModal({
 // ── Main Goals page ───────────────────────────────────────────────────────────
 export default function GoalsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useTranslation();
+  const updateUser = useAuthStore((s) => s.updateUser);
   const [goals,        setGoals]       = useState<CalorieGoal[]>([]);
   const [loading,      setLoading]     = useState(true);
   const [showForm,     setShowForm]    = useState(false);
@@ -641,6 +676,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
   const [whatIfPreview, setWhatIfPreview] = useState<any | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [applyingPreview, setApplyingPreview] = useState(false);
+  const [lastRefreshSource, setLastRefreshSource] = useState("initial-load");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -651,18 +687,22 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
   }, []);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => {
+  const refreshForecastData = useCallback((source = "manual") => {
+    setLastRefreshSource(source);
     predictionsApi.get().then((r) => setPrediction(r.data)).catch(() => setPrediction(null));
     analyticsApi.get(90).then((r) => setAnalytics(r.data)).catch(() => setAnalytics(null));
   }, []);
   useEffect(() => {
-    const handler = () => {
-      predictionsApi.get().then((r) => setPrediction(r.data)).catch(() => setPrediction(null));
-      analyticsApi.get(90).then((r) => setAnalytics(r.data)).catch(() => setAnalytics(null));
+    refreshForecastData("initial-load");
+  }, [refreshForecastData]);
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const source = (event as CustomEvent<{ source?: string }>).detail?.source ?? "shared-event";
+      refreshForecastData(source);
     };
-    window.addEventListener("fitai:data-changed", handler);
-    return () => window.removeEventListener("fitai:data-changed", handler);
-  }, []);
+    window.addEventListener(APP_EVENTS.dataChanged, handler as EventListener);
+    return () => window.removeEventListener(APP_EVENTS.dataChanged, handler as EventListener);
+  }, [refreshForecastData]);
 
   const deactivate = async (id: number) => {
     await calorieGoalsApi.update(id, { active: false });
@@ -687,7 +727,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
     if (!activeGoal) return;
     setPreviewInputs({
       dailyCalories: String(Math.round(activeGoal.dailyCalories)),
-      caloriesBurned: "0",
+      caloriesBurned: String(Math.round(analytics?.summary?.avgCaloriesBurned ?? 0)),
       proteinGrams: String(Math.round(activeGoal.proteinGrams)),
       carbsGrams: String(Math.round(activeGoal.carbsGrams)),
       fatsGrams: String(Math.round(activeGoal.fatsGrams)),
@@ -702,7 +742,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
       targetDate: activeGoal.targetDate.split("T")[0],
     });
     setWhatIfPreview(null);
-  }, [activeGoal?.id]);
+  }, [activeGoal?.id, analytics?.summary?.avgCaloriesBurned]);
 
   useEffect(() => {
     if (!activeGoal) return;
@@ -739,19 +779,35 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
 
   const applyWhatIfPreview = async () => {
     if (!activeGoal || !whatIfPreview) return;
-    const ok = confirm("Apply this what-if plan to your active goal?");
+    const ok = confirm(t("goals.applyPreviewConfirm"));
     if (!ok) return;
     setApplyingPreview(true);
     try {
-      await calorieGoalsApi.update(activeGoal.id, {
-        dailyCalories: Number(previewInputs.dailyCalories),
-        proteinGrams: Number(previewInputs.proteinGrams),
-        carbsGrams: Number(previewInputs.carbsGrams),
-        fatsGrams: Number(previewInputs.fatsGrams),
-        targetDate: previewInputs.targetDate,
-      });
+      const workoutDaysPerWeek = Number(previewInputs.workoutDaysPerWeek || 0) || null;
+      const workoutMinutesPerWeek = Number(previewInputs.workoutMinutesPerWeek || 0) || 0;
+      const trainingHoursPerDay = workoutDaysPerWeek && workoutMinutesPerWeek > 0
+        ? Number((workoutMinutesPerWeek / workoutDaysPerWeek / 60).toFixed(2))
+        : null;
+
+      const [goalRes, profileRes] = await Promise.all([
+        calorieGoalsApi.update(activeGoal.id, {
+          dailyCalories: Number(previewInputs.dailyCalories),
+          proteinGrams: Number(previewInputs.proteinGrams),
+          carbsGrams: Number(previewInputs.carbsGrams),
+          fatsGrams: Number(previewInputs.fatsGrams),
+          targetDate: previewInputs.targetDate,
+        }),
+        usersApi.updateProfile({
+          trainingDaysPerWeek: workoutDaysPerWeek,
+          trainingHoursPerDay,
+        } as any),
+      ]);
+      updateUser(profileRes.data.user);
+      setGoals((current) => current.map((goal) => (
+        goal.id === activeGoal.id ? goalRes.data.goal : goal
+      )));
       emitDataChanged("goals-what-if");
-      await load();
+      refreshForecastData("goals-what-if");
     } finally {
       setApplyingPreview(false);
     }
@@ -762,6 +818,18 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
     bulk:     { label: t("goals.weightGain"), color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
     maintain: { label: t("goals.maintenance"), color: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" },
   };
+  const AGGRESSIVENESS_LABELS: Record<string, string> = {
+    aggressive: t("goals.aggressivenessAggressive"),
+    conservative: t("goals.aggressivenessConservative"),
+    reasonable: t("goals.aggressivenessReasonable"),
+  };
+  const PLAN_STATUS_LABELS: Record<string, string> = {
+    needs_more_data: t("goals.statusNeedsMoreData"),
+    too_aggressive: t("goals.statusTooAggressive"),
+    behind: t("goals.statusBehind"),
+    ahead: t("goals.statusAhead"),
+    on_track: t("goals.statusOnTrack"),
+  };
 
   return (
     <div className={embedded ? "p-4 sm:p-6 max-w-5xl mx-auto space-y-6" : "p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6"}>
@@ -771,7 +839,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("goals.title")}</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              Calorie targets &amp; body composition plans
+              {t("goals.calorieTargetsDesc")}
             </p>
           </div>
           <Button onClick={() => setShowForm(true)}>+ {t("goals.createGoal")}</Button>
@@ -779,7 +847,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
       ) : (
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
-            Calorie targets &amp; body composition plans
+            {t("goals.calorieTargetsDesc")}
           </p>
           <Button size="sm" onClick={() => setShowForm(true)}>+ {t("goals.createGoal")}</Button>
         </div>
@@ -795,10 +863,10 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
           <div className="text-5xl mb-4">🎯</div>
           <h3 className="font-semibold text-gray-800 dark:text-white mb-2">{t("goals.noGoal")}</h3>
           <p className="text-sm text-gray-400 mb-4">
-            Create a calorie goal to get a personalised macro plan
+            {t("goals.emptyCreateDesc")}
           </p>
           <p className="text-xs text-gray-400 mb-4">
-            Make sure your profile has age, height, weight, sex and activity level filled in.
+            {t("goals.emptyProfileHint")}
           </p>
           <Button onClick={() => setShowForm(true)}>{t("goals.createGoal")}</Button>
         </Card>
@@ -812,7 +880,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" />
                     <h2 className="font-bold text-gray-900 dark:text-white">
-                      {activeGoal.name || "Active Goal"}
+                      {activeGoal.name || t("goals.activeGoalFallback")}
                     </h2>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_LABELS[activeGoal.type]?.color}`}>
                       {TYPE_LABELS[activeGoal.type]?.label}
@@ -849,27 +917,27 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
               {prediction?.goalChallenge && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
                   <div className="bg-brand-50 dark:bg-brand-900/20 rounded-xl p-3">
-                    <p className="text-xs text-brand-500 font-medium">Goal realism</p>
+                    <p className="text-xs text-brand-500 font-medium">{t("goals.goalRealism")}</p>
                     <p className="font-bold text-brand-800 dark:text-brand-200 capitalize">
-                      {String(prediction.goalAggressiveness ?? "reasonable")}
+                      {AGGRESSIVENESS_LABELS[String(prediction.goalAggressiveness ?? "reasonable")] ?? AGGRESSIVENESS_LABELS.reasonable}
                     </p>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
-                    <p className="text-xs text-gray-400">Required pace</p>
+                    <p className="text-xs text-gray-400">{t("goals.requiredPace")}</p>
                     <p className="font-bold text-gray-800 dark:text-gray-100">
                       {prediction.goalChallenge.requiredWeeklyPct > 0 ? "+" : ""}{prediction.goalChallenge.requiredWeeklyPct}% BW/wk
                     </p>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
-                    <p className="text-xs text-gray-400">Current pace</p>
+                    <p className="text-xs text-gray-400">{t("goals.currentPace")}</p>
                     <p className="font-bold text-gray-800 dark:text-gray-100">
                       {prediction.goalChallenge.currentWeeklyPct > 0 ? "+" : ""}{prediction.goalChallenge.currentWeeklyPct}% BW/wk
                     </p>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
-                    <p className="text-xs text-gray-400">Adaptive ETA</p>
+                    <p className="text-xs text-gray-400">{t("goals.adaptiveEta")}</p>
                     <p className="font-bold text-gray-800 dark:text-gray-100">
-                      {prediction.adaptiveGoalDate ?? "Needs more data"}
+                      {prediction.adaptiveGoalDate ?? t("goals.needsMoreData")}
                     </p>
                   </div>
                 </div>
@@ -877,72 +945,90 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
 
               {prediction?.goalChallenge?.suggestedPostponedDate && (
                 <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  This deadline looks aggressive based on the adaptive model. Suggested postponed date:{" "}
+                  {t("goals.aggressiveDeadline")} {t("goals.aggressiveDeadlineSuggest")}:{" "}
                   <strong>{prediction.goalChallenge.suggestedPostponedDate}</strong>.
                 </div>
               )}
 
               <CardHeader
                 title={t("goals.progressToDate")}
-                subtitle="Ideal plan vs logged trend vs adaptive forecast"
+                subtitle={t("goals.forecastSubtitle")}
               />
               <GoalsForecastChart
                 prediction={prediction}
                 analytics={analytics}
                 preview={whatIfPreview}
                 targetWeight={activeGoal.targetWeight}
+                fallbackGoalId={activeGoal.id}
                 visible={forecastSeries}
                 onToggle={toggleForecastSeries}
+                labels={{
+                  sparseTitle: t("goals.sparseForecastTitle"),
+                  sparseBody: t("goals.sparseForecastBody"),
+                  sparseStatus: t("goals.sparseForecastStatus"),
+                  sparseDaysLogged: t("goals.sparseForecastDaysLogged"),
+                  fallbackProjection: t("goals.fallbackProjection"),
+                  actualWeight: t("goals.actualWeight"),
+                  idealPlan: t("goals.idealPlan"),
+                  adaptiveForecast: t("goals.adaptiveForecast"),
+                  whatIfPreview: t("goals.whatIfPreview"),
+                  caloriesEaten: t("goals.caloriesEaten"),
+                  caloriesBurned: t("common.burned"),
+                  protein: t("common.protein"),
+                  carbs: t("common.carbs"),
+                  fats: t("common.fats"),
+                  normalizedHint: t("goals.normalizedOverlayHint"),
+                }}
               />
 
               <div className="mt-6 border-t border-gray-100 dark:border-gray-700 pt-5">
                 <CardHeader
-                  title="What-if preview"
-                  subtitle="Adjust the plan variables and compare the orange preview line before applying anything."
+                  title={t("goals.whatIfPreviewTitle")}
+                  subtitle={t("goals.whatIfPreviewSubtitle")}
                 />
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <Input label="Calories eaten" type="number" value={previewInputs.dailyCalories} onChange={(e) => updatePreviewInput("dailyCalories", e.target.value)} />
-                  <Input label="Calories burned" type="number" value={previewInputs.caloriesBurned} onChange={(e) => updatePreviewInput("caloriesBurned", e.target.value)} />
-                  <Input label="Protein (g)" type="number" value={previewInputs.proteinGrams} onChange={(e) => updatePreviewInput("proteinGrams", e.target.value)} />
-                  <Input label="Carbs (g)" type="number" value={previewInputs.carbsGrams} onChange={(e) => updatePreviewInput("carbsGrams", e.target.value)} />
-                  <Input label="Fats (g)" type="number" value={previewInputs.fatsGrams} onChange={(e) => updatePreviewInput("fatsGrams", e.target.value)} />
-                  <Input label="Workout days/wk" type="number" value={previewInputs.workoutDaysPerWeek} onChange={(e) => updatePreviewInput("workoutDaysPerWeek", e.target.value)} />
-                  <Input label="Workout min/wk" type="number" value={previewInputs.workoutMinutesPerWeek} onChange={(e) => updatePreviewInput("workoutMinutesPerWeek", e.target.value)} />
-                  <Input label="Target date" type="date" value={previewInputs.targetDate} onChange={(e) => updatePreviewInput("targetDate", e.target.value)} />
+                  <Input label={t("goals.caloriesEaten")} type="number" value={previewInputs.dailyCalories} onChange={(e) => updatePreviewInput("dailyCalories", e.target.value)} />
+                  <Input label={t("common.burned")} type="number" value={previewInputs.caloriesBurned} onChange={(e) => updatePreviewInput("caloriesBurned", e.target.value)} />
+                  <Input label={t("goals.proteinG")} type="number" value={previewInputs.proteinGrams} onChange={(e) => updatePreviewInput("proteinGrams", e.target.value)} />
+                  <Input label={t("goals.carbsG")} type="number" value={previewInputs.carbsGrams} onChange={(e) => updatePreviewInput("carbsGrams", e.target.value)} />
+                  <Input label={t("goals.fatsG")} type="number" value={previewInputs.fatsGrams} onChange={(e) => updatePreviewInput("fatsGrams", e.target.value)} />
+                  <Input label={t("goals.workoutDaysPerWeek")} type="number" value={previewInputs.workoutDaysPerWeek} onChange={(e) => updatePreviewInput("workoutDaysPerWeek", e.target.value)} />
+                  <Input label={t("goals.workoutMinutesPerWeek")} type="number" value={previewInputs.workoutMinutesPerWeek} onChange={(e) => updatePreviewInput("workoutMinutesPerWeek", e.target.value)} />
+                  <Input label={t("goals.targetDate")} type="date" value={previewInputs.targetDate} onChange={(e) => updatePreviewInput("targetDate", e.target.value)} />
                 </div>
                 <div className="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-xl bg-gray-50 dark:bg-gray-700/60 p-3">
                   <div>
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-100">
-                      {previewLoading ? "Updating preview..." : whatIfPreview?.recommendation?.reason ?? "Change a variable to preview the forecast."}
+                      {previewLoading ? t("goals.updatingPreview") : whatIfPreview?.recommendation?.reason ?? t("goals.previewHint")}
                     </p>
                     {whatIfPreview?.adaptiveGoalDate && (
                       <p className="text-xs text-gray-400 mt-0.5">
-                        Preview ETA: {whatIfPreview.adaptiveGoalDate}
-                        {whatIfPreview.etaDrift != null ? ` (${whatIfPreview.etaDrift > 0 ? "+" : ""}${whatIfPreview.etaDrift} days vs target)` : ""}
+                        {t("goals.previewEta")}: {whatIfPreview.adaptiveGoalDate}
+                        {whatIfPreview.etaDrift != null ? ` (${whatIfPreview.etaDrift > 0 ? "+" : ""}${whatIfPreview.etaDrift} ${t("goals.daysVsTarget")})` : ""}
                       </p>
                     )}
                   </div>
                   <Button size="sm" loading={applyingPreview} disabled={!whatIfPreview || previewLoading} onClick={applyWhatIfPreview}>
-                    Apply preview
+                    {t("goals.applyPreview")}
                   </Button>
                 </div>
               </div>
 
               <div className="mt-6 border-t border-gray-100 dark:border-gray-700 pt-5">
                 <CardHeader
-                  title="Goal analytics"
-                  subtitle="Why the adaptive forecast is moving."
+                  title={t("goals.analyticsTitle")}
+                  subtitle={t("goals.analyticsSubtitle")}
                 />
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    { label: "Calorie adherence", value: analytics?.diagnostics?.calorieAdherence != null ? `${analytics.diagnostics.calorieAdherence}%` : "--" },
-                    { label: "Macro adherence", value: analytics?.diagnostics?.macroAdherence != null ? `${analytics.diagnostics.macroAdherence}%` : "--" },
-                    { label: "Workout adherence", value: analytics?.diagnostics?.workoutAdherence != null ? `${analytics.diagnostics.workoutAdherence}%` : "--" },
-                    { label: "Weight velocity", value: analytics?.diagnostics?.weightVelocity != null ? `${analytics.diagnostics.weightVelocity > 0 ? "+" : ""}${analytics.diagnostics.weightVelocity} kg/wk` : "--" },
-                    { label: "Trend confidence", value: prediction?.trendConfidence ?? analytics?.diagnostics?.trendConfidence ?? "--" },
-                    { label: "ETA drift", value: prediction?.etaDrift != null ? `${prediction.etaDrift > 0 ? "+" : ""}${prediction.etaDrift} days` : "--" },
-                    { label: "Plateau risk", value: analytics?.diagnostics?.plateauRisk === "elevated" ? "Elevated" : "Normal" },
-                    { label: "Plan status", value: String(prediction?.goalChallenge?.status ?? "--").replaceAll("_", " ") },
+                    { label: t("goals.calorieAdherence"), value: analytics?.diagnostics?.calorieAdherence != null ? `${analytics.diagnostics.calorieAdherence}%` : "--" },
+                    { label: t("goals.macroAdherence"), value: analytics?.diagnostics?.macroAdherence != null ? `${analytics.diagnostics.macroAdherence}%` : "--" },
+                    { label: t("goals.workoutAdherence"), value: analytics?.diagnostics?.workoutAdherence != null ? `${analytics.diagnostics.workoutAdherence}%` : "--" },
+                    { label: t("goals.weightVelocity"), value: analytics?.diagnostics?.weightVelocity != null ? `${analytics.diagnostics.weightVelocity > 0 ? "+" : ""}${analytics.diagnostics.weightVelocity} kg/wk` : "--" },
+                    { label: t("goals.trendConfidence"), value: prediction?.trendConfidence ?? analytics?.diagnostics?.trendConfidence ?? "--" },
+                    { label: t("goals.etaDrift"), value: prediction?.etaDrift != null ? `${prediction.etaDrift > 0 ? "+" : ""}${prediction.etaDrift} days` : "--" },
+                    { label: t("goals.plateauRisk"), value: analytics?.diagnostics?.plateauRisk === "elevated" ? t("goals.elevated") : t("goals.normal") },
+                    { label: t("goals.planStatus"), value: PLAN_STATUS_LABELS[String(prediction?.goalChallenge?.status ?? "")] ?? "--" },
                   ].map((item) => (
                     <div key={item.label} className="rounded-xl bg-gray-50 dark:bg-gray-700 p-3">
                       <p className="text-xs text-gray-400">{item.label}</p>
@@ -951,6 +1037,9 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
                   ))}
                 </div>
                 <div className="mt-4 space-y-2">
+                  <p className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+                    {t("goals.forecastStatus")}: {prediction?.hasEnoughData ? t("goals.fullAdaptiveForecast") : t("goals.sparseFallback")} · {t("goals.lastRefresh")}: {lastRefreshSource}
+                  </p>
                   {(prediction?.insights ?? []).slice(0, 5).map((insight: string) => (
                     <p key={insight} className="rounded-lg bg-gray-50 dark:bg-gray-700/70 px-3 py-2 text-sm text-gray-600 dark:text-gray-300">
                       {insight}
@@ -958,7 +1047,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
                   ))}
                   {whatIfPreview?.recommendation?.reason && (
                     <p className="rounded-lg bg-orange-50 dark:bg-orange-900/20 px-3 py-2 text-sm text-orange-800 dark:text-orange-200">
-                      What-if: {whatIfPreview.recommendation.reason}
+                      {t("goals.whatIfPreview")}: {whatIfPreview.recommendation.reason}
                     </p>
                   )}
                 </div>
