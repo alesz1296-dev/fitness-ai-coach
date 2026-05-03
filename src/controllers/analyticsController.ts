@@ -69,7 +69,7 @@ export const getAnalytics = async (
       prisma.calorieGoal.findFirst({
         where: { userId, active: true },
         orderBy: { createdAt: "desc" },
-        select: { dailyCalories: true, proteinGrams: true, weeklyChange: true },
+        select: { dailyCalories: true, proteinGrams: true, carbsGrams: true, fatsGrams: true, weeklyChange: true },
       }),
       prisma.user.findUnique({
         where: { id: userId },
@@ -173,6 +173,25 @@ export const getAnalytics = async (
             .reduce((s, d) => s + Math.min(100, (d.protein / activeGoal.proteinGrams) * 100), 0) / targetDays
         )
       : null;
+    const carbsAdherence = activeGoal?.carbsGrams && targetDays
+      ? Math.round(
+          dailySeries
+            .filter((d) => d.calories > 0)
+            .reduce((s, d) => s + Math.max(0, 100 - Math.abs(d.carbs - activeGoal.carbsGrams) / activeGoal.carbsGrams * 100), 0) / targetDays
+        )
+      : null;
+    const fatsAdherence = activeGoal?.fatsGrams && targetDays
+      ? Math.round(
+          dailySeries
+            .filter((d) => d.calories > 0)
+            .reduce((s, d) => s + Math.max(0, 100 - Math.abs(d.fats - activeGoal.fatsGrams) / activeGoal.fatsGrams * 100), 0) / targetDays
+        )
+      : null;
+    const macroScores = [proteinAdherence, carbsAdherence, fatsAdherence]
+      .filter((v): v is number => typeof v === "number");
+    const macroAdherence = macroScores.length
+      ? Math.round(macroScores.reduce((s, v) => s + v, 0) / macroScores.length)
+      : null;
     const workoutAdherence = user?.trainingDaysPerWeek
       ? Math.round((workouts.length / Math.max(1, Math.ceil(days / 7) * user.trainingDaysPerWeek)) * 100)
       : null;
@@ -190,10 +209,16 @@ export const getAnalytics = async (
       weightSeries,
       diagnostics: {
         calorieAdherence,
+        macroAdherence,
         proteinAdherence,
+        carbsAdherence,
+        fatsAdherence,
         workoutAdherence,
         loggingConsistency,
         weightVelocity,
+        plateauRisk: weightVelocity != null && Math.abs(weightVelocity) < 0.1 && trendConfidence !== "insufficient"
+          ? "elevated"
+          : "normal",
         trendConfidence,
         targetCalories: activeGoal?.dailyCalories ?? null,
         targetProtein: activeGoal?.proteinGrams ?? null,

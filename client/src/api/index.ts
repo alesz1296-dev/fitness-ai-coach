@@ -400,6 +400,17 @@ export const reportsApi = {
 // ── Predictions ───────────────────────────────────────────────────────────────
 export const predictionsApi = {
   get: () => api.get<any>("/predictions"),
+  preview: (data: {
+    dailyCalories?: number;
+    caloriesBurned?: number;
+    proteinGrams?: number;
+    carbsGrams?: number;
+    fatsGrams?: number;
+    workoutDaysPerWeek?: number;
+    workoutMinutesPerWeek?: number;
+    targetDate?: string;
+    targetWeight?: number;
+  }) => api.post<any>("/predictions/preview", data),
 };
 
 export const weeklyReviewApi = {
@@ -480,10 +491,14 @@ export interface AnalyticsSummary {
 
 export interface AnalyticsDiagnostics {
   calorieAdherence: number | null;
+  macroAdherence: number | null;
   proteinAdherence: number | null;
+  carbsAdherence: number | null;
+  fatsAdherence: number | null;
   workoutAdherence: number | null;
   loggingConsistency: number;
   weightVelocity: number | null;
+  plateauRisk?: "normal" | "elevated";
   trendConfidence: "insufficient" | "low" | "medium" | "high";
   targetCalories: number | null;
   targetProtein: number | null;

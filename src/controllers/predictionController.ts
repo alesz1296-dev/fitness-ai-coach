@@ -768,3 +768,227 @@ export const getPredictions = async (
     next(err);
   }
 };
+
+// POST /api/predictions/preview
+// Returns a temporary "what if" forecast without saving the active goal.
+export const previewPrediction = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const timezone = timezoneFromHeaders(req);
+    const body = req.body ?? {};
+
+    const [user, weightLogs, activeGoal] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          weight: true, height: true, age: true, sex: true,
+          activityLevel: true, trainingDaysPerWeek: true, trainingHoursPerDay: true,
+          planAdjustmentMode: true,
+        },
+      }),
+      prisma.weightLog.findMany({
+        where: { userId },
+        orderBy: { date: "asc" },
+        select: { weight: true, date: true },
+      }),
+      prisma.calorieGoal.findFirst({
+        where: { userId, active: true },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true, type: true, targetWeight: true, targetDate: true,
+          dailyCalories: true, tdee: true, proteinGrams: true,
+          carbsGrams: true, fatsGrams: true, weeklyChange: true,
+        },
+      }),
+    ]);
+
+    if (!activeGoal) {
+      res.status(400).json({ error: "Create an active goal before previewing changes." });
+      return;
+    }
+
+    const today = new Date();
+    const currentWeight = (weightLogs.at(-1)?.weight ?? user?.weight ?? activeGoal.targetWeight) || 75;
+    const targetWeight = Number(body.targetWeight ?? activeGoal.targetWeight);
+    const targetDateInput = String(body.targetDate ?? dayKey(activeGoal.targetDate, timezone));
+    const targetDate = Number.isNaN(new Date(`${targetDateInput}T12:00:00`).getTime())
+      ? dayKey(activeGoal.targetDate, timezone)
+      : targetDateInput;
+    const dailyCalories = Number(body.dailyCalories ?? activeGoal.dailyCalories);
+    const proteinGrams = Number(body.proteinGrams ?? activeGoal.proteinGrams);
+    const carbsGrams = Number(body.carbsGrams ?? activeGoal.carbsGrams);
+    const fatsGrams = Number(body.fatsGrams ?? activeGoal.fatsGrams);
+    const caloriesBurned = Number(body.caloriesBurned ?? 0);
+    const workoutDaysPerWeek = Number(body.workoutDaysPerWeek ?? user?.trainingDaysPerWeek ?? 0);
+    const workoutMinutesPerWeek = Number(
+      body.workoutMinutesPerWeek ??
+      ((user?.trainingHoursPerDay ?? 0) * 60 * Math.max(1, workoutDaysPerWeek))
+    );
+
+    const estimatedTDEE =
+      activeGoal.tdee ??
+      (user
+        ? calculateTDEE(
+            currentWeight,
+            user.height,
+            user.age,
+            user.activityLevel,
+            user.sex ?? "male",
+            workoutDaysPerWeek || user.trainingDaysPerWeek,
+            workoutMinutesPerWeek
+              ? workoutMinutesPerWeek / 60 / Math.max(1, workoutDaysPerWeek)
+              : user.trainingHoursPerDay,
+          )
+        : 2000);
+
+    const foodLogs = await prisma.foodLog.findMany({
+      where: { userId },
+      orderBy: { date: "asc" },
+      select: { date: true, calories: true, protein: true, carbs: true, fats: true },
+    });
+    const foodDays = new Set(foodLogs.map((f) => dayKey(f.date, timezone))).size || 1;
+    const avgLoggedCalories = foodLogs.reduce((s, f) => s + f.calories, 0) / foodDays;
+    const avgLoggedProtein = foodLogs.reduce((s, f) => s + (f.protein ?? 0), 0) / foodDays;
+    const avgLoggedCarbs = foodLogs.reduce((s, f) => s + (f.carbs ?? 0), 0) / foodDays;
+    const avgLoggedFats = foodLogs.reduce((s, f) => s + (f.fats ?? 0), 0) / foodDays;
+
+    const regressionPoints = weightLogs.map((w) => ({
+      x: weightLogs.length > 0 ? (w.date.getTime() - weightLogs[0].date.getTime()) / 86400000 : 0,
+      y: w.weight,
+    }));
+    const reg = linearRegression(regressionPoints);
+    const slopePerWeek = round(reg.slope * 7, 3);
+    const confidence: TrendResult["confidence"] =
+      weightLogs.length >= 10 && reg.r2 >= 0.7 ? "high" :
+      weightLogs.length >= 5 && reg.r2 >= 0.5 ? "medium" :
+      weightLogs.length >= 3 ? "low" :
+      "insufficient";
+
+    const baselineWeeklyChange =
+      activeGoal.weeklyChange ||
+      round(((activeGoal.dailyCalories - estimatedTDEE) * 7) / 7700, 3);
+    const rawResponseFactor =
+      confidence === "insufficient" || Math.abs(baselineWeeklyChange) < 0.05
+        ? null
+        : slopePerWeek / baselineWeeklyChange;
+    const responseFactor = rawResponseFactor == null
+      ? null
+      : round(Math.max(-2, Math.min(2, rawResponseFactor)), 2);
+
+    const previewNetBalance = dailyCalories - estimatedTDEE + caloriesBurned;
+    const idealWeeklyChange = round((previewNetBalance * 7) / 7700, 3);
+    const adaptiveWeeklyChange = round(idealWeeklyChange * (responseFactor ?? 1), 3);
+    const weeksToTargetDate = Math.max(
+      1,
+      Math.round((new Date(`${targetDate}T12:00:00`).getTime() - today.getTime()) / (7 * 86400000)),
+    );
+    const requiredWeeklyChange = round((targetWeight - currentWeight) / weeksToTargetDate, 3);
+    const requiredWeeklyPct = round((requiredWeeklyChange / currentWeight) * 100, 2);
+    const currentWeeklyPct = round((adaptiveWeeklyChange / currentWeight) * 100, 2);
+    const goalType =
+      targetWeight < currentWeight - 0.2 ? "cut" :
+      targetWeight > currentWeight + 0.2 ? "bulk" :
+      "maintain";
+    const safeWeeklyPct =
+      goalType === "cut" ? { min: -1.0, max: -0.25 } :
+      goalType === "bulk" ? { min: 0.1, max: 0.5 } :
+      { min: -0.25, max: 0.25 };
+    const goalAggressiveness =
+      requiredWeeklyPct < safeWeeklyPct.min || requiredWeeklyPct > safeWeeklyPct.max
+        ? "aggressive"
+        : Math.abs(requiredWeeklyPct) < 0.1
+          ? "conservative"
+          : "reasonable";
+
+    const previewPath = Array.from({ length: 13 }, (_, week) => ({
+      week,
+      date: offsetDate(today, week * 7, timezone),
+      weight: round(currentWeight + adaptiveWeeklyChange * week, 1),
+    }));
+    const idealPath = Array.from({ length: 13 }, (_, week) => ({
+      week,
+      date: offsetDate(today, week * 7, timezone),
+      weight: round(currentWeight + idealWeeklyChange * week, 1),
+    }));
+
+    const adaptiveGoalDate = (() => {
+      if (!targetWeight || adaptiveWeeklyChange === 0) return null;
+      const weeksNeeded = (targetWeight - currentWeight) / adaptiveWeeklyChange;
+      return weeksNeeded > 0 && weeksNeeded < 260
+        ? offsetDate(today, Math.round(weeksNeeded * 7), timezone)
+        : null;
+    })();
+    const etaDrift = adaptiveGoalDate
+      ? Math.round((new Date(adaptiveGoalDate).getTime() - new Date(`${targetDate}T12:00:00`).getTime()) / 86400000)
+      : null;
+    const suggestedPostponedDate = etaDrift != null && etaDrift > 7 ? adaptiveGoalDate : null;
+    const planStatus =
+      confidence === "insufficient" ? "needs_more_data" :
+      goalAggressiveness === "aggressive" ? "too_aggressive" :
+      Math.abs(adaptiveWeeklyChange - requiredWeeklyChange) <= 0.1 ? "on_track" :
+      goalType === "cut"
+        ? adaptiveWeeklyChange > requiredWeeklyChange ? "behind" : "ahead"
+        : adaptiveWeeklyChange < requiredWeeklyChange ? "behind" : "ahead";
+
+    const calorieDelta = Math.round(dailyCalories - activeGoal.dailyCalories);
+    const macroDelta = {
+      protein: Math.round(proteinGrams - activeGoal.proteinGrams),
+      carbs: Math.round(carbsGrams - activeGoal.carbsGrams),
+      fats: Math.round(fatsGrams - activeGoal.fatsGrams),
+    };
+
+    res.json({
+      previewOnly: true,
+      currentWeight,
+      targetWeight,
+      targetDate,
+      previewPath,
+      idealPath,
+      adaptiveGoalDate,
+      etaDrift,
+      responseFactor,
+      trendConfidence: confidence,
+      goalAggressiveness,
+      goalChallenge: {
+        status: planStatus,
+        safeWeeklyPct,
+        requiredWeeklyPct,
+        currentWeeklyPct,
+        suggestedPostponedDate,
+      },
+      recommendation: {
+        action:
+          confidence === "insufficient" ? "improve_logging" :
+          suggestedPostponedDate ? "suggest_date_change" :
+          calorieDelta !== 0 || macroDelta.protein !== 0 || macroDelta.carbs !== 0 || macroDelta.fats !== 0
+            ? "preview_adjustment"
+            : "hold",
+        reason:
+          confidence === "insufficient"
+            ? "The preview is available, but more consistent weight and food logs are needed before trusting a plan change."
+            : suggestedPostponedDate
+              ? "This version predicts the target after the selected date; consider postponing or changing calories/training."
+              : "This version keeps the adaptive trend close enough to the plan to compare before applying.",
+        calorieDelta,
+        macroDelta,
+        suggestedTargetDate: suggestedPostponedDate,
+      },
+      diagnostics: {
+        avgLoggedCalories: Math.round(avgLoggedCalories),
+        avgLoggedProtein: Math.round(avgLoggedProtein),
+        avgLoggedCarbs: Math.round(avgLoggedCarbs),
+        avgLoggedFats: Math.round(avgLoggedFats),
+        estimatedTDEE: Math.round(estimatedTDEE),
+        previewNetBalance: Math.round(previewNetBalance),
+        workoutDaysPerWeek,
+        workoutMinutesPerWeek,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
