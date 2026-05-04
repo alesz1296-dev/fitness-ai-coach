@@ -125,16 +125,9 @@ export const authApi = {
   }) => api.post<AuthResponse>("/auth/register", data),
   login: (data: { email: string; password: string; rememberMe?: boolean }) =>
     api.post<AuthResponse>("/auth/login", data),
-  refresh: (refreshToken: string) =>
-    api.post<{ accessToken: string; refreshToken: string }>("/auth/refresh", {
-      refreshToken,
-    }),
-  logout: (refreshToken?: string, allDevices = false) =>
-    api.post(
-      "/auth/logout",
-      { refreshToken },
-      { params: allDevices ? { all: "true" } : {} },
-    ),
+  refresh: () => api.post<AuthResponse>("/auth/refresh"),
+  logout: (allDevices = false) =>
+    api.post("/auth/logout", {}, { params: allDevices ? { all: "true" } : {} }),
   me: () => api.get<{ user: User }>("/auth/me"),
 };
 
@@ -146,6 +139,7 @@ export const dashboardApi = {
 // ── Users ─────────────────────────────────────────────────────────────────────
 export const usersApi = {
   getProfile: () => api.get<{ user: User }>("/users/profile"),
+  exportData: () => api.get("/users/export", { responseType: "blob" }),
   updateProfile: (data: Partial<User>) =>
     api.put<{ user: User }>("/users/profile", data),
   changePassword: (data: { currentPassword: string; newPassword: string }) =>

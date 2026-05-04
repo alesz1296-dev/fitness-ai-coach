@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { authApi } from "../../api";
@@ -35,11 +35,17 @@ function parseApiError(err: any): string {
 export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setAuth } = useAuthStore();
+  const { setAuth, isAuthenticated, isHydrating } = useAuthStore();
   const { t } = useTranslation();
   const [banner, setBanner] = useState("");
 
   const sessionExpired = searchParams.get("sessionExpired") === "1";
+
+  useEffect(() => {
+    if (!isHydrating && isAuthenticated) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, isHydrating, navigate]);
 
   const {
     register,
@@ -51,7 +57,7 @@ export default function Login() {
     try {
       setBanner("");
       const res = await authApi.login({ email: data.email, password: data.password, rememberMe: data.rememberMe });
-      setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
+      setAuth(res.data.user, res.data.accessToken);
       navigate("/dashboard");
     } catch (err: any) {
       setBanner(parseApiError(err));
@@ -59,6 +65,11 @@ export default function Login() {
   };
 
   return (
+    isHydrating ? (
+      <div className="min-h-screen grid place-items-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+        <div className="text-sm text-gray-300">Loading...</div>
+      </div>
+    ) : (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
@@ -137,5 +148,6 @@ export default function Login() {
         </div>
       </div>
     </div>
+    )
   );
 }

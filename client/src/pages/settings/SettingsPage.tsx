@@ -937,11 +937,9 @@ export default function SettingsPage() {
           <Button
             variant="secondary"
             onClick={() => {
-              const token = localStorage.getItem("accessToken");
               const a = document.createElement("a");
-              a.href = `/api/users/export`;
-              fetch("/api/users/export", { headers: { Authorization: `Bearer ${token}` } })
-                .then((r) => r.blob())
+              usersApi.exportData()
+                .then((r) => r.data)
                 .then((blob) => {
                   const url = URL.createObjectURL(blob);
                   a.href = url;

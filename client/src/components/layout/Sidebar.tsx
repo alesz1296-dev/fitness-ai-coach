@@ -21,9 +21,8 @@ export function Sidebar() {
   ];
 
   const handleLogout = async () => {
-    const refreshToken = localStorage.getItem("refreshToken") ?? undefined;
     try {
-      await authApi.logout(refreshToken);
+      await authApi.logout();
     } catch {
       /* best-effort */
     }

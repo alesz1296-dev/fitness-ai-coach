@@ -5,38 +5,52 @@ interface AuthState {
   user: User | null;
   accessToken: string | null;
   isAuthenticated: boolean;
-  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
+  isHydrating: boolean;
+  setHydrating: (value: boolean) => void;
+  setAuth: (user: User, accessToken: string) => void;
   updateUser: (user: Partial<User>) => void;
+  clearAuth: () => void;
   logout: () => void;
 }
 
-const storedUser         = localStorage.getItem("user");
-const storedAccessToken  = localStorage.getItem("accessToken");
+function purgeLegacyAuthStorage(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("user");
+}
+
+purgeLegacyAuthStorage();
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user:            storedUser ? JSON.parse(storedUser) : null,
-  accessToken:     storedAccessToken,
-  isAuthenticated: !!storedAccessToken,
+  user: null,
+  accessToken: null,
+  isAuthenticated: false,
+  isHydrating: true,
 
-  setAuth: (user, accessToken, refreshToken) => {
-    localStorage.setItem("accessToken",  accessToken);
-    localStorage.setItem("refreshToken", refreshToken);
-    localStorage.setItem("user", JSON.stringify(user));
-    set({ user, accessToken, isAuthenticated: true });
+  setHydrating: (value) => {
+    set({ isHydrating: value });
+  },
+
+  setAuth: (user, accessToken) => {
+    purgeLegacyAuthStorage();
+    set({ user, accessToken, isAuthenticated: true, isHydrating: false });
   },
 
   updateUser: (partial) => {
     set((state) => {
       const updated = { ...state.user, ...partial } as User;
-      localStorage.setItem("user", JSON.stringify(updated));
       return { user: updated };
     });
   },
 
+  clearAuth: () => {
+    purgeLegacyAuthStorage();
+    set({ user: null, accessToken: null, isAuthenticated: false, isHydrating: false });
+  },
+
   logout: () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("user");
-    set({ user: null, accessToken: null, isAuthenticated: false });
+    purgeLegacyAuthStorage();
+    set({ user: null, accessToken: null, isAuthenticated: false, isHydrating: false });
   },
 }));

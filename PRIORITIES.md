@@ -73,6 +73,32 @@ Recently cleared:
 
 ---
 
+## PENDING - SYSTEM HARDENING
+
+| # | Task | Category | Pri | Status |
+|---|------|----------|-----|--------|
+| S1 | Auth/session hardening - move long-lived tokens and cached user data out of `localStorage` to reduce XSS blast radius | Security | P1 | Pending |
+| S2 | Chat memory parity - clear `AgentMessage` alongside `Conversation`, or rename the UX so "clear history" only means visible transcript | AI/Privacy | P1 | Pending |
+| S3 | Offline replay idempotency - add mutation UUIDs and server-side dedupe for queued writes to prevent duplicate logs on replay | Infra/Data | P1 | Pending |
+| S4 | Tool-call safety - validate tool arguments before dispatch and append tool results deterministically instead of from parallel callbacks | AI/Tools | P2 | Pending |
+| S5 | Food search scalability - move toward DB-first indexed lookup with cached translations instead of request-path AI + in-memory filtering | Nutrition/Infra | P2 | Pending |
+| S6 | Critical `any` cleanup - remove `prisma as any` bridges from search/context paths once generated client alignment is enforced | Code Quality | P2 | Pending |
+
+### S1 checklist - auth/session hardening
+
+- [ ] Set refresh token in an `httpOnly`, `Secure`, `SameSite` cookie on login/register/refresh and clear it on logout in [src/controllers/authController.ts](C:/Users/alesz/AI/projects/fitness_ai_coach/src/controllers/authController.ts)
+- [ ] Keep refresh-token rotation and revocation server-side, but stop sending refresh tokens back to browser JS in [src/controllers/authController.ts](C:/Users/alesz/AI/projects/fitness_ai_coach/src/controllers/authController.ts)
+- [ ] Update the client HTTP layer to send cookies with auth requests and stop reading refresh tokens from `localStorage` in [client/src/api/axios.ts](C:/Users/alesz/AI/projects/fitness_ai_coach/client/src/api/axios.ts)
+- [ ] Move access-token storage out of `localStorage` and keep it memory-only in [client/src/store/authStore.ts](C:/Users/alesz/AI/projects/fitness_ai_coach/client/src/store/authStore.ts)
+- [ ] Stop persisting the full user object in `localStorage`; hydrate the user from `/auth/me` or the refresh response instead in [client/src/store/authStore.ts](C:/Users/alesz/AI/projects/fitness_ai_coach/client/src/store/authStore.ts)
+- [ ] Remove remaining direct token reads from layout/settings/logout flows in [client/src/components/layout/BottomNav.tsx](C:/Users/alesz/AI/projects/fitness_ai_coach/client/src/components/layout/BottomNav.tsx) and [client/src/pages/settings/SettingsPage.tsx](C:/Users/alesz/AI/projects/fitness_ai_coach/client/src/pages/settings/SettingsPage.tsx)
+- [ ] Decide whether auth middleware should accept cookie-auth directly or stay bearer-only during the migration in [src/middleware/auth.ts](C:/Users/alesz/AI/projects/fitness_ai_coach/src/middleware/auth.ts)
+- [ ] Add a post-login boot path that rehydrates auth state through `/auth/me` so refresh-on-load still works without `localStorage`
+- [ ] Add regression tests for login, refresh, logout, reload, and XSS-sensitive state assumptions
+- [ ] If the frontend and API ever become cross-site, add CSRF protection and keep `SameSite=None; Secure` aligned with that deployment shape
+
+---
+
 ## PENDING - GOALS OVERHAUL
 
 | # | Task | Category | Pri | Status |
@@ -170,17 +196,19 @@ Completed prerequisites already done: `#124`, `#114`, `#115`, `#126`.
 
 | Sprint | Items | Goal |
 |--------|-------|------|
-| 1 | #108, #109, #110, #111, #113, #112 | Finish goals overhaul now that shared goal UI is already complete |
-| 2 | #116, #117, #122, #123 | Ship specialist AI agents and split the coach UI into clear tabs |
-| 3 | #118, #125, #119, #120, #121 | Finish proactive notifications end to end |
-| 4 | #71, #85, #106, #107, #127, request timeout, OpenAI error handling, SSE streaming, optimistic UI, suggested JSON persistence, DB indexes, connection pooling, coaching mode, developer/admin mode, advanced workout structures | Close the remaining infra, UX, and coaching-platform gaps |
-| 5 | #B2, #B3, #B5, #B7, #B8 | Tackle the next wave of wearable, platform, and integration work |
-| 6 | #B4, #B6 | Leave scanner and AI food-photo detection as the final nutrition-convenience wave |
+| 1 | S1, S2, S3, S4, S5, S6 | Harden auth, sync, AI safety, and search before more surface work |
+| 2 | #108, #109, #110, #111, #113, #112 | Finish goals overhaul now that shared goal UI is already complete |
+| 3 | #116, #117, #122, #123 | Ship specialist AI agents and split the coach UI into clear tabs |
+| 4 | #118, #125, #119, #120, #121 | Finish proactive notifications end to end |
+| 5 | #71, #85, #106, #107, #127, request timeout, OpenAI error handling, SSE streaming, optimistic UI, suggested JSON persistence, DB indexes, connection pooling, coaching mode, developer/admin mode, advanced workout structures | Close the remaining infra, UX, and coaching-platform gaps |
+| 6 | #B2, #B3, #B5, #B7, #B8 | Tackle the next wave of wearable, platform, and integration work |
+| 7 | #B4, #B6 | Leave scanner and AI food-photo detection as the final nutrition-convenience wave |
 
 ---
 
 ## What to do next
 
+- Start with system hardening: auth/session storage, chat-memory parity, offline replay idempotency, tool-call validation, search scalability, and removing critical `any` bridges.
 - Start with Goals Overhaul: `#108` plus the chart/validator/panel/wizard items now that their shared UI foundation is done.
 - Then move to AI agents and the AI Coach split, since those depend on the agent/tool work that is already complete.
 - After that, finish the proactive engine so notifications, preferences, and the notification center can land together.

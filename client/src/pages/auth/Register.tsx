@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { authApi } from "../../api";
@@ -42,6 +42,7 @@ function parseApiError(err: any): { banner: string; fields: Record<string, strin
 export default function Register() {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
+  const { isAuthenticated, isHydrating } = useAuthStore();
   const { t } = useTranslation();
   const [banner,    setBanner]    = useState("");
   const [apiFields, setApiFields] = useState<Record<string, string>>({});
@@ -56,6 +57,12 @@ export default function Register() {
 
   const password = watch("password");
 
+  useEffect(() => {
+    if (!isHydrating && isAuthenticated) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, isHydrating, navigate]);
+
   const onSubmit = async (data: RegisterForm) => {
     try {
       setBanner("");
@@ -67,7 +74,7 @@ export default function Register() {
         firstName: data.firstName,
         lastName:  data.lastName,
       });
-      setAuth(res.data.user, res.data.accessToken, res.data.refreshToken);
+      setAuth(res.data.user, res.data.accessToken);
       navigate("/dashboard");
     } catch (err: any) {
       const { banner, fields } = parseApiError(err);
@@ -86,6 +93,11 @@ export default function Register() {
     errors[name]?.message || apiFields[name];
 
   return (
+    isHydrating ? (
+      <div className="min-h-screen grid place-items-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+        <div className="text-sm text-gray-300">Loading...</div>
+      </div>
+    ) : (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
@@ -172,5 +184,6 @@ export default function Register() {
         </div>
       </div>
     </div>
+    )
   );
 }

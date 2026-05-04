@@ -1,6 +1,7 @@
 import axios, { type AxiosRequestConfig } from "axios";
 import { addPendingOp } from "../lib/idb";
 import { useOfflineStore } from "../store/offlineStore";
+import { useAuthStore } from "../store/authStore";
 
 // Auth paths that should never be queued for offline replay
 const AUTH_PATHS = ["/auth/login", "/auth/register", "/auth/refresh", "/auth/logout"];
@@ -8,11 +9,12 @@ const AUTH_PATHS = ["/auth/login", "/auth/register", "/auth/refresh", "/auth/log
 const api = axios.create({
   baseURL: "/api",
   headers: { "Content-Type": "application/json" },
+  withCredentials: true,
 });
 
 // Attach access token + locale headers to every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("accessToken");
+  const token = useAuthStore.getState().accessToken;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   try {
     config.headers["X-Timezone"] = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -40,14 +42,11 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+    const url = originalRequest.url ?? "";
+    const isAuthEndpoint = AUTH_PATHS.some((p) => url.includes(p));
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      const refreshToken = localStorage.getItem("refreshToken");
-
-      if (!refreshToken) {
-        clearSession();
-        return Promise.reject(error);
-      }
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+      const { setAuth, clearAuth } = useAuthStore.getState();
 
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -65,12 +64,10 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const { data } = await axios.post("/api/auth/refresh", { refreshToken });
-        const { accessToken: newAccess, refreshToken: newRefresh } = data;
+        const { data } = await axios.post("/api/auth/refresh", {}, { withCredentials: true });
+        const { accessToken: newAccess, user } = data;
 
-        localStorage.setItem("accessToken", newAccess);
-        localStorage.setItem("refreshToken", newRefresh);
-        api.defaults.headers.common["Authorization"] = `Bearer ${newAccess}`;
+        if (user) setAuth(user, newAccess);
 
         processQueue(null, newAccess);
 
@@ -81,7 +78,8 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        clearSession(true);
+        clearAuth();
+        window.location.href = "/login?sessionExpired=1";
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -93,13 +91,12 @@ api.interceptors.response.use(
     // non-GET mutation on a non-auth endpoint, serialize it to IndexedDB.
     if (!error.response && error.request && !originalRequest._retry) {
       const method = (originalRequest.method ?? "").toUpperCase();
-      const url    = originalRequest.url ?? "";
       const isAuthEndpoint = AUTH_PATHS.some((p) => url.includes(p));
       const isMutation = method !== "GET" && method !== "";
 
       if (isMutation && !isAuthEndpoint) {
         const headers: Record<string, string> = {};
-        const token = localStorage.getItem("accessToken");
+        const token = useAuthStore.getState().accessToken;
         if (token) headers.Authorization = `Bearer ${token}`;
         try {
           headers["X-Timezone"] = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -128,9 +125,7 @@ api.interceptors.response.use(
 );
 
 function clearSession(expired = false) {
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("user");
+  useAuthStore.getState().clearAuth();
   window.location.href = expired ? "/login?sessionExpired=1" : "/login";
 }
 

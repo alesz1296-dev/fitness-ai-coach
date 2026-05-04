@@ -16,6 +16,14 @@ const JWT_EXPIRY          = env.JWT_EXPIRY;
 const REFRESH_SECRET      = env.REFRESH_SECRET;
 const REFRESH_EXPIRY_DAYS = env.REFRESH_EXPIRY_DAYS;
 const REFRESH_EXPIRY_MS   = REFRESH_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+const REFRESH_COOKIE_NAME = "fitai_refresh";
+const REFRESH_COOKIE_PATH = "/api/auth";
+const REFRESH_COOKIE_BASE = {
+  httpOnly: true,
+  secure: env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: REFRESH_COOKIE_PATH,
+};
 
 // ── Token helpers ──────────────────────────────────────────────────────────────
 
@@ -41,6 +49,62 @@ function verifyRefreshToken(token: string): { id: number; email: string; jti: st
   return { id: payload.id, email: payload.email, jti: payload.jti, exp: payload.exp };
 }
 
+function getRefreshTokenFromRequest(req: Request): string | null {
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    const match = cookieHeader
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${REFRESH_COOKIE_NAME}=`));
+    if (match) return decodeURIComponent(match.slice(REFRESH_COOKIE_NAME.length + 1));
+  }
+
+  const bodyToken = (req.body as { refreshToken?: unknown } | undefined)?.refreshToken;
+  return typeof bodyToken === "string" && bodyToken.trim().length > 0 ? bodyToken : null;
+}
+
+function setRefreshCookie(
+  res: Response,
+  refreshToken: string,
+  rememberMe = true,
+): void {
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
+    ...REFRESH_COOKIE_BASE,
+    maxAge: rememberMe ? REFRESH_EXPIRY_MS : 24 * 60 * 60 * 1000,
+  });
+}
+
+function clearRefreshCookie(res: Response): void {
+  res.clearCookie(REFRESH_COOKIE_NAME, REFRESH_COOKIE_BASE);
+}
+
+async function getAuthUser(userId: number) {
+  return prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      firstName: true,
+      lastName: true,
+      age: true,
+      weight: true,
+      height: true,
+      sex: true,
+      activityLevel: true,
+      fitnessLevel: true,
+      goal: true,
+      profileComplete: true,
+      proteinMultiplier: true,
+      trainingDaysPerWeek: true,
+      trainingHoursPerDay: true,
+      planAdjustmentMode: true,
+      emailVerified: true,
+      createdAt: true,
+    },
+  });
+}
+
 // ── Register ───────────────────────────────────────────────────────────────────
 
 export const register = async (
@@ -61,6 +125,7 @@ export const register = async (
 
     const accessToken  = signAccessToken(user.id, user.email);
     const refreshToken = signRefreshToken(user.id, user.email);
+    setRefreshCookie(res, refreshToken, true);
 
     // Fire-and-forget — don't block registration if email fails
     const verifyToken = crypto.randomBytes(32).toString("hex");
@@ -68,12 +133,13 @@ export const register = async (
       .then(() => sendEmailVerificationEmail(user.email, user.username, verifyToken))
       .catch((err: Error) => logger.warn(`Failed to send verification email: ${err.message}`));
 
+    const authUser = await getAuthUser(user.id);
+
     logger.info(`New user registered: ${username} (${email})`);
     res.status(201).json({
       message: "Registration successful. Check your email to verify your account.",
       accessToken,
-      refreshToken,
-      user: { id: user.id, email: user.email, username: user.username, firstName: user.firstName, lastName: user.lastName, emailVerified: false },
+      user: authUser,
     });
   } catch (error) { next(error); }
 };
@@ -94,13 +160,15 @@ export const login = async (
 
     const accessToken  = signAccessToken(user.id, user.email);
     const refreshToken = signRefreshToken(user.id, user.email, Boolean(rememberMe));
+    setRefreshCookie(res, refreshToken, Boolean(rememberMe));
+
+    const authUser = await getAuthUser(user.id);
 
     logger.info(`User logged in: ${user.username}`);
     res.json({
       message: "Login successful",
       accessToken,
-      refreshToken,
-      user: { id: user.id, email: user.email, username: user.username, firstName: user.firstName, lastName: user.lastName, profileComplete: user.profileComplete, planAdjustmentMode: (user as any).planAdjustmentMode ?? "suggest" },
+      user: authUser,
     });
   } catch (error) { next(error); }
 };
@@ -111,8 +179,8 @@ export const refresh = async (
   req: Request, res: Response, next: NextFunction
 ): Promise<void> => {
   try {
-    const { refreshToken } = req.body;
-    if (!refreshToken || typeof refreshToken !== "string")
+    const refreshToken = getRefreshTokenFromRequest(req);
+    if (!refreshToken)
       return next(createError("Refresh token required", 400));
 
     let payload: { id: number; email: string; jti: string; exp: number };
@@ -133,9 +201,12 @@ export const refresh = async (
 
     const newAccessToken  = signAccessToken(user.id, user.email);
     const newRefreshToken = signRefreshToken(user.id, user.email);
+    setRefreshCookie(res, newRefreshToken, true);
+
+    const authUser = await getAuthUser(user.id);
 
     logger.info(`Token refreshed for user ${user.id}`);
-    res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
+    res.json({ accessToken: newAccessToken, user: authUser });
   } catch (error) { next(error); }
 };
 
@@ -145,9 +216,9 @@ export const logout = async (
   req: AuthRequest, res: Response, next: NextFunction
 ): Promise<void> => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = getRefreshTokenFromRequest(req);
 
-    if (refreshToken && typeof refreshToken === "string") {
+    if (refreshToken) {
       try {
         const payload = verifyRefreshToken(refreshToken);
         const remainingMs = (payload.exp * 1000) - Date.now();
@@ -157,6 +228,7 @@ export const logout = async (
       }
     }
 
+    clearRefreshCookie(res);
     logger.info(`User ${req.user!.id} logged out`);
     res.json({ message: "Logged out successfully" });
   } catch (error) { next(error); }
