@@ -118,8 +118,8 @@ export default function Register() {
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              <Input label={t("auth.firstName")} placeholder="Alex"  {...register("firstName")} />
-              <Input label={t("auth.lastName")}  placeholder="Smith" {...register("lastName")}  />
+              <Input label={t("auth.firstName")} placeholder="Ale"  {...register("firstName")} />
+              <Input label={t("auth.lastName")}  placeholder="Salazar" {...register("lastName")}  />
             </div>
 
             <Input

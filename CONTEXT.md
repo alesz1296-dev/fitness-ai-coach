@@ -1018,3 +1018,23 @@ Updated `AGENT_TOOLS`:
 - Users can clear the current day’s food logs directly from the Nutrition page without manually deleting each logged item.
 - Progress history, predictions, and analytics can now be inspected over shorter and longer ranges, from a single day up to a full year.
 - Ukrainian is now a first-class selectable app language at the wiring level, with the UI able to load safely under the `uk` locale even before a full deep translation pass is finished.
+## Session 2026-05-04 - Auth hardening + Spanish locale cleanup
+
+### What changed
+- Moved refresh tokens out of browser-readable storage and into an `httpOnly` cookie-backed flow, while keeping access tokens memory-only and rehydrating auth state through `/auth/me`.
+- Cleaned up the remaining broken Spanish locale strings that were affecting Nutrition labels, search text, and related UI accents.
+- Updated the account-creation placeholder example to use `Ale` / `Salazar` instead of the old sample name.
+
+### Files modified
+- `src/controllers/authController.ts` - cookie-backed refresh flow, refresh rotation/clear, and no refresh tokens returned to browser JS
+- `client/src/api/axios.ts` - cookie-aware auth requests and memory-only access token handling
+- `client/src/store/authStore.ts` - removed persistent auth state from `localStorage`
+- `client/src/App.tsx` and `client/src/components/layout/ProtectedRoute.tsx` - boot/re-hydration path for `/auth/me`
+- `client/src/pages/auth/Login.tsx` and `client/src/pages/auth/Register.tsx` - hydrated auth responses; register placeholders updated to `Ale` / `Salazar`
+- `client/src/pages/settings/SettingsPage.tsx` - logout / export paths updated to use the shared auth client
+- `client/src/i18n/locales/es.ts` - repaired mojibake in Nutrition-related Spanish labels and search text
+
+### Behavior changes
+- Auth sessions are now much less exposed to XSS because the refresh token is no longer readable from JavaScript.
+- Spanish mode should now show correct accents in the Nutrition/search strings that were previously corrupted.
+- The register form example now matches the preferred placeholder naming more closely.

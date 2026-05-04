@@ -2189,3 +2189,24 @@ Info chip shown when a frequency match exists: "Showing plans for N×/week — m
 - The clear-day action removes logged foods for the selected day without wiping unrelated nutrition preferences.
 - Progress can now be inspected over both much shorter and much longer windows, from a single day through one year.
 - Ukrainian is now wired end to end as a selectable locale, even though some deeper page strings still need a later full translation pass.
+
+## 2026-05-04 - Auth hardening + Spanish locale cleanup
+
+### What changed
+- Moved refresh tokens out of browser-readable storage and into an `httpOnly` cookie-backed flow, while keeping access tokens memory-only and rehydrating auth state through `/auth/me`.
+- Cleaned up the remaining broken Spanish locale strings that were affecting Nutrition labels, search text, and related UI accents.
+- Updated the account-creation placeholder example to use `Ale` / `Salazar` instead of the old sample name.
+
+### Files modified
+- `src/controllers/authController.ts` - cookie-backed refresh flow, refresh rotation/clear, and no refresh tokens returned to browser JS
+- `client/src/api/axios.ts` - cookie-aware auth requests and memory-only access token handling
+- `client/src/store/authStore.ts` - removed persistent auth state from `localStorage`
+- `client/src/App.tsx` and `client/src/components/layout/ProtectedRoute.tsx` - boot/re-hydration path for `/auth/me`
+- `client/src/pages/auth/Login.tsx` and `client/src/pages/auth/Register.tsx` - hydrated auth responses; register placeholders updated to `Ale` / `Salazar`
+- `client/src/pages/settings/SettingsPage.tsx` - logout / export paths updated to use the shared auth client
+- `client/src/i18n/locales/es.ts` - repaired mojibake in Nutrition-related Spanish labels and search text
+
+### Notes
+- Auth sessions are now much less exposed to XSS because the refresh token is no longer readable from JavaScript.
+- Spanish mode should now show correct accents in the Nutrition/search strings that were previously corrupted.
+- The register form example now matches the preferred placeholder naming more closely.
