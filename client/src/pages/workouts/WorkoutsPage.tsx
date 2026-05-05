@@ -15,6 +15,7 @@ import { Modal } from "../../components/ui/Modal";
 import { Textarea } from "../../components/ui/Textarea";
 import { Badge } from "../../components/ui/Badge";
 import { APP_EVENTS, emitDataChanged } from "../../lib/appEvents";
+import { WorkoutPrepPanel } from "../../lib/workoutPrep";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MET Activity data (Compendium of Physical Activities, Ainsworth et al.)
@@ -863,6 +864,14 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
   const [trainingType, setTrainingType] = useState<string>("");
   const weightKg  = user?.weight ?? 75;
   const injuries  = user?.injuries ?? [];
+  const prepSource = {
+    splitType: trainingType || builderMuscle,
+    objective: trainingType || "general",
+    muscleGroups: builderMuscle !== "Any" ? [builderMuscle] : [],
+    dayLabel: name || trainingType || "Workout",
+    trainingType: trainingType || undefined,
+    exerciseNames: rows.map((r) => r.exerciseName).filter(Boolean),
+  };
 
   // Auto-estimate calories when duration or training type changes
   useEffect(() => {
@@ -986,6 +995,8 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
         weightKg={weightKg}
         onApply={(kcal) => setCalories(String(kcal))}
       />
+
+      <WorkoutPrepPanel source={prepSource} />
 
       {/* Muscle-group filter chips — filters ExerciseSearch results in all rows */}
       <div>
@@ -1706,6 +1717,14 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
 }) {
   const { t } = useTranslation();
   const muscleGroups = Array.isArray(template.muscleGroups) ? template.muscleGroups : [];
+  const prepSource = {
+    splitType: template.splitType,
+    objective: template.objective,
+    muscleGroups,
+    dayLabel: template.dayLabel,
+    trainingType: template.name,
+    exerciseNames: template.exercises.map((ex) => ex.exerciseName),
+  };
 
   return (
     <Card className="flex flex-col h-full">
@@ -1734,6 +1753,10 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
         {muscleGroups.slice(0, 3).map((m) => (
           <span key={m} className="text-xs bg-gray-100 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">{m}</span>
         ))}
+      </div>
+
+      <div className="mb-3">
+        <WorkoutPrepPanel source={prepSource} compact />
       </div>
 
       {template.exercises.length > 0 && (
@@ -1776,6 +1799,14 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
   const [savingId, setSavingId] = useState<number | null>(null);
   // Local exercises state so UI updates without full reload
   const [exercises, setExercises] = useState(template.exercises);
+  const prepSource = {
+    splitType: template.splitType,
+    objective: template.objective,
+    muscleGroups: Array.isArray(template.muscleGroups) ? template.muscleGroups : [],
+    dayLabel: template.dayLabel,
+    trainingType: template.name,
+    exerciseNames: exercises.map((ex) => ex.exerciseName),
+  };
 
   const saveExercise = async (ex: typeof exercises[0]) => {
     setSavingId(ex.id);
@@ -1864,6 +1895,8 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
           </Button>
         </div>
       )}
+
+      <WorkoutPrepPanel source={prepSource} />
 
       <div className="space-y-2">
         {exercises.map((ex, i) => {

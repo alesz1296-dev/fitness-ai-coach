@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/Button";
 import { Modal } from "../../components/ui/Modal";
 import { Badge } from "../../components/ui/Badge";
 import { useTranslation } from "../../i18n";
+import { WorkoutPrepPanel } from "../../lib/workoutPrep";
 
 const OBJECTIVE_COLORS: Record<string, string> = {
   hypertrophy: "bg-blue-100 text-blue-700",
@@ -31,6 +32,14 @@ function TemplateCard({ template, onStart, onView }: {
   const muscleGroups = Array.isArray(template.muscleGroups)
     ? template.muscleGroups
     : [];
+  const prepSource = {
+    splitType: template.splitType,
+    objective: template.objective,
+    muscleGroups,
+    dayLabel: template.dayLabel,
+    trainingType: template.name,
+    exerciseNames: template.exercises.map((ex) => ex.exerciseName),
+  };
 
   return (
     <Card className="flex flex-col h-full">
@@ -59,6 +68,10 @@ function TemplateCard({ template, onStart, onView }: {
         ))}
       </div>
 
+      <div className="mb-3">
+        <WorkoutPrepPanel source={prepSource} compact />
+      </div>
+
       {template.exercises.length > 0 && (
         <div className="text-xs text-gray-400 mb-3 space-y-0.5">
           {template.exercises.slice(0, 4).map((e) => (
@@ -83,6 +96,14 @@ function TemplateDetail({ template, onStart, onClose }: {
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const prepSource = {
+    splitType: template.splitType,
+    objective: template.objective,
+    muscleGroups: Array.isArray(template.muscleGroups) ? template.muscleGroups : [],
+    dayLabel: template.dayLabel,
+    trainingType: template.name,
+    exerciseNames: template.exercises.map((ex) => ex.exerciseName),
+  };
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -93,6 +114,8 @@ function TemplateDetail({ template, onStart, onClose }: {
         </div>
       </div>
       {template.description && <p className="text-sm text-gray-600 dark:text-gray-300">{template.description}</p>}
+
+      <WorkoutPrepPanel source={prepSource} />
 
       <div className="space-y-2">
         {template.exercises.map((ex, i) => (

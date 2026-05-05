@@ -159,6 +159,17 @@ export interface Translation {
     muscleQuads: string; muscleHamstrings: string; muscleCalves: string; muscleGlutes: string; muscleTraps: string;
     muscleForearms: string; muscleCore: string; muscleFullBody: string;
     howManyMonthsToFill: string; thisMonth: string; nextMonth: string; plusTwoMonths: string;
+    prepTitle: string; prepWarmup: string; prepStretch: string; prepShortNote: string;
+    prepUpper: string; prepLower: string; prepPush: string; prepPull: string; prepFullBody: string; prepCardio: string; prepRecovery: string;
+    prepNoteStrength: string; prepNoteHypertrophy: string; prepNoteEndurance: string; prepNoteRecovery: string; prepNoteGeneral: string;
+    prepShoulderCircles: string; prepBandPullAparts: string; prepScapPushUps: string; prepThoracicRotations: string;
+    prepDoorwayChestStretch: string; prepLatStretch: string; prepCrossBodyShoulderStretch: string; prepThoracicOpenBook: string;
+    prepAnkleCircles: string; prepHipHinges: string; prepBodyweightSquats: string; prepGluteBridges: string;
+    prepCouchStretch: string; prepHamstringStretch: string; prepCalfStretch: string; prepFigureFourStretch: string;
+    prepBandExternalRotations: string; prepInclinePushUps: string; prepShoulderTaps: string; prepWallSlides: string;
+    prepBandChestOpener: string; prepOverheadTricepsStretch: string;
+    prepBandRows: string; prepScapRetractions: string; prepDeadHang: string; prepRearDeltStretch: string; prepBicepsWallStretch: string; prepChildPoseReach: string;
+    prepBriskWalk: string; prepMarching: string; prepDynamicLunges: string; prepChestStretch: string; prepHipFlexorStretch: string; prepAnkleRocks: string; prepWorldsGreatestStretch: string; prepCatCow: string; prepDeadBugBreathing: string; prepControlledBreathing: string; prepPigeonStretch: string; prepBreathingReset: string; prepOpenBooks: string;
   };
   progress: {
     title: string; bodyWeight: string; logWeight: string; weightHistory: string;
@@ -688,6 +699,63 @@ const en: Translation = {
     thisMonth: "This month",
     nextMonth: "+ Next month",
     plusTwoMonths: "+ 2 months",
+    prepTitle: "Warm-up & stretch",
+    prepWarmup: "Warm-up",
+    prepStretch: "Stretch & mobility",
+    prepShortNote: "Short on time? Do the first 2 items.",
+    prepUpper: "Upper-body prep",
+    prepLower: "Lower-body prep",
+    prepPush: "Push-day prep",
+    prepPull: "Pull-day prep",
+    prepFullBody: "Full-body prep",
+    prepCardio: "Cardio prep",
+    prepRecovery: "Recovery prep",
+    prepNoteStrength: "Use a few lighter sets to prime the movement pattern before your working sets.",
+    prepNoteHypertrophy: "Keep the prep snappy so you save energy for your working sets.",
+    prepNoteEndurance: "Get your breathing and joints ready before the main effort.",
+    prepNoteRecovery: "Stay gentle and focus on mobility, breathing, and smooth range of motion.",
+    prepNoteGeneral: "Keep the warm-up simple, then move into the day’s work.",
+    prepShoulderCircles: "Shoulder circles",
+    prepBandPullAparts: "Band pull-aparts",
+    prepScapPushUps: "Scapular push-ups",
+    prepThoracicRotations: "Thoracic rotations",
+    prepDoorwayChestStretch: "Doorway chest stretch",
+    prepLatStretch: "Lat stretch",
+    prepCrossBodyShoulderStretch: "Cross-body shoulder stretch",
+    prepThoracicOpenBook: "Thoracic open-book stretch",
+    prepAnkleCircles: "Ankle circles",
+    prepHipHinges: "Hip hinges",
+    prepBodyweightSquats: "Bodyweight squats",
+    prepGluteBridges: "Glute bridges",
+    prepCouchStretch: "Couch stretch",
+    prepHamstringStretch: "Hamstring stretch",
+    prepCalfStretch: "Calf stretch",
+    prepFigureFourStretch: "Figure-four stretch",
+    prepBandExternalRotations: "Band external rotations",
+    prepInclinePushUps: "Incline push-ups",
+    prepShoulderTaps: "Shoulder taps",
+    prepWallSlides: "Wall slides",
+    prepBandChestOpener: "Band chest opener",
+    prepOverheadTricepsStretch: "Overhead triceps stretch",
+    prepBandRows: "Band rows",
+    prepScapRetractions: "Scapular retractions",
+    prepDeadHang: "Dead hang",
+    prepRearDeltStretch: "Rear delt stretch",
+    prepBicepsWallStretch: "Biceps wall stretch",
+    prepChildPoseReach: "Child’s pose reach",
+    prepBriskWalk: "Brisk walk",
+    prepMarching: "Marching in place",
+    prepDynamicLunges: "Dynamic lunges",
+    prepChestStretch: "Chest stretch",
+    prepHipFlexorStretch: "Hip flexor stretch",
+    prepAnkleRocks: "Ankle rocks",
+    prepWorldsGreatestStretch: "World’s greatest stretch",
+    prepCatCow: "Cat-cow",
+    prepDeadBugBreathing: "Dead bug breathing",
+    prepControlledBreathing: "Controlled breathing",
+    prepPigeonStretch: "Pigeon stretch",
+    prepBreathingReset: "Breathing reset",
+    prepOpenBooks: "Open books",
     anyNotesDay: "Any notes for this day…",
     saveDayBtn: "Save this day",
     templateDay: "Template / Day",

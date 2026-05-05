@@ -37,6 +37,16 @@ function estimateCaloriesBurned(
   return Math.max(0, Math.round(met * weightKg * (durationMin / 60)));
 }
 
+const parseGroups = (value: string | null): string[] => {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [value];
+  }
+};
+
 // ── GET /api/workouts ─────────────────────────────────────────────────────────
 
 export const getWorkouts = async (
@@ -602,6 +612,8 @@ export const startFromTemplate = async (
         name:        template.name,
         dayLabel:    template.dayLabel,
         objective:   template.objective,
+        splitType:   template.splitType,
+        muscleGroups: parseGroups(template.muscleGroups),
         description: template.description,
       },
     });

@@ -8,6 +8,7 @@ import type { WeeklyPlan, WeeklyPlanDay } from "../types";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { Modal } from "./ui/Modal";
+import { WorkoutPrepPanel } from "../lib/workoutPrep";
 
 // ── Toast ────────────────────────────────────────────────────────────────────
 function useToast() {
@@ -295,6 +296,14 @@ function PlanCard({
   const levelColor = plan.level === "advanced"
     ? "text-purple-700 bg-purple-50 border-purple-200"
     : "text-blue-700 bg-blue-50 border-blue-200";
+  const prepSource = {
+    splitType: plan.splitType,
+    objective: plan.name,
+    muscleGroups: plan.tags,
+    dayLabel: plan.name,
+    trainingType: plan.splitType,
+    exerciseNames: plan.schedule.map((s) => s.label),
+  };
 
   return (
     <button
@@ -312,6 +321,9 @@ function PlanCard({
         </span>
       </div>
       <p className="text-xs text-gray-500 leading-relaxed mb-3">{plan.description}</p>
+      <div className="mb-3">
+        <WorkoutPrepPanel source={prepSource} compact />
+      </div>
       <div className="flex flex-wrap gap-1">
         {plan.tags.map((t) => (
           <span key={t} className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{t}</span>
