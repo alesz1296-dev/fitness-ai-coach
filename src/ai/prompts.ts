@@ -1,4 +1,12 @@
 export type AgentType = "coach" | "nutritionist" | "general";
+export type ProposalKind = "workout" | "meal" | "goal" | null;
+export type ProposalState = "advice_only" | "plan_opportunity" | "plan_request";
+
+export interface ProposalIntent {
+  proposalKind: ProposalKind;
+  proposalState: ProposalState;
+  saveableProposal: boolean;
+}
 
 export interface UserContext {
   username: string;
@@ -17,6 +25,11 @@ export interface UserContext {
   planAdjustmentMode?: "suggest" | "confirm" | "auto" | string | null;
   /** ISO 639-1 language code — "en" | "es" */
   language?: string | null;
+}
+
+interface HistoryMessageLike {
+  role: string;
+  content: string;
 }
 
 const buildUserContext = (user: UserContext): string => {
@@ -156,6 +169,11 @@ Rules:
 export const buildSystemPrompt = (
   agentType: AgentType,
   user: UserContext,
+  intent: ProposalIntent = {
+    proposalKind: null,
+    proposalState: "advice_only",
+    saveableProposal: false,
+  },
 ): string => {
   const userCtx = buildUserContext(user);
 
@@ -170,6 +188,29 @@ Current user profile: [${userCtx}]${langNote}
 
 Authorization rule: never claim that you changed, saved, logged, or deleted anything unless a tool result explicitly says it happened. Your normal structured JSON blocks are proposals; the app asks the user for confirmation before applying them.`;
 
+  const intentRule =
+    intent.proposalState === "plan_request"
+      ? `\n\nConversation state: the user has explicitly asked for a ${intent.proposalKind ?? "structured"} plan. You may provide a concrete saveable proposal. Include machine-readable JSON only if it matches the requested plan type, and keep any JSON block at the very end of the reply.`
+      : intent.proposalState === "plan_opportunity"
+        ? "\n\nConversation state: the user is moving toward structured planning, but has not clearly asked for a saveable plan yet. You may offer to build a plan or ask one clarifying question, but do not include any machine-readable JSON blocks in this reply."
+        : "\n\nConversation state: advice-only. Reply conversationally with useful guidance, but do not include any machine-readable JSON blocks in this reply.";
+
+  const workoutInstructions =
+    intent.proposalState === "plan_request" &&
+    intent.proposalKind === "workout"
+      ? `\n${WORKOUT_JSON_INSTRUCTIONS}`
+      : "";
+  const nutritionInstructions =
+    intent.proposalState === "plan_request" &&
+    intent.proposalKind === "goal"
+      ? `\n${NUTRITION_JSON_INSTRUCTIONS}`
+      : "";
+  const mealPlanInstructions =
+    intent.proposalState === "plan_request" &&
+    intent.proposalKind === "meal"
+      ? `\n${MEAL_PLAN_JSON_INSTRUCTIONS}`
+      : "";
+
   if (agentType === "coach") {
     return `${base}
 
@@ -183,7 +224,7 @@ You are acting as the GYM COACH persona. Your expertise:
 - PR strategies and 1RM calculations
 
 When giving workout advice, factor in the user's fitness level and goals. Suggest specific sets, reps, and rest times. Encourage progressive overload.
-${WORKOUT_JSON_INSTRUCTIONS}`;
+${intentRule}${workoutInstructions}`;
   }
 
   if (agentType === "nutritionist") {
@@ -197,8 +238,7 @@ You are acting as the NUTRITIONIST persona. Your expertise:
 - Eating for performance vs. aesthetics
 
 When giving nutrition advice, calculate specific calorie and macro targets. Recommend whole foods first. Use TDEE principles. Any meal plan you generate must be aligned to the user's active goal and calorie target rather than being generic.
-${NUTRITION_JSON_INSTRUCTIONS}
-${MEAL_PLAN_JSON_INSTRUCTIONS}`;
+${intentRule}${nutritionInstructions}${mealPlanInstructions}`;
   }
 
   // General — can trigger either JSON block depending on context
@@ -206,9 +246,7 @@ ${MEAL_PLAN_JSON_INSTRUCTIONS}`;
 
 You can answer questions about both fitness and nutrition.
 Help the user understand their progress, set realistic expectations, and stay motivated.
-${WORKOUT_JSON_INSTRUCTIONS}
-${NUTRITION_JSON_INSTRUCTIONS}
-${MEAL_PLAN_JSON_INSTRUCTIONS}`;
+${intentRule}${workoutInstructions}${nutritionInstructions}${mealPlanInstructions}`;
 };
 
 // ── JSON extraction helpers (used by the frontend via the API response) ────────
@@ -246,4 +284,79 @@ export function extractMealPlanJson(text: string): Record<string, any> | null {
   } catch {
     return null;
   }
+}
+
+export function stripStructuredPlanBlocks(text: string): string {
+  return text
+    .replace(/```workout-json[\s\S]*?```/g, "")
+    .replace(/```nutrition-json[\s\S]*?```/g, "")
+    .replace(/```meal-plan-json[\s\S]*?```/g, "")
+    .trim();
+}
+
+export function classifyProposalIntent(
+  userMessage: string,
+  agentType: AgentType,
+  history: HistoryMessageLike[] = [],
+): ProposalIntent {
+  const normalized = userMessage.toLowerCase();
+  const recentContext = history
+    .slice(-4)
+    .map((msg) => msg.content.toLowerCase())
+    .join(" ");
+  const combined = `${recentContext} ${normalized}`;
+
+  const workoutSignals =
+    /\b(workout|routine|training plan|gym plan|split|push day|pull day|leg day|program)\b/.test(
+      combined,
+    ) || agentType === "coach";
+  const mealSignals =
+    /\b(meal plan|meal prep|meals|diet plan|nutrition plan|menu)\b/.test(
+      combined,
+    );
+  const goalSignals =
+    /\b(calories|macros|protein target|calorie goal|cut|bulk|deficit|surplus)\b/.test(
+      combined,
+    );
+
+  const explicitRequest =
+    /\b(build|create|make|design|generate|write|give me|set up|set|draft|plan)\b/.test(
+      normalized,
+    ) || /\b(can you|could you|please)\b/.test(normalized);
+  const softPlanning =
+    /\b(should i|could i|can i|what would|may i|would it help|maybe|thinking of)\b/.test(
+      normalized,
+    ) || /\b(plan|routine|meal plan|macros|calories)\b/.test(normalized);
+
+  let proposalKind: ProposalKind = null;
+  if (mealSignals && !goalSignals) proposalKind = "meal";
+  else if (goalSignals && !mealSignals) proposalKind = "goal";
+  else if (workoutSignals) proposalKind = "workout";
+  else if (mealSignals) proposalKind = "meal";
+
+  if (proposalKind && explicitRequest) {
+    return {
+      proposalKind,
+      proposalState: "plan_request",
+      saveableProposal: true,
+    };
+  }
+
+  if (
+    softPlanning &&
+    (proposalKind !== null ||
+      /\b(plan|routine|structure|template|schedule)\b/.test(normalized))
+  ) {
+    return {
+      proposalKind,
+      proposalState: "plan_opportunity",
+      saveableProposal: false,
+    };
+  }
+
+  return {
+    proposalKind: null,
+    proposalState: "advice_only",
+    saveableProposal: false,
+  };
 }

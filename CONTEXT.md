@@ -65,9 +65,11 @@ The web frontend is now a richer multi-surface app than the original dashboard-o
 
 - keeping shared data in sync across dashboard, progress, nutrition, and workouts
 - making the major planning surfaces translated instead of hardcoded in English
+- keeping the workout calendar/action workflow translated, including build/apply/swap/clear labels
 - keeping the weight logging flow one tap away from the dashboard tile and the floating action button
 - making Nutrition search feel natural by jumping straight into the database search field
 - keeping the weekly plan picker and AI workout builder localized and broader in scope
+- giving the app more distinct appearance presets so it does not feel like a generic palette swap app
 
 The frontend uses React page containers plus feature subcomponents, Zustand for auth/session state, and shared browser events for refreshes. The design intent is:
 
@@ -75,6 +77,7 @@ The frontend uses React page containers plus feature subcomponents, Zustand for 
 - shared events for cross-page refreshes
 - locale keys for visible copy
 - API helpers as the single network boundary
+- appearance presets and surface styling as first-class UX controls rather than a single dark-mode toggle
 `src/data/foods.ts` and `src/data/exercises.ts` are **seed sources only** — they are no longer used at runtime for search. `searchController.ts` queries `FoodItem` and `ExerciseItem` DB tables directly, falling back to the static arrays only when those tables are empty (first boot before `npm run prisma:seed` has been run).
 
 **When adding new foods or exercises**: add to the static array first, then re-run `npm run prisma:seed` (upsert — safe to re-run). The backup reference copies live in `docs/backup-food-db.md` and `docs/backup-exercise-db.md`.
@@ -219,6 +222,13 @@ The responsive pass has been completed. Summary of changes:
 - ✅ `client/public/sw.js` — cache-first static, network-first API, SPA shell fallback
 - ✅ `client/public/icons/icon-192.png` + `icon-512.png` — purple circular icon with white "F"
 - ✅ `client/index.html` — manifest link, apple-mobile-web-app-capable meta tags, apple-touch-icon, theme-color
+
+## Session 2026-05-05 - Workout calendar localization + appearance presets
+
+- Updated the workouts calendar action row so the build, apply-template, swap-days, and clear-month actions use locale keys instead of hardcoded English.
+- Translated the AI workout builder label in Spanish to `Creador con AI`.
+- Expanded the appearance system with additional presets and stronger surface treatments so the app can feel editorial, industrial, amber, or paper-like instead of generic.
+- Added shared surface styling so cards and panels visually respond more to the selected preset.
 - ✅ `client/src/main.tsx` — service worker registration on window load
 - ✅ `client/src/components/InstallPrompt.tsx` — iOS 3s-delay banner + Android `beforeinstallprompt` button
 - ✅ `client/src/components/OfflineBanner.tsx` — online/offline detection banner

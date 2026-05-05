@@ -315,6 +315,9 @@ export interface Conversation {
   response?: string | null;
   agentType: "coach" | "nutritionist" | "general";
   metadata?: {
+    proposalKind?: "workout" | "meal" | "goal" | null;
+    proposalState?: "advice_only" | "plan_opportunity" | "plan_request";
+    saveableProposal?: boolean;
     suggestedWorkout?:  Record<string, any>;
     suggestedPlan?:     Record<string, any>;
     suggestedMealPlan?: Record<string, any>;

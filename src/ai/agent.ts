@@ -1,6 +1,11 @@
 import OpenAI from "openai";
 import { Prisma } from "@prisma/client";
-import { AgentType, buildSystemPrompt, UserContext } from "./prompts.js";
+import {
+  AgentType,
+  buildSystemPrompt,
+  ProposalIntent,
+  UserContext,
+} from "./prompts.js";
 import prisma from "../lib/prisma.js";
 import logger from "../lib/logger.js";
 import { getProvider } from "./providers/index.js";
@@ -1196,8 +1201,9 @@ export const chat = async (
   agentType: AgentType,
   user: UserContext & { id?: number },
   history: ChatMessage[] = [],
+  intent?: ProposalIntent,
 ): Promise<AgentResponse> => {
-  const systemPrompt = buildSystemPrompt(agentType, user);
+  const systemPrompt = buildSystemPrompt(agentType, user, intent);
   const tools = AGENT_TOOLS[agentType];
 
   // Build the initial message array

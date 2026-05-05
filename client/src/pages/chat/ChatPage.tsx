@@ -1,21 +1,39 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
-import { chatApi } from "../../api";
-import type { Conversation } from "../../types";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { calendarApi, chatApi } from "../../api";
+import type { Conversation, WorkoutTemplate } from "../../types";
 import { Button } from "../../components/ui/Button";
+import { Modal } from "../../components/ui/Modal";
 import { useTranslation, t } from "../../i18n";
 import type { TKey } from "../../i18n";
 import { emitDataChanged } from "../../lib/appEvents";
 
 type AgentType = "coach" | "nutritionist" | "general";
+type ProposalKind = "workout" | "meal" | "goal" | null;
+type ProposalState = "advice_only" | "plan_opportunity" | "plan_request";
 
 interface ChatMessage {
   role: string;
   content: string;
   id?: number;
+  proposalKind?: ProposalKind;
+  proposalState?: ProposalState;
+  saveableProposal?: boolean;
   suggestedWorkout?: Record<string, any>;
   suggestedPlan?: Record<string, any>;
   suggestedMealPlan?: Record<string, any>;
+}
+
+interface WorkoutScheduleState {
+  template: WorkoutTemplate;
+  workoutName: string;
+  muscleGroups: string[];
+}
+
+interface PendingMealPlanState {
+  plan: Record<string, any>;
+  resolve: () => void;
+  reject: (reason?: unknown) => void;
 }
 
 const AGENTS: { id: AgentType; label: string; icon: string; desc: string }[] = [
@@ -60,6 +78,27 @@ function getStarters(t: (k: TKey) => string): Record<AgentType, string[]> {
       t("chat.starterGeneral4"),
     ],
   };
+}
+
+function getCurrentMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getMonthRange(startMonth: string, count: number): string[] {
+  const [year, month] = startMonth.split("-").map(Number);
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(year, month - 1 + i, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+}
+
+function getMondayIso(date = new Date()): string {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split("T")[0];
 }
 
 // ── Typing indicator ──────────────────────────────────────────────────────────
@@ -188,6 +227,7 @@ function ChatBubble({
     .replace(/```nutrition-json[\s\S]*?```/g, "")
     .replace(/```meal-plan-json[\s\S]*?```/g, "")
     .trim();
+  const canShowSaveCards = msg.saveableProposal === true;
 
   // Simple markdown-ish rendering: bold (**text**), line breaks
   const renderText = (raw: string) => {
@@ -240,7 +280,7 @@ function ChatBubble({
         </div>
 
         {/* Prominent action cards — one per suggestion type */}
-        {msg.suggestedWorkout && (
+        {canShowSaveCards && msg.suggestedWorkout && (
           <SuggestionCard
             icon="💪"
             title={t("chat.workoutsTitle")}
@@ -258,7 +298,7 @@ function ChatBubble({
             onConfirm={() => onSaveWorkout(msg.suggestedWorkout!)}
           />
         )}
-        {msg.suggestedMealPlan && (
+        {canShowSaveCards && msg.suggestedMealPlan && (
           <SuggestionCard
             icon="🥗"
             title={t("chat.mealPlannerTitle")}
@@ -278,7 +318,7 @@ function ChatBubble({
             onConfirm={() => onSaveMealPlan(msg.suggestedMealPlan!)}
           />
         )}
-        {msg.suggestedPlan && (
+        {canShowSaveCards && msg.suggestedPlan && (
           <SuggestionCard
             icon="🎯"
             title={t("chat.goalsTitle")}
@@ -293,9 +333,220 @@ function ChatBubble({
   );
 }
 
+function WorkoutScheduleModal({
+  plan,
+  onClose,
+  onConfirm,
+}: {
+  plan: WorkoutScheduleState | null;
+  onClose: () => void;
+  onConfirm: (payload: {
+    weekdays: number[];
+    months: number;
+    overwrite: boolean;
+  }) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [weekdays, setWeekdays] = useState<number[]>([0]);
+  const [months, setMonths] = useState(1);
+  const [overwrite, setOverwrite] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (plan) {
+      setWeekdays([0]);
+      setMonths(1);
+      setOverwrite(false);
+      setSaving(false);
+    }
+  }, [plan]);
+
+  if (!plan) return null;
+
+  const toggleDay = (dayIndex: number) => {
+    setWeekdays((prev) =>
+      prev.includes(dayIndex)
+        ? prev.filter((d) => d !== dayIndex)
+        : [...prev, dayIndex].sort((a, b) => a - b),
+    );
+  };
+
+  const labels = [
+    t("mealPlanner.monday"),
+    t("mealPlanner.tuesday"),
+    t("mealPlanner.wednesday"),
+    t("mealPlanner.thursday"),
+    t("mealPlanner.friday"),
+    t("mealPlanner.saturday"),
+    t("mealPlanner.sunday"),
+  ];
+
+  return (
+    <Modal open={true} onClose={onClose} title={t("chat.scheduleWorkoutTitle")}>
+      <div className="space-y-5">
+        <div>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            {plan.workoutName}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {t("chat.scheduleWorkoutBody")}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+            {t("chat.scheduleWorkoutDays")}
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {labels.map((label, idx) => (
+              <button
+                key={label}
+                onClick={() => toggleDay(idx)}
+                className={`rounded-xl border px-3 py-2 text-sm transition-colors ${
+                  weekdays.includes(idx)
+                    ? "bg-brand-600 text-white border-brand-600"
+                    : "border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+            {t("chat.scheduleWorkoutMonths")}
+          </p>
+          <div className="flex gap-2">
+            {[1, 2, 3].map((value) => (
+              <button
+                key={value}
+                onClick={() => setMonths(value)}
+                className={`flex-1 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                  months === value
+                    ? "bg-brand-600 text-white border-brand-600"
+                    : "border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+                }`}
+              >
+                {t("chat.monthCount", { count: value })}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-200">
+          <input
+            type="checkbox"
+            checked={overwrite}
+            onChange={(e) => setOverwrite(e.target.checked)}
+          />
+          <span>{t("chat.scheduleWorkoutOverwrite")}</span>
+        </label>
+
+        <div className="flex gap-3">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
+            {t("chat.notNow")}
+          </Button>
+          <Button
+            className="flex-1"
+            disabled={weekdays.length === 0 || saving}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await onConfirm({ weekdays, months, overwrite });
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            {saving ? t("chat.saving") : t("chat.scheduleWorkoutConfirm")}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function MealPlanDurationModal({
+  pending,
+  onClose,
+  onConfirm,
+}: {
+  pending: PendingMealPlanState | null;
+  onClose: () => void;
+  onConfirm: (durationWeeks: number) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [durationWeeks, setDurationWeeks] = useState(1);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (pending) {
+      const suggested = Number(pending.plan.durationWeeks ?? 1);
+      setDurationWeeks([1, 4, 8, 12].includes(suggested) ? suggested : 1);
+      setSaving(false);
+    }
+  }, [pending]);
+
+  if (!pending) return null;
+
+  return (
+    <Modal open={true} onClose={onClose} title={t("chat.mealDurationTitle")}>
+      <div className="space-y-5">
+        <div>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            {pending.plan.name || t("chat.mealPlannerTitle")}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {t("chat.mealDurationBody")}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          {[1, 4, 8, 12].map((value) => (
+            <button
+              key={value}
+              onClick={() => setDurationWeeks(value)}
+              className={`rounded-xl border px-3 py-3 text-sm transition-colors ${
+                durationWeeks === value
+                  ? "bg-brand-600 text-white border-brand-600"
+                  : "border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200"
+              }`}
+            >
+              {t("chat.weekCount", { count: value })}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-3">
+          <Button variant="secondary" className="flex-1" onClick={onClose}>
+            {t("chat.notNow")}
+          </Button>
+          <Button
+            className="flex-1"
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await onConfirm(durationWeeks);
+              } finally {
+                setSaving(false);
+              }
+            }}
+          >
+            {saving ? t("chat.saving") : t("chat.mealDurationConfirm")}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Main Chat page ────────────────────────────────────────────────────────────
 export default function ChatPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const STARTERS = getStarters(t);
   const [searchParams] = useSearchParams();
   const defaultAgent = (searchParams.get("agent") as AgentType) || "general";
@@ -310,6 +561,10 @@ export default function ChatPage() {
   );
   const [pendingAgent, setPendingAgent] = useState<AgentType | null>(null);
   const [sidebarHistory, setSidebarHistory] = useState<Conversation[]>([]);
+  const [pendingWorkoutSchedule, setPendingWorkoutSchedule] =
+    useState<WorkoutScheduleState | null>(null);
+  const [pendingMealPlan, setPendingMealPlan] =
+    useState<PendingMealPlanState | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -328,6 +583,16 @@ export default function ChatPage() {
             role: "assistant",
             content: c.response,
             id: c.id,
+            proposalKind: meta.proposalKind,
+            proposalState: meta.proposalState,
+            saveableProposal:
+              typeof meta.saveableProposal === "boolean"
+                ? meta.saveableProposal
+                : Boolean(
+                    meta.suggestedWorkout ||
+                      meta.suggestedPlan ||
+                      meta.suggestedMealPlan,
+                  ),
             ...(meta.suggestedWorkout && {
               suggestedWorkout: meta.suggestedWorkout,
             }),
@@ -410,6 +675,9 @@ export default function ChatPage() {
       const res = await chatApi.send({ message: msg, agentType: agent });
       const {
         message: aiText,
+        proposalKind,
+        proposalState,
+        saveableProposal,
         suggestedWorkout,
         suggestedPlan,
         suggestedMealPlan,
@@ -419,6 +687,9 @@ export default function ChatPage() {
         {
           role: "assistant",
           content: aiText,
+          proposalKind,
+          proposalState,
+          saveableProposal,
           ...(suggestedWorkout && { suggestedWorkout }),
           ...(suggestedPlan && { suggestedPlan }),
           ...(suggestedMealPlan && { suggestedMealPlan }),
@@ -448,7 +719,7 @@ export default function ChatPage() {
   const handleSaveWorkout = async (
     workout: Record<string, any>,
   ): Promise<void> => {
-    await chatApi.saveWorkout({
+    const res = await chatApi.saveWorkout({
       mode: workout.mode === "replace" ? "replace" : "create",
       targetTemplateId: workout.targetTemplateId ?? null,
       name: workout.name || `${agentInfo.label} Workout`,
@@ -459,6 +730,13 @@ export default function ChatPage() {
       dayLabel: workout.dayLabel || workout.name || "AI Workout",
       muscleGroups: workout.muscleGroups ?? [],
       exercises: workout.exercises ?? [],
+    });
+    setPendingWorkoutSchedule({
+      template: res.data.template,
+      workoutName: res.data.template.dayLabel || res.data.template.name,
+      muscleGroups: Array.isArray(workout.muscleGroups)
+        ? workout.muscleGroups
+        : [],
     });
     showToast(
       workout.mode === "replace"
@@ -471,24 +749,13 @@ export default function ChatPage() {
   const handleSaveMealPlan = async (
     mealPlan: Record<string, any>,
   ): Promise<void> => {
-    await chatApi.saveMealPlan({
-      mode:
-        mealPlan.mode === "replace" || mealPlan.mode === "append"
-          ? mealPlan.mode
-          : "create",
-      targetPlanId: mealPlan.targetPlanId ?? null,
-      name: mealPlan.name,
-      weekStart: mealPlan.weekStart,
-      durationWeeks: mealPlan.durationWeeks,
-      days: mealPlan.days,
-      meals: mealPlan.meals,
+    await new Promise<void>((resolve, reject) => {
+      setPendingMealPlan({
+        plan: mealPlan,
+        resolve,
+        reject,
+      });
     });
-    emitDataChanged("meal-plan");
-    showToast(
-      mealPlan.mode === "replace"
-        ? t("chat.toastMealUpdated")
-        : t("chat.toastMealSaved"),
-    );
   };
 
   // Save calorie / macro plan using the structured JSON the AI embedded
@@ -505,6 +772,67 @@ export default function ChatPage() {
       notes: plan.notes,
     });
     showToast(t("chat.toastGoalSaved"));
+  };
+
+  const handleScheduleWorkout = async ({
+    weekdays,
+    months,
+    overwrite,
+  }: {
+    weekdays: number[];
+    months: number;
+    overwrite: boolean;
+  }) => {
+    if (!pendingWorkoutSchedule) return;
+    const startMonth = getCurrentMonth();
+    const monthsToFill = getMonthRange(startMonth, months);
+    const assignments = weekdays.map((dayOfWeek) => ({
+      dayOfWeek,
+      workoutName: pendingWorkoutSchedule.workoutName,
+      muscleGroups: pendingWorkoutSchedule.muscleGroups,
+      templateId: pendingWorkoutSchedule.template.id,
+    }));
+
+    for (const month of monthsToFill) {
+      await calendarApi.populate({ month, assignments, overwrite });
+    }
+
+    emitDataChanged("workout");
+    setPendingWorkoutSchedule(null);
+    showToast(t("chat.toastWorkoutScheduled"));
+    navigate("/workouts");
+  };
+
+  const closePendingMealPlan = () => {
+    if (!pendingMealPlan) return;
+    pendingMealPlan.reject(new Error("cancelled"));
+    setPendingMealPlan(null);
+  };
+
+  const confirmPendingMealPlan = async (durationWeeks: number) => {
+    if (!pendingMealPlan) return;
+    const mealPlan = pendingMealPlan.plan;
+    await chatApi.saveMealPlan({
+      mode:
+        mealPlan.mode === "replace" || mealPlan.mode === "append"
+          ? mealPlan.mode
+          : "create",
+      targetPlanId: mealPlan.targetPlanId ?? null,
+      name: mealPlan.name,
+      weekStart: mealPlan.weekStart || getMondayIso(),
+      durationWeeks,
+      days: mealPlan.days,
+      meals: mealPlan.meals,
+    });
+    emitDataChanged("meal-plan");
+    showToast(
+      mealPlan.mode === "replace"
+        ? t("chat.toastMealUpdated")
+        : t("chat.toastMealSaved"),
+    );
+    pendingMealPlan.resolve();
+    setPendingMealPlan(null);
+    navigate("/meal-planner");
   };
 
   return (
@@ -714,6 +1042,18 @@ export default function ChatPage() {
       {/* end flex outer */}
 
       {/* ── Agent-switch confirmation modal (#15) ──────────────────────────── */}
+      <WorkoutScheduleModal
+        plan={pendingWorkoutSchedule}
+        onClose={() => setPendingWorkoutSchedule(null)}
+        onConfirm={handleScheduleWorkout}
+      />
+
+      <MealPlanDurationModal
+        pending={pendingMealPlan}
+        onClose={closePendingMealPlan}
+        onConfirm={confirmPendingMealPlan}
+      />
+
       {pendingAgent &&
         (() => {
           const next = AGENTS.find((a) => a.id === pendingAgent)!;

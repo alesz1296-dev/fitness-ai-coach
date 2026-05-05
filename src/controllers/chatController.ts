@@ -6,9 +6,13 @@ import { createError } from "../middleware/errorHandler.js";
 import { chat } from "../ai/agent.js";
 import {
   AgentType,
+  classifyProposalIntent,
   extractWorkoutJson,
   extractNutritionJson,
   extractMealPlanJson,
+  stripStructuredPlanBlocks,
+  type ProposalKind,
+  type ProposalState,
 } from "../ai/prompts.js";
 import {
   buildUserContext,
@@ -59,6 +63,15 @@ interface ChatExercise {
   restSeconds?: number;
   notes?: string;
   order?: number;
+}
+
+interface ChatProposalMetadata {
+  proposalKind: ProposalKind;
+  proposalState: ProposalState;
+  saveableProposal: boolean;
+  suggestedWorkout?: Record<string, unknown>;
+  suggestedPlan?: Record<string, unknown>;
+  suggestedMealPlan?: Record<string, unknown>;
 }
 
 const parseMondayDate = (date = new Date()): string => {
@@ -119,7 +132,8 @@ export const sendMessage = async (
 
     // Load user profile and conversation memory in parallel
     const xLang = (req.headers["x-language"] as string | undefined) ?? null;
-    const language = xLang === "es" || xLang === "en" ? xLang : "en";
+    const language =
+      xLang === "es" || xLang === "en" || xLang === "uk" ? xLang : "en";
 
     const [user, history] = await Promise.all([
       buildUserContext(req.user!.id, language),
@@ -130,26 +144,60 @@ export const sendMessage = async (
       return next(createError("User not found", 404));
     }
 
+    const proposalIntent = classifyProposalIntent(
+      message.trim(),
+      agentType as AgentType,
+      history,
+    );
+
     // Call the AI agent
     const { message: aiResponse, tokensUsed } = await chat(
       message.trim(),
       agentType as AgentType,
       user,
       history,
+      proposalIntent,
     );
 
-    // Extract structured JSON blocks from the AI response so the frontend
-    // can render "Save as Template" / "Save as Goal" buttons without parsing raw text.
-    const suggestedWorkout = extractWorkoutJson(aiResponse);
-    const suggestedPlan = extractNutritionJson(aiResponse);
-    const suggestedMealPlan = extractMealPlanJson(aiResponse);
+    const displayMessage = stripStructuredPlanBlocks(aiResponse);
+    const suggestedWorkout =
+      proposalIntent.proposalState === "plan_request" &&
+      proposalIntent.proposalKind === "workout"
+        ? extractWorkoutJson(aiResponse)
+        : null;
+    const suggestedPlan =
+      proposalIntent.proposalState === "plan_request" &&
+      proposalIntent.proposalKind === "goal"
+        ? extractNutritionJson(aiResponse)
+        : null;
+    const suggestedMealPlan =
+      proposalIntent.proposalState === "plan_request" &&
+      proposalIntent.proposalKind === "meal"
+        ? extractMealPlanJson(aiResponse)
+        : null;
+    const saveableProposal = Boolean(
+      proposalIntent.saveableProposal &&
+        ((proposalIntent.proposalKind === "workout" && suggestedWorkout) ||
+          (proposalIntent.proposalKind === "goal" && suggestedPlan) ||
+          (proposalIntent.proposalKind === "meal" && suggestedMealPlan)),
+    );
 
     // Build metadata object to persist alongside the conversation so save
     // buttons are still available when the user reloads chat history.
-    const metadataObj: Record<string, unknown> = {};
-    if (suggestedWorkout) metadataObj.suggestedWorkout = suggestedWorkout;
-    if (suggestedPlan) metadataObj.suggestedPlan = suggestedPlan;
-    if (suggestedMealPlan) metadataObj.suggestedMealPlan = suggestedMealPlan;
+    const metadataObj: ChatProposalMetadata = {
+      proposalKind: proposalIntent.proposalKind,
+      proposalState: proposalIntent.proposalState,
+      saveableProposal,
+    };
+    if (saveableProposal && suggestedWorkout) {
+      metadataObj.suggestedWorkout = suggestedWorkout;
+    }
+    if (saveableProposal && suggestedPlan) {
+      metadataObj.suggestedPlan = suggestedPlan;
+    }
+    if (saveableProposal && suggestedMealPlan) {
+      metadataObj.suggestedMealPlan = suggestedMealPlan;
+    }
     const metadataJson =
       Object.keys(metadataObj).length > 0 ? JSON.stringify(metadataObj) : null;
 
@@ -160,7 +208,7 @@ export const sendMessage = async (
           userId: req.user!.id,
           role: "user",
           message: message.trim(),
-          response: aiResponse,
+          response: displayMessage,
           agentType,
           ...(metadataJson && { metadata: metadataJson }),
         },
@@ -173,13 +221,17 @@ export const sendMessage = async (
     );
 
     res.json({
-      message: aiResponse,
+      message: displayMessage,
       agentType,
       conversationId: conversation.id,
       tokensUsed,
-      ...(suggestedWorkout && { suggestedWorkout }),
-      ...(suggestedPlan && { suggestedPlan }),
-      ...(suggestedMealPlan && { suggestedMealPlan }),
+      proposalKind: proposalIntent.proposalKind,
+      proposalState: proposalIntent.proposalState,
+      saveableProposal,
+      ...(saveableProposal && suggestedWorkout && { suggestedWorkout }),
+      ...(saveableProposal && suggestedPlan && { suggestedPlan }),
+      ...(saveableProposal &&
+        suggestedMealPlan && { suggestedMealPlan }),
     });
   } catch (error: unknown) {
     // User-facing errors thrown by the agent's classifyOpenAIError helper

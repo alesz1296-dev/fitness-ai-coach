@@ -358,6 +358,7 @@ export const saveMealPlanFromChatSchema = z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "weekStart must be YYYY-MM-DD")
       .optional(),
+    durationWeeks: z.coerce.number().int().min(1).max(52).optional(),
     days: z
       .array(
         z.object({

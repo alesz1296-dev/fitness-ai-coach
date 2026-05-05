@@ -264,6 +264,10 @@ export interface Translation {
     mealPlannerTitle: string; mealReplaceQ: string; mealAppendQ: string; mealSaveQ: string;
     mealUpdateBtn: string; mealSaveBtn: string;
     goalsTitle: string; goalSaveQ: string; goalSaveBtn: string;
+    scheduleWorkoutTitle: string; scheduleWorkoutBody: string; scheduleWorkoutDays: string;
+    scheduleWorkoutMonths: string; scheduleWorkoutOverwrite: string; scheduleWorkoutConfirm: string;
+    mealDurationTitle: string; mealDurationBody: string; mealDurationConfirm: string;
+    monthCount: string; weekCount: string; toastWorkoutScheduled: string;
     today: string; yesterday: string; daysAgo: string;
     errorMsg: string; clearConfirm: string;
     recentChats: string; noHistory: string;
@@ -1126,6 +1130,18 @@ const en: Translation = {
     goalsTitle: "Goals",
     goalSaveQ: "Want to save this calorie & macro plan to your goals?",
     goalSaveBtn: "Yes, save as Goal",
+    scheduleWorkoutTitle: "Schedule this workout",
+    scheduleWorkoutBody: "Your template is saved. Choose which weekdays to place it on and how many months to fill.",
+    scheduleWorkoutDays: "Weekdays",
+    scheduleWorkoutMonths: "How many months?",
+    scheduleWorkoutOverwrite: "Overwrite planned days if something is already there",
+    scheduleWorkoutConfirm: "Save to calendar",
+    mealDurationTitle: "Choose meal-plan length",
+    mealDurationBody: "Pick how long this plan should run before saving it to Meal Planner.",
+    mealDurationConfirm: "Save meal plan",
+    monthCount: "{{count}} month",
+    weekCount: "{{count}} week",
+    toastWorkoutScheduled: "✅ Workout added to your calendar.",
     today: "Today", yesterday: "Yesterday", daysAgo: "{{n}} days ago",
     errorMsg: "Sorry, I couldn't respond right now. Please try again.",
     clearConfirm: "Clear {{agent}} conversation history?",

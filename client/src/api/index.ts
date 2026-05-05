@@ -114,6 +114,12 @@ export interface ChatMealPlanPayload {
   meals?: ChatMealPlanMeal[];
 }
 
+export interface ChatProposalMeta {
+  proposalKind: "workout" | "meal" | "goal" | null;
+  proposalState: "advice_only" | "plan_opportunity" | "plan_request";
+  saveableProposal: boolean;
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const authApi = {
   register: (data: {
@@ -368,6 +374,9 @@ export const chatApi = {
       agentType: string;
       conversationId: number;
       tokensUsed?: number;
+      proposalKind: "workout" | "meal" | "goal" | null;
+      proposalState: "advice_only" | "plan_opportunity" | "plan_request";
+      saveableProposal: boolean;
       suggestedWorkout?: Record<string, any>;
       suggestedPlan?: Record<string, any>;
       suggestedMealPlan?: Record<string, any>;
@@ -378,7 +387,11 @@ export const chatApi = {
     ),
   clearHistory: (agentType?: string) =>
     api.delete(`/chat/history${agentType ? `?agentType=${agentType}` : ""}`),
-  saveWorkout: (data: any) => api.post("/chat/save-workout", data),
+  saveWorkout: (data: any) =>
+    api.post<{ message: string; template: WorkoutTemplate }>(
+      "/chat/save-workout",
+      data,
+    ),
   saveCaloriePlan: (data: any) => api.post("/chat/save-calorie-plan", data),
   saveMealPlan: (data: any) =>
     api.post<{ message: string; plan: MealPlan }>("/chat/save-meal-plan", data as ChatMealPlanPayload),
