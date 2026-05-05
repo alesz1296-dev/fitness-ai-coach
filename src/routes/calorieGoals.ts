@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import { validate, validateIdParam } from "../middleware/validate.js";
 import {
   createCalorieGoalSchema,
@@ -18,6 +19,7 @@ import {
 
 const router = Router();
 router.use(authenticate);
+router.use(idempotency);
 
 // POST /api/calorie-goals/preview  (calculate without saving)
 router.post("/preview", validate(previewCalorieGoalSchema), previewCalorieGoal);

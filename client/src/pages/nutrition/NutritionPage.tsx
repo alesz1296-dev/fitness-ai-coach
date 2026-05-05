@@ -15,6 +15,7 @@ import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { Select } from "../../components/ui/Select";
 import { useDraggableWeightFab } from "../../hooks/useDraggableWeightFab";
+import { readAppPrefs } from "../../hooks/useDarkMode";
 
 function getMealOptions(t: (k: string) => string) {
   return [
@@ -478,6 +479,8 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
   const [results,   setResults]   = useState<any[]>([]);
   const [open,      setOpen]      = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [myFoods,       setMyFoods]       = useState<CustomFood[]>([]);
   const [myFoodsQuery,  setMyFoodsQuery]  = useState("");
@@ -540,6 +543,16 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
     setMyFoods((prev) => prev.filter((f) => f.id !== id));
   };
 
+  const focusFoodSearch = useCallback(() => {
+    setBrowseMode("search");
+    setSelectedCategory("");
+    setOpen(true);
+    window.setTimeout(() => {
+      searchSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      searchInputRef.current?.focus();
+    }, 0);
+  }, []);
+
   const filteredMyFoods = myFoods.filter((f) =>
     !myFoodsQuery.trim() || f.name.toLowerCase().includes(myFoodsQuery.toLowerCase())
   );
@@ -598,10 +611,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setBrowseMode("search");
-                  setSelectedCategory("");
-                }}
+                onClick={focusFoodSearch}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                   browseMode === "search"
                     ? "bg-brand-600 text-white border-brand-600"
@@ -707,8 +717,9 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
             </div>
           )}
 
-          <div className="relative">
+          <div ref={searchSectionRef} className="relative">
             <Input
+              ref={searchInputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => (query || activeTags.length > 0) && results.length > 0 && setOpen(true)}
@@ -1198,15 +1209,22 @@ function MacroRing({ label, value, total, color, goal, danger = false }: {
   // danger=true (fats/carbs): ring turns red when over. Otherwise (protein): always green.
   const strokeColor = over && danger ? "#ef4444" : (over || met) ? "#22c55e" : color;
   const trackColor  = danger && over ? "#fecaca" : "#f3f4f6";
-  const glowFilter  =
-    over && danger ? "drop-shadow(0 0 8px rgba(239,68,68,0.80))"
-    : (over || met) ? "drop-shadow(0 0 5px rgba(34,197,94,0.65))"
-    : rawGoalPct >= 70 && goal ? "drop-shadow(0 0 5px rgba(59,130,246,0.55))"
+  const glowShadow =
+    over && danger ? "0 0 8px rgba(239,68,68,0.80)"
+    : (over || met) ? "0 0 5px rgba(34,197,94,0.65)"
+    : rawGoalPct >= 70 && goal ? "0 0 5px rgba(59,130,246,0.55)"
     : "none";
 
   return (
     <div className="text-center">
-      <div className="relative w-16 h-16 mx-auto" style={{ filter: glowFilter }}>
+      <div className="relative w-16 h-16 mx-auto">
+        {glowShadow !== "none" && (
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{ boxShadow: glowShadow }}
+          />
+        )}
         <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
           <circle cx="18" cy="18" r="15.9" fill="none" stroke={trackColor} strokeWidth="3" />
           <circle cx="18" cy="18" r="15.9" fill="none" stroke={strokeColor} strokeWidth="3"
@@ -2371,26 +2389,68 @@ export default function NutritionPage() {
   type SuppId = keyof typeof SUPPLEMENT_DEFS;
 
   interface SuppState { enabled: boolean; qty: number; }
-  const initSupplements = (): Record<SuppId, SuppState> => {
-    try {
-      const s = localStorage.getItem("supplement_prefs_v2");
-      if (s) return JSON.parse(s);
-    } catch { /* ignore */ }
-    return {
-      creatine: { enabled: false, qty: 5 },
-      omega3:   { enabled: false, qty: 3 },
-      whey:     { enabled: false, qty: 1 },
-      casein:   { enabled: false, qty: 0 },
-      plant:    { enabled: false, qty: 0 },
-      mass_gainer: { enabled: false, qty: 0 },
-    };
+  const BUILTIN_SUPP_STORE_KEY = "supplement_prefs_by_date_v1";
+  const LEGACY_BUILTIN_SUPP_KEY = "supplement_prefs_v2";
+  const emptyBuiltinSupps = (): Record<SuppId, SuppState> => ({
+    creatine: { enabled: false, qty: 5 },
+    omega3: { enabled: false, qty: 3 },
+    whey: { enabled: false, qty: 1 },
+    casein: { enabled: false, qty: 0 },
+    plant: { enabled: false, qty: 0 },
+    mass_gainer: { enabled: false, qty: 0 },
+  });
+  const normalizeBuiltinSupps = (value: unknown): Record<SuppId, SuppState> => {
+    const base = emptyBuiltinSupps();
+    if (!value || typeof value !== "object") return base;
+    for (const id of Object.keys(base) as SuppId[]) {
+      const entry = (value as Record<string, any>)[id];
+      if (entry && typeof entry === "object") {
+        base[id] = {
+          enabled: !!entry.enabled,
+          qty: Number.isFinite(Number(entry.qty)) ? Number(entry.qty) : base[id].qty,
+        };
+      }
+    }
+    return base;
   };
-  const [supplements, setSupplements] = useState<Record<SuppId, SuppState>>(initSupplements);
+  const loadBuiltinSuppStore = (): Record<string, Record<SuppId, SuppState>> => {
+    try {
+      const raw = localStorage.getItem(BUILTIN_SUPP_STORE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+      const legacy = localStorage.getItem(LEGACY_BUILTIN_SUPP_KEY);
+      if (legacy) {
+        const migrated = { [date]: normalizeBuiltinSupps(JSON.parse(legacy)) };
+        try {
+          localStorage.setItem(BUILTIN_SUPP_STORE_KEY, JSON.stringify(migrated));
+          localStorage.removeItem(LEGACY_BUILTIN_SUPP_KEY);
+        } catch { /* ignore */ }
+        return migrated;
+      }
+    } catch { /* ignore */ }
+    return {};
+  };
+  const [builtinSuppStore, setBuiltinSuppStore] = useState<Record<string, Record<SuppId, SuppState>>>(loadBuiltinSuppStore);
+  const [supplements, setSupplements] = useState<Record<SuppId, SuppState>>(() => normalizeBuiltinSupps(loadBuiltinSuppStore()[date]));
+
+  useEffect(() => {
+    setSupplements(normalizeBuiltinSupps(builtinSuppStore[date]));
+  }, [date, builtinSuppStore]);
+
+  const persistBuiltinSuppsForDate = (day: string, next: Record<SuppId, SuppState>) => {
+    setBuiltinSuppStore((prev) => {
+      const store = { ...prev, [day]: next };
+      try { localStorage.setItem(BUILTIN_SUPP_STORE_KEY, JSON.stringify(store)); } catch { /* ignore */ }
+      return store;
+    });
+  };
 
   const updateSupp = (id: SuppId, patch: Partial<SuppState>) => {
     setSupplements((prev) => {
       const next = { ...prev, [id]: { ...prev[id], ...patch } };
-      try { localStorage.setItem("supplement_prefs_v2", JSON.stringify(next)); } catch { /* ignore */ }
+      persistBuiltinSuppsForDate(date, next);
       return next;
     });
   };
@@ -2456,41 +2516,137 @@ export default function NutritionPage() {
     }, { calories: 0, protein: 0, carbs: 0, fats: 0 });
 
   // ── Custom supplements (user-defined) ────────────────────────────────────
-  interface CustomSupp { id: string; name: string; emoji: string; unit: string; defaultQty: number; cal: number; p: number; c: number; f: number; enabled: boolean; qty: number; }
-  const CUSTOM_SUPP_KEY = "fitai_custom_supps_v1";
-  const loadCustomSupps = (): CustomSupp[] => { try { return JSON.parse(localStorage.getItem(CUSTOM_SUPP_KEY) ?? "[]"); } catch { return []; } };
-  const [customSupps, setCustomSupps] = useState<CustomSupp[]>(loadCustomSupps);
-  const saveCustomSupps = (next: CustomSupp[]) => {
-    setCustomSupps(next);
-    try { localStorage.setItem(CUSTOM_SUPP_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  interface CustomSuppDef { id: string; name: string; emoji: string; unit: string; defaultQty: number; cal: number; p: number; c: number; f: number; }
+  interface CustomSuppState { enabled: boolean; qty: number; }
+  const CUSTOM_SUPP_DEFS_KEY = "fitai_custom_supp_defs_v1";
+  const CUSTOM_SUPP_STORE_KEY = "fitai_custom_supp_state_by_date_v1";
+  const LEGACY_CUSTOM_SUPP_KEY = "fitai_custom_supps_v1";
+  const loadCustomSuppDefs = (): CustomSuppDef[] => {
+    try {
+      const defsRaw = localStorage.getItem(CUSTOM_SUPP_DEFS_KEY);
+      if (defsRaw) return JSON.parse(defsRaw);
+      const legacy = localStorage.getItem(LEGACY_CUSTOM_SUPP_KEY);
+      if (legacy) {
+        return (JSON.parse(legacy) as Array<CustomSuppDef & CustomSuppState>).map(({ enabled: _enabled, qty: _qty, ...def }) => def);
+      }
+    } catch { /* ignore */ }
+    return [];
   };
-  const updateCustomSupp = (id: string, patch: Partial<CustomSupp>) => {
-    saveCustomSupps(customSupps.map((s) => s.id === id ? { ...s, ...patch } : s));
+  const loadCustomSuppStore = (): Record<string, Record<string, CustomSuppState>> => {
+    try {
+      const raw = localStorage.getItem(CUSTOM_SUPP_STORE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+      const legacy = localStorage.getItem(LEGACY_CUSTOM_SUPP_KEY);
+      if (legacy) {
+        const parsed = JSON.parse(legacy) as Array<CustomSuppDef & CustomSuppState>;
+        const migrated = {
+          [date]: Object.fromEntries(
+            parsed.map((s) => [s.id, { enabled: !!s.enabled, qty: Number.isFinite(Number(s.qty)) ? Number(s.qty) : s.defaultQty }]),
+          ),
+        };
+        try {
+          const defs = parsed.map(({ enabled: _enabled, qty: _qty, ...def }) => def);
+          localStorage.setItem(CUSTOM_SUPP_DEFS_KEY, JSON.stringify(defs));
+          localStorage.setItem(CUSTOM_SUPP_STORE_KEY, JSON.stringify(migrated));
+          localStorage.removeItem(LEGACY_CUSTOM_SUPP_KEY);
+        } catch { /* ignore */ }
+        return migrated;
+      }
+    } catch { /* ignore */ }
+    return {};
   };
-  const removeCustomSupp = (id: string) => saveCustomSupps(customSupps.filter((s) => s.id !== id));
+  const [customSuppDefs, setCustomSuppDefs] = useState<CustomSuppDef[]>(loadCustomSuppDefs);
+  const [customSuppStore, setCustomSuppStore] = useState<Record<string, Record<string, CustomSuppState>>>(loadCustomSuppStore);
+  const emptyCustomSuppState = () => Object.fromEntries(customSuppDefs.map((def) => [def.id, { enabled: false, qty: def.defaultQty }])) as Record<string, CustomSuppState>;
+  const normalizeCustomSuppState = (value: unknown) => {
+    const base = emptyCustomSuppState();
+    if (!value || typeof value !== "object") return base;
+    for (const def of customSuppDefs) {
+      const entry = (value as Record<string, any>)[def.id];
+      if (entry && typeof entry === "object") {
+        base[def.id] = {
+          enabled: !!entry.enabled,
+          qty: Number.isFinite(Number(entry.qty)) ? Number(entry.qty) : def.defaultQty,
+        };
+      }
+    }
+    return base;
+  };
+  const [customSuppState, setCustomSuppState] = useState<Record<string, CustomSuppState>>(() => normalizeCustomSuppState(loadCustomSuppStore()[date]));
+
+  useEffect(() => {
+    setCustomSuppState(normalizeCustomSuppState(customSuppStore[date]));
+  }, [date, customSuppDefs, customSuppStore]);
+
+  const persistCustomSuppStateForDate = (day: string, next: Record<string, CustomSuppState>) => {
+    setCustomSuppStore((prev) => {
+      const store = { ...prev, [day]: next };
+      try { localStorage.setItem(CUSTOM_SUPP_STORE_KEY, JSON.stringify(store)); } catch { /* ignore */ }
+      return store;
+    });
+  };
+  const persistCustomSuppDefs = (next: CustomSuppDef[]) => {
+    setCustomSuppDefs(next);
+    try { localStorage.setItem(CUSTOM_SUPP_DEFS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  };
+  const updateCustomSupp = (id: string, patch: Partial<CustomSuppState>) => {
+    setCustomSuppState((prev) => {
+      const next = { ...prev, [id]: { ...prev[id], ...patch } };
+      persistCustomSuppStateForDate(date, next);
+      return next;
+    });
+  };
+  const removeCustomSupp = (id: string) => {
+    persistCustomSuppDefs(customSuppDefs.filter((s) => s.id !== id));
+    setCustomSuppState((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      persistCustomSuppStateForDate(date, next);
+      return next;
+    });
+    setCustomSuppStore((prev) => {
+      const nextStore = Object.fromEntries(
+        Object.entries(prev).map(([day, state]) => {
+          const copy = { ...state };
+          delete copy[id];
+          return [day, copy];
+        }),
+      );
+      try { localStorage.setItem(CUSTOM_SUPP_STORE_KEY, JSON.stringify(nextStore)); } catch { /* ignore */ }
+      return nextStore;
+    });
+  };
   const [showAddCustomSupp, setShowAddCustomSupp] = useState(false);
   const [newSuppDraft, setNewSuppDraft] = useState({ name: "", emoji: "💊", unit: "caps", defaultQty: 1, cal: 0, p: 0, c: 0, f: 0 });
   const addCustomSupp = () => {
     if (!newSuppDraft.name.trim()) return;
-    const entry: CustomSupp = { ...newSuppDraft, id: `cust_${Date.now()}`, enabled: false, qty: newSuppDraft.defaultQty };
-    saveCustomSupps([...customSupps, entry]);
+    const entry: CustomSuppDef = { ...newSuppDraft, id: `cust_${Date.now()}` };
+    persistCustomSuppDefs([...customSuppDefs, entry]);
+    setCustomSuppState((prev) => {
+      const next = { ...prev, [entry.id]: { enabled: false, qty: entry.defaultQty } };
+      persistCustomSuppStateForDate(date, next);
+      return next;
+    });
     setNewSuppDraft({ name: "", emoji: "💊", unit: "caps", defaultQty: 1, cal: 0, p: 0, c: 0, f: 0 });
     setShowAddCustomSupp(false);
   };
 
   // Include custom supps in total macro count
-  const customSuppMacros = customSupps
-    .filter((s) => s.enabled && s.qty > 0)
-    .reduce((acc, s) => {
-      const mult = s.qty / (s.defaultQty || 1);
-      return { calories: acc.calories + s.cal * mult, protein: acc.protein + s.p * mult, carbs: acc.carbs + s.c * mult, fats: acc.fats + s.f * mult };
+  const customSuppMacros = customSuppDefs
+    .map((def) => ({ def, state: customSuppState[def.id] ?? { enabled: false, qty: def.defaultQty } }))
+    .filter((item) => item.state.enabled && item.state.qty > 0)
+    .reduce((acc, { def, state }) => {
+      const mult = state.qty / (def.defaultQty || 1);
+      return { calories: acc.calories + def.cal * mult, protein: acc.protein + def.p * mult, carbs: acc.carbs + def.c * mult, fats: acc.fats + def.f * mult };
     }, { calories: 0, protein: 0, carbs: 0, fats: 0 });
 
   // ── Water tracking ───────────────────────────────────────────────────────────
   const getTrackWaterPref = () => {
     try {
-      const s = localStorage.getItem("app_prefs_v1");
-      if (s) return JSON.parse(s).trackWater !== false;
+      return readAppPrefs().trackWater !== false;
     } catch { /* ignore */ }
     return true;
   };
@@ -3590,15 +3746,16 @@ export default function NutritionPage() {
           })}
 
           {/* Custom supplements */}
-          {customSupps.map((cs) => {
+          {customSuppDefs.map((def) => {
+            const cs = customSuppState[def.id] ?? { enabled: false, qty: def.defaultQty };
             const macroLine = [
-              cs.cal > 0 ? `${Math.round(cs.cal * (cs.qty / (cs.defaultQty || 1)))} kcal` : null,
-              cs.p  > 0 ? `${Math.round(cs.p  * (cs.qty / (cs.defaultQty || 1)))}g P` : null,
+              def.cal > 0 ? `${Math.round(def.cal * (cs.qty / (def.defaultQty || 1)))} kcal` : null,
+              def.p  > 0 ? `${Math.round(def.p  * (cs.qty / (def.defaultQty || 1)))}g P` : null,
             ].filter(Boolean).join(" · ");
             return (
-              <div key={cs.id} className="relative">
+              <div key={def.id} className="relative">
                 <div
-                  onClick={() => updateCustomSupp(cs.id, { enabled: !cs.enabled })}
+                  onClick={() => updateCustomSupp(def.id, { enabled: !cs.enabled })}
                   className={`relative cursor-pointer rounded-xl border p-2.5 text-center transition-all select-none ${
                     cs.enabled
                       ? "border-purple-400 bg-purple-50 dark:bg-purple-900/30 shadow-sm"
@@ -3607,17 +3764,17 @@ export default function NutritionPage() {
                 >
                   {/* Delete custom supp */}
                   <button
-                    onClick={(e) => { e.stopPropagation(); removeCustomSupp(cs.id); }}
+                    onClick={(e) => { e.stopPropagation(); removeCustomSupp(def.id); }}
                     title={t("nutrition.removeSupplement")}
                     className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] bg-gray-100 text-red-400 hover:bg-red-50 hover:text-red-500 z-10 font-bold transition-colors"
                   >×</button>
-                  <div className="text-2xl mb-1">{cs.emoji || "💊"}</div>
-                  <p className={`text-xs font-semibold leading-tight ${cs.enabled ? "text-purple-800 dark:text-purple-200" : "text-gray-700 dark:text-gray-300"}`}>{cs.name}</p>
+                  <div className="text-2xl mb-1">{def.emoji || "💊"}</div>
+                  <p className={`text-xs font-semibold leading-tight ${cs.enabled ? "text-purple-800 dark:text-purple-200" : "text-gray-700 dark:text-gray-300"}`}>{def.name}</p>
                   <div className="flex items-center justify-center gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => updateCustomSupp(cs.id, { qty: Math.max(0, cs.qty - 1) })} className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200">−</button>
+                    <button onClick={() => updateCustomSupp(def.id, { qty: Math.max(0, cs.qty - 1) })} className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200">−</button>
                     <span className="text-xs font-semibold text-gray-800 dark:text-gray-100 w-6 text-center">{cs.qty}</span>
-                    <button onClick={() => updateCustomSupp(cs.id, { qty: cs.qty + 1 })} className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200">+</button>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{cs.unit}</span>
+                    <button onClick={() => updateCustomSupp(def.id, { qty: cs.qty + 1 })} className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-200">+</button>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500">{def.unit}</span>
                   </div>
                   {cs.enabled && macroLine && <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-1 font-medium">{macroLine}</p>}
                   {cs.enabled && (

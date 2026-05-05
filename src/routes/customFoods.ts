@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import {
   getCustomFoods,
   createCustomFood,
@@ -9,6 +10,7 @@ import {
 
 const router = Router();
 router.use(authenticate);
+router.use(idempotency);
 
 // GET    /api/custom-foods        — list user's foods (optional ?q=search)
 router.get("/", getCustomFoods);

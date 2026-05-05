@@ -2,6 +2,28 @@
 
 Most recent session first.
 
+## 2026-05-05 - Session: dashboard, workouts, nutrition, and frontend docs
+
+### Goal
+Polish the main web surfaces, expand translation coverage for the weekly plan and workout AI builder, make Nutrition search mode jump straight to the DB search field, and refresh the docs so the frontend architecture is easier to study.
+
+### Files modified
+- `client/src/pages/dashboard/Dashboard.tsx` - the today weight tile now opens the log-weight panel directly
+- `client/src/components/WeeklyPlanWidget.tsx` - translated the weekly plan picker and sync modal, including month labels and plan quality labels
+- `client/src/pages/workouts/WorkoutsPage.tsx` - translated the AI builder and expanded the muscle-group picker to include broader splits and body regions
+- `client/src/pages/nutrition/NutritionPage.tsx` - tapping search mode again now jumps to the database search field on the same page
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the new plan, AI workout, and calendar translation keys
+- `ARCHITECTURE.md` - added a fuller frontend deep-dive section
+- `CONTEXT.md`, `PRIORITIES.md` - synced the live project notes
+
+### Notes
+- The dashboard weight tile now behaves like the other interactive summary tiles: it opens the weight log entry flow instead of only toggling the history panel.
+- The weekly plan picker now uses translation keys for the setup modal, month sync controls, and plan labels.
+- The AI workout builder now includes broader muscle groups like upper/lower body, push/pull, quads, hamstrings, calves, traps, and forearms.
+- Nutrition search mode now behaves more like a jump-to-search action when tapped again.
+
+---
+
 ## 2026-05-03 - Session: dynamic refresh + food localization
 
 ### Goal

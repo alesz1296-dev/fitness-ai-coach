@@ -59,6 +59,22 @@ fitness_ai_coach/
 
 ### Food + exercise data — important rule
 
+## Current Frontend Focus
+
+The web frontend is now a richer multi-surface app than the original dashboard-only version. The current focus areas are:
+
+- keeping shared data in sync across dashboard, progress, nutrition, and workouts
+- making the major planning surfaces translated instead of hardcoded in English
+- keeping the weight logging flow one tap away from the dashboard tile and the floating action button
+- making Nutrition search feel natural by jumping straight into the database search field
+- keeping the weekly plan picker and AI workout builder localized and broader in scope
+
+The frontend uses React page containers plus feature subcomponents, Zustand for auth/session state, and shared browser events for refreshes. The design intent is:
+
+- page-local state for page-local interactions
+- shared events for cross-page refreshes
+- locale keys for visible copy
+- API helpers as the single network boundary
 `src/data/foods.ts` and `src/data/exercises.ts` are **seed sources only** — they are no longer used at runtime for search. `searchController.ts` queries `FoodItem` and `ExerciseItem` DB tables directly, falling back to the static arrays only when those tables are empty (first boot before `npm run prisma:seed` has been run).
 
 **When adding new foods or exercises**: add to the static array first, then re-run `npm run prisma:seed` (upsert — safe to re-run). The backup reference copies live in `docs/backup-food-db.md` and `docs/backup-exercise-db.md`.

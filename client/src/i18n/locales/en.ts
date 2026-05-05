@@ -14,6 +14,7 @@ export interface Translation {
     notes: string; optional: string; close: string; confirm: string;
     back: string; next: string; done: string; remove: string; reset: string;
     apply: string; name: string; goal: string; weight: string; calories: string;
+    custom: string;
     protein: string; carbs: string; fats: string; water: string;
     kg: string; lbs: string; kcal: string; min: string;
     day: string;
@@ -41,6 +42,15 @@ export interface Translation {
     weeklyTrainingPlan: string; tapDayComplete: string; syncToCalendar: string;
     editSchedule: string; browsePlans: string; avgCalBurned: string;
     noPlanThisWeek: string; noPlanSub: string; daysCompleted: string;
+    planYourWeek: string; suggestedPlansForDays: string; useThisPlan: string;
+    backToPlanSuggestions: string; customizePlanHint: string; scrollToSeeAll: string;
+    howManyDaysPerWeek: string; howManyMonthsToFill: string;
+    syncWeeklyPlanToCalendar: string; syncWeeklyPlanDescription: string;
+    replaceExistingCalendarDays: string; thisMonth: string; nextMonth: string; plusTwoMonths: string;
+    trainingDaysUpdated: string; failedToSyncWeeklyPlan: string; syncedWeeklyPlanSummary: string;
+    noActiveDaysToSync: string;
+    planLevelIntermediate: string; planLevelAdvanced: string; adjustPlan: string;
+    daySingular: string; daysPlural: string; monthSingular: string; monthsPlural: string;
     languageChanged: string;
     tapToView: string; kcalTarget: string; target: string; targetColon: string;
     inTheLast7Days: string; dayRest: string; daysRest: string;
@@ -142,6 +152,13 @@ export interface Translation {
     exerciseSuggest: string; applyBtn: string; closeBtn: string;
     cancelTimer: string; logged: string; loading: string;
     todayLabel: string; doneBtn: string; viewBtn: string;
+    generateWorkout: string; generating: string; pickAtLeastOneMuscleGroup: string;
+    aiCouldNotGeneratePlan: string; failedToSaveWorkout: string; templateFrequencyMismatch: string;
+    muscleChest: string; muscleBack: string; muscleShoulders: string; muscleBiceps: string; muscleTriceps: string;
+    muscleUpperBody: string; muscleLowerBody: string; musclePush: string; musclePull: string; muscleLegs: string;
+    muscleQuads: string; muscleHamstrings: string; muscleCalves: string; muscleGlutes: string; muscleTraps: string;
+    muscleForearms: string; muscleCore: string; muscleFullBody: string;
+    howManyMonthsToFill: string; thisMonth: string; nextMonth: string; plusTwoMonths: string;
   };
   progress: {
     title: string; bodyWeight: string; logWeight: string; weightHistory: string;
@@ -203,7 +220,7 @@ export interface Translation {
   };
   settings: {
     equipment: string; difficulty: string; instructions: string; searchFood: string;
-    savePreferences: string; saveInjuries: string; saveCycleSettings: string; updatePassword: string; currentPassword: string; newPassword: string; confirmPasswordField: string; selectActivityLevel: string; selectFitnessLevel: string; selectSex: string; selectDays: string; selectDuration: string; daysPerWeek: string; hoursPerSession: string; fitnessLevel: string; proteinTarget: string; appliedToCalc: string; whyMatters: string; usedByAI: string; showWaterWidget: string; switchDarkMode: string; controlsAppearance: string; preferenceSaved: string; colorTheme: string; colorThemeHelp: string; themeOptionDefault: string; themeOptionBlackGold: string; themeOptionWhiteGreen: string; downloadDataDesc: string; irreversibleActions: string; memberSince: string; account: string; username: string; cycleLength: string; firstDayPeriod: string; menstrualCycleTracking: string; cyclePersonalises: string; avgCycleLength: string; commonRanges: string; injuriesExercises: string; trainingSchedule: string; goToPlan: string; goalDescription: string; passwordHint: string; activityLevel: string; injuriesSaved: string; injurySelectHelp: string; activeLimitations: string; injuryWarning: string; injuryLowerBack: string; injuryUpperBack: string; injuryKneeLeft: string; injuryKneeRight: string; injuryShoulderLeft: string; injuryShoulderRight: string; injuryHip: string; injuryElbowLeft: string; injuryElbowRight: string; injuryWristLeft: string; injuryWristRight: string; injuryAnkleLeft: string; injuryAnkleRight: string; injuryRotatorCuff: string; injuryHamstring: string; injuryItBand: string; injuryPlantarFascia: string;
+    savePreferences: string; saveInjuries: string; saveCycleSettings: string; updatePassword: string; currentPassword: string; newPassword: string; confirmPasswordField: string; selectActivityLevel: string; selectFitnessLevel: string; selectSex: string; selectDays: string; selectDuration: string; daysPerWeek: string; hoursPerSession: string; fitnessLevel: string; proteinTarget: string; appliedToCalc: string; whyMatters: string; usedByAI: string; showWaterWidget: string; switchDarkMode: string; controlsAppearance: string; preferenceSaved: string; appearancePreset: string; appearancePresetHelp: string; appearanceOptionSystemClassic: string; appearanceOptionLightClassic: string; appearanceOptionDarkCharcoal: string; appearanceOptionBlackGold: string; appearanceOptionWhiteGreen: string; appearanceOptionMidnightCyan: string; appearanceOptionSoftSand: string; appearanceOptionEditorialRose: string; colorTheme: string; colorThemeHelp: string; themeOptionDefault: string; themeOptionBlackGold: string; themeOptionWhiteGreen: string; downloadDataDesc: string; irreversibleActions: string; memberSince: string; account: string; username: string; cycleLength: string; firstDayPeriod: string; menstrualCycleTracking: string; cyclePersonalises: string; avgCycleLength: string; commonRanges: string; injuriesExercises: string; trainingSchedule: string; goToPlan: string; goalDescription: string; passwordHint: string; activityLevel: string; injuriesSaved: string; injurySelectHelp: string; activeLimitations: string; injuryWarning: string; injuryLowerBack: string; injuryUpperBack: string; injuryKneeLeft: string; injuryKneeRight: string; injuryShoulderLeft: string; injuryShoulderRight: string; injuryHip: string; injuryElbowLeft: string; injuryElbowRight: string; injuryWristLeft: string; injuryWristRight: string; injuryAnkleLeft: string; injuryAnkleRight: string; injuryRotatorCuff: string; injuryHamstring: string; injuryItBand: string; injuryPlantarFascia: string;
   };
   auth: {
     login: string; register: string; logout: string; email: string; password: string;
@@ -296,7 +313,7 @@ const en: Translation = {
     day: "Day",
     sets: "Sets", reps: "Reps", rpe: "RPE", net: "Net",
     burned: "burned", estimated: "estimated", error: "Error",
-    viewAll: "View all →", manage: "Manage →",
+    viewAll: "View all →", manage: "Manage →", custom: "Custom",
   },
   dashboard: {
     title: "Dashboard", goodMorning: "Good morning", goodAfternoon: "Good afternoon",
@@ -332,6 +349,31 @@ const en: Translation = {
     noPlanThisWeek: "No plan for this week",
     noPlanSub: "Choose from beginner-friendly to advanced templates",
     daysCompleted: "days",
+    planYourWeek: "Plan your week",
+    suggestedPlansForDays: "Suggested plans for {{days}} days",
+    useThisPlan: "Use This Plan →",
+    backToPlanSuggestions: "← Back to plan suggestions",
+    customizePlanHint: "Toggle days on/off, edit labels, and optionally set a calorie target for each session.",
+    scrollToSeeAll: "↕ scroll to see all",
+    howManyDaysPerWeek: "How many days per week will you train?",
+    howManyMonthsToFill: "How many months to fill?",
+    syncWeeklyPlanToCalendar: "Sync Weekly Plan to Calendar",
+    syncWeeklyPlanDescription: "Fills your workout calendar with this week's schedule, repeated across the selected months.",
+    replaceExistingCalendarDays: "Replace existing calendar days",
+    thisMonth: "This month",
+    nextMonth: "+ Next month",
+    plusTwoMonths: "+ 2 months",
+    trainingDaysUpdated: "Training days updated to {{days}} 💪 — update your weekly plan to match!",
+    failedToSyncWeeklyPlan: "Failed to sync to calendar.",
+    syncedWeeklyPlanSummary: "Synced {{days}} {{dayWord}} across {{months}} {{monthWord}}! Open the Calendar tab to review.",
+    noActiveDaysToSync: "No active days to sync.",
+    planLevelIntermediate: "Intermediate",
+    planLevelAdvanced: "Advanced",
+    adjustPlan: "Adjust plan",
+    daySingular: "day",
+    daysPlural: "days",
+    monthSingular: "month",
+    monthsPlural: "months",
     languageChanged: "Language updated",
     tapToView: "tap to view →",
     kcalTarget: "kcal target",
@@ -642,6 +684,10 @@ const en: Translation = {
     overwriteDays: "Overwrite days that already have a plan",
     replaceDays: "Replace days that already have a plan",
     howManyMonths: "How many months to fill?",
+    howManyMonthsToFill: "How many months to fill?",
+    thisMonth: "This month",
+    nextMonth: "+ Next month",
+    plusTwoMonths: "+ 2 months",
     anyNotesDay: "Any notes for this day…",
     saveDayBtn: "Save this day",
     templateDay: "Template / Day",
@@ -653,6 +699,30 @@ const en: Translation = {
     aiBuilderTitle: "AI Workout Builder",
     pickTargets: "Pick your targets and let AI design your session",
     regenerate: "Regenerate",
+    generateWorkout: "Generate Workout",
+    generating: "Generating...",
+    pickAtLeastOneMuscleGroup: "Pick at least one muscle group.",
+    aiCouldNotGeneratePlan: "AI could not generate a plan. Try again or adjust your selections.",
+    failedToSaveWorkout: "Failed to save workout.",
+    templateFrequencyMismatch: "⚠️ You've selected {{selected}} day(s) but this template is designed for {{target}}x/week.",
+    muscleChest: "Chest",
+    muscleBack: "Back",
+    muscleShoulders: "Shoulders",
+    muscleBiceps: "Biceps",
+    muscleTriceps: "Triceps",
+    muscleUpperBody: "Upper Body",
+    muscleLowerBody: "Lower Body",
+    musclePush: "Push",
+    musclePull: "Pull",
+    muscleLegs: "Legs",
+    muscleQuads: "Quads",
+    muscleHamstrings: "Hamstrings",
+    muscleCalves: "Calves",
+    muscleGlutes: "Glutes",
+    muscleTraps: "Traps",
+    muscleForearms: "Forearms",
+    muscleCore: "Core",
+    muscleFullBody: "Full Body",
     nextBtn: "Next →",
     difficultyLabel: "Difficulty",
     dateLabel: "Date",
@@ -845,6 +915,16 @@ const en: Translation = {
     switchDarkMode: "Switch the app to a dark colour scheme",
     controlsAppearance: "Controls appearance and tracking features",
     preferenceSaved: "Preferences saved",
+    appearancePreset: "Appearance preset",
+    appearancePresetHelp: "Choose a full app look. This controls both palette and light/dark mode.",
+    appearanceOptionSystemClassic: "System classic",
+    appearanceOptionLightClassic: "Light classic",
+    appearanceOptionDarkCharcoal: "Dark grey",
+    appearanceOptionBlackGold: "Black + Golden",
+    appearanceOptionWhiteGreen: "White + Green",
+    appearanceOptionMidnightCyan: "Midnight cyan",
+    appearanceOptionSoftSand: "Soft sand",
+    appearanceOptionEditorialRose: "Editorial rose",
     colorTheme: "Color theme",
     colorThemeHelp: "Pick a base accent palette for the app",
     themeOptionDefault: "Default",

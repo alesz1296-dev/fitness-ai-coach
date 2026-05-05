@@ -1,6 +1,6 @@
 # FitAI Coach - Task Priorities
 
-_Last updated: 2026-05-03_
+_Last updated: 2026-05-05_
 
 > Format: **P1** = must-ship · **P2** = high value · **P3** = deferred/nice-to-have
 
@@ -58,6 +58,10 @@ _Last updated: 2026-05-03_
 | - | Progress mobile tab polish - horizontally scrollable tab strip, renamed embedded Plan tab, Goals deep-link to plan review, and compact month/day target-date display | Progress/Goals UX | P1 | Done |
 | - | Nutrition library polish - `Add New Food` CTA moved to the left side of My Foods and protein shake supplements now appear as `Protein Shake` in macro food/meal breakdowns | Nutrition/UX | P1 | Done |
 | - | Theme and language preference polish - added `Black + Golden` and `White + Green` theme options and fixed the language-change toast so it appears in the newly selected language | Settings/UX | P1 | Done |
+| - | Dashboard weight tile interaction - today's weight card now opens the log-weight panel directly | UX | P1 | Done |
+| - | WeeklyPlanWidget localization - plan picker, sync modal, and calendar prompts are now translated | i18n/UX | P1 | Done |
+| - | Workouts AI builder translation - builder labels and broader muscle groups are localized | i18n/Workouts | P1 | Done |
+| - | Nutrition search jump - re-tapping search mode now jumps focus to the database search field | UX | P1 | Done |
 
 ---
 
@@ -71,6 +75,7 @@ Recently cleared:
 - Progress now supports broader time windows from `1 day` through `1 year`.
 - Ukrainian locale wiring is in place across the app shell and language picker; a deeper translation pass still remains as follow-up product polish.
 - Auth/session hardening is complete: refresh tokens now live in httpOnly cookies, access tokens are memory-only, and auth state bootstraps through `/auth/me`.
+- Today's UI polish added one-tap weight logging from the dashboard tile, translated the weekly plan picker, expanded workout AI muscle groups, and made Nutrition search mode jump directly into the DB search field.
 - Spanish locale mojibake cleanup fixed the corrupted Nutrition/search labels, and the register placeholder example now uses `Ale` / `Salazar`.
 
 ---

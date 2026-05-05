@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { applyColorTheme, applyDark, readColorThemePref, readDarkPref } from "../../hooks/useDarkMode";
+import { applyAppearancePreset, readAppPrefs, writeAppPrefs } from "../../hooks/useDarkMode";
 import { emitAppPrefsChanged, emitWeightLogged } from "../../lib/appEvents";
 import { useTranslation, LANG_LABELS, t as _t } from "../../i18n";
 import type { SupportedLang } from "../../i18n";
@@ -695,6 +695,8 @@ function LanguagePicker() {
   const { t, i18n } = useTranslation();
   const toast = useToast();
   const flags: Record<SupportedLang, string> = { en: "🇬🇧", es: "🇪🇸", uk: "🇺🇦" };
+  const languageOptions = (Object.entries(LANG_LABELS) as [SupportedLang, string][])
+    .map(([code, label]) => ({ value: code, label: `${flags[code]} ${label}` }));
 
   const handleLangChange = (code: SupportedLang) => {
     if (code === i18n.language) return;
@@ -705,26 +707,17 @@ function LanguagePicker() {
   return (
     <>
       <ToastBanner msg={toast.msg} />
-      <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
+      <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 gap-4">
         <div>
           <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🌐 {t("profile.language")}</p>
           <p className="text-xs text-gray-500 dark:text-gray-400">{t("profile.changeLanguage")}</p>
         </div>
-        <div className="flex gap-1.5">
-          {(Object.entries(LANG_LABELS) as [SupportedLang, string][]).map(([code, label]) => (
-            <button
-              key={code}
-              type="button"
-              onClick={() => handleLangChange(code as SupportedLang)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                i18n.language === code
-                  ? "bg-brand-600 text-white border-brand-600"
-                  : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-brand-400"
-              }`}
-            >
-              {flags[code]} {label}
-            </button>
-          ))}
+        <div className="w-52 shrink-0">
+          <Select
+            value={i18n.language}
+            onChange={(e) => handleLangChange(e.target.value as SupportedLang)}
+            options={languageOptions}
+          />
         </div>
       </div>
     </>
@@ -732,41 +725,45 @@ function LanguagePicker() {
 }
 
 // â”€â”€ App Preferences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-type AppPrefs = { trackWater: boolean; darkMode: boolean; colorTheme: "default" | "black-gold" | "white-green" };
+type AppPrefs = {
+  trackWater: boolean;
+  appearancePreset:
+    | "system-classic"
+    | "light-classic"
+    | "dark-classic"
+    | "dark-charcoal"
+    | "black-gold"
+    | "white-green"
+    | "midnight-cyan"
+    | "soft-sand"
+    | "editorial-rose";
+};
 
 function AppPreferencesForm() {
   const { t } = useTranslation();
-  const initPrefs = (): AppPrefs => {
-    try {
-      const s = localStorage.getItem("app_prefs_v1");
-      if (s) return { trackWater: true, darkMode: readDarkPref(), colorTheme: readColorThemePref(), ...JSON.parse(s) };
-    } catch { /* ignore */ }
-    return { trackWater: true, darkMode: readDarkPref(), colorTheme: readColorThemePref() };
-  };
-  const [prefs, setPrefs] = useState<AppPrefs>(initPrefs);
+  const [prefs, setPrefs] = useState<AppPrefs>(() => readAppPrefs() as AppPrefs);
   const [saved, setSaved] = useState(false);
 
-  const toggle = (key: keyof AppPrefs) => {
+  const persist = (next: AppPrefs) => {
+    writeAppPrefs(next);
+    applyAppearancePreset(next.appearancePreset);
+    emitAppPrefsChanged();
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const toggleTrackWater = () => {
     setPrefs((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      try { localStorage.setItem("app_prefs_v1", JSON.stringify(next)); } catch { /* ignore */ }
-      if (key === "darkMode") applyDark(next.darkMode);
-      applyColorTheme(next.colorTheme);
-      emitAppPrefsChanged();
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      const next = { ...prev, trackWater: !prev.trackWater };
+      persist(next);
       return next;
     });
   };
 
-  const updateColorTheme = (value: AppPrefs["colorTheme"]) => {
+  const updateAppearancePreset = (value: AppPrefs["appearancePreset"]) => {
     setPrefs((prev) => {
-      const next = { ...prev, colorTheme: value };
-      try { localStorage.setItem("app_prefs_v1", JSON.stringify(next)); } catch { /* ignore */ }
-      applyColorTheme(next.colorTheme);
-      emitAppPrefsChanged();
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      const next = { ...prev, appearancePreset: value };
+      persist(next);
       return next;
     });
   };
@@ -789,35 +786,32 @@ function AppPreferencesForm() {
       {saved && <p className="text-sm text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 rounded-xl px-3 py-2 mb-4">{t("settings.preferenceSaved")}</p>}
       <div className="space-y-1">
 
-        {/* Dark mode */}
-        <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700">
-          <div>
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🌙 Dark Mode</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.switchDarkMode")}</p>
-          </div>
-          <Toggle on={prefs.darkMode} onClick={() => toggle("darkMode")} />
-        </div>
-
-        {/* Language picker */}
-        <LanguagePicker />
-
+        {/* Appearance preset */}
         <div className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{t("settings.colorTheme")}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.colorThemeHelp")}</p>
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">🎨 {t("settings.appearancePreset")}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.appearancePresetHelp")}</p>
           </div>
-          <div className="w-44 shrink-0">
+          <div className="w-64 shrink-0">
             <Select
-              value={prefs.colorTheme}
-              onChange={(e) => updateColorTheme(e.target.value as AppPrefs["colorTheme"])}
+              value={prefs.appearancePreset}
+              onChange={(e) => updateAppearancePreset(e.target.value as AppPrefs["appearancePreset"])}
               options={[
-                { value: "default", label: t("settings.themeOptionDefault") },
-                { value: "black-gold", label: t("settings.themeOptionBlackGold") },
-                { value: "white-green", label: t("settings.themeOptionWhiteGreen") },
+                { value: "system-classic", label: t("settings.appearanceOptionSystemClassic") },
+                { value: "light-classic", label: t("settings.appearanceOptionLightClassic") },
+                { value: "dark-charcoal", label: t("settings.appearanceOptionDarkCharcoal") },
+                { value: "black-gold", label: t("settings.appearanceOptionBlackGold") },
+                { value: "white-green", label: t("settings.appearanceOptionWhiteGreen") },
+                { value: "midnight-cyan", label: t("settings.appearanceOptionMidnightCyan") },
+                { value: "soft-sand", label: t("settings.appearanceOptionSoftSand") },
+                { value: "editorial-rose", label: t("settings.appearanceOptionEditorialRose") },
               ]}
             />
           </div>
         </div>
+
+        {/* Language picker */}
+        <LanguagePicker />
 
         {/* Water tracking */}
         <div className="flex items-center justify-between py-3">
@@ -825,7 +819,7 @@ function AppPreferencesForm() {
             <p className="text-sm font-medium text-gray-800 dark:text-gray-200">💧 Water Tracking</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">{t("settings.showWaterWidget")}</p>
           </div>
-          <Toggle on={prefs.trackWater} onClick={() => toggle("trackWater")} />
+          <Toggle on={prefs.trackWater} onClick={toggleTrackWater} />
         </div>
 
       </div>

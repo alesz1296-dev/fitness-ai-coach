@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import { validate } from "../middleware/validate.js";
 import { validateIdParam } from "../middleware/validate.js";
 import { createGoalSchema, updateGoalSchema } from "../middleware/schemas.js";
@@ -13,6 +14,7 @@ import {
 const router = Router();
 
 router.use(authenticate);
+router.use(idempotency);
 
 // GET    /api/goals
 router.get("/", getGoals);

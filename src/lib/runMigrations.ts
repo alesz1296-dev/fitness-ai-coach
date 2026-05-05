@@ -192,6 +192,25 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
       UNIQUE ("userId", "weekStart")
     )`,
   },
+  {
+    table: "IdempotencyRecord",
+    sql: `CREATE TABLE IF NOT EXISTS "IdempotencyRecord" (
+      "id" SERIAL PRIMARY KEY,
+      "userId" INTEGER NOT NULL,
+      "key" TEXT NOT NULL,
+      "method" TEXT NOT NULL,
+      "path" TEXT NOT NULL,
+      "requestHash" TEXT NOT NULL,
+      "status" TEXT NOT NULL DEFAULT 'pending',
+      "responseStatus" INTEGER,
+      "responseBody" TEXT,
+      "responseContentType" TEXT,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,
+      UNIQUE ("userId", "key")
+    )`,
+  },
 ];
 
 // Column migrations
@@ -272,6 +291,8 @@ const INDEX_MIGRATIONS: Array<{ name: string; sql: string }> = [
     sql: `CREATE INDEX IF NOT EXISTS "idx_fooditem_name" ON "FoodItem" ("name")` },
   { name: "idx_weeklyreview_userid_weekstart",
     sql: `CREATE INDEX IF NOT EXISTS "idx_weeklyreview_userid_weekstart" ON "WeeklyReview" ("userId", "weekStart")` },
+  { name: "idx_idempotencyrecord_userid_method_path",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_idempotencyrecord_userid_method_path" ON "IdempotencyRecord" ("userId", "method", "path")` },
   { name: "idx_exerciseitem_name",
     sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_name" ON "ExerciseItem" ("name")` },
   { name: "idx_exerciseitem_primarymuscle",

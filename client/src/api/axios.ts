@@ -5,6 +5,58 @@ import { useAuthStore } from "../store/authStore";
 
 // Auth paths that should never be queued for offline replay
 const AUTH_PATHS = ["/auth/login", "/auth/register", "/auth/refresh", "/auth/logout"];
+const QUEUEABLE_MUTATION_PATHS = [
+  "/foods",
+  "/workouts",
+  "/weight",
+  "/water",
+  "/users",
+  "/goals",
+  "/templates",
+  "/meal-plans",
+  "/calendar",
+  "/custom-foods",
+  "/custom-exercises",
+  "/weekly-plan",
+  "/calorie-goals",
+];
+const NON_QUEUEABLE_MUTATION_PATHS = [
+  "/calorie-goals/preview",
+];
+
+function isMutation(method?: string): boolean {
+  const upper = (method ?? "").toUpperCase();
+  return upper !== "" && upper !== "GET";
+}
+
+function isQueueableMutationPath(url: string): boolean {
+  if (NON_QUEUEABLE_MUTATION_PATHS.some((p) => url.startsWith(p))) return false;
+  return QUEUEABLE_MUTATION_PATHS.some((p) => url.startsWith(p));
+}
+
+function getHeaderValue(headers: unknown, name: string): string | undefined {
+  if (!headers || typeof headers !== "object") return undefined;
+  const obj = headers as Record<string, unknown> & { get?: (k: string) => unknown };
+  if (typeof obj.get === "function") {
+    const viaGet = obj.get(name);
+    if (typeof viaGet === "string") return viaGet;
+    if (viaGet != null) return String(viaGet);
+  }
+  const raw = obj[name] ?? obj[name.toLowerCase()] ?? obj[name.toUpperCase()];
+  return typeof raw === "string" ? raw : raw != null ? String(raw) : undefined;
+}
+
+function setHeaderValue(headers: unknown, name: string, value: string): void {
+  if (!headers || typeof headers !== "object") return;
+  const obj = headers as Record<string, unknown>;
+  obj[name] = value;
+}
+
+function createIdempotencyKey(): string {
+  const cryptoObj = globalThis.crypto as Crypto | undefined;
+  if (cryptoObj?.randomUUID) return cryptoObj.randomUUID();
+  return `fitai_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
 
 const api = axios.create({
   baseURL: "/api",
@@ -14,6 +66,7 @@ const api = axios.create({
 
 // Attach access token + locale headers to every request
 api.interceptors.request.use((config) => {
+  config.headers = config.headers ?? {};
   const token = useAuthStore.getState().accessToken;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   try {
@@ -23,6 +76,16 @@ api.interceptors.request.use((config) => {
     const lang = localStorage.getItem("lang");
     if (lang) config.headers["X-Language"] = lang;
   } catch { /* ignore */ }
+
+  const method = (config.method ?? "").toUpperCase();
+  const url = config.url ?? "";
+  const isAuthEndpoint = AUTH_PATHS.some((p) => url.includes(p));
+  if (isMutation(method) && !isAuthEndpoint) {
+    const existing = getHeaderValue(config.headers, "X-Idempotency-Key");
+    if (!existing) {
+      setHeaderValue(config.headers, "X-Idempotency-Key", createIdempotencyKey());
+    }
+  }
   return config;
 });
 
@@ -94,7 +157,7 @@ api.interceptors.response.use(
       const isAuthEndpoint = AUTH_PATHS.some((p) => url.includes(p));
       const isMutation = method !== "GET" && method !== "";
 
-      if (isMutation && !isAuthEndpoint) {
+      if (isMutation && !isAuthEndpoint && isQueueableMutationPath(url)) {
         const headers: Record<string, string> = {};
         const token = useAuthStore.getState().accessToken;
         if (token) headers.Authorization = `Bearer ${token}`;
@@ -103,6 +166,8 @@ api.interceptors.response.use(
         } catch { /* ignore */ }
         const lang = localStorage.getItem("lang");
         if (lang) headers["X-Language"] = lang;
+        const idempotencyKey = getHeaderValue(originalRequest.headers, "X-Idempotency-Key") ?? createIdempotencyKey();
+        headers["X-Idempotency-Key"] = idempotencyKey;
 
         const rawBody = originalRequest.data;
         let body: unknown;
@@ -114,7 +179,7 @@ api.interceptors.response.use(
           }
         }
 
-        addPendingOp({ method, url, body, headers, timestamp: Date.now() })
+        addPendingOp({ method, url, body, headers, idempotencyKey, timestamp: Date.now() })
           .then(() => useOfflineStore.getState().incrementPendingCount())
           .catch(() => { /* silently ignore IDB errors */ });
       }

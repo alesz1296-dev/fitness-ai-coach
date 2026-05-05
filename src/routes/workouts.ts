@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import { validate, validateIdParam } from "../middleware/validate.js";
 import {
   createWorkoutSchema,
@@ -25,6 +26,7 @@ import {
 
 const router = Router();
 router.use(authenticate);
+router.use(idempotency);
 
 // ── Static sub-paths first (before /:id) ─────────────────────────────────────
 // GET  /api/workouts/stats

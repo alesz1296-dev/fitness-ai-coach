@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import { validate, validateIdParam } from "../middleware/validate.js";
 import { logWaterSchema, updateWaterTargetSchema } from "../middleware/schemas.js";
 import {
@@ -12,6 +13,7 @@ import {
 
 const router = Router();
 router.use(authenticate);
+router.use(idempotency);
 
 router.post("/", validate(logWaterSchema), logWater);
 router.get("/today", getToday);

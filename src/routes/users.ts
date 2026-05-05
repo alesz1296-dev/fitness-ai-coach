@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import { validate } from "../middleware/validate.js";
 import { updateProfileSchema, changePasswordSchema } from "../middleware/schemas.js";
 import {
@@ -15,6 +16,7 @@ const router = Router();
 
 // All user routes require authentication
 router.use(authenticate);
+router.use(idempotency);
 
 // GET  /api/users/profile
 router.get("/profile", getProfile);

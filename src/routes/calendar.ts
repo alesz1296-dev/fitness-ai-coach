@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import { validate } from "../middleware/validate.js";
 import {
   populateCalendarSchema,
@@ -17,6 +18,7 @@ import {
 
 const router = Router();
 router.use(authenticate);
+router.use(idempotency);
 
 router.get("/", getCalendarMonth);
 router.post("/populate", validate(populateCalendarSchema), populateCalendar);

@@ -899,7 +899,7 @@ function WorkoutForm({ onSave, onClose }: { onSave: () => void; onClose: () => v
       if (res.data.newPRs?.length) setNewPRs(res.data.newPRs);
       else onSave();
     } catch (e: any) {
-      setError(e.response?.data?.error || "Failed to save workout");
+      setError(e.response?.data?.error || t("workouts.failedToSaveWorkout"));
     } finally { setLoading(false); }
   };
 
@@ -2362,19 +2362,19 @@ function PlanToCalendarModal({
           </div>
           {weekdays.size !== template.frequency && (
             <p className="text-xs text-amber-500 mt-1">
-              ⚠️ You've selected {weekdays.size} day{weekdays.size !== 1 ? "s" : ""} but this template is designed for {template.frequency}x/week.
+              {t("workouts.templateFrequencyMismatch", { selected: weekdays.size, target: template.frequency })}
             </p>
           )}
         </div>
 
         {/* Duration picker */}
         <div>
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">How many months to fill?</p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">{t("workouts.howManyMonthsToFill")}</p>
           <div className="flex gap-2">
             {([
-              { val: "1", label: "This month", sub: thisMonth },
-              { val: "2", label: "+ Next month", sub: nextMonth },
-              { val: "3", label: "+ 2 months", sub: twoMonths },
+              { val: "1", label: t("workouts.thisMonth"), sub: thisMonth },
+              { val: "2", label: t("workouts.nextMonth"), sub: nextMonth },
+              { val: "3", label: t("workouts.plusTwoMonths"), sub: twoMonths },
             ] as const).map(({ val, label, sub }) => (
               <button
                 key={val}
@@ -3512,7 +3512,26 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState("");
 
-  const MUSCLE_OPTS = ["Chest","Back","Shoulders","Biceps","Triceps","Legs","Glutes","Core","Full Body"];
+  const MUSCLE_OPTS = [
+    { value: "chest",        label: t("workouts.muscleChest") },
+    { value: "back",         label: t("workouts.muscleBack") },
+    { value: "shoulders",    label: t("workouts.muscleShoulders") },
+    { value: "biceps",       label: t("workouts.muscleBiceps") },
+    { value: "triceps",      label: t("workouts.muscleTriceps") },
+    { value: "upper_body",   label: t("workouts.muscleUpperBody") },
+    { value: "lower_body",   label: t("workouts.muscleLowerBody") },
+    { value: "push",         label: t("workouts.musclePush") },
+    { value: "pull",         label: t("workouts.musclePull") },
+    { value: "legs",         label: t("workouts.muscleLegs") },
+    { value: "quads",        label: t("workouts.muscleQuads") },
+    { value: "hamstrings",   label: t("workouts.muscleHamstrings") },
+    { value: "calves",       label: t("workouts.muscleCalves") },
+    { value: "glutes",       label: t("workouts.muscleGlutes") },
+    { value: "traps",        label: t("workouts.muscleTraps") },
+    { value: "forearms",     label: t("workouts.muscleForearms") },
+    { value: "core",         label: t("workouts.muscleCore") },
+    { value: "full_body",    label: t("workouts.muscleFullBody") },
+  ];
   const TYPE_OPTS   = [
     { value: "strength",    label: _t("workouts.strength"),    icon: "🏋️" },
     { value: "hypertrophy", label: _t("workouts.hypertrophy"), icon: "📈" },
@@ -3521,12 +3540,14 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
   ];
 
   const toggleMuscle = (m: string) => setMuscles((p) => p.includes(m) ? p.filter((x) => x !== m) : [...p, m]);
+  const selectedMuscleLabels = MUSCLE_OPTS.filter((opt) => muscles.includes(opt.value)).map((opt) => opt.label);
+  const selectedTypeLabel = TYPE_OPTS.find((opt) => opt.value === type)?.label ?? type;
 
   const generate = async () => {
-    if (muscles.length === 0) { setError("Pick at least one muscle group."); return; }
+    if (muscles.length === 0) { setError(t("workouts.pickAtLeastOneMuscleGroup")); return; }
     setError(""); setLoading(true); setPlan(null);
     try {
-      const prompt = `Generate a ${type} workout targeting: ${muscles.join(", ")}. Duration: ~${duration} min. ${(user as any)?.injuries?.length ? `Avoid exercises for: ${(user as any).injuries.join(", ")}.` : ""} Return JSON only: { "name": "...", "exercises": [{ "exerciseName": "...", "sets": N, "reps": "N-N", "notes": "..." }] }`;
+      const prompt = `Generate a ${type} workout targeting: ${selectedMuscleLabels.join(", ")}. Duration: ~${duration} min. ${(user as any)?.injuries?.length ? `Avoid exercises for: ${(user as any).injuries.join(", ")}.` : ""} Return JSON only: { "name": "...", "exercises": [{ "exerciseName": "...", "sets": N, "reps": "N-N", "notes": "..." }] }`;
       const res = await chatApi.send({ message: prompt, agentType: "coach" });
       const text = (res.data as any).response ?? (res.data as any).message ?? "";
       const match = text.match(/\{[\s\S]*\}/);
@@ -3535,7 +3556,7 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
       if (!parsed.exercises?.length) throw new Error("No exercises");
       setPlan(parsed);
     } catch (e: any) {
-      setError("AI could not generate a plan. Try again or adjust your selections.");
+      setError(t("workouts.aiCouldNotGeneratePlan"));
     } finally { setLoading(false); }
   };
 
@@ -3558,7 +3579,7 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
       });
       emitDataChanged("workout");
       onWorkoutLogged();
-    } catch { setError("Failed to save workout."); }
+    } catch { setError(t("workouts.failedToSaveWorkout")); }
     finally { setSaving(false); }
   };
 
@@ -3573,10 +3594,10 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
           <div className="flex flex-wrap gap-2">
             {MUSCLE_OPTS.map((m) => (
               <button
-                key={m}
-                onClick={() => toggleMuscle(m)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${muscles.includes(m) ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-brand-400"}`}
-              >{m}</button>
+                key={m.value}
+                onClick={() => toggleMuscle(m.value)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${muscles.includes(m.value) ? "bg-brand-600 text-white border-brand-600" : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-brand-400"}`}
+              >{m.label}</button>
             ))}
           </div>
         </div>
@@ -3597,28 +3618,28 @@ function AIWorkoutBuilder({ onWorkoutLogged }: { onWorkoutLogged: () => void }) 
 
         {/* Duration */}
         <div className="mb-4">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Duration: {duration} min</p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{t("workouts.durationLabel")}: {duration} {t("common.min")}</p>
           <input type="range" min={20} max={120} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="w-full" />
         </div>
 
         {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2 mb-3">{error}</p>}
 
         <Button loading={loading} onClick={generate} className="w-full">
-          {loading ? "Generating..." : "Generate Workout"}
+          {loading ? t("workouts.generating") : t("workouts.generateWorkout")}
         </Button>
       </Card>
 
       {/* Generated plan */}
       {plan && (
         <Card>
-          <CardHeader title={plan.name} subtitle={`${plan.exercises.length} exercises · ${type} · ${muscles.join(", ")}`} />
+          <CardHeader title={plan.name} subtitle={`${plan.exercises.length} ${t("workouts.exercises")} · ${selectedTypeLabel} · ${selectedMuscleLabels.join(", ")}`} />
           <div className="space-y-2 mb-4">
             {plan.exercises.map((ex, i) => (
               <div key={i} className="flex items-start gap-3 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                 <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i+1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{ex.exerciseName}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{ex.sets} sets × {ex.reps} reps{ex.notes ? ` · ${ex.notes}` : ""}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{ex.sets} {t("workouts.sets")} × {ex.reps} {t("workouts.reps")}{ex.notes ? ` · ${ex.notes}` : ""}</p>
                 </div>
               </div>
             ))}
@@ -3695,7 +3716,7 @@ export default function WorkoutsPage() {
     const n = user?.trainingDaysPerWeek ?? 4;
     if (!editingDays) setDaysInput(String(n));
     if (prevDaysRef.current !== null && prevDaysRef.current !== n) {
-      toast.show(`Training days updated to ${n} 💪`);
+      toast.show(t("dashboard.trainingDaysUpdated", { days: n }));
     }
     prevDaysRef.current = n;
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3801,7 +3822,7 @@ export default function WorkoutsPage() {
           { key: "history",   label: `🏋️ ${t("workouts.history")}` },
           { key: "calendar",  label: `📅 ${t("workouts.calendar")}` },
           { key: "templates", label: `📋 ${t("workouts.templates")}` },
-          { key: "ai-build",  label: "🤖 AI Build" },
+          { key: "ai-build",  label: `🤖 ${t("workouts.aiBuilder")}` },
         ] as const).map(({ key, label }) => (
           <button
             key={key}

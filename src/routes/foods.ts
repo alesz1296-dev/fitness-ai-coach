@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import { validate, validateIdParam } from "../middleware/validate.js";
 import { logFoodSchema, bulkLogFoodsSchema } from "../middleware/schemas.js";
 import {
@@ -16,6 +17,7 @@ import {
 const router = Router();
 
 router.use(authenticate);
+router.use(idempotency);
 
 // GET    /api/foods/history  ← must come before /:id
 router.get("/history", getFoodHistory);

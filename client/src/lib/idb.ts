@@ -7,6 +7,7 @@
 
 export interface PendingOp {
   id?: number;
+  idempotencyKey?: string;            // replay-safe mutation key shared with the server
   method: string;                      // POST | PUT | PATCH | DELETE
   url: string;                         // relative path, e.g. "/workouts"
   body: unknown;                       // JSON-serialisable request payload

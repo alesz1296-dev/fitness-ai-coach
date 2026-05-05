@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import {
   listCustomExercises,
   createCustomExercise,
@@ -9,6 +10,7 @@ import {
 
 const router = Router();
 router.use(authenticate);
+router.use(idempotency);
 
 router.get   ("/",    listCustomExercises);
 router.post  ("/",    createCustomExercise);

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { idempotency } from "../middleware/idempotency.js";
 import { validate, validateIdParam } from "../middleware/validate.js";
 import {
   createMealPlanSchema,
@@ -20,6 +21,7 @@ import {
 
 const router = Router();
 router.use(authenticate);
+router.use(idempotency);
 
 router.get("/", getPlans);
 router.get("/:id", validateIdParam(), getPlan);

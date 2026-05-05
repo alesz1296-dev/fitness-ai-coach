@@ -290,7 +290,7 @@ function PlanCard({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dayLabels = getDayLabels(i18n.language);
   const levelColor = plan.level === "advanced"
     ? "text-purple-700 bg-purple-50 border-purple-200"
@@ -308,7 +308,7 @@ function PlanCard({
       <div className="flex items-start justify-between gap-2 mb-2">
         <span className="font-semibold text-sm text-gray-900">{plan.name}</span>
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full border shrink-0 ${levelColor}`}>
-          {plan.level === "advanced" ? "Advanced" : "Intermediate"}
+          {plan.level === "advanced" ? t("dashboard.planLevelAdvanced") : t("dashboard.planLevelIntermediate")}
         </span>
       </div>
       <p className="text-xs text-gray-500 leading-relaxed mb-3">{plan.description}</p>
@@ -353,6 +353,7 @@ function SetupModal({
   onSave: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   // step: "pick" = choose a template, "customize" = edit days manually
   const [step, setStep] = useState<"pick" | "customize">(existingPlan ? "customize" : "pick");
   // Seed selectedDays from the user's profile training schedule if available
@@ -437,7 +438,7 @@ function SetupModal({
       <div className="space-y-5">
         {/* Day count selector */}
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">How many days per week will you train?</p>
+          <p className="text-sm font-medium text-gray-700 mb-2">{t("dashboard.howManyDaysPerWeek")}</p>
           <div className="flex gap-2">
             {[2, 3, 4, 5, 6, 7].map((n) => (
               <button
@@ -458,8 +459,8 @@ function SetupModal({
         {/* Plan cards */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-gray-700">Suggested plans for {selectedDays} days</p>
-            <p className="text-xs text-gray-400">↕ scroll to see all</p>
+            <p className="text-sm font-medium text-gray-700">{t("dashboard.suggestedPlansForDays", { days: selectedDays })}</p>
+            <p className="text-xs text-gray-400">{t("dashboard.scrollToSeeAll")}</p>
           </div>
           <div className="space-y-3 max-h-72 overflow-y-auto pr-1 rounded-xl">
             {filteredPlans.map((plan) => (
@@ -475,21 +476,21 @@ function SetupModal({
 
         <div className="flex gap-2 pt-2 border-t border-gray-100">
           <Button variant="secondary" className="flex-1" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             variant="secondary"
             className="flex-1"
             onClick={() => { setSelectedTemplateId(null); handleNext(); }}
           >
-            Custom
+            {t("common.custom")}
           </Button>
           <Button
             className="flex-1"
             disabled={!selectedTemplateId}
             onClick={handleNext}
           >
-            Use This Plan →
+            {t("dashboard.useThisPlan")}
           </Button>
         </div>
       </div>
@@ -505,12 +506,12 @@ function SetupModal({
           onClick={() => setStep("pick")}
           className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
         >
-          ← Back to plan suggestions
+          {t("dashboard.backToPlanSuggestions")}
         </button>
       )}
 
       <p className="text-sm text-gray-500">
-        Toggle days on/off, edit labels, and optionally set a calorie target for each session.
+        {t("dashboard.customizePlanHint")}
       </p>
 
       {/* Day toggles */}
@@ -636,6 +637,7 @@ function SyncCalendarModal({
   onClose: () => void;
   onSynced: (msg: string) => void;
 }) {
+  const { t } = useTranslation();
   const today     = new Date();
   const thisMonth = format(today, "yyyy-MM");
   const nextMonth = format(new Date(today.getFullYear(), today.getMonth() + 1, 1), "yyyy-MM");
@@ -651,7 +653,7 @@ function SyncCalendarModal({
   const months     = ALL_MONTHS.slice(0, Number(duration));
 
   const handleSync = async () => {
-    if (activeDays.length === 0) { setError("No active days to sync."); return; }
+    if (activeDays.length === 0) { setError(t("dashboard.noActiveDaysToSync")); return; }
     setSaving(true);
     setError("");
     const assignments = activeDays.map((d) => ({
@@ -666,18 +668,23 @@ function SyncCalendarModal({
         const res = await calendarApi.populate({ month, assignments, overwrite });
         total += res.data.count;
       }
-      onSynced(`Synced ${total} day${total !== 1 ? "s" : ""} across ${months.length} month${months.length !== 1 ? "s" : ""}! Open the Calendar tab to review.`);
+      onSynced(t("dashboard.syncedWeeklyPlanSummary", {
+        days: total,
+        dayWord: total !== 1 ? t("dashboard.daysPlural") : t("dashboard.daySingular"),
+        months: months.length,
+        monthWord: months.length !== 1 ? t("dashboard.monthsPlural") : t("dashboard.monthSingular"),
+      }));
     } catch {
-      setError("Failed to sync to calendar.");
+      setError(t("dashboard.failedToSyncWeeklyPlan"));
       setSaving(false);
     }
   };
 
   return (
-    <Modal open title="Sync Weekly Plan to Calendar" onClose={onClose} size="sm">
+    <Modal open title={t("dashboard.syncWeeklyPlanToCalendar")} onClose={onClose} size="sm">
       <div className="space-y-4 p-1">
         <p className="text-sm text-gray-500">
-          Fills your workout calendar with this week's schedule, repeated across the selected months.
+          {t("dashboard.syncWeeklyPlanDescription")}
         </p>
 
         {/* Preview of days being synced */}
@@ -692,12 +699,12 @@ function SyncCalendarModal({
 
         {/* Duration picker */}
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">How many months?</p>
+          <p className="text-sm font-medium text-gray-700 mb-2">{t("dashboard.howManyMonthsToFill")}</p>
           <div className="flex gap-2">
             {([
-              { val: "1", label: "This month",   sub: thisMonth },
-              { val: "2", label: "+ Next month",  sub: nextMonth },
-              { val: "3", label: "+ 2 months",    sub: twoMonths },
+              { val: "1", label: t("dashboard.thisMonth"),   sub: thisMonth },
+              { val: "2", label: t("dashboard.nextMonth"),   sub: nextMonth },
+              { val: "3", label: t("dashboard.plusTwoMonths"),    sub: twoMonths },
             ] as const).map(({ val, label, sub }) => (
               <button
                 key={val}
@@ -721,14 +728,14 @@ function SyncCalendarModal({
             onChange={(e) => setOverwrite(e.target.checked)}
             className="w-4 h-4 accent-brand-600"
           />
-          Replace existing calendar days
+          {t("dashboard.replaceExistingCalendarDays")}
         </label>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 
         <div className="flex gap-3">
-          <Button variant="secondary" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button onClick={handleSync} loading={saving} className="flex-1">Sync to Calendar</Button>
+          <Button variant="secondary" onClick={onClose} className="flex-1">{t("common.cancel")}</Button>
+          <Button onClick={handleSync} loading={saving} className="flex-1">{t("dashboard.syncToCalendar")}</Button>
         </div>
       </div>
     </Modal>
@@ -779,7 +786,7 @@ export default function WeeklyPlanWidget() {
     if (user?.trainingDaysPerWeek == null) return;
     if (prevTrainingDays == null) { setPrevTrainingDays(user.trainingDaysPerWeek); return; }
     if (user.trainingDaysPerWeek !== prevTrainingDays) {
-      toast.show(`Training days updated to ${user.trainingDaysPerWeek} 💪 — update your weekly plan to match!`);
+      toast.show(t("dashboard.trainingDaysUpdated", { days: user.trainingDaysPerWeek }));
       setPrevTrainingDays(user.trainingDaysPerWeek);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -969,7 +976,7 @@ export default function WeeklyPlanWidget() {
         </>
       )}
 
-      <Modal open={showSetup} onClose={() => setShowSetup(false)} title="Plan Your Week" size="md">
+      <Modal open={showSetup} onClose={() => setShowSetup(false)} title={t("dashboard.planYourWeek")} size="md">
         <SetupModal
           existingPlan={plan}
           initialDays={user?.trainingDaysPerWeek ?? undefined}

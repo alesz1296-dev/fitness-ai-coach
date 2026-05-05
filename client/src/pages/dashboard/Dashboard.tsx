@@ -366,7 +366,10 @@ export default function Dashboard() {
           sub={activeGoal ? `${t("dashboard.targetColon")} ${activeGoal.targetWeight}kg` : t("dashboard.logYourWeight")}
           color="bg-gradient-to-br from-purple-500 to-purple-700"
           icon="⚖️"
-          onClick={() => setShowWeightManager((v) => !v)}
+          onClick={() => {
+            setShowWeightManager(false);
+            setShowWeightFab(true);
+          }}
         />
         <StatCard
           label={t("dashboard.workoutsThisWeek")}
