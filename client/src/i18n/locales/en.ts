@@ -123,7 +123,7 @@ export interface Translation {
     newPR: string; previousBest: string; firstTime: string; volume: string;
     filterMuscle: string; calculateCalories: string; calorieCalculator: string;
     restTimer: string; restComplete: string; startRest: string;
-    strength: string; hypertrophy: string; endurance: string; cardio: string; mobility: string;
+    strength: string; hypertrophy: string; endurance: string; cardio: string; mobility: string; fatLoss: string; general: string;
     activityType: string; calorieCalcTitle: string; calcCalories: string;
     stepsOptional: string; stepsPlaceholder: string;
     searchExercise: string; searchByNameMuscle: string; anyMuscle: string;
@@ -138,6 +138,9 @@ export interface Translation {
     markSetDone: string; addToWorkout: string; noExercisesLogged: string;
     noPersonalTemplates: string; noRecommendedTemplates: string; personalised: string;
     forkBtn: string; smartSuggestions: string;
+    forkHint: string; goalTemplatesFatLoss: string; goalTemplatesHypertrophy: string; goalTemplatesStrength: string; goalTemplatesEndurance: string;
+    scheduledWorkouts: string;
+    selectAtLeastOneWeekday: string; calendarFillSummary: string; calendarEditableHint: string;
     seedTemplates: string; seedDesc: string; fullEditor: string; selectBtn: string;
     addToCalendar: string; addToMonthlyCalendar: string; buildMonthlyPlan: string;
     applyTemplateCalendar: string; weeklySchedule: string; whichDays: string;
@@ -157,7 +160,7 @@ export interface Translation {
     muscleChest: string; muscleBack: string; muscleShoulders: string; muscleBiceps: string; muscleTriceps: string;
     muscleUpperBody: string; muscleLowerBody: string; musclePush: string; musclePull: string; muscleLegs: string;
     muscleQuads: string; muscleHamstrings: string; muscleCalves: string; muscleGlutes: string; muscleTraps: string;
-    muscleForearms: string; muscleCore: string; muscleFullBody: string;
+    muscleForearms: string; muscleCore: string; muscleFullBody: string; muscleAdductors: string; muscleAbductors: string;
     howManyMonthsToFill: string; thisMonth: string; nextMonth: string; plusTwoMonths: string;
     prepTitle: string; prepWarmup: string; prepStretch: string; prepShortNote: string;
     prepUpper: string; prepLower: string; prepPush: string; prepPull: string; prepFullBody: string; prepCardio: string; prepRecovery: string;
@@ -231,7 +234,7 @@ export interface Translation {
   };
   settings: {
     equipment: string; difficulty: string; instructions: string; searchFood: string;
-    savePreferences: string; saveInjuries: string; saveCycleSettings: string; updatePassword: string; currentPassword: string; newPassword: string; confirmPasswordField: string; selectActivityLevel: string; selectFitnessLevel: string; selectSex: string; selectDays: string; selectDuration: string; daysPerWeek: string; hoursPerSession: string; fitnessLevel: string; proteinTarget: string; appliedToCalc: string; whyMatters: string; usedByAI: string; showWaterWidget: string; switchDarkMode: string; controlsAppearance: string; preferenceSaved: string; appearancePreset: string; appearancePresetHelp: string; appearanceOptionSystemClassic: string; appearanceOptionLightClassic: string; appearanceOptionDarkCharcoal: string; appearanceOptionBlackGold: string; appearanceOptionWhiteGreen: string; appearanceOptionMidnightCyan: string; appearanceOptionSoftSand: string; appearanceOptionEditorialRose: string; colorTheme: string; colorThemeHelp: string; themeOptionDefault: string; themeOptionBlackGold: string; themeOptionWhiteGreen: string; downloadDataDesc: string; irreversibleActions: string; memberSince: string; account: string; username: string; cycleLength: string; firstDayPeriod: string; menstrualCycleTracking: string; cyclePersonalises: string; avgCycleLength: string; commonRanges: string; injuriesExercises: string; trainingSchedule: string; goToPlan: string; goalDescription: string; passwordHint: string; activityLevel: string; injuriesSaved: string; injurySelectHelp: string; activeLimitations: string; injuryWarning: string; injuryLowerBack: string; injuryUpperBack: string; injuryKneeLeft: string; injuryKneeRight: string; injuryShoulderLeft: string; injuryShoulderRight: string; injuryHip: string; injuryElbowLeft: string; injuryElbowRight: string; injuryWristLeft: string; injuryWristRight: string; injuryAnkleLeft: string; injuryAnkleRight: string; injuryRotatorCuff: string; injuryHamstring: string; injuryItBand: string; injuryPlantarFascia: string;
+    savePreferences: string; saveInjuries: string; saveCycleSettings: string; updatePassword: string; currentPassword: string; newPassword: string; confirmPasswordField: string; selectActivityLevel: string; selectFitnessLevel: string; selectSex: string; selectDays: string; selectDuration: string; daysPerWeek: string; hoursPerSession: string; fitnessLevel: string; proteinTarget: string; appliedToCalc: string; whyMatters: string; usedByAI: string; showWaterWidget: string; switchDarkMode: string; controlsAppearance: string; preferenceSaved: string; appearancePreset: string; appearancePresetHelp: string; appearanceOptionSystemClassic: string; appearanceOptionLightClassic: string; appearanceOptionDarkCharcoal: string; appearanceOptionBlackGold: string; appearanceOptionWhiteGreen: string; appearanceOptionMidnightCyan: string; appearanceOptionSoftSand: string; appearanceOptionEditorialRose: string; appearanceOptionIndustrialSlate: string; appearanceOptionPaperIvory: string; appearanceOptionAuroraInk: string; appearanceOptionSunriseAmber: string; colorTheme: string; colorThemeHelp: string; themeOptionDefault: string; themeOptionBlackGold: string; themeOptionWhiteGreen: string; downloadDataDesc: string; irreversibleActions: string; memberSince: string; account: string; username: string; cycleLength: string; firstDayPeriod: string; menstrualCycleTracking: string; cyclePersonalises: string; avgCycleLength: string; commonRanges: string; injuriesExercises: string; trainingSchedule: string; goToPlan: string; goalDescription: string; passwordHint: string; activityLevel: string; injuriesSaved: string; injurySelectHelp: string; activeLimitations: string; injuryWarning: string; injuryLowerBack: string; injuryUpperBack: string; injuryKneeLeft: string; injuryKneeRight: string; injuryShoulderLeft: string; injuryShoulderRight: string; injuryHip: string; injuryElbowLeft: string; injuryElbowRight: string; injuryWristLeft: string; injuryWristRight: string; injuryAnkleLeft: string; injuryAnkleRight: string; injuryRotatorCuff: string; injuryHamstring: string; injuryItBand: string; injuryPlantarFascia: string;
   };
   auth: {
     login: string; register: string; logout: string; email: string; password: string;
@@ -296,6 +299,14 @@ export interface Translation {
     createTemplate: string; myTemplates: string; community: string;
     difficulty: string; beginner: string; intermediate: string; advanced: string;
     duration: string; exercises: string; startWorkout: string; preview: string;
+    recommended: string; preBuiltSplits: string; recommendedTemplatesEmpty: string;
+    seedRecommendedTemplates: string; seedRecommendedDesc: string; personalTemplatesEmpty: string;
+    saveWorkoutAsTemplateHint: string; askAiCoach: string; deleteTemplateConfirm: string;
+    templateDeleted: string; templateRenamed: string; templateAdded: string;
+    splitPpl: string; splitUpperLower: string; splitBroSplit: string; splitFullBody: string; splitCustom: string;
+    splitFullBody3d: string; splitPpl6d: string; splitUpperLower4d: string; splitBroSplit5d: string; splitFatLoss4d: string;
+    showingPlansForDays: string; matchingProfileSetting: string; viewTemplate: string;
+    failedToStartWorkout: string; weekShort: string;
   };
   ai: {
     nutritionCoach: string; workoutCoach: string; goalsCoach: string;
@@ -635,7 +646,7 @@ const en: Translation = {
     calorieCalculator: "Calorie Calculator", restTimer: "Rest Timer",
     restComplete: "Rest complete!", startRest: "Start rest timer",
     strength: "Strength", hypertrophy: "Hypertrophy", endurance: "Endurance",
-    cardio: "Cardio", mobility: "Mobility",
+    cardio: "Cardio", mobility: "Mobility", fatLoss: "Fat Loss", general: "General",
     activityType: "Activity type",
     calorieCalcTitle: "Calorie Calculator",
     calcCalories: "Calculate calories burned from activity type →",
@@ -676,6 +687,15 @@ const en: Translation = {
     personalised: "Personalised for your goal",
     forkBtn: "Fork",
     smartSuggestions: "Smart Suggestions",
+    forkHint: "Fork it to My Templates — then you can rename it and adjust exercises.",
+    goalTemplatesFatLoss: "Your goal is weight loss — templates below are sorted by fat-loss focus.",
+    goalTemplatesHypertrophy: "Your goal is muscle building — hypertrophy templates are highlighted first.",
+    goalTemplatesStrength: "Your goal is strength — strength-focused programs are at the top.",
+    goalTemplatesEndurance: "Your goal is endurance — cardio and full-body templates are prioritized.",
+    scheduledWorkouts: "Scheduled {{count}} workouts this week!",
+    selectAtLeastOneWeekday: "Select at least one weekday.",
+    calendarFillSummary: "📆 Fills {{days}} day{{daysPlural}}/week × {{months}} month{{monthsPlural}} on the Calendar tab.",
+    calendarEditableHint: "You can edit, move, or delete any individual day afterwards.",
     seedTemplates: "Seed Recommended Templates",
     seedDesc: "Seed the database with 24 research-based workout splits",
     fullEditor: "Full editor (notes, bulk apply)",
@@ -791,6 +811,8 @@ const en: Translation = {
     muscleForearms: "Forearms",
     muscleCore: "Core",
     muscleFullBody: "Full Body",
+    muscleAdductors: "Adductors",
+    muscleAbductors: "Abductors",
     nextBtn: "Next →",
     difficultyLabel: "Difficulty",
     dateLabel: "Date",
@@ -984,7 +1006,7 @@ const en: Translation = {
     controlsAppearance: "Controls appearance and tracking features",
     preferenceSaved: "Preferences saved",
     appearancePreset: "Appearance preset",
-    appearancePresetHelp: "Choose a full app look. This controls both palette and light/dark mode.",
+    appearancePresetHelp: "Choose a full app look. This controls palette, background texture, and light/dark mode.",
     appearanceOptionSystemClassic: "System classic",
     appearanceOptionLightClassic: "Light classic",
     appearanceOptionDarkCharcoal: "Dark grey",
@@ -993,6 +1015,10 @@ const en: Translation = {
     appearanceOptionMidnightCyan: "Midnight cyan",
     appearanceOptionSoftSand: "Soft sand",
     appearanceOptionEditorialRose: "Editorial rose",
+    appearanceOptionIndustrialSlate: "Industrial slate",
+    appearanceOptionPaperIvory: "Paper ivory",
+    appearanceOptionAuroraInk: "Aurora ink",
+    appearanceOptionSunriseAmber: "Sunrise amber",
     colorTheme: "Color theme",
     colorThemeHelp: "Pick a base accent palette for the app",
     themeOptionDefault: "Default",
@@ -1158,6 +1184,21 @@ const en: Translation = {
     beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced",
     duration: "Duration", exercises: "Exercises", startWorkout: "Start Workout",
     preview: "Preview",
+    recommended: "Recommended", preBuiltSplits: "Pre-built and custom workout splits",
+    recommendedTemplatesEmpty: "No recommended templates yet", seedRecommendedTemplates: "Seed Recommended Templates",
+    seedRecommendedDesc: "Seed the database with 24 research-based workout splits",
+    personalTemplatesEmpty: "No personal templates yet",
+    saveWorkoutAsTemplateHint: "Save a logged workout as a template, or ask the AI Coach to generate one.",
+    askAiCoach: "Ask AI Coach", deleteTemplateConfirm: "Delete this template?",
+    templateDeleted: "Template deleted.", templateRenamed: "Template renamed.", templateAdded: "Template added to My Templates.",
+    splitPpl: "Push / Pull / Legs", splitUpperLower: "Upper / Lower", splitBroSplit: "Bro Split", splitFullBody: "Full Body", splitCustom: "Custom",
+    splitFullBody3d: "Full Body (3×/week)", splitPpl6d: "Push Pull Legs (6×/week)", splitUpperLower4d: "Upper / Lower (4×/week)",
+    splitBroSplit5d: "Bro Split (5×/week)", splitFatLoss4d: "Fat Loss (4×/week)",
+    showingPlansForDays: "Showing plans for {{days}}×/week — matching your profile setting.",
+    matchingProfileSetting: "matching your profile setting.",
+    viewTemplate: "View template",
+    failedToStartWorkout: "Failed to start workout",
+    weekShort: "week",
   },
   ai: {
     nutritionCoach: "Nutrition Coach", workoutCoach: "Workout Coach",

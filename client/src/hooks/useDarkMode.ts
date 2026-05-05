@@ -12,7 +12,11 @@ export type ThemePreset =
   | "white-green"
   | "midnight-cyan"
   | "soft-sand"
-  | "editorial-rose";
+  | "editorial-rose"
+  | "industrial-slate"
+  | "paper-ivory"
+  | "aurora-ink"
+  | "sunrise-amber";
 
 export interface AppPrefs {
   trackWater: boolean;
@@ -20,7 +24,17 @@ export interface AppPrefs {
 }
 
 type ThemeMode = "system" | "light" | "dark";
-type ThemePalette = "classic" | "black-gold" | "white-green" | "midnight-cyan" | "soft-sand" | "editorial-rose";
+type ThemePalette =
+  | "classic"
+  | "black-gold"
+  | "white-green"
+  | "midnight-cyan"
+  | "soft-sand"
+  | "editorial-rose"
+  | "industrial-slate"
+  | "paper-ivory"
+  | "aurora-ink"
+  | "sunrise-amber";
 
 type ThemePresetConfig = {
   mode: ThemeMode;
@@ -42,6 +56,10 @@ const THEME_PRESETS: Record<ThemePreset, ThemePresetConfig> = {
   "midnight-cyan": { mode: "dark", palette: "midnight-cyan" },
   "soft-sand": { mode: "light", palette: "soft-sand" },
   "editorial-rose": { mode: "light", palette: "editorial-rose" },
+  "industrial-slate": { mode: "dark", palette: "industrial-slate" },
+  "paper-ivory": { mode: "light", palette: "paper-ivory" },
+  "aurora-ink": { mode: "dark", palette: "aurora-ink" },
+  "sunrise-amber": { mode: "light", palette: "sunrise-amber" },
 };
 
 function canUseStorage() {
@@ -69,7 +87,11 @@ function normalizePreset(value: unknown): ThemePreset | null {
     value === "white-green" ||
     value === "midnight-cyan" ||
     value === "soft-sand" ||
-    value === "editorial-rose"
+    value === "editorial-rose" ||
+    value === "industrial-slate" ||
+    value === "paper-ivory" ||
+    value === "aurora-ink" ||
+    value === "sunrise-amber"
   ) {
     return value === "dark-classic" ? "dark-charcoal" : value;
   }

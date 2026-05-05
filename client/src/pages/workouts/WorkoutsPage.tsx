@@ -16,6 +16,12 @@ import { Textarea } from "../../components/ui/Textarea";
 import { Badge } from "../../components/ui/Badge";
 import { APP_EVENTS, emitDataChanged } from "../../lib/appEvents";
 import { WorkoutPrepPanel } from "../../lib/workoutPrep";
+import {
+  getTemplateDisplayTitle,
+  translateMuscleGroupLabel,
+  translateObjectiveLabel,
+  translateSplitLabel,
+} from "../../lib/workoutLabels";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MET Activity data (Compendium of Physical Activities, Ainsworth et al.)
@@ -1538,14 +1544,6 @@ const SPLIT_ICONS: Record<string, string> = {
   PPL: "🔄", Upper_Lower: "↕️", Bro_Split: "💪", Full_Body: "🏋️", Custom: "⚙️",
 };
 
-const SPLIT_LABELS: Record<string, string> = {
-  Full_Body_3d:   "Full Body (3×/week)",
-  PPL_6d:         "Push Pull Legs (6×/week)",
-  Upper_Lower_4d: "Upper / Lower (4×/week)",
-  Bro_Split_5d:   "Bro Split (5×/week)",
-  Custom_4d:      "Fat Loss (4×/week)",
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Smart plan suggestions — injury warnings, missing muscles, gender/goal advice
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1716,6 +1714,7 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
   onStart: () => void; onView: () => void; onDelete?: () => void;
 }) {
   const { t } = useTranslation();
+  const title = getTemplateDisplayTitle(template, t);
   const muscleGroups = Array.isArray(template.muscleGroups) ? template.muscleGroups : [];
   const prepSource = {
     splitType: template.splitType,
@@ -1732,12 +1731,14 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-base">{SPLIT_ICONS[template.splitType] ?? "🏋️"}</span>
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{template.name}</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{title}</h3>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">{template.dayLabel} · {template.frequency}×/week</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">
+            {translateSplitLabel(template.splitType, t)} · {template.frequency}×/{t("templates.weekShort")}
+          </p>
         </div>
         <div className="flex gap-1 shrink-0">
-          {template.isSystem && <Badge variant="info">{t("workouts.recommended")}</Badge>}
+          {template.isSystem && <Badge variant="info">{t("templates.recommended")}</Badge>}
           {template.aiGenerated && !template.isSystem && <Badge variant="success">AI</Badge>}
         </div>
       </div>
@@ -1748,10 +1749,10 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
 
       <div className="flex gap-1.5 flex-wrap mb-3">
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${OBJECTIVE_COLORS[template.objective] ?? "bg-gray-100 text-gray-600"}`}>
-          {template.objective.replace("_", " ")}
+          {translateObjectiveLabel(template.objective, t)}
         </span>
         {muscleGroups.slice(0, 3).map((m) => (
-          <span key={m} className="text-xs bg-gray-100 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">{m}</span>
+          <span key={m} className="text-xs bg-gray-100 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">{translateMuscleGroupLabel(m, t)}</span>
         ))}
       </div>
 
@@ -1772,8 +1773,8 @@ function TemplateCard({ template, onStart, onView, onDelete }: {
         {onDelete && (
           <button onClick={onDelete} className="px-2 text-xs text-red-400 hover:text-red-600 transition-colors">🗑</button>
         )}
-        <Button variant="secondary" size="sm" className="flex-1" onClick={onView}>{t("workouts.viewBtn")}</Button>
-        <Button size="sm" className="flex-1" onClick={onStart}>▶ Start</Button>
+        <Button variant="secondary" size="sm" className="flex-1" onClick={onView}>{t("templates.viewTemplate")}</Button>
+        <Button size="sm" className="flex-1" onClick={onStart}>{t("templates.startWorkout")}</Button>
       </div>
     </Card>
   );
@@ -1786,6 +1787,7 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
 }) {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const title = getTemplateDisplayTitle(template, t);
   const injuries = user?.injuries ?? [];
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState(template.name);
@@ -1865,13 +1867,15 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-gray-900 dark:text-white truncate">{template.name}</h3>
+              <h3 className="font-bold text-gray-900 dark:text-white truncate">{title}</h3>
               {!template.isSystem && onRename && (
                 <button onClick={() => setRenaming(true)} className="text-xs text-gray-400 dark:text-gray-500 hover:text-brand-600 transition-colors shrink-0">✏️</button>
               )}
             </div>
           )}
-          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">{template.dayLabel} · {template.frequency}×/week · {template.objective}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">
+            {translateSplitLabel(template.splitType, t)} · {template.frequency}×/{t("templates.weekShort")} · {translateObjectiveLabel(template.objective, t)}
+          </p>
         </div>
       </div>
 
@@ -1883,7 +1887,7 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
           <span>🔧</span>
           <div className="flex-1">
             <p className="font-medium">{t("workouts.wantsCustomise")}</p>
-            <p className="text-xs text-blue-600 mt-0.5">Fork it to My Templates — then you can rename it and adjust exercises.</p>
+            <p className="text-xs text-blue-600 mt-0.5">{t("workouts.forkHint")}</p>
           </div>
           <Button
             size="sm"
@@ -1980,7 +1984,7 @@ function TemplateDetail({ template, onStart, onClose, onFork, onRename, onUpdate
 
       <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
         <Button variant="secondary" className="flex-1" onClick={onClose}>{t("workouts.closeBtn")}</Button>
-        <Button className="flex-1" onClick={onStart}>▶ Start Workout</Button>
+        <Button className="flex-1" onClick={onStart}>{t("templates.startWorkout")}</Button>
       </div>
     </div>
   );
@@ -2009,10 +2013,10 @@ function RecommendedBanner({ goal }: { goal?: string | null }) {
   if (!objective) return null;
 
   const labels: Record<string, string> = {
-    fat_loss: "Your goal is weight loss — templates below are sorted by fat-loss focus.",
-    hypertrophy: "Your goal is muscle building — hypertrophy templates are highlighted first.",
-    strength: "Your goal is strength — strength-focused programs are at the top.",
-    endurance: "Your goal is endurance — cardio and full-body templates are prioritized.",
+    fat_loss: t("workouts.goalTemplatesFatLoss"),
+    hypertrophy: t("workouts.goalTemplatesHypertrophy"),
+    strength: t("workouts.goalTemplatesStrength"),
+    endurance: t("workouts.goalTemplatesEndurance"),
   };
 
   return (
@@ -2070,7 +2074,7 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
       await workoutsApi.startFromTemplate(template.id);
       emitDataChanged("workout");
       onWorkoutStarted();
-    } catch { alert("Failed to start workout"); }
+    } catch { alert(t("templates.failedToStartWorkout")); }
     finally { setStarting(null); }
   };
 
@@ -2105,7 +2109,7 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
       }
       emitDataChanged("workout");
       onWorkoutStarted();
-      toast.show(`Scheduled ${pattern.length} workouts this week!`);
+      toast.show(t("workouts.scheduledWorkouts", { count: pattern.length }));
     } catch {
       alert("Failed to schedule workouts");
     } finally { setScheduling(null); }
@@ -2118,15 +2122,15 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
   };
 
   const deleteMyTemplate = async (id: number) => {
-    if (!confirm("Delete this template?")) return;
+    if (!confirm(t("templates.deleteTemplateConfirm"))) return;
     await templatesApi.delete(id);
     setMine((prev) => prev.filter((t) => t.id !== id));
-    toast.show("Template deleted.");
+    toast.show(t("templates.templateDeleted"));
   };
 
   const forkTemplate = async (template: WorkoutTemplate) => {
     const res = await templatesApi.create({
-      name: `${template.name} (My Copy)`,
+      name: `${getTemplateDisplayTitle(template, t)} (${t("templates.myTemplates")})`,
       description: template.description,
       splitType: template.splitType,
       objective: template.objective,
@@ -2147,14 +2151,14 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
     setMine((prev) => [...prev, forked]);
     setDetail(forked);
     setSubTab("mine");
-    toast.show(`"${forked.name}" added to My Templates. You can rename it now.`);
+    toast.show(t("templates.templateAdded"));
   };
 
   const renameTemplate = async (id: number, name: string) => {
     await templatesApi.update(id, { name });
     setMine((prev) => prev.map((t) => t.id === id ? { ...t, name } : t));
     setDetail((d) => d?.id === id ? { ...d, name } : d);
-    toast.show("Template renamed.");
+    toast.show(t("templates.templateRenamed"));
   };
 
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" /></div>;
@@ -2163,13 +2167,13 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
     <div className="space-y-6">
       {/* Sub-tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-        {(["recommended", "mine"] as const).map((t) => (
+        {(["recommended", "mine"] as const).map((subTabKey) => (
           <button
-            key={t}
-            onClick={() => setSubTab(t)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${subTab === t ? "bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700"}`}
+            key={subTabKey}
+            onClick={() => setSubTab(subTabKey)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${subTab === subTabKey ? "bg-white dark:bg-gray-800 shadow-sm text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700"}`}
           >
-            {t === "recommended" ? "📋 Recommended" : `⚙️ My Templates${mine.length ? ` (${mine.length})` : ""}`}
+            {subTabKey === "recommended" ? t("templates.recommended") : `${t("templates.myTemplates")}${mine.length ? ` (${mine.length})` : ""}`}
           </button>
         ))}
       </div>
@@ -2197,12 +2201,12 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
             <RecommendedBanner goal={user?.goal} />
             {hasAnyMatch && (
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                Showing plans for <span className="font-semibold text-brand-600">{trainingDays}×/week</span> — matching your profile setting.
+                {t("templates.showingPlansForDays", { days: trainingDays })}
               </p>
             )}
             {Object.entries(filteredGrouped).map(([groupKey, templates]) => (
               <div key={groupKey}>
-                <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-4">{SPLIT_LABELS[groupKey] ?? groupKey}</h2>
+                <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-4">{translateSplitLabel(groupKey, t)}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {templates.map((t) => (
                     <TemplateCard
@@ -2223,7 +2227,7 @@ function TemplatesTab({ onWorkoutStarted, trainingDays }: { onWorkoutStarted: ()
           <Card className="text-center py-14">
             <div className="text-5xl mb-4">⚙️</div>
             <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">{t("workouts.noPersonalTemplates")}</h3>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Save a logged workout as a template, or ask the AI Coach to generate one.</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">{t("templates.saveWorkoutAsTemplateHint")}</p>
             <Button variant="secondary" onClick={() => navigate("/chat?agent=coach")}>🤖 Ask AI Coach</Button>
           </Card>
         ) : (
@@ -2338,13 +2342,13 @@ function PlanToCalendarModal({
   const months = [thisMonth, nextMonth, twoMonths].slice(0, Number(duration));
 
   const handleApply = async () => {
-    if (weekdays.size === 0) { setError("Select at least one weekday."); return; }
+    if (weekdays.size === 0) { setError(t("workouts.selectAtLeastOneWeekday")); return; }
     setError("");
     setSaving(true);
     const muscleGroups = Array.isArray(template.muscleGroups) ? template.muscleGroups : [];
     const assignments = [...weekdays].map((dow) => ({
       dayOfWeek:    dow,
-      workoutName:  template.dayLabel || template.name,
+      workoutName:  getTemplateDisplayTitle(template, t),
       muscleGroups,
       templateId:   template.id,
       isRestDay:    false,
@@ -2367,16 +2371,16 @@ function PlanToCalendarModal({
       <div className="space-y-5 p-1">
         {/* Template info */}
         <div className="bg-brand-50 border border-brand-100 rounded-xl px-4 py-3">
-          <p className="text-sm font-semibold text-brand-800">{template.dayLabel || template.name}</p>
+          <p className="text-sm font-semibold text-brand-800">{getTemplateDisplayTitle(template, t)}</p>
           {Array.isArray(template.muscleGroups) && template.muscleGroups.length > 0 && (
-            <p className="text-xs text-brand-600 mt-0.5">{(template.muscleGroups as string[]).join(" · ")}</p>
+            <p className="text-xs text-brand-600 mt-0.5">{(template.muscleGroups as string[]).map((m) => translateMuscleGroupLabel(m, t)).join(" · ")}</p>
           )}
         </div>
 
         {/* Weekday picker */}
         <div>
           <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-            Which days of the week? <span className="text-gray-400 dark:text-gray-500 text-xs">(template frequency: {template.frequency}x/week)</span>
+            {t("workouts.whichDays")} <span className="text-gray-400 dark:text-gray-500 text-xs">({template.frequency}×/{t("templates.weekShort")})</span>
           </p>
           <div className="flex gap-1.5 flex-wrap">
             {WEEKDAY_LABELS.map((label, dow) => (
@@ -2438,14 +2442,20 @@ function PlanToCalendarModal({
         {error && <p className="text-sm text-red-500">{error}</p>}
 
         <div className="bg-gray-50 dark:bg-gray-700 rounded-xl px-4 py-2 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-400 dark:text-gray-500 dark:text-gray-500">
-          📆 Fills <strong>{weekdays.size} day{weekdays.size !== 1 ? "s" : ""}/week × {months.length} month{months.length !== 1 ? "s" : ""}</strong> on the Calendar tab.
-          You can edit, move, or delete any individual day afterwards.
+          {t("workouts.calendarFillSummary", {
+            days: weekdays.size,
+            daysPlural: weekdays.size !== 1 ? "s" : "",
+            months: months.length,
+            monthsPlural: months.length !== 1 ? "s" : "",
+          })}
+          {" "}
+          {t("workouts.calendarEditableHint")}
         </div>
 
         <div className="flex gap-3">
           <Button variant="secondary" onClick={onClose} className="flex-1">{t("common.cancel")}</Button>
           <Button onClick={handleApply} loading={saving} className="flex-1">
-            Add to Calendar
+            {t("workouts.addToCalendar")}
           </Button>
         </div>
       </div>
@@ -3292,9 +3302,9 @@ function ApplyTemplateModal({
                 className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-400 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
               >
                 <option value="">— Select template —</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.dayLabel || t.name}{t.muscleGroups?.length ? ` (${(t.muscleGroups as string[]).join(", ")})` : ""}
+                {templates.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    {getTemplateDisplayTitle(tpl, t)}
                   </option>
                 ))}
               </select>

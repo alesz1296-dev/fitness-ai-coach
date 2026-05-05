@@ -736,7 +736,11 @@ type AppPrefs = {
     | "white-green"
     | "midnight-cyan"
     | "soft-sand"
-    | "editorial-rose";
+    | "editorial-rose"
+    | "industrial-slate"
+    | "paper-ivory"
+    | "aurora-ink"
+    | "sunrise-amber";
 };
 
 function AppPreferencesForm() {
@@ -805,6 +809,10 @@ function AppPreferencesForm() {
                 { value: "midnight-cyan", label: t("settings.appearanceOptionMidnightCyan") },
                 { value: "soft-sand", label: t("settings.appearanceOptionSoftSand") },
                 { value: "editorial-rose", label: t("settings.appearanceOptionEditorialRose") },
+                { value: "industrial-slate", label: t("settings.appearanceOptionIndustrialSlate") },
+                { value: "paper-ivory", label: t("settings.appearanceOptionPaperIvory") },
+                { value: "aurora-ink", label: t("settings.appearanceOptionAuroraInk") },
+                { value: "sunrise-amber", label: t("settings.appearanceOptionSunriseAmber") },
               ]}
             />
           </div>
