@@ -143,7 +143,9 @@ export interface Translation {
     selectAtLeastOneWeekday: string; calendarFillSummary: string; calendarEditableHint: string;
     seedTemplates: string; seedDesc: string; fullEditor: string; selectBtn: string;
     addToCalendar: string; addToMonthlyCalendar: string; buildMonthlyPlan: string;
-    applyTemplateCalendar: string; weeklySchedule: string; whichDays: string;
+    buildPlan: string; applyTemplateCalendar: string; applyTemplateBtn: string;
+    swapDays: string; swappingDays: string; clearMonth: string;
+    weeklySchedule: string; whichDays: string;
     targetMuscleGroups: string; trainingStyle: string; trainingTypeOptional: string;
     labelCalendar: string; linkTemplate: string; repeatWeekdays: string;
     overwriteDays: string; replaceDays: string; howManyMonths: string;
@@ -703,7 +705,12 @@ const en: Translation = {
     addToCalendar: "Add to Calendar",
     addToMonthlyCalendar: "Add to Monthly Calendar",
     buildMonthlyPlan: "Build Monthly Workout Plan",
+    buildPlan: "Build Plan",
     applyTemplateCalendar: "Apply Template to Calendar",
+    applyTemplateBtn: "Apply template",
+    swapDays: "Swap days",
+    swappingDays: "Swapping…",
+    clearMonth: "Clear month",
     weeklySchedule: "Weekly Schedule",
     whichDays: "Which days of the week?",
     targetMuscleGroups: "Target muscle groups",

@@ -2657,22 +2657,22 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => setShowBuilder(true)}
             className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition">
-            🗓 Build Plan
+            🗓 {t("workouts.buildPlan")}
           </button>
           <button onClick={() => setShowApply(true)}
             className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-brand-300 text-brand-700 dark:text-brand-400 text-xs font-semibold px-3 py-1.5 rounded-xl transition hover:bg-brand-50">
-            📋 Apply Template
+            📋 {t("workouts.applyTemplateBtn")}
           </button>
           <button
             onClick={() => { setSwapMode((v) => !v); setSwapFrom(null); setSelected(null); }}
             className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition
               ${swapMode ? "bg-amber-100 border-amber-400 text-amber-700" : "bg-white border-gray-200 text-gray-600 dark:text-gray-300 hover:border-gray-400"}`}>
-            🔄 {swapMode ? "Swapping…" : "Swap Days"}
+            🔄 {swapMode ? t("workouts.swappingDays") : t("workouts.swapDays")}
           </button>
           {calendarDays.length > 0 && (
             <button onClick={handleClearMonth}
               className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 hover:border-red-400 text-red-600 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-xl transition">
-              🗑 Clear Month
+              🗑 {t("workouts.clearMonth")}
             </button>
           )}
         </div>
@@ -2889,7 +2889,7 @@ function CalendarTab({ allWorkouts, trainingDays }: { allWorkouts: Workout[]; tr
             onClick={() => setShowBuilder(true)}
             className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold px-5 py-2.5 rounded-xl transition"
           >
-            🗓 Build My Monthly Plan
+            🗓 {t("workouts.buildPlan")}
           </button>
         </div>
       )}
