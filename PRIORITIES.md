@@ -1,6 +1,6 @@
 # FitAI Coach - Task Priorities
 
-_Last updated: 2026-05-05_
+_Last updated: 2026-05-06_
 
 > Format: **P1** = must-ship · **P2** = high value · **P3** = deferred/nice-to-have
 
@@ -64,6 +64,12 @@ _Last updated: 2026-05-05_
 | - | WeeklyPlanWidget localization - plan picker, sync modal, and calendar prompts are now translated | i18n/UX | P1 | Done |
 | - | Workouts AI builder translation - builder labels and broader muscle groups are localized | i18n/Workouts | P1 | Done |
 | - | Nutrition search jump - re-tapping search mode now jumps focus to the database search field | UX | P1 | Done |
+| - | Role-aware coach/admin foundation - added user roles, permission flags, coach invites, coach-client links, pending coach proposals, coach workspace pages, admin ops page, and dashboard-side accept/reject proposal flow | Platform/Coach Mode | P1 | Done |
+| - | Coach/admin/dashboard localization pass - moved the new role-mode UI off hardcoded English and into locale keys for English, Spanish, and Ukrainian | i18n/Platform | P1 | Done |
+| - | Internal shell split - coach navigation is now coach-only, while admin/dev now routes to `/internal` as the dedicated internal surface | Platform/Architecture | P1 | Done |
+| - | Internal Phase 2 foundation - `/internal` now links into a per-user workspace console with profile, stats, active goal, recent training, nutrition, weight, meal plans, calendar preview, proposals, and relationships | Platform/Internal Tools | P1 | Done |
+| - | Internal metrics + audit + read-only view - `/internal` now shows live usage signals, exposes recent audit logs, and supports a safe read-only user view route with a visible banner | Platform/Internal Tools | P1 | Done |
+| - | Internal impersonation + ops foundation - added `ImpersonationSession`, global impersonation banner, feature-flag management, content inventory, repair tools, and deeper coach/internal audit coverage | Platform/Internal Tools | P1 | Done |
 
 ---
 
@@ -80,6 +86,10 @@ Recently cleared:
 - Today's UI polish added one-tap weight logging from the dashboard tile, translated the weekly plan picker, expanded workout AI muscle groups, made Nutrition search mode jump directly into the DB search field, and localized the workout calendar action cluster.
 - The appearance system now has more distinctive presets and surface styling, so the app can look more editorial / industrial / warm rather than generic.
 - Spanish locale mojibake cleanup fixed the corrupted Nutrition/search labels, and the register placeholder example now uses `Ale` / `Salazar`.
+- Coach mode and admin/dev mode now exist as role-aware shells with invite-based coach linking, pending proposals, coach client overview, and admin role-management basics.
+- Internal Phase 2 has started: admin/dev users can now drill from `/internal` into a dedicated per-user workspace view instead of stopping at high-level summary cards.
+- Internal mode now also has first-pass observability: recent usage metrics, audit logging, and a read-only view path.
+- Internal mode now also supports true impersonation sessions plus first-pass feature flags, content inventory, and repair tools.
 
 ---
 
@@ -92,6 +102,7 @@ Recently cleared:
 | S4 | Tool-call safety - validate tool arguments before dispatch and append tool results deterministically instead of from parallel callbacks | AI/Tools | P2 | Pending |
 | S5 | Food search scalability - move toward DB-first indexed lookup with cached translations instead of request-path AI + in-memory filtering | Nutrition/Infra | P2 | Pending |
 | S6 | Critical `any` cleanup - remove `prisma as any` bridges from search/context paths once generated client alignment is enforced | Code Quality | P2 | Pending |
+| S7 | Coach/admin hardening - tighten permission coverage further, expand audit coverage deeper into platform actions, and add session-expiry handling around impersonation flows | Platform/Security | P2 | Pending |
 
 ---
 
@@ -140,7 +151,7 @@ Recently cleared:
 | 107 | Pagination - workout history, standard offset (page + limit on History tab) | Infra/UX | P2 | Pending |
 | 127 | Add visible "+ Custom exercise" button as primary entry point in WorkoutsPage (not just no-results state) | UX | P2 | Pending |
 | - | Coaching mode - coaches can share workout or nutrition plans via link for clients to import | Platform | P2 | Pending |
-| - | Developer/Admin mode - privileged support, ops, and content-management surface | Internal | P2 | Pending |
+| - | Developer/Admin mode - deepen `/internal` beyond the new impersonation/flags/repair foundation with richer content ops, repair tools, feature rollouts, and system dashboards | Internal | P2 | Pending |
 | - | Advanced workout structures - stretching, warm-up, circuits, and supersets across builder/templates/logging | Workouts | P2 | Pending |
 | - | Stretching & Mobility + Warm-up as dedicated workout categories (filter, builder, rest timer skip) | Feature | P2 | Pending |
 | - | Full Ukrainian localization pass - translate deeper page copy, analytics labels, and AI-adjacent UI beyond the initial locale wiring | Localization | P2 | Pending |

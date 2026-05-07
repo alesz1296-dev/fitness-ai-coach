@@ -25,6 +25,26 @@ const REFRESH_COOKIE_BASE = {
   path: REFRESH_COOKIE_PATH,
 };
 
+function parsePermissionFlags(value: unknown): string[] {
+  if (Array.isArray(value)) return value as string[];
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? (parsed as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeAuthUser<T extends { permissionFlags?: unknown }>(user: T): T & {
+  permissionFlags: string[];
+} {
+  return {
+    ...user,
+    permissionFlags: parsePermissionFlags(user.permissionFlags),
+  };
+}
+
 // ── Token helpers ──────────────────────────────────────────────────────────────
 
 function signAccessToken(userId: number, email: string): string {
@@ -79,7 +99,7 @@ function clearRefreshCookie(res: Response): void {
 }
 
 async function getAuthUser(userId: number) {
-  return prisma.user.findUnique({
+  const user = await (prisma.user.findUnique as any)({
     where: { id: userId },
     select: {
       id: true,
@@ -99,10 +119,13 @@ async function getAuthUser(userId: number) {
       trainingDaysPerWeek: true,
       trainingHoursPerDay: true,
       planAdjustmentMode: true,
+      role: true,
+      permissionFlags: true,
       emailVerified: true,
       createdAt: true,
     },
   });
+  return user ? normalizeAuthUser(user) : null;
 }
 
 // ── Register ───────────────────────────────────────────────────────────────────
@@ -240,7 +263,7 @@ export const getMe = async (
   req: AuthRequest, res: Response, next: NextFunction
 ): Promise<void> => {
   try {
-    const user = await prisma.user.findUnique({
+    const user = await (prisma.user.findUnique as any)({
       where:  { id: req.user!.id },
       select: {
         id: true, email: true, username: true,
@@ -251,12 +274,14 @@ export const getMe = async (
         profileComplete: true, proteinMultiplier: true,
         trainingDaysPerWeek: true, trainingHoursPerDay: true,
         planAdjustmentMode: true,
+        role: true,
+        permissionFlags: true,
         emailVerified: true,
         createdAt: true,
       },
     });
     if (!user) return next(createError("User not found", 404));
-    res.json({ user });
+    res.json({ user: normalizeAuthUser(user) });
   } catch (error) { next(error); }
 };
 

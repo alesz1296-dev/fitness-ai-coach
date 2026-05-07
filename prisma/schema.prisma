@@ -33,6 +33,8 @@ model User {
   waterTargetMl        Float    @default(2000) // daily water target in ml
   emailVerified        Boolean  @default(false)
   planAdjustmentMode   String   @default("suggest") // "suggest" | "confirm" | "auto"
+  role                 String   @default("user")
+  permissionFlags      String   @default("[]")
   createdAt            DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -53,8 +55,72 @@ model User {
   customExercises  CustomExercise[]
   weeklyReviews    WeeklyReview[]
   idempotencyRecords IdempotencyRecord[]
+  coachLinksAsCoach CoachClientLink[] @relation("CoachLinksAsCoach")
+  coachLinksAsClient CoachClientLink[] @relation("CoachLinksAsClient")
+  coachInvites CoachInvite[] @relation("CoachInvitesAsCoach")
+  coachInviteAcceptances CoachInvite[] @relation("CoachInvitesAsClient")
+  proposalsCreated CoachProposal[] @relation("CoachProposalCreatedBy")
+  proposalsReceived CoachProposal[] @relation("CoachProposalForClient")
+  auditLogs AuditLog[] @relation("AuditActor")
+  featureFlagsUpdated FeatureFlag[] @relation("FeatureFlagUpdatedBy")
+  impersonationSessionsCreated ImpersonationSession[] @relation("ImpersonationActor")
+  impersonationSessionsTargeted ImpersonationSession[] @relation("ImpersonationTarget")
 
   @@index([email])
+}
+
+model CoachClientLink {
+  id        Int      @id @default(autoincrement())
+  coachId   Int
+  clientId  Int
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coach  User @relation("CoachLinksAsCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  client User @relation("CoachLinksAsClient", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([coachId, clientId])
+  @@index([coachId, status])
+  @@index([clientId, status])
+}
+
+model CoachInvite {
+  id             Int      @id @default(autoincrement())
+  coachId        Int
+  code           String   @unique
+  status         String   @default("invited")
+  expiresAt      DateTime
+  usedByClientId Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  coach        User  @relation("CoachInvitesAsCoach", fields: [coachId], references: [id], onDelete: Cascade)
+  usedByClient User? @relation("CoachInvitesAsClient", fields: [usedByClientId], references: [id], onDelete: SetNull)
+
+  @@index([coachId, status])
+}
+
+model CoachProposal {
+  id         Int      @id @default(autoincrement())
+  coachId    Int
+  clientId   Int
+  type       String
+  status     String   @default("pending")
+  sourceId   Int
+  payload    String?
+  note       String?
+  acceptedAt DateTime?
+  rejectedAt DateTime?
+  appliedId  Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  coach  User @relation("CoachProposalCreatedBy", fields: [coachId], references: [id], onDelete: Cascade)
+  client User @relation("CoachProposalForClient", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId, status])
+  @@index([coachId, status])
 }
 
 model WeeklyReview {
@@ -105,6 +171,57 @@ model IdempotencyRecord {
 
   @@unique([userId, key])
   @@index([userId, method, path])
+}
+
+model AuditLog {
+  id           Int      @id @default(autoincrement())
+  actorUserId  Int?
+  actorRole    String
+  action       String
+  targetType   String?
+  targetId     Int?
+  targetUserId Int?
+  metadata     String?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetUserId, createdAt])
+}
+
+model FeatureFlag {
+  id              Int      @id @default(autoincrement())
+  key             String   @unique
+  label           String
+  description     String?
+  enabled         Boolean  @default(false)
+  updatedByUserId Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  updatedBy User? @relation("FeatureFlagUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([enabled])
+}
+
+model ImpersonationSession {
+  id            Int      @id @default(autoincrement())
+  token         String   @unique
+  actorUserId   Int
+  targetUserId  Int
+  status        String   @default("active")
+  createdAt     DateTime @default(now())
+  endedAt       DateTime?
+
+  actor  User @relation("ImpersonationActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  target User @relation("ImpersonationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([actorUserId, status])
+  @@index([targetUserId, status])
 }
 
 // ── Goals ─────────────────────────────────────────────────────────────────────
@@ -182,6 +299,9 @@ model WorkoutTemplate {
   muscleGroups String   @default("[]") // JSON array stored as string (SQLite)
   isSystem     Boolean  @default(false)
   aiGenerated  Boolean  @default(false)
+  provenanceRole String @default("user")
+  provenanceSourceUserId Int?
+  sourceProposalId Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -268,6 +388,9 @@ model CalorieGoal {
   feasible            Boolean  @default(true)
   warning             String?
   aiGenerated         Boolean  @default(false)
+  provenanceRole      String   @default("user")
+  provenanceSourceUserId Int?
+  sourceProposalId    Int?
   notes               String?
   // Macro cycling — training day vs rest day targets
   macrosCycling       Boolean  @default(false)
@@ -391,6 +514,9 @@ model MealPlan {
   name      String
   weekStart String        // ISO date "YYYY-MM-DD" of the Monday for this plan
   durationWeeks Int       @default(1)
+  provenanceRole String   @default("user")
+  provenanceSourceUserId Int?
+  sourceProposalId Int?
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 

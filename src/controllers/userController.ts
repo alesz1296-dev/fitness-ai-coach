@@ -10,6 +10,17 @@ import {
   syncLatestWeight,
 } from "../lib/weightSync.js";
 
+function parsePermissionFlags(value: unknown): string[] {
+  if (Array.isArray(value)) return value as string[];
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? (parsed as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 // GET /api/users/profile
 export const getProfile = async (
   req: AuthRequest,
@@ -40,6 +51,8 @@ export const getProfile = async (
         periodStart: true,
         cycleLength: true,
         planAdjustmentMode: true,
+        role: true,
+        permissionFlags: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -53,6 +66,7 @@ export const getProfile = async (
     const userOut = {
       ...user,
       injuries: user.injuries ? JSON.parse(user.injuries as string) : [],
+      permissionFlags: parsePermissionFlags(user.permissionFlags),
     };
 
     res.json({ user: userOut });
@@ -130,7 +144,7 @@ export const updateProfile = async (
         await syncLatestWeight(tx, req.user!.id);
       }
 
-      return tx.user.findUnique({
+      return (tx.user.findUnique as any)({
         where: { id: req.user!.id },
         select: {
           id: true,
@@ -153,6 +167,8 @@ export const updateProfile = async (
           periodStart: true,
           cycleLength: true,
           planAdjustmentMode: true,
+          role: true,
+          permissionFlags: true,
           updatedAt: true,
         },
       });
@@ -162,6 +178,7 @@ export const updateProfile = async (
     const updatedOut = {
       ...updated,
       injuries: updated?.injuries ? JSON.parse(updated.injuries as string) : [],
+      permissionFlags: parsePermissionFlags(updated?.permissionFlags),
     };
 
     logger.info(`Profile updated for user ${req.user!.id}`);

@@ -7,18 +7,27 @@ export function Sidebar() {
   const { user, logout } = useAuthStore();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const isCoachShell = user?.role === "coach";
+  const isAdminShell = user?.role === "admin" || user?.role === "developer";
 
   const navItems = [
-    { to: "/dashboard", icon: "⊞", label: t("nav.dashboard") },
-    { to: "/workouts", icon: "🏋️", label: t("nav.workouts") },
-    { to: "/nutrition", icon: "🥗", label: t("nav.nutrition") },
-    { to: "/goals", icon: "🎯", label: t("nav.goals") },
-    { to: "/chat", icon: "🤖", label: t("nav.aiCoach") },
-    { to: "/meal-planner", icon: "📋", label: t("nav.mealPlanner") },
-    { to: "/progress", icon: "📈", label: t("nav.progress") },
-    { to: "/reports", icon: "📊", label: t("nav.reports") },
-    { to: "/settings", icon: "⚙️", label: t("nav.settings") },
+    { to: "/dashboard", icon: "DB", label: t("nav.dashboard") },
+    { to: "/workouts", icon: "WO", label: t("nav.workouts") },
+    { to: "/nutrition", icon: "NU", label: t("nav.nutrition") },
+    { to: "/goals", icon: "GO", label: t("nav.goals") },
+    { to: "/chat", icon: "AI", label: t("nav.aiCoach") },
+    { to: "/meal-planner", icon: "MP", label: t("nav.mealPlanner") },
+    { to: "/progress", icon: "PR", label: t("nav.progress") },
+    { to: "/reports", icon: "RP", label: t("nav.reports") },
+    { to: "/settings", icon: "ST", label: t("nav.settings") },
   ];
+
+  if (isCoachShell) {
+    navItems.push({ to: "/coach", icon: "CP", label: t("nav.coachMode") });
+  }
+  if (isAdminShell) {
+    navItems.push({ to: "/internal", icon: "AD", label: t("nav.adminMode") });
+  }
 
   const handleLogout = async () => {
     try {
@@ -34,7 +43,9 @@ export function Sidebar() {
     <aside className="hidden md:flex md:flex-col w-60 min-h-screen bg-gray-900 shrink-0">
       <div className="px-6 py-5 border-b border-gray-800">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">F</div>
+          <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">
+            F
+          </div>
           <span className="text-white font-semibold text-lg">FitAI Coach</span>
         </div>
       </div>
@@ -64,7 +75,9 @@ export function Sidebar() {
               }`
             }
           >
-            <span className="text-base">{item.icon}</span>
+            <span className="text-[11px] font-bold tracking-wide w-6 text-center">
+              {item.icon}
+            </span>
             {item.label}
           </NavLink>
         ))}
@@ -75,7 +88,7 @@ export function Sidebar() {
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
         >
-          <span className="text-base">🚪</span>
+          <span className="text-[11px] font-bold tracking-wide w-6 text-center">OUT</span>
           {t("auth.logout")}
         </button>
       </div>

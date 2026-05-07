@@ -1,31 +1,43 @@
-import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { authApi } from "../../api";
 import { useTranslation } from "../../i18n";
 
-const MORE_PATHS = ["/meal-planner", "/progress", "/reports", "/settings"];
-
 export function BottomNav() {
   const [showMore, setShowMore] = useState(false);
-  const { logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isCoachShell = user?.role === "coach";
+  const isAdminShell = user?.role === "admin" || user?.role === "developer";
 
-  const PRIMARY_ITEMS = [
-    { to: "/dashboard", icon: "⊞", label: t("nav.dashboard") },
-    { to: "/workouts", icon: "🏋️", label: t("nav.workouts") },
-    { to: "/nutrition", icon: "🥗", label: t("nav.nutrition") },
-    { to: "/goals", icon: "🎯", label: t("nav.goals") },
-    { to: "/chat", icon: "🤖", label: t("nav.aiCoach") },
+  const primaryItems = [
+    { to: "/dashboard", icon: "DB", label: t("nav.dashboard") },
+    { to: "/workouts", icon: "WO", label: t("nav.workouts") },
+    { to: "/nutrition", icon: "NU", label: t("nav.nutrition") },
+    { to: "/goals", icon: "GO", label: t("nav.goals") },
+    { to: "/chat", icon: "AI", label: t("nav.aiCoach") },
   ];
 
-  const MORE_ITEMS = [
-    { to: "/meal-planner", icon: "📋", label: t("nav.mealPlanner") },
-    { to: "/progress", icon: "📈", label: t("nav.progress") },
-    { to: "/reports", icon: "📊", label: t("nav.reports") },
-    { to: "/settings", icon: "⚙️", label: t("nav.settings") },
-  ];
+  const moreItems = useMemo(() => {
+    const items = [
+      { to: "/meal-planner", icon: "MP", label: t("nav.mealPlanner") },
+      { to: "/progress", icon: "PR", label: t("nav.progress") },
+      { to: "/reports", icon: "RP", label: t("nav.reports") },
+      { to: "/settings", icon: "ST", label: t("nav.settings") },
+    ];
+
+    if (isCoachShell) {
+      items.push({ to: "/coach", icon: "CP", label: t("nav.coachMode") });
+    }
+    if (isAdminShell) {
+      items.push({ to: "/internal", icon: "AD", label: t("nav.adminMode") });
+    }
+
+    return items;
+  }, [isAdminShell, isCoachShell, t]);
 
   const handleLogout = async () => {
     setShowMore(false);
@@ -38,7 +50,9 @@ export function BottomNav() {
     navigate("/login");
   };
 
-  const isMoreActive = MORE_PATHS.some((p) => location.pathname.startsWith(p));
+  const isMoreActive = moreItems.some((item) =>
+    location.pathname.startsWith(item.to),
+  );
 
   return (
     <>
@@ -47,7 +61,7 @@ export function BottomNav() {
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="flex items-stretch h-14">
-          {PRIMARY_ITEMS.map((item) => (
+          {primaryItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -57,7 +71,9 @@ export function BottomNav() {
                 }`
               }
             >
-              <span className="text-xl leading-none">{item.icon}</span>
+              <span className="text-[11px] font-bold tracking-wide leading-none">
+                {item.icon}
+              </span>
               {item.label}
             </NavLink>
           ))}
@@ -68,7 +84,7 @@ export function BottomNav() {
               isMoreActive && !showMore ? "text-brand-400" : "text-gray-400"
             }`}
           >
-            <span className="text-xl leading-none">⋯</span>
+            <span className="text-[11px] font-bold tracking-wide leading-none">...</span>
             {t("nav.more")}
           </button>
         </div>
@@ -90,11 +106,13 @@ export function BottomNav() {
             </div>
 
             <div className="px-5 py-3 border-b border-gray-800">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("nav.more")}</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                {t("nav.more")}
+              </p>
             </div>
 
             <div className="px-3 py-3 space-y-0.5">
-              {MORE_ITEMS.map((item) => (
+              {moreItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -107,7 +125,9 @@ export function BottomNav() {
                     }`
                   }
                 >
-                  <span className="text-lg">{item.icon}</span>
+                  <span className="text-[11px] font-bold tracking-wide w-6 text-center">
+                    {item.icon}
+                  </span>
                   {item.label}
                 </NavLink>
               ))}
@@ -118,7 +138,9 @@ export function BottomNav() {
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
               >
-                <span className="text-lg">🚪</span>
+                <span className="text-[11px] font-bold tracking-wide w-6 text-center">
+                  OUT
+                </span>
                 {t("auth.logout")}
               </button>
             </div>

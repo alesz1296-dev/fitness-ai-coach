@@ -8,14 +8,14 @@ import { format, parseISO, addWeeks } from "date-fns";
 import { fmtMonthDay, fmtMonthDayYear, fmtLongMonthDay, fmtWeekdayFullDate } from "../../lib/dateFormat";
 import { useAuthStore } from "../../store/authStore";
 import { useTranslation } from "../../i18n";
-import { dashboardApi, calorieGoalsApi, weightApi } from "../../api";
+import { dashboardApi, calorieGoalsApi, coachApi, weightApi } from "../../api";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import WeeklyPlanWidget from "../../components/WeeklyPlanWidget";
 import { useIsDark } from "../../hooks/useDarkMode";
 import { useDraggableWeightFab } from "../../hooks/useDraggableWeightFab";
-import type { DashboardData } from "../../types";
-import { emitWeightLogged } from "../../lib/appEvents";
+import type { CoachProposal, DashboardData } from "../../types";
+import { emitDataChanged, emitWeightLogged } from "../../lib/appEvents";
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, color, icon, onClick }: {
@@ -81,6 +81,14 @@ export default function Dashboard() {
   const [data,       setData]       = useState<DashboardData | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [projection, setProjection] = useState<{ projected: any[]; actual: any[] } | null>(null);
+  const [coachInviteCode, setCoachInviteCode] = useState<string | null>(null);
+  const [creatingCoachInvite, setCreatingCoachInvite] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
+  const [inviteStatus, setInviteStatus] = useState<string | null>(null);
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [pendingCoachProposals, setPendingCoachProposals] = useState<CoachProposal[]>([]);
+  const [loadingCoachProposals, setLoadingCoachProposals] = useState(false);
+  const [actingProposalId, setActingProposalId] = useState<number | null>(null);
 
   // ── Toast ─────────────────────────────────────────────────────────────────────
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -108,6 +116,18 @@ export default function Dashboard() {
     }
   }).catch(() => {});
 
+  const refreshCoachProposals = async () => {
+    setLoadingCoachProposals(true);
+    try {
+      const res = await coachApi.getPendingForMe();
+      setPendingCoachProposals(res.data.proposals ?? []);
+    } catch {
+      setPendingCoachProposals([]);
+    } finally {
+      setLoadingCoachProposals(false);
+    }
+  };
+
   const handleDeleteWeight = async (id: number) => {
     if (!confirm("Delete this weight entry?")) return;
     try {
@@ -128,6 +148,47 @@ export default function Dashboard() {
       refreshDash();
     } catch { /* silent */ }
     finally { setSavingEdit(false); }
+  };
+
+  const handleAcceptCoachInvite = async () => {
+    const code = inviteCode.trim().toUpperCase();
+    if (!code) return;
+    setInviteBusy(true);
+    setInviteStatus(null);
+    try {
+      await coachApi.acceptInvite(code);
+      setInviteStatus(t("coach.coachLinkActivated"));
+      setInviteCode("");
+      emitDataChanged("coach-link");
+    } catch (error: any) {
+      setInviteStatus(error?.response?.data?.error ?? t("coach.failedAcceptInvite"));
+    } finally {
+      setInviteBusy(false);
+    }
+  };
+
+  const handleCreateCoachInvite = async () => {
+    setCreatingCoachInvite(true);
+    try {
+      const res = await coachApi.createInvite(7);
+      setCoachInviteCode(res.data.invite.code);
+    } finally {
+      setCreatingCoachInvite(false);
+    }
+  };
+
+  const handleCoachProposalAction = async (
+    proposalId: number,
+    action: "accept" | "reject",
+  ) => {
+    setActingProposalId(proposalId);
+    try {
+      await coachApi.actOnProposal(proposalId, action);
+      await Promise.all([refreshCoachProposals(), refreshDash()]);
+      emitDataChanged("coach-proposal");
+    } finally {
+      setActingProposalId(null);
+    }
   };
 
   // ── Dark mode (must be before any early return — Rules of Hooks) ─────────────
@@ -185,12 +246,14 @@ export default function Dashboard() {
       })
       .catch(() => { /* silently fail — show empty state */ })
       .finally(() => setLoading(false));
+    void refreshCoachProposals();
   }, []);
 
   // Re-fetch when any shared nutrition/weight data changes
   useEffect(() => {
     const handler = () => {
       refreshDash();
+      void refreshCoachProposals();
     };
     window.addEventListener("fitai:data-changed", handler);
     return () => window.removeEventListener("fitai:data-changed", handler);
@@ -321,6 +384,10 @@ export default function Dashboard() {
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? t("dashboard.goodMorning") : hour < 18 ? t("dashboard.goodAfternoon") : t("dashboard.goodEvening");
   const displayName = user?.firstName || user?.username;
+  const isCoachRole = user?.role === "coach";
+  const isInternalRole = user?.role === "admin" || user?.role === "developer";
+  const isCoachShell = isCoachRole || isInternalRole;
+  const coachCardTarget = isInternalRole ? "/internal" : "/coach";
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 lg:space-y-8">
@@ -799,6 +866,167 @@ export default function Dashboard() {
 
           {/* Weekly Plan */}
           <WeeklyPlanWidget />
+
+          <Card>
+            <CardHeader
+              title={isInternalRole ? t("admin.title") : isCoachRole ? t("coach.title") : t("coach.pendingProposals")}
+              subtitle={
+                isInternalRole
+                  ? t("admin.subtitle")
+                  : isCoachRole
+                    ? t("coach.createCoachInviteBody")
+                    : t("coach.joinCoachBody")
+              }
+              action={
+                isCoachShell ? (
+                  <Button variant="ghost" size="sm" onClick={() => navigate(coachCardTarget)}>
+                    {t("coach.open")} →
+                  </Button>
+                ) : undefined
+              }
+            />
+            <div className="space-y-4">
+              {isInternalRole && (
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-700/50 p-4 space-y-2">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    {t("admin.userLookup")}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {t("admin.subtitle")}
+                  </p>
+                </div>
+              )}
+
+              {isCoachRole && (
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-700/50 p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                        {t("coach.createCoachInvite")}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {t("coach.createCoachInviteBody")}
+                      </p>
+                    </div>
+                    <Button size="sm" onClick={handleCreateCoachInvite} loading={creatingCoachInvite}>
+                      {t("coach.generate")}
+                    </Button>
+                  </div>
+                  {coachInviteCode && (
+                    <div className="rounded-xl border border-brand-200 dark:border-brand-700 bg-white dark:bg-gray-800 px-3 py-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t("coach.inviteCode")}</p>
+                      <p className="text-lg font-bold tracking-[0.18em] text-brand-600 dark:text-brand-400">
+                        {coachInviteCode}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!isCoachRole && !isInternalRole && (
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-700/50 p-4 space-y-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                      {t("coach.joinCoach")}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {t("coach.joinCoachBody")}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                      placeholder="AB12CD34"
+                      className="flex-1 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                    <Button size="sm" onClick={handleAcceptCoachInvite} loading={inviteBusy}>
+                      {t("coach.connect")}
+                    </Button>
+                  </div>
+                  {inviteStatus && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{inviteStatus}</p>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    {t("coach.pendingProposals")}
+                  </p>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {pendingCoachProposals.length}
+                  </span>
+                </div>
+                {loadingCoachProposals ? (
+                  <p className="text-sm text-gray-400">{t("coach.loadingProposals")}</p>
+                ) : pendingCoachProposals.length === 0 ? (
+                  <p className="text-sm text-gray-400">{t("coach.noPendingProposals")}</p>
+                ) : (
+                  <div className="space-y-3">
+                    {pendingCoachProposals.map((proposal) => {
+                      const coachName =
+                        proposal.coach?.firstName ||
+                        proposal.coach?.username ||
+                        t("coach.title");
+                      const proposalLabel =
+                        proposal.type === "workout"
+                          ? t("coach.workoutProposal")
+                          : proposal.type === "meal"
+                            ? t("coach.mealProposal")
+                            : t("coach.goalProposal");
+                      return (
+                        <div
+                          key={proposal.id}
+                          className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                                {proposalLabel}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {t("coach.fromCoach", { name: coachName })}
+                              </p>
+                              {proposal.note && (
+                                <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
+                                  {proposal.note}
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-[11px] rounded-full bg-amber-100 text-amber-700 px-2 py-1 font-semibold">
+                              {t("coach.pending")}
+                            </span>
+                          </div>
+                          <div className="flex gap-2 mt-3">
+                            <Button
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => handleCoachProposalAction(proposal.id, "accept")}
+                              loading={actingProposalId === proposal.id}
+                            >
+                              {t("coach.accept")}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="flex-1"
+                              onClick={() => handleCoachProposalAction(proposal.id, "reject")}
+                              loading={actingProposalId === proposal.id}
+                            >
+                              {t("coach.reject")}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
 
           {/* Quick actions */}
           <Card>

@@ -5,7 +5,7 @@
 export interface Translation {
   nav: {
     dashboard: string; nutrition: string; workouts: string; progress: string;
-    goals: string; profile: string; more: string; mealPlanner: string; chat: string; reports: string; settings: string; templates: string; aiCoach: string;
+    goals: string; profile: string; more: string; mealPlanner: string; chat: string; reports: string; settings: string; templates: string; aiCoach: string; coachMode: string; adminMode: string;
   };
   common: {
     save: string; cancel: string; delete: string; edit: string; add: string;
@@ -319,6 +319,49 @@ export interface Translation {
     askNutrition: string; askWorkout: string; askGoals: string;
     thinking: string; proactiveMode: string; proactiveOn: string; proactiveOff: string;
   };
+  coach: {
+    title: string; subtitle: string; open: string;
+    inviteClient: string; inviteClientBody: string; createInviteCode: string; activeCode: string;
+    assignedClients: string; loadingClients: string; noClients: string;
+    clientOverviewTitle: string; clientOverviewBody: string; backToClients: string;
+    currentGoal: string; recentCalories: string; recentProtein: string; pendingProposals: string;
+    clientActivity: string; recentWorkouts: string; noLoggedWorkouts: string;
+    activeCalorieGoal: string; noActiveCalorieGoal: string; currentMealPlans: string; noMealPlans: string;
+    publishDrafts: string; workoutTemplate: string; selectTemplate: string; overwrite: string;
+    sendWorkoutDraft: string; mealPlan: string; selectMealPlan: string; sendMealDraft: string;
+    goalMacros: string; selectCalorieGoal: string; fallbackGoalName: string; sendGoalDraft: string;
+    proposalHistory: string; noCoachProposals: string;
+    workoutProposal: string; mealProposal: string; goalProposal: string;
+    fromCoach: string; pending: string; accepted: string; rejected: string;
+    joinCoach: string; joinCoachBody: string; connect: string;
+    createCoachInvite: string; createCoachInviteBody: string; generate: string; inviteCode: string;
+    coachLinkActivated: string; failedAcceptInvite: string;
+    loadingProposals: string; noPendingProposals: string; accept: string; reject: string;
+    oneMonth: string; twoMonths: string; threeMonths: string;
+  };
+  admin: {
+    title: string; subtitle: string; userLookup: string; searchPlaceholder: string; search: string;
+    coachRelationships: string; noRelationships: string; coachToClient: string;
+    roleUser: string; roleCoach: string; roleAdmin: string; roleDeveloper: string;
+    openWorkspace: string; backToInternal: string; workspaceTitle: string; joinedOn: string;
+    profileAndRole: string; roleLabel: string; trainingDaysLabel: string; permissionFlagsLabel: string;
+    statsOverview: string; activeGoalLabel: string; goalTypeLabel: string; dailyCaloriesLabel: string;
+    targetWeightLabel: string; targetDateLabel: string; noActiveGoal: string; recentNutrition: string;
+    noRecentNutrition: string; recentWorkouts: string; noRecentWorkouts: string; recentWeight: string;
+    noRecentWeight: string; recentMealPlans: string; noMealPlans: string; calendarPreview: string;
+    calendarPreviewSubtitle: string; noCalendarDays: string; relationshipsForUser: string;
+    noRelationshipsForUser: string; pendingProposals: string; noPendingProposals: string; exerciseCountLabel: string; restDayLabel: string;
+    totalUsers: string; totalCoaches: string; totalInternalUsers: string; totalPendingProposals: string;
+    systemTotals: string; recentUsageSignals: string; recentUsageSignalsSub: string;
+    metricSignups7d: string; metricWorkouts7d: string; metricFoodLogs7d: string; metricWeights7d: string;
+    metricChats7d: string; metricActiveGoals: string; metricCalendarDays30d: string; metricPendingCoachLinks: string;
+    recentAuditLogs: string; recentAuditLogsSub: string; noAuditLogs: string; readOnlyView: string;
+    readOnlyBannerTitle: string; readOnlyBannerBody: string;
+    impersonationBanner: string; endImpersonation: string; startImpersonation: string;
+    featureFlags: string; featureFlagsSub: string; noFeatureFlags: string; enabled: string; disabled: string;
+    contentOps: string; contentOpsSub: string; repairTools: string; repairToolsSub: string;
+    repairUserIdLabel: string; repairUserIdPlaceholder: string; repairSyncWeight: string; repairCleanupInvites: string;
+  };
 }
 
 // English strings
@@ -326,7 +369,7 @@ const en: Translation = {
   nav: {
     dashboard: "Dashboard", nutrition: "Nutrition", workouts: "Workouts",
     progress: "Progress", goals: "Goals", profile: "Profile", more: "More",
-    mealPlanner: "Meal Planner", chat: "AI Coach", reports: "Reports", settings: "Settings", templates: "Templates", aiCoach: "AI Coach",
+    mealPlanner: "Meal Planner", chat: "AI Coach", reports: "Reports", settings: "Settings", templates: "Templates", aiCoach: "AI Coach", coachMode: "Coach Mode", adminMode: "Admin / Dev",
   },
   common: {
     save: "Save", cancel: "Cancel", delete: "Delete", edit: "Edit", add: "Add",
@@ -1232,6 +1275,152 @@ const en: Translation = {
     thinking: "Thinking…", proactiveMode: "Proactive mode",
     proactiveOn: "Proactive mode is on — coach will send you timely insights",
     proactiveOff: "Proactive mode is off",
+  },
+  coach: {
+    title: "Coach Mode",
+    subtitle: "Manage your clients, publish plans, and review their current progress.",
+    open: "Open",
+    inviteClient: "Invite a client",
+    inviteClientBody: "Create a coach invite code that a client can accept from their dashboard.",
+    createInviteCode: "Create invite code",
+    activeCode: "Active code",
+    assignedClients: "Assigned clients",
+    loadingClients: "Loading clients...",
+    noClients: "No active clients yet. Share an invite code to connect someone.",
+    clientOverviewTitle: "Full client workspace",
+    clientOverviewBody: "Full client workspace, current stats, and coach publishing tools.",
+    backToClients: "Back to clients",
+    currentGoal: "Current goal",
+    recentCalories: "Recent calories",
+    recentProtein: "Recent protein",
+    pendingProposals: "Pending proposals",
+    clientActivity: "Client activity",
+    recentWorkouts: "Recent workouts",
+    noLoggedWorkouts: "No logged workouts yet.",
+    activeCalorieGoal: "Active calorie goal",
+    noActiveCalorieGoal: "No active calorie goal.",
+    currentMealPlans: "Current meal plans",
+    noMealPlans: "No meal plans yet.",
+    publishDrafts: "Publish coach drafts",
+    workoutTemplate: "Workout template",
+    selectTemplate: "Select template",
+    overwrite: "Overwrite",
+    sendWorkoutDraft: "Send workout draft",
+    mealPlan: "Meal plan",
+    selectMealPlan: "Select meal plan",
+    sendMealDraft: "Send meal-plan draft",
+    goalMacros: "Goal / macros",
+    selectCalorieGoal: "Select calorie goal",
+    fallbackGoalName: "{{type}} goal",
+    sendGoalDraft: "Send goal draft",
+    proposalHistory: "Proposal history",
+    noCoachProposals: "No coach proposals yet.",
+    workoutProposal: "Workout proposal",
+    mealProposal: "Meal proposal",
+    goalProposal: "Goal proposal",
+    fromCoach: "From {{name}}",
+    pending: "Pending",
+    accepted: "Accepted",
+    rejected: "Rejected",
+    joinCoach: "Join a coach",
+    joinCoachBody: "Paste the invite code your coach shared with you.",
+    connect: "Connect",
+    createCoachInvite: "Create coach invite",
+    createCoachInviteBody: "Generate a client code valid for 7 days.",
+    generate: "Generate",
+    inviteCode: "Invite code",
+    coachLinkActivated: "Coach link activated.",
+    failedAcceptInvite: "Failed to accept invite.",
+    loadingProposals: "Loading proposals...",
+    noPendingProposals: "No pending coach proposals right now.",
+    accept: "Accept",
+    reject: "Reject",
+    oneMonth: "1 month",
+    twoMonths: "2 months",
+    threeMonths: "3 months",
+  },
+  admin: {
+    title: "Admin / Dev Mode",
+    subtitle: "Internal operations, role assignment, relationships, and global diagnostics.",
+    userLookup: "User lookup and role assignment",
+    searchPlaceholder: "Search username, email, first or last name",
+    search: "Search",
+    coachRelationships: "Coach relationships",
+    noRelationships: "No coach/client relationships yet.",
+    coachToClient: "Coach: {{coach}} -> Client: {{client}}",
+    roleUser: "user",
+    roleCoach: "coach",
+    roleAdmin: "admin",
+    roleDeveloper: "developer",
+    openWorkspace: "Open workspace",
+    backToInternal: "← Back to internal overview",
+    workspaceTitle: "{{user}} workspace",
+    joinedOn: "Joined",
+    profileAndRole: "Profile and role",
+    roleLabel: "Role",
+    trainingDaysLabel: "Training days per week",
+    permissionFlagsLabel: "Permission flags",
+    statsOverview: "Stats overview",
+    activeGoalLabel: "Active goal",
+    goalTypeLabel: "Goal type",
+    dailyCaloriesLabel: "Daily calories",
+    targetWeightLabel: "Target weight",
+    targetDateLabel: "Target date",
+    noActiveGoal: "No active calorie goal.",
+    recentNutrition: "Recent nutrition",
+    noRecentNutrition: "No recent nutrition logs in the current window.",
+    recentWorkouts: "Recent workouts",
+    noRecentWorkouts: "No workouts logged yet.",
+    recentWeight: "Recent weight",
+    noRecentWeight: "No weight logs yet.",
+    recentMealPlans: "Recent meal plans",
+    noMealPlans: "No meal plans yet.",
+    calendarPreview: "Calendar preview",
+    calendarPreviewSubtitle: "Scheduled days through {{end}}",
+    noCalendarDays: "No scheduled calendar days in the current window.",
+    relationshipsForUser: "Relationships for this user",
+    noRelationshipsForUser: "No coach/client relationships for this user.",
+    pendingProposals: "Pending coach proposals",
+    noPendingProposals: "No pending coach proposals.",
+    exerciseCountLabel: "exercises",
+    restDayLabel: "Rest day",
+    totalUsers: "Users",
+    totalCoaches: "Coaches",
+    totalInternalUsers: "Internal users",
+    totalPendingProposals: "Pending proposals",
+    systemTotals: "System totals",
+    recentUsageSignals: "Recent usage signals",
+    recentUsageSignalsSub: "Rolling activity indicators for the last 7 to 30 days.",
+    metricSignups7d: "Signups (7d)",
+    metricWorkouts7d: "Workouts (7d)",
+    metricFoodLogs7d: "Food logs (7d)",
+    metricWeights7d: "Weight logs (7d)",
+    metricChats7d: "Chat messages (7d)",
+    metricActiveGoals: "Active goals",
+    metricCalendarDays30d: "Calendar days (30d)",
+    metricPendingCoachLinks: "Pending coach links",
+    recentAuditLogs: "Recent audit logs",
+    recentAuditLogsSub: "Latest privileged actions and internal activity.",
+    noAuditLogs: "No audit logs yet.",
+    readOnlyView: "Read-only view",
+    readOnlyBannerTitle: "Read-only view as user",
+    readOnlyBannerBody: "This internal mode is intentionally read-only. Use it to inspect the user experience safely without mutating their data.",
+    impersonationBanner: "{{actor}} is currently impersonating {{user}}.",
+    endImpersonation: "End impersonation",
+    startImpersonation: "Impersonate",
+    featureFlags: "Feature flags",
+    featureFlagsSub: "Internal rollout switches and controlled behavior toggles.",
+    noFeatureFlags: "No feature flags configured yet.",
+    enabled: "Enabled",
+    disabled: "Disabled",
+    contentOps: "Content ops",
+    contentOpsSub: "Read-only content inventory and seeded catalog overview.",
+    repairTools: "Repair tools",
+    repairToolsSub: "Safe internal repair actions with audit logging.",
+    repairUserIdLabel: "Target user ID",
+    repairUserIdPlaceholder: "Enter user ID",
+    repairSyncWeight: "Sync profile weight from latest log",
+    repairCleanupInvites: "Cleanup expired coach invites",
   },
 };
 

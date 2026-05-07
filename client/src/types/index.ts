@@ -21,6 +21,8 @@ export interface User {
   cycleLength?: number | null;        // cycle length in days
   waterTargetMl?: number | null;      // daily water target in ml
   planAdjustmentMode?: "suggest" | "confirm" | "auto" | null;
+  role?: "user" | "coach" | "admin" | "developer";
+  permissionFlags?: string[] | null;
   createdAt?: string;
 }
 
@@ -30,7 +32,89 @@ export interface AuthResponse {
   message?: string;
 }
 
+export interface CoachClientLink {
+  id: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  client?: User;
+  coach?: User;
+}
+
+export interface CoachProposal {
+  id: number;
+  coachId: number;
+  clientId: number;
+  type: "workout" | "meal" | "goal";
+  status: "pending" | "accepted" | "rejected";
+  sourceId: number;
+  payload?: string | null;
+  note?: string | null;
+  acceptedAt?: string | null;
+  rejectedAt?: string | null;
+  appliedId?: number | null;
+  createdAt: string;
+  updatedAt: string;
+  coach?: User;
+}
+
 // ── Workouts ─────────────────────────────────────────────────────────────────
+export interface AuditLogEntry {
+  id: number;
+  actorUserId?: number | null;
+  actorRole: string;
+  action: string;
+  targetType?: string | null;
+  targetId?: number | null;
+  targetUserId?: number | null;
+  metadata?: Record<string, unknown> | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+  actor?: User;
+}
+
+export interface InternalSummaryMetrics {
+  signups7d: number;
+  workouts7d: number;
+  foodLogs7d: number;
+  weights7d: number;
+  chats7d: number;
+  activeGoals: number;
+  calendarDays30d: number;
+  pendingCoachLinks: number;
+}
+
+export interface InternalUserWorkspace {
+  user: User;
+  stats: {
+    workoutCount: number;
+    foodCount: number;
+    weightCount: number;
+    goalCount: number;
+  };
+  recentWorkouts: Workout[];
+  activeGoal: CalorieGoal | null;
+  recentWeights: WeightLog[];
+  recentFoods: FoodLog[];
+  nutritionSummary: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fats: number;
+    entries: number;
+  };
+  mealPlans: MealPlan[];
+  pendingProposals: CoachProposal[];
+  relationships: CoachClientLink[];
+  calendarDays: WorkoutCalendarDay[];
+  windows: {
+    nutritionStart: string;
+    nutritionEnd: string;
+    calendarEnd: string;
+  };
+}
+
 export interface WorkoutExercise {
   id: number;
   workoutId: number;

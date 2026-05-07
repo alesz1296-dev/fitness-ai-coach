@@ -2,6 +2,47 @@
 
 Most recent session first.
 
+## 2026-05-06 - Session: coach mode, admin mode, and role-aware planning
+
+### Goal
+Add the first real role-and-relationship layer to the app so coaches can manage assigned clients through draft proposals, admins/developers can access internal operations surfaces, and normal users can accept coach invites and apply pending coach-authored plans safely.
+
+### Files modified
+- `prisma/schema.prisma` - added `User.role`, `User.permissionFlags`, `CoachClientLink`, `CoachInvite`, `CoachProposal`, plus provenance fields on templates, meal plans, and calorie goals
+- `src/lib/runMigrations.ts` - added startup migrations for the new role, relationship, invite, and proposal tables/columns
+- `src/middleware/auth.ts` - added role, permission, and coach-client access middleware
+- `src/controllers/authController.ts`, `src/controllers/userController.ts` - auth/profile payloads now include normalized `role` and `permissionFlags`
+- `src/controllers/coachController.ts` - coach invite, client overview, proposal creation, pending proposal listing, and accept/reject apply flows
+- `src/controllers/adminController.ts` - admin summary, user search, role updates, and relationship visibility
+- `src/routes/coach.ts`, `src/routes/admin.ts`, `src/server.ts` - exposed the new coach/admin API surfaces
+- `client/src/api/index.ts`, `client/src/types/index.ts` - added coach/admin client APIs and shared role/proposal types
+- `client/src/pages/coach/CoachPage.tsx`, `client/src/pages/coach/CoachClientPage.tsx`, `client/src/pages/admin/AdminPage.tsx` - added the first coach/admin workspace pages
+- `client/src/pages/dashboard/Dashboard.tsx` - added coach invite acceptance plus pending coach proposal review/accept/reject from the main user dashboard
+- `client/src/components/layout/Sidebar.tsx`, `client/src/components/layout/BottomNav.tsx`, `client/src/App.tsx` - added role-aware navigation and routes for coach/admin shells
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added navigation keys for coach/admin mode
+
+### Notes
+- Coach/client relationships now use invite codes and become active only after explicit client acceptance.
+- Coach-authored workout, meal, and goal changes are stored as pending proposals first; they do not silently overwrite the client.
+- Accepting a workout proposal clones the coach template into the client account and can also schedule it into the calendar using the attached weekday/month payload.
+- Accepting a meal proposal clones the coach meal plan into the client Meal Planner.
+- Accepting a goal proposal clones the coach calorie goal into the client's active goal state and syncs the profile goal label.
+- Admin/dev mode currently focuses on user lookup, role assignment, relationship visibility, and top-level diagnostics; impersonation and deeper ops are still follow-up work.
+- Backend and frontend builds both passed after the role-system integration.
+- Follow-up localization pass moved the new coach/admin/dashboard proposal UI off hardcoded English and into locale keys for English, Spanish, and Ukrainian.
+- Follow-up shell split clarified intent: coach mode now reads as the product-facing business role, while admin/dev now points to `/internal` as the dedicated internal surface.
+- Phase 2 internal tooling is now underway: `/internal` can link into a dedicated per-user workspace console that shows profile, counts, active goal, recent workouts, recent nutrition, recent weight, meal plans, calendar preview, proposals, and relationships.
+- A richer internal backend endpoint now aggregates cross-user workspace data for admin/developer users without forcing the internal shell to reuse the coach UI directly.
+- Internal overview now includes real usage-signal widgets such as recent signups, workouts, food logs, weight logs, chats, active goals, and calendar activity.
+- Added an `AuditLog` model plus internal action logging for summary access, user search, workspace access, role changes, relationship viewing, and audit-feed viewing.
+- Added a safe read-only `/internal/view/users/:userId` route with a visible banner so internal users can inspect a user-facing workspace context without mutating data.
+- Added true impersonation sessions: admin/dev users can now start an impersonation flow from `/internal`, the app sends a dedicated impersonation header, and the normal app shell shows an explicit top banner with an exit action.
+- Added `FeatureFlag` and `ImpersonationSession` models plus internal endpoints for feature-flag management, impersonation start/stop, content inventory, and repair actions.
+- Added first repair/content tools on `/internal`: profile-weight sync from the latest weight log and expired coach-invite cleanup, both audited.
+- Deepened audit coverage into coach flows so invite creation/acceptance and coach proposal create/accept/reject actions are now logged too.
+
+---
+
 ## 2026-05-05 - Session: dashboard, workouts, nutrition, styling, and frontend docs
 
 ### Goal

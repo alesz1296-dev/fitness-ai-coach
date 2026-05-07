@@ -24,6 +24,11 @@ import type {
   WorkoutCalendarDay,
   CustomFood,
   CustomExercise,
+  CoachClientLink,
+  CoachProposal,
+  InternalUserWorkspace,
+  InternalSummaryMetrics,
+  AuditLogEntry,
 } from "../types";
 
 interface WorkoutExerciseCreateInput {
@@ -590,4 +595,70 @@ export const calendarApi = {
     api.delete<{ message: string; count: number }>(
       `/calendar/clear?month=${month}`,
     ),
+};
+
+export const coachApi = {
+  getClients: () =>
+    api.get<{ clients: CoachClientLink[] }>("/coach/clients"),
+  createInvite: (expiresInDays = 7) =>
+    api.post<{ invite: { id: number; code: string; status: string; expiresAt: string } }>(
+      "/coach/invites",
+      { expiresInDays },
+    ),
+  acceptInvite: (code: string) =>
+    api.post<{ message: string }>("/coach/accept-invite", { code }),
+  getClientOverview: (clientId: number) =>
+    api.get<{
+      client: User;
+      recentWorkouts: Workout[];
+      activeGoal: CalorieGoal | null;
+      weightLogs: WeightLog[];
+      nutritionSummary: { calories: number; protein: number };
+      plans: MealPlan[];
+      proposals: CoachProposal[];
+    }>(`/coach/clients/${clientId}`),
+  getClientProposals: (clientId: number) =>
+    api.get<{ proposals: CoachProposal[] }>(`/coach/clients/${clientId}/proposals`),
+  createProposal: (data: {
+    clientId: number;
+    type: "workout" | "meal" | "goal";
+    sourceId: number;
+    note?: string;
+    payload?: { weekdays?: number[]; months?: number; overwrite?: boolean };
+  }) => api.post<{ proposal: CoachProposal }>("/coach/proposals", data),
+  getPendingForMe: () =>
+    api.get<{ proposals: CoachProposal[] }>("/coach/proposals/pending"),
+  actOnProposal: (id: number, action: "accept" | "reject") =>
+    api.post<{ proposal: CoachProposal }>(`/coach/proposals/${id}/action`, { action }),
+};
+
+export const adminApi = {
+  getSummary: () =>
+    api.get<{ stats: Record<string, number>; metrics: InternalSummaryMetrics }>("/admin/summary"),
+  getAuditLogs: () =>
+    api.get<{ logs: AuditLogEntry[] }>("/admin/audit"),
+  startImpersonation: (userId: number) =>
+    api.post<{ token: string; user: User }>("/admin/impersonation/start", { userId }),
+  stopImpersonation: () =>
+    api.post<{ message: string }>("/admin/impersonation/stop"),
+  getFeatureFlags: () =>
+    api.get<{ flags: Array<{ id: number; key: string; label: string; description?: string | null; enabled: boolean }> }>("/admin/feature-flags"),
+  upsertFeatureFlag: (data: { key: string; label: string; description?: string; enabled: boolean }) =>
+    api.put<{ flag: { id: number; key: string; label: string; description?: string | null; enabled: boolean } }>("/admin/feature-flags", data),
+  getContentSummary: () =>
+    api.get<{ summary: Record<string, number> }>("/admin/content/summary"),
+  runRepair: (data: { action: string; userId?: number }) =>
+    api.post<{ message: string; latestWeight?: number; updated?: number }>("/admin/repair", data),
+  searchUsers: (q = "") =>
+    api.get<{ users: User[] }>(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  getUserDetail: (userId: number) =>
+    api.get<{ user: User; stats: Record<string, number> }>(`/admin/users/${userId}`),
+  getUserWorkspace: (userId: number) =>
+    api.get<InternalUserWorkspace>(`/admin/users/${userId}/workspace`),
+  updateUserRole: (
+    userId: number,
+    data: { role: "user" | "coach" | "admin" | "developer"; permissionFlags: string[] },
+  ) => api.put<{ user: User }>(`/admin/users/${userId}/role`, data),
+  getRelationships: () =>
+    api.get<{ relationships: CoachClientLink[] }>("/admin/relationships"),
 };

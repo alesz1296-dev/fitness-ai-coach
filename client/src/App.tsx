@@ -23,6 +23,10 @@ import ChatPage        from "./pages/chat/ChatPage";
 import ReportsPage     from "./pages/reports/ReportsPage";
 import SettingsPage    from "./pages/settings/SettingsPage";
 import MealPlannerPage from "./pages/mealplanner/MealPlannerPage";
+import CoachPage from "./pages/coach/CoachPage";
+import CoachClientPage from "./pages/coach/CoachClientPage";
+import AdminPage from "./pages/admin/AdminPage";
+import AdminUserPage from "./pages/admin/AdminUserPage";
 
 export default function App() {
   // Wire up online/offline listeners and SW message handler globally
@@ -76,6 +80,12 @@ export default function App() {
             <Route path="/meal-planner" element={<ErrorBoundary><MealPlannerPage /></ErrorBoundary>} />
             <Route path="/reports" element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />
             <Route path="/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
+            <Route path="/coach" element={<ErrorBoundary><CoachPage /></ErrorBoundary>} />
+            <Route path="/coach/clients/:clientId" element={<ErrorBoundary><CoachClientPage /></ErrorBoundary>} />
+            <Route path="/internal" element={<ErrorBoundary><AdminPage /></ErrorBoundary>} />
+            <Route path="/internal/users/:userId" element={<ErrorBoundary><AdminUserPage /></ErrorBoundary>} />
+            <Route path="/internal/view/users/:userId" element={<ErrorBoundary><AdminUserPage /></ErrorBoundary>} />
+            <Route path="/admin" element={<Navigate to="/internal" replace />} />
           </Route>
         </Route>
 

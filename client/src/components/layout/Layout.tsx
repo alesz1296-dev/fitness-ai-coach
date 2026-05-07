@@ -3,16 +3,19 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
 import { useAuthStore } from "../../store/authStore";
-import { usersApi } from "../../api";
+import { adminApi, usersApi } from "../../api";
 import { OnboardingModal } from "../OnboardingModal";
 import { useDarkModeInit } from "../../hooks/useDarkMode";
 import { ProfileSummaryBar } from "./ProfileSummaryBar";
 import { OfflineBanner } from "./OfflineBanner";
 import { APP_EVENTS } from "../../lib/appEvents";
+import { Button } from "../ui/Button";
+import { useTranslation } from "../../i18n";
 
 export function Layout() {
   useDarkModeInit();
-  const { user, updateUser } = useAuthStore();
+  const { user, actorUser, impersonationToken, updateUser, stopImpersonation } = useAuthStore();
+  const { t } = useTranslation();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
@@ -42,12 +45,40 @@ export function Layout() {
     setShowOnboarding(false);
   };
 
+  const endImpersonation = async () => {
+    try {
+      await adminApi.stopImpersonation();
+    } catch {
+      // Keep local exit available even if the server-side stop call fails.
+    } finally {
+      stopImpersonation();
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
       <OfflineBanner />
+      {impersonationToken && actorUser && user ? (
+        <div className="fixed top-0 inset-x-0 z-[70] bg-amber-500 text-amber-950 border-b border-amber-600 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 py-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2 text-sm">
+            <div>
+              <span className="font-semibold">{t("admin.readOnlyBannerTitle")}</span>
+              <span className="ml-2">
+                {t("admin.impersonationBanner", {
+                  actor: actorUser.username,
+                  user: user.username,
+                })}
+              </span>
+            </div>
+            <Button size="sm" variant="secondary" onClick={endImpersonation}>
+              {t("admin.endImpersonation")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
       <Sidebar />
       {/* pb-16 reserves space for the fixed bottom tab bar on mobile */}
-      <main className="flex-1 overflow-auto min-w-0 pb-16 md:pb-0">
+      <main className={`flex-1 overflow-auto min-w-0 pb-16 md:pb-0 ${impersonationToken ? "pt-14 md:pt-12" : ""}`}>
         <ProfileSummaryBar />
         <Outlet />
       </main>

@@ -70,6 +70,12 @@ The web frontend is now a richer multi-surface app than the original dashboard-o
 - making Nutrition search feel natural by jumping straight into the database search field
 - keeping the weekly plan picker and AI workout builder localized and broader in scope
 - giving the app more distinct appearance presets so it does not feel like a generic palette swap app
+- extending the product with role-aware shells for normal users, coaches, and admin/dev users
+- keeping coach-authored workout, meal, and goal changes draft-first so clients explicitly accept them
+- keeping the new coach/admin/dashboard proposal surfaces translated instead of leaving the role system half-hardcoded
+- growing `/internal` into a true internal console, starting with per-user workspace inspection instead of only role toggles and summary counts
+- adding real internal observability primitives so `/internal` is useful operationally, not just structurally
+- extending internal mode from passive inspection into a controlled operations console with impersonation, feature flags, and repair tools
 
 The frontend uses React page containers plus feature subcomponents, Zustand for auth/session state, and shared browser events for refreshes. The design intent is:
 
@@ -78,6 +84,41 @@ The frontend uses React page containers plus feature subcomponents, Zustand for 
 - locale keys for visible copy
 - API helpers as the single network boundary
 - appearance presets and surface styling as first-class UX controls rather than a single dark-mode toggle
+- role-aware navigation and scoped workspaces instead of spinning up separate apps for coach/admin
+
+## Current Role / Mode Model
+
+The app now has first-class role support on `User`:
+
+- `user`
+- `coach`
+- `admin`
+- `developer`
+
+Current implementation notes:
+
+- coach/client linking uses invite codes
+- coach-authored plans are proposal-first, not auto-applied
+- clients can accept or reject pending coach proposals from the main dashboard
+- `/coach` is the product-facing coach shell
+- `/internal` is the internal admin/dev shell
+- `admin` and `developer` share the internal shell family, with permission flags deciding which tools are exposed
+- Phase 2 is now partially implemented:
+  - `/internal` still acts as the overview page
+  - `/internal/users/:userId` is now the first real internal user console
+  - the internal user console aggregates profile, role, stats, active goal, recent workouts, recent nutrition, recent weight logs, meal plans, calendar preview, proposals, and coach relationships
+  - `/internal/view/users/:userId` now provides a safe read-only view mode with an explicit banner
+  - the internal overview now shows real usage signals for the last 7 to 30 days
+  - an `AuditLog` model now records key internal actions like role changes and privileged page access
+  - true impersonation is now implemented through `ImpersonationSession` plus a global banner and explicit stop action
+  - `/internal` now exposes first-pass feature-flag management, content inventory, and repair actions
+  - richer repair tools, deeper system dashboards, and broader internal content-management flows are still follow-up work
+
+Key new data models:
+
+- `CoachClientLink`
+- `CoachInvite`
+- `CoachProposal`
 `src/data/foods.ts` and `src/data/exercises.ts` are **seed sources only** — they are no longer used at runtime for search. `searchController.ts` queries `FoodItem` and `ExerciseItem` DB tables directly, falling back to the static arrays only when those tables are empty (first boot before `npm run prisma:seed` has been run).
 
 **When adding new foods or exercises**: add to the static array first, then re-run `npm run prisma:seed` (upsert — safe to re-run). The backup reference copies live in `docs/backup-food-db.md` and `docs/backup-exercise-db.md`.

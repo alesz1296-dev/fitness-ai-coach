@@ -575,3 +575,35 @@ export const resetPasswordSchema = z.object({
 export const verifyEmailSchema = z.object({
   token: z.string().min(1, "Verification token is required"),
 });
+
+// Admin / Coach
+export const createCoachInviteSchema = z.object({
+  expiresInDays: z.coerce.number().int().min(1).max(30).optional().default(7),
+});
+
+export const acceptCoachInviteSchema = z.object({
+  code: z.string().trim().min(4).max(64),
+});
+
+export const createCoachProposalSchema = z.object({
+  clientId: z.coerce.number().int().positive(),
+  type: z.enum(["workout", "meal", "goal"]),
+  sourceId: z.coerce.number().int().positive(),
+  note: z.string().trim().max(1000).optional(),
+  payload: z
+    .object({
+      weekdays: z.array(z.coerce.number().int().min(0).max(6)).optional(),
+      months: z.coerce.number().int().min(1).max(3).optional(),
+      overwrite: z.boolean().optional(),
+    })
+    .optional(),
+});
+
+export const coachProposalActionSchema = z.object({
+  action: z.enum(["accept", "reject"]),
+});
+
+export const updateUserRoleSchema = z.object({
+  role: z.enum(["user", "coach", "admin", "developer"]),
+  permissionFlags: z.array(z.string().trim().min(1)).optional().default([]),
+});

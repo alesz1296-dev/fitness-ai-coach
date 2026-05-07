@@ -67,8 +67,9 @@ const api = axios.create({
 // Attach access token + locale headers to every request
 api.interceptors.request.use((config) => {
   config.headers = config.headers ?? {};
-  const token = useAuthStore.getState().accessToken;
+  const { accessToken: token, impersonationToken } = useAuthStore.getState();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (impersonationToken) config.headers["X-Impersonation-Session"] = impersonationToken;
   try {
     config.headers["X-Timezone"] = Intl.DateTimeFormat().resolvedOptions().timeZone;
   } catch { /* ignore */ }

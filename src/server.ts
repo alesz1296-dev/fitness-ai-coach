@@ -36,6 +36,8 @@ import calendarRoutes    from "./routes/calendar.js";
 import analyticsRoutes   from "./routes/analytics.js";
 import customFoodRoutes      from "./routes/customFoods.js";
 import customExerciseRoutes from "./routes/customExerciseRoutes.js";
+import coachRoutes from "./routes/coach.js";
+import adminRoutes from "./routes/admin.js";
 import { runMigrations } from "./lib/runMigrations.js";
 
 const app: Express = express();
@@ -56,7 +58,7 @@ app.use(cors({
     callback(new Error(`CORS: origin '${origin}' not allowed`));
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Timezone", "X-Language", "X-Idempotency-Key"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Timezone", "X-Language", "X-Idempotency-Key", "X-Impersonation-Session"],
   credentials: true,
 }));
 app.options("*", cors());
@@ -126,6 +128,8 @@ app.use("/api/calendar",    calendarRoutes);
 app.use("/api/analytics",   analyticsRoutes);
 app.use("/api/custom-foods",      customFoodRoutes);
 app.use("/api/custom-exercises", customExerciseRoutes);
+app.use("/api/coach", coachRoutes);
+app.use("/api/admin", adminRoutes);
 
 // ── Serve React frontend (production) ───────────────────────────────────────
 import path from "path";
