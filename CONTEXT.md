@@ -76,6 +76,7 @@ The web frontend is now a richer multi-surface app than the original dashboard-o
 - growing `/internal` into a true internal console, starting with per-user workspace inspection instead of only role toggles and summary counts
 - adding real internal observability primitives so `/internal` is useful operationally, not just structurally
 - extending internal mode from passive inspection into a controlled operations console with impersonation, feature flags, and repair tools
+- keeping the shared shell polished, since sidebar/bottom-nav regressions now affect every major page at once
 
 The frontend uses React page containers plus feature subcomponents, Zustand for auth/session state, and shared browser events for refreshes. The design intent is:
 

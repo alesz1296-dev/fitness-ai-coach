@@ -90,6 +90,7 @@ Recently cleared:
 - Internal Phase 2 has started: admin/dev users can now drill from `/internal` into a dedicated per-user workspace view instead of stopping at high-level summary cards.
 - Internal mode now also has first-pass observability: recent usage metrics, audit logging, and a read-only view path.
 - Internal mode now also supports true impersonation sessions plus first-pass feature flags, content inventory, and repair tools.
+- Shared shell emoji icons for Dashboard / Workouts / Nutrition / Goals / Progress / Reports / Meals / Settings were restored after the nav-icon regression.
 
 ---
 

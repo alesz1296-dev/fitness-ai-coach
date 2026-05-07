@@ -40,6 +40,7 @@ Add the first real role-and-relationship layer to the app so coaches can manage 
 - Added `FeatureFlag` and `ImpersonationSession` models plus internal endpoints for feature-flag management, impersonation start/stop, content inventory, and repair actions.
 - Added first repair/content tools on `/internal`: profile-weight sync from the latest weight log and expired coach-invite cleanup, both audited.
 - Deepened audit coverage into coach flows so invite creation/acceptance and coach proposal create/accept/reject actions are now logged too.
+- Restored the shared page emojis in the sidebar and mobile bottom navigation after the icon regression that replaced them with two-letter abbreviations.
 
 ---
 
