@@ -14,26 +14,26 @@ export function BottomNav() {
   const isAdminShell = user?.role === "admin" || user?.role === "developer";
 
   const primaryItems = [
-    { to: "/dashboard", icon: "🏠", label: t("nav.dashboard") },
-    { to: "/workouts", icon: "🏋️", label: t("nav.workouts") },
-    { to: "/nutrition", icon: "🍎", label: t("nav.nutrition") },
-    { to: "/goals", icon: "🎯", label: t("nav.goals") },
-    { to: "/chat", icon: "🤖", label: t("nav.aiCoach") },
+    { to: "/dashboard", icon: "\u{1F3E0}", label: t("nav.dashboard") },
+    { to: "/workouts", icon: "\u{1F3CB}\uFE0F", label: t("nav.workouts") },
+    { to: "/nutrition", icon: "\u{1F34E}", label: t("nav.nutrition") },
+    { to: "/goals", icon: "\u{1F3AF}", label: t("nav.goals") },
+    { to: "/chat", icon: "\u{1F916}", label: t("nav.aiCoach") },
   ];
 
   const moreItems = useMemo(() => {
     const items = [
-      { to: "/meal-planner", icon: "🍽️", label: t("nav.mealPlanner") },
-      { to: "/progress", icon: "📈", label: t("nav.progress") },
-      { to: "/reports", icon: "📋", label: t("nav.reports") },
-      { to: "/settings", icon: "⚙️", label: t("nav.settings") },
+      { to: "/meal-planner", icon: "\u{1F37D}\uFE0F", label: t("nav.mealPlanner") },
+      { to: "/progress", icon: "\u{1F4C8}", label: t("nav.progress") },
+      { to: "/reports", icon: "\u{1F4CB}", label: t("nav.reports") },
+      { to: "/settings", icon: "\u2699\uFE0F", label: t("nav.settings") },
     ];
 
     if (isCoachShell) {
-      items.push({ to: "/coach", icon: "👥", label: t("nav.coachMode") });
+      items.push({ to: "/coach", icon: "\u{1F465}", label: t("nav.coachMode") });
     }
     if (isAdminShell) {
-      items.push({ to: "/internal", icon: "🛠️", label: t("nav.adminMode") });
+      items.push({ to: "/internal", icon: "\u{1F6E0}\uFE0F", label: t("nav.adminMode") });
     }
 
     return items;
@@ -71,9 +71,7 @@ export function BottomNav() {
                 }`
               }
             >
-              <span className="text-base leading-none">
-                {item.icon}
-              </span>
+              <span className="emoji-glyph text-base leading-none">{item.icon}</span>
               {item.label}
             </NavLink>
           ))}
@@ -125,7 +123,7 @@ export function BottomNav() {
                     }`
                   }
                 >
-                  <span className="text-base leading-none w-6 text-center">
+                  <span className="emoji-glyph text-base leading-none w-6 text-center">
                     {item.icon}
                   </span>
                   {item.label}
@@ -138,8 +136,8 @@ export function BottomNav() {
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
               >
-                <span className="text-base leading-none w-6 text-center">
-                  ↩️
+                <span className="emoji-glyph text-base leading-none w-6 text-center">
+                  {"\u21A9\uFE0F"}
                 </span>
                 {t("auth.logout")}
               </button>

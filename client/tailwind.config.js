@@ -19,7 +19,16 @@ export default {
         },
       },
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
+        sans: [
+          "Inter",
+          "system-ui",
+          "-apple-system",
+          "\"Segoe UI\"",
+          "\"Apple Color Emoji\"",
+          "\"Segoe UI Emoji\"",
+          "\"Noto Color Emoji\"",
+          "sans-serif",
+        ],
       },
     },
   },

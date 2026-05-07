@@ -2,6 +2,11 @@
 
 Read this at the start of every session before touching any code.
 
+## Current frontend focus
+
+- Shared navigation now uses Unicode escape-based emoji icons in `Sidebar.tsx` and `BottomNav.tsx` instead of raw emoji literals, because the previous source bytes were vulnerable to mojibake.
+- The base font stack now explicitly includes `Apple Color Emoji`, `Segoe UI Emoji`, and `Noto Color Emoji` so page-menu icons survive mobile browser font fallback more reliably.
+
 ---
 
 ## What This Project Is

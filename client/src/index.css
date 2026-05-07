@@ -188,12 +188,18 @@
     box-sizing: border-box;
   }
   body {
-    font-family: "Inter", system-ui, sans-serif;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", "Apple Color Emoji",
+      "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
     background-attachment: fixed;
     transition: background 200ms ease, color 200ms ease;
+  }
+
+  .emoji-glyph {
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    font-variant-emoji: emoji;
   }
 
   html[data-theme-preset="system-classic"] body,

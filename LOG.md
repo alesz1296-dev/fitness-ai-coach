@@ -2238,6 +2238,21 @@ Info chip shown when a frequency match exists: "Showing plans for N×/week — m
 
 ---
 
+## 2026-05-07 - Navigation emoji rendering repair
+
+### Goal
+- Restore the page-menu emojis reliably across deployed mobile browsers after the shared nav started showing broken or missing glyphs.
+
+### Files modified
+- `client/src/components/layout/Sidebar.tsx` - replaced corrupted emoji literals with Unicode escape sequences and routed nav/logout icons through a dedicated emoji-safe class
+- `client/src/components/layout/BottomNav.tsx` - replaced corrupted emoji literals with Unicode escape sequences and routed primary / more-sheet / logout icons through the same emoji-safe class
+- `client/src/index.css` - expanded the app font stack to include emoji-capable system fonts and added `.emoji-glyph`
+- `client/tailwind.config.js` - aligned the Tailwind sans stack with the new emoji-capable fallback chain
+
+### Notes
+- The issue was not only “icons removed”; the shared nav files had mojibake in source, so the fix now avoids raw emoji bytes in those files.
+- Using Unicode escapes plus explicit emoji font fallbacks should hold up better on phone browsers and Railway-served builds.
+
 ## 2026-05-03 - Nutrition browse mode + progress ranges + Ukrainian locale wiring
 
 ### Goal

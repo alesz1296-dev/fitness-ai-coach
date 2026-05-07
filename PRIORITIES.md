@@ -1,6 +1,6 @@
 # FitAI Coach - Task Priorities
 
-_Last updated: 2026-05-06_
+_Last updated: 2026-05-07_
 
 > Format: **P1** = must-ship · **P2** = high value · **P3** = deferred/nice-to-have
 
@@ -70,6 +70,7 @@ _Last updated: 2026-05-06_
 | - | Internal Phase 2 foundation - `/internal` now links into a per-user workspace console with profile, stats, active goal, recent training, nutrition, weight, meal plans, calendar preview, proposals, and relationships | Platform/Internal Tools | P1 | Done |
 | - | Internal metrics + audit + read-only view - `/internal` now shows live usage signals, exposes recent audit logs, and supports a safe read-only user view route with a visible banner | Platform/Internal Tools | P1 | Done |
 | - | Internal impersonation + ops foundation - added `ImpersonationSession`, global impersonation banner, feature-flag management, content inventory, repair tools, and deeper coach/internal audit coverage | Platform/Internal Tools | P1 | Done |
+| - | Navigation emoji rendering repair - replaced corrupted nav emoji literals with Unicode escapes and added explicit emoji font fallbacks for mobile/browser reliability | UX/i18n | P1 | Done |
 
 ---
 
@@ -78,6 +79,7 @@ _Last updated: 2026-05-06_
 Foundation work is complete. The roadmap below only shows live dependencies and remaining work.
 
 Recently cleared:
+- Shared page-menu emojis now render through Unicode escapes plus emoji-safe font fallbacks instead of brittle raw glyph bytes.
 - Nutrition food database now supports both free-text search and category-browse fallback with a category -> food selector path.
 - Nutrition now exposes a visible clear-day food action in the main header instead of forcing one-by-one deletion.
 - Progress now supports broader time windows from `1 day` through `1 year`.
