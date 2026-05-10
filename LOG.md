@@ -2,6 +2,32 @@
 
 Most recent session first.
 
+## 2026-05-10 - Dashboard coach-code shortcut and success state
+
+### Goal
+- Make the coach-code entry even easier to discover and feel more complete by adding a top shortcut, auto-scroll/focus behavior, and a clear post-connect success state.
+
+### Files modified
+- `client/src/pages/dashboard/Dashboard.tsx` - added a `Have a coach code?` shortcut near the top of the dashboard, wired it to scroll and focus the end-of-dashboard connect input, and replaced the plain success line with a dedicated coach-connected success card after invite acceptance
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the shortcut, success-state, and follow-up action labels
+
+### Notes
+- The underlying invite acceptance flow is unchanged; this pass is about visibility, focus, and feedback.
+- After a successful link, the dashboard now confirms the connection more clearly and guides the user toward reviewing coach updates instead of leaving them on a generic status line.
+
+## 2026-05-10 - Dashboard coach-code entry moved to a dedicated end section
+
+### Goal
+- Make the coach invite-code flow easier for regular users to find by moving it out of the mixed proposal card and into a clearer dedicated section at the end of the dashboard.
+
+### Files modified
+- `client/src/pages/dashboard/Dashboard.tsx` - removed the embedded client join-code form from the mixed coach/proposals card, added a stronger dedicated coach-connect section at the end of the dashboard, and left a small inline hint in the old location
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the new coach-connect section labels, helper copy, and placeholder text
+
+### Notes
+- This is a client-facing discoverability improvement only; the underlying invite acceptance flow and API call are unchanged.
+- The proposal card now stays focused on coach activity, while the connect flow reads more like its own guided action surface.
+
 ## 2026-05-10 - Shared coach/client role-state design system
 
 ### Goal

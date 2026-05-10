@@ -98,6 +98,9 @@ export default function Dashboard() {
   const proposalSignatureRef = useRef<string>("");
   const proposalCountRef = useRef(0);
   const proposalLoadedRef = useRef(false);
+  const coachConnectSectionRef = useRef<HTMLDivElement | null>(null);
+  const coachConnectInputRef = useRef<HTMLInputElement | null>(null);
+  const [inviteAccepted, setInviteAccepted] = useState(false);
 
   useEffect(() => {
     if (!proposalUpdateBanner) return;
@@ -222,13 +225,20 @@ export default function Dashboard() {
     try {
       await coachApi.acceptInvite(code);
       setInviteStatus(t("coach.coachLinkActivated"));
+      setInviteAccepted(true);
       setInviteCode("");
       emitDataChanged("coach-link");
     } catch (error: any) {
+      setInviteAccepted(false);
       setInviteStatus(error?.response?.data?.error ?? t("coach.failedAcceptInvite"));
     } finally {
       setInviteBusy(false);
     }
+  };
+
+  const scrollToCoachConnect = () => {
+    coachConnectSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => coachConnectInputRef.current?.focus(), 350);
   };
 
   const handleCreateCoachInvite = async () => {
@@ -508,6 +518,22 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {!isCoachRole && !isInternalRole && (
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={scrollToCoachConnect}
+            className="inline-flex items-center gap-2 rounded-full border border-brand-300 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-100 dark:border-brand-700 dark:bg-brand-900/30 dark:text-brand-200 dark:hover:bg-brand-900/50"
+          >
+            <span>{"\u{1F511}"}</span>
+            <span>{t("coach.haveCoachCode")}</span>
+          </button>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {t("coach.haveCoachCodeHelp")}
+          </p>
+        </div>
+      )}
 
       {showCoachUpdates && (
         <section className="rounded-[28px] border border-brand-200/70 dark:border-brand-800/70 bg-gradient-to-br from-brand-50 via-white to-amber-50 dark:from-brand-950/30 dark:via-gray-900 dark:to-gray-900 shadow-sm overflow-hidden">
@@ -1238,30 +1264,10 @@ export default function Dashboard() {
               )}
 
               {!isCoachRole && !isInternalRole && (
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-700/50 p-4 space-y-3">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                      {t("coach.joinCoach")}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {t("coach.joinCoachBody")}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={inviteCode}
-                      onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                      placeholder="AB12CD34"
-                      className="flex-1 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
-                    />
-                    <Button size="sm" onClick={handleAcceptCoachInvite} loading={inviteBusy}>
-                      {t("coach.connect")}
-                    </Button>
-                  </div>
-                  {inviteStatus && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{inviteStatus}</p>
-                  )}
+                <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-700/30 p-4">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {t("coach.coachConnectMovedHint")}
+                  </p>
                 </div>
               )}
 
@@ -1436,6 +1442,89 @@ export default function Dashboard() {
               ))}
             </div>
           </Card>
+
+          {!isCoachRole && !isInternalRole && (
+            <Card className="overflow-hidden border-brand-200 dark:border-brand-800 bg-gradient-to-br from-brand-50 via-white to-emerald-50 dark:from-brand-900/20 dark:via-gray-900 dark:to-emerald-950/20">
+              <div ref={coachConnectSectionRef} />
+              <CardHeader
+                title={t("coach.joinCoach")}
+                subtitle={t("coach.coachConnectSectionBody")}
+              />
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-brand-200/80 dark:border-brand-800/70 bg-white/90 dark:bg-gray-800/85 p-4">
+                  {inviteAccepted ? (
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-green-600 text-lg text-white shadow-sm">
+                          {"\u2713"}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {t("coach.coachConnectedTitle")}
+                          </p>
+                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                            {t("coach.coachConnectedBody")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-green-200 bg-green-50/80 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-900/40 dark:bg-green-900/20 dark:text-green-200">
+                        {inviteStatus || t("coach.coachLinkActivated")}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+                          {t("coach.reviewCoachUpdates")}
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => navigate("/notifications")}>
+                          {t("notifications.viewDetails")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-lg text-white shadow-sm">
+                          {"\u{1F511}"}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {t("coach.coachConnectSectionTitle")}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {t("coach.joinCoachBody")}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                        <input
+                          ref={coachConnectInputRef}
+                          type="text"
+                          value={inviteCode}
+                          onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                          placeholder={t("coach.inviteCodePlaceholder")}
+                          className="flex-1 rounded-2xl border border-brand-200 dark:border-brand-700 bg-white dark:bg-gray-900 px-4 py-3 text-sm font-medium tracking-[0.18em] uppercase text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                        />
+                        <Button className="sm:min-w-[150px]" onClick={handleAcceptCoachInvite} loading={inviteBusy}>
+                          {t("coach.connect")}
+                        </Button>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="rounded-full bg-white/80 dark:bg-gray-900/80 px-2.5 py-1">
+                          {t("coach.inviteCode")}
+                        </span>
+                        <span>{t("coach.coachConnectSectionHelp")}</span>
+                      </div>
+
+                      {inviteStatus && (
+                        <p className="mt-3 text-sm font-medium text-brand-700 dark:text-brand-300">{inviteStatus}</p>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
 
