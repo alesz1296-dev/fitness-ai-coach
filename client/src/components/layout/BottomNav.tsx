@@ -23,6 +23,7 @@ export function BottomNav() {
 
   const moreItems = useMemo(() => {
     const items = [
+      { to: "/notifications", icon: "\u{1F514}", label: t("nav.notifications") },
       { to: "/meal-planner", icon: "\u{1F37D}\uFE0F", label: t("nav.mealPlanner") },
       { to: "/progress", icon: "\u{1F4C8}", label: t("nav.progress") },
       { to: "/reports", icon: "\u{1F4CB}", label: t("nav.reports") },

@@ -412,6 +412,161 @@ function weekStartFromIso(weekStart: string): Date {
   return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
+async function loadCoachDashboardSignals(coachId: number) {
+  const links = await db.coachClientLink.findMany({
+    where: { coachId, status: "active" },
+    include: {
+      client: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          goal: true,
+          weight: true,
+          trainingDaysPerWeek: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  const clientIds = links.map((link: any) => link.client?.id).filter(Boolean) as number[];
+  const [weeklyReviews, pendingProposals, recentAuditLogs] = await Promise.all([
+    clientIds.length > 0
+      ? db.weeklyReview.findMany({
+          where: { userId: { in: clientIds } },
+          orderBy: [{ userId: "asc" }, { weekStart: "desc" }],
+        })
+      : Promise.resolve([]),
+    clientIds.length > 0
+      ? db.coachProposal.findMany({
+          where: { clientId: { in: clientIds }, status: "pending" },
+          include: {
+            client: {
+              select: { id: true, username: true, firstName: true, lastName: true },
+            },
+            coach: {
+              select: { id: true, username: true, firstName: true, lastName: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
+    db.auditLog.findMany({
+      where: {
+        OR: [
+          { actorUserId: coachId },
+          { targetUserId: { in: clientIds } },
+        ],
+        action: { startsWith: "coach." },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 12,
+    }),
+  ]);
+
+  const latestByClient = new Map<number, any>();
+  for (const review of weeklyReviews as any[]) {
+    if (!latestByClient.has(review.userId)) latestByClient.set(review.userId, review);
+  }
+
+  const pendingByClient = new Map<number, number>();
+  for (const proposal of pendingProposals as any[]) {
+    pendingByClient.set(proposal.clientId, (pendingByClient.get(proposal.clientId) ?? 0) + 1);
+  }
+
+  const attentionClients = links
+    .map((link: any) => {
+      const client = link.client;
+      if (!client) return null;
+      const latestReview = latestByClient.get(client.id) ?? null;
+      const reasons: string[] = [];
+      const pendingCount = pendingByClient.get(client.id) ?? 0;
+      const latestWeekStart = latestReview?.weekStart ?? null;
+      const latestWeekDate = latestWeekStart ? weekStartFromIso(latestWeekStart) : null;
+      const daysSinceReview = latestWeekDate
+        ? Math.floor((Date.now() - latestWeekDate.getTime()) / (24 * 60 * 60 * 1000))
+        : null;
+      const workoutAdherence = latestReview?.plannedWorkouts
+        ? Math.round((Number(latestReview.workoutsCompleted ?? 0) / Number(latestReview.plannedWorkouts)) * 100)
+        : null;
+      const weightDelta = latestReview?.averageWeight != null && client.weight != null
+        ? Math.round((Number(latestReview.averageWeight) - Number(client.weight)) * 10) / 10
+        : null;
+
+      if (pendingCount > 0) reasons.push(`${pendingCount} pending proposal${pendingCount === 1 ? "" : "s"}`);
+      if (daysSinceReview == null || daysSinceReview >= 7) reasons.push("weekly check-in due");
+      if (workoutAdherence != null && workoutAdherence < 75) reasons.push("workout adherence low");
+      if (latestReview?.proteinAdherence != null && latestReview.proteinAdherence < 80) reasons.push("protein adherence low");
+      if (latestReview?.calorieAdherence != null && latestReview.calorieAdherence < 75) reasons.push("calorie adherence low");
+      if (weightDelta != null && Math.abs(weightDelta) >= 1) reasons.push("weight trend shifted");
+
+      if (reasons.length === 0) return null;
+      return {
+        client: { ...client },
+        pendingProposals: pendingCount,
+        workoutAdherence,
+        proteinAdherence: latestReview?.proteinAdherence ?? null,
+        calorieAdherence: latestReview?.calorieAdherence ?? null,
+        weightDelta,
+        latestWeekStart,
+        reasons,
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 6);
+
+  const notifications = [
+    ...pendingProposals.slice(0, 4).map((proposal: any) => ({
+      id: `proposal-${proposal.id}`,
+      type: "proposal" as const,
+      title: `${coachClientDisplayName(proposal.client)} needs review`,
+      body: `${proposal.type} proposal is waiting for acceptance.`,
+      clientId: proposal.clientId,
+      clientName: coachClientDisplayName(proposal.client),
+      createdAt: proposal.createdAt,
+      action: "coach.proposal.pending",
+    })),
+    ...recentAuditLogs.slice(0, 4).map((log: any) => ({
+      id: `audit-${log.id}`,
+      type: "client" as const,
+      title: log.action.replace("coach.", "").replaceAll("_", " "),
+      body: "Recent coach activity logged.",
+      clientId: log.targetUserId ?? null,
+      clientName: null,
+      createdAt: log.createdAt,
+      action: log.action,
+    })),
+    ...attentionClients.slice(0, 2).map((entry: any) => ({
+      id: `attention-${entry.client.id}`,
+      type: "checkin" as const,
+      title: `${coachClientDisplayName(entry.client)} needs attention`,
+      body: entry.reasons.join(" · "),
+      clientId: entry.client.id,
+      clientName: coachClientDisplayName(entry.client),
+      createdAt: new Date().toISOString(),
+      action: "coach.client.attention",
+    })),
+  ]
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .slice(0, 8);
+
+  const summary = {
+    totalClients: links.length,
+    pendingProposals: pendingProposals.length,
+    needsAttention: attentionClients.length,
+    overdueCheckIns: attentionClients.filter((item: any) => item.reasons.some((reason: string) => reason.includes("check-in due"))).length,
+  };
+
+  return {
+    links,
+    attentionClients,
+    notifications,
+    summary,
+  };
+}
+
 export const getCoachDashboard = async (
   req: AuthRequest,
   res: Response,
@@ -563,6 +718,23 @@ export const getCoachDashboard = async (
       overdueCheckIns: attentionClients.filter((item: any) => item.reasons.some((reason: string) => reason.includes("check-in due"))).length,
       recentNotifications: notifications,
       attentionClients,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getNotifications = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const snapshot = await loadCoachDashboardSignals(req.user!.id);
+    res.json({
+      notifications: snapshot.notifications,
+      attentionClients: snapshot.attentionClients,
+      summary: snapshot.summary,
     });
   } catch (error) {
     next(error);

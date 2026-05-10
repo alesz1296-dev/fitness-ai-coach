@@ -623,7 +623,16 @@ export const coachApi = {
   toggleLibraryFavorite: (data: { itemType: "template" | "meal"; sourceId: number }) =>
     api.post<{ favorite: CoachLibraryFavorite | null }>("/coach/library/favorite", data),
   getNotifications: () =>
-    api.get<{ notifications: CoachNotification[] }>("/coach/notifications"),
+    api.get<{
+      notifications: CoachNotification[];
+      attentionClients: CoachDashboardSummary["attentionClients"];
+      summary: {
+        totalClients: number;
+        pendingProposals: number;
+        needsAttention: number;
+        overdueCheckIns: number;
+      };
+    }>("/coach/notifications"),
   getClientProposals: (clientId: number) =>
     api.get<{ proposals: CoachProposal[] }>(`/coach/clients/${clientId}/proposals`),
   createProposal: (data: {

@@ -141,7 +141,18 @@ export default function CoachPage() {
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader title={t("coach.notifications")} subtitle={t("coach.notificationsSub")} />
+          <CardHeader
+            title={t("coach.notifications")}
+            subtitle={t("coach.notificationsSub")}
+            action={
+              <Link
+                to="/notifications"
+                className="text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400"
+              >
+                {t("common.viewAll")}
+              </Link>
+            }
+          />
           <div className="space-y-3">
             {(dashboard?.recentNotifications ?? []).length === 0 ? (
               <p className="text-sm text-gray-400">{t("coach.noNotifications")}</p>

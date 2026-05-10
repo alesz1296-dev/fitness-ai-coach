@@ -12,6 +12,7 @@ Read this at the start of every session before touching any code.
 - Coach libraries now let coaches favorite reusable workout templates and meal plans, reapply them as quick swap shortcuts, and leave weekly-review coach notes directly on each check-in record.
 - The top-level coach shell now includes a small "needs attention today" summary plus recent notifications so coaches can spot overdue follow-ups without opening each client.
 - The coach dashboard now also exposes a dedicated "clients needing attention" drill-down card, and the user dashboard raises client-side proposal update notifications when coach proposal data changes.
+- A dedicated `/notifications` page now acts as the shared landing zone for coach events and proposal activity. Coaches see the coach feed plus attention queue there, while regular users see pending proposals and dashboard-linked updates in the same shell.
 - Coach mode is no longer hidden from admin/developer users in navigation; internal users now see coach as a first-class shell entry alongside `/internal`.
 - Coach profiles now render a reusable `Verified Coach` badge beside coach usernames/names in proposals, coach comments, and internal workspace views.
 - Nutrition food search is now expected to be language-agnostic: backend search normalizes accents/case/punctuation, token-matches terms in any order, checks English names, aliases, all stored localized names, AI-translated queries, and deterministic multilingual query expansions before translating returned names into the selected UI language.

@@ -23,6 +23,7 @@ import ChatPage        from "./pages/chat/ChatPage";
 import ReportsPage     from "./pages/reports/ReportsPage";
 import SettingsPage    from "./pages/settings/SettingsPage";
 import MealPlannerPage from "./pages/mealplanner/MealPlannerPage";
+import NotificationsPage from "./pages/notifications/NotificationsPage";
 import CoachPage from "./pages/coach/CoachPage";
 import CoachClientPage from "./pages/coach/CoachClientPage";
 import AdminPage from "./pages/admin/AdminPage";
@@ -78,6 +79,7 @@ export default function App() {
             <Route path="/goals" element={<ErrorBoundary><GoalsPage /></ErrorBoundary>} />
             <Route path="/chat" element={<ErrorBoundary><ChatPage /></ErrorBoundary>} />
             <Route path="/meal-planner" element={<ErrorBoundary><MealPlannerPage /></ErrorBoundary>} />
+            <Route path="/notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
             <Route path="/reports" element={<ErrorBoundary><ReportsPage /></ErrorBoundary>} />
             <Route path="/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
             <Route path="/coach" element={<ErrorBoundary><CoachPage /></ErrorBoundary>} />

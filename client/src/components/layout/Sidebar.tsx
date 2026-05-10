@@ -12,6 +12,7 @@ export function Sidebar() {
 
   const navItems = [
     { to: "/dashboard", icon: "\u{1F3E0}", label: t("nav.dashboard") },
+    { to: "/notifications", icon: "\u{1F514}", label: t("nav.notifications") },
     { to: "/workouts", icon: "\u{1F3CB}\uFE0F", label: t("nav.workouts") },
     { to: "/nutrition", icon: "\u{1F34E}", label: t("nav.nutrition") },
     { to: "/goals", icon: "\u{1F3AF}", label: t("nav.goals") },

@@ -1,6 +1,6 @@
 # FitAI Coach - Task Priorities
 
-_Last updated: 2026-05-09_
+_Last updated: 2026-05-10_
 
 > Format: **P1** = must-ship · **P2** = high value · **P3** = deferred/nice-to-have
 
@@ -10,6 +10,7 @@ _Last updated: 2026-05-09_
 
 | # | Task | Category | Pri | Status |
 |---|------|----------|-----|--------|
+| - | Shared notification center page for coach/user feeds and attention drill-downs | Platform/Coach Mode | P1 | Done |
 | - | Full i18n Spanish translation - all pages, hooks, day labels (Intl), chat starters | i18n | P1 | Done |
 | - | Dashboard: macro labels, consumed, chart legend, day-rest, quick actions all dynamic | i18n | P1 | Done |
 | - | WeeklyPlanWidget: Intl day abbreviations, edit schedule, sync to calendar | i18n | P1 | Done |
@@ -89,6 +90,7 @@ _Last updated: 2026-05-09_
 Foundation work is complete. The roadmap below only shows live dependencies and remaining work.
 
 Recently cleared:
+- A shared `/notifications` page now gives coaches a real event feed plus an attention queue, and regular users can see pending coach proposals in the same shell.
 - Coach privacy settings now let clients control which sections a coach can see, and internal dev/admin users have an audited coach-test switch for a selected client.
 - Dashboard nutrition cards now include daily supplement macros, so protein shakes counted in Nutrition also affect Dashboard calories/macros.
 - Coach scratch meal planning now has a real food-search editor with editable quantities/macros, per-meal/day totals, and customizable week/month duration.

@@ -19,6 +19,7 @@ import {
   createProposal,
   getCoachDashboard,
   getCoachLibrary,
+  getNotifications,
   getClientOverview,
   getMyClients,
   listMyPendingProposals,
@@ -37,6 +38,7 @@ router.post("/proposals/:id/comments", addProposalComment);
 
 router.use(requireRole("coach", "admin", "developer"));
 router.get("/dashboard", getCoachDashboard);
+router.get("/notifications", getNotifications);
 router.get("/clients", getMyClients);
 router.get("/library", getCoachLibrary);
 router.post("/library/favorite", toggleCoachLibraryFavorite);

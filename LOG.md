@@ -2,6 +2,24 @@
 
 Most recent session first.
 
+## 2026-05-10 - Shared notification center for coach and user activity
+
+### Goal
+- Add a dedicated `/notifications` surface that acts as the shared landing page for coach events, proposal updates, and attention cues, while still keeping regular users in the loop on their pending coach activity.
+
+### Files modified
+- `src/controllers/coachController.ts` - added a dedicated coach notifications endpoint backed by the existing dashboard signal aggregation
+- `src/routes/coach.ts` - exposed `GET /coach/notifications`
+- `client/src/pages/notifications/NotificationsPage.tsx` - added the shared notification center UI with search, unread state, and attention drill-down
+- `client/src/components/layout/Sidebar.tsx`, `client/src/components/layout/BottomNav.tsx`, `client/src/App.tsx` - wired the new notifications page into the shared shell and routes
+- `client/src/pages/dashboard/Dashboard.tsx`, `client/src/pages/coach/CoachPage.tsx` - added direct links into the notification center from the main dashboard and coach summary
+- `client/src/api/index.ts`, `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the notification-center API typing and locale keys
+- `LOG.md`, `CONTEXT.md`, `PRIORITIES.md`, `ARCHITECTURE.md` - updated project memory after the implementation pass
+
+### Notes
+- The notification center is intentionally shared: coaches see the coach feed and attention queue, while regular users see their pending coach proposals and dashboard-linked updates.
+- Unread state is currently tracked client-side so the page is useful immediately without introducing a second notification database model.
+
 ## 2026-05-09 - Verified coach identity badges
 
 ### Goal

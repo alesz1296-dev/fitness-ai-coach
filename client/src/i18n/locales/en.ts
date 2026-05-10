@@ -5,7 +5,7 @@
 export interface Translation {
   nav: {
     dashboard: string; nutrition: string; workouts: string; progress: string;
-    goals: string; profile: string; more: string; mealPlanner: string; chat: string; reports: string; settings: string; templates: string; aiCoach: string; coachMode: string; adminMode: string;
+    goals: string; profile: string; more: string; mealPlanner: string; chat: string; reports: string; settings: string; templates: string; aiCoach: string; coachMode: string; adminMode: string; notifications: string;
   };
   common: {
     save: string; cancel: string; delete: string; edit: string; add: string;
@@ -350,6 +350,13 @@ export interface Translation {
     oneWeek: string; fourWeeks: string; eightWeeks: string; twelveWeeks: string;
     weekCount: string;
   };
+  notifications: {
+    title: string; subtitleCoach: string; subtitleUser: string; center: string; centerSub: string;
+    unread: string; noNotifications: string; markAllRead: string; markRead: string;
+    proposalTimeline: string; coachFeed: string; userFeed: string;
+    openCoach: string; openDashboard: string; viewDetails: string;
+    attentionQueue: string; attentionQueueSub: string; searchPlaceholder: string; proposalWaiting: string;
+  };
   admin: {
     title: string; subtitle: string; userLookup: string; searchPlaceholder: string; search: string;
     coachRelationships: string; noRelationships: string; coachToClient: string;
@@ -381,7 +388,7 @@ const en: Translation = {
   nav: {
     dashboard: "Dashboard", nutrition: "Nutrition", workouts: "Workouts",
     progress: "Progress", goals: "Goals", profile: "Profile", more: "More",
-    mealPlanner: "Meal Planner", chat: "AI Coach", reports: "Reports", settings: "Settings", templates: "Templates", aiCoach: "AI Coach", coachMode: "Coach Mode", adminMode: "Admin / Dev",
+    mealPlanner: "Meal Planner", chat: "AI Coach", reports: "Reports", settings: "Settings", templates: "Templates", aiCoach: "AI Coach", coachMode: "Coach Mode", adminMode: "Admin / Dev", notifications: "Notifications",
   },
   common: {
     save: "Save", cancel: "Cancel", delete: "Delete", edit: "Edit", add: "Add",
@@ -1429,6 +1436,27 @@ const en: Translation = {
     eightWeeks: "8 weeks",
     twelveWeeks: "12 weeks",
     weekCount: "{{count}} week(s)",
+  },
+  notifications: {
+    title: "Notifications",
+    subtitleCoach: "Recent coach events, client follow-ups, and proposal activity.",
+    subtitleUser: "Your recent coach updates, proposals, and saved actions.",
+    center: "Notification Center",
+    centerSub: "One place for timeline items, attention signals, and proposal updates.",
+    unread: "unread",
+    noNotifications: "No notifications yet.",
+    markAllRead: "Mark all read",
+    markRead: "Mark read",
+    proposalTimeline: "Proposal timeline",
+    coachFeed: "Coach feed",
+    userFeed: "User feed",
+    openCoach: "Open coach mode",
+    openDashboard: "Open dashboard",
+    viewDetails: "View details",
+    attentionQueue: "Clients needing attention",
+    attentionQueueSub: "Reason-based client cards pulled from the shared coach feed.",
+    searchPlaceholder: "Search notifications, clients, or reasons...",
+    proposalWaiting: "Proposal waiting for review.",
   },
   admin: {
     title: "Admin / Dev Mode",

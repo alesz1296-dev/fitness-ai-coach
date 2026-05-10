@@ -487,6 +487,9 @@ export default function Dashboard() {
           <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">{fmtWeekdayFullDate(new Date())}</p>
         </div>
         <div className="flex gap-2 sm:gap-3">
+          <Button variant="secondary" size="sm" onClick={() => navigate("/notifications")} className="flex-1 sm:flex-none">
+            {t("nav.notifications")}
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => navigate("/nutrition")} className="flex-1 sm:flex-none">
             + {t("nutrition.logFood")}
           </Button>
