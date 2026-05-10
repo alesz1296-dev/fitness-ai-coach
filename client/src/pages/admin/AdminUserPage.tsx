@@ -28,6 +28,7 @@ export default function AdminUserPage() {
   const [workspace, setWorkspace] = useState<InternalUserWorkspace | null>(null);
   const [loading, setLoading] = useState(true);
   const isReadOnlyView = location.pathname.includes("/internal/view/");
+  const [actingAsCoach, setActingAsCoach] = useState(false);
 
   useEffect(() => {
     if (!user || !["admin", "developer"].includes(user.role ?? "user")) {
@@ -54,6 +55,17 @@ export default function AdminUserPage() {
       active = false;
     };
   }, [navigate, user, userId]);
+
+  const startCoachTest = async () => {
+    if (!workspace) return;
+    setActingAsCoach(true);
+    try {
+      await adminApi.startCoachTestAccess(workspace.user.id);
+      navigate(`/coach/clients/${workspace.user.id}`);
+    } finally {
+      setActingAsCoach(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -173,6 +185,32 @@ export default function AdminUserPage() {
           </div>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader title={t("admin.coachPrivacyTitle")} subtitle={t("admin.coachPrivacySubtitle")} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+          {Object.entries(workspace.user.coachVisibility ?? {}).map(([key, value]) => (
+            <div key={key} className={`rounded-xl border px-3 py-3 ${value ? "border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800" : "border-gray-200 bg-gray-50 dark:bg-gray-900/40 dark:border-gray-700"}`}>
+              <p className="font-medium text-gray-900 dark:text-white">{t(`settings.coachVisibility${key.charAt(0).toUpperCase() + key.slice(1)}` as any)}</p>
+              <p className={`text-xs mt-1 ${value ? "text-green-700 dark:text-green-300" : "text-gray-500 dark:text-gray-400"}`}>
+                {value ? t("admin.visibleToCoach") : t("admin.hiddenFromCoach")}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {!isReadOnlyView && (user?.role === "admin" || user?.role === "developer") ? (
+        <Card>
+          <CardHeader title={t("admin.coachTestTitle")} subtitle={t("admin.coachTestSub")} />
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <p className="text-sm text-gray-600 dark:text-gray-300">{t("admin.coachTestBody")}</p>
+            <Button loading={actingAsCoach} onClick={() => void startCoachTest()}>
+              {t("admin.actAsCoachForClient")}
+            </Button>
+          </div>
+        </Card>
+      ) : null}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <Card>

@@ -4,6 +4,7 @@ import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
 import { writeAuditLog } from "../lib/audit.js";
+import { parseCoachVisibility } from "../lib/coachPrivacy.js";
 
 const db = prisma as any;
 
@@ -181,6 +182,7 @@ export const getUserDetail = async (
           lastName: true,
           role: true,
           permissionFlags: true,
+          coachVisibility: true,
           goal: true,
           weight: true,
           trainingDaysPerWeek: true,
@@ -197,6 +199,7 @@ export const getUserDetail = async (
       user: {
         ...user,
         permissionFlags: parsePermissionFlags(user.permissionFlags),
+        coachVisibility: parseCoachVisibility((user as any).coachVisibility),
       },
       stats: { workoutCount, foodCount, weightCount, goalCount },
     });
@@ -250,6 +253,7 @@ export const getUserWorkspace = async (
           lastName: true,
           role: true,
           permissionFlags: true,
+          coachVisibility: true,
           goal: true,
           weight: true,
           height: true,
@@ -358,6 +362,7 @@ export const getUserWorkspace = async (
       user: {
         ...user,
         permissionFlags: parsePermissionFlags(user.permissionFlags),
+        coachVisibility: parseCoachVisibility((user as any).coachVisibility),
       },
       stats: { workoutCount, foodCount, weightCount, goalCount },
       recentWorkouts,
@@ -597,6 +602,30 @@ export const stopImpersonation = async (
       metadata: { token },
     });
     res.json({ message: "Impersonation ended" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const startCoachTestAccess = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const targetUserId = Number(req.body?.userId);
+    if (!Number.isInteger(targetUserId) || targetUserId < 1) {
+      return next(createError("Valid user id is required", 400));
+    }
+    await writeAuditLog({
+      req,
+      action: "internal.coach_test.started",
+      targetType: "user",
+      targetId: targetUserId,
+      targetUserId,
+      metadata: { mode: "coach", auditOnly: true },
+    });
+    res.json({ message: "Coach test mode opened" });
   } catch (error) {
     next(error);
   }

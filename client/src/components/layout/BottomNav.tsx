@@ -29,7 +29,7 @@ export function BottomNav() {
       { to: "/settings", icon: "\u2699\uFE0F", label: t("nav.settings") },
     ];
 
-    if (isCoachShell) {
+    if (isCoachShell || isAdminShell) {
       items.push({ to: "/coach", icon: "\u{1F465}", label: t("nav.coachMode") });
     }
     if (isAdminShell) {

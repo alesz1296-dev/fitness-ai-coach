@@ -6,7 +6,7 @@ import { useTranslation, LANG_LABELS, t as _t } from "../../i18n";
 import type { SupportedLang } from "../../i18n";
 import { usersApi, calorieGoalsApi } from "../../api";
 import { useAuthStore } from "../../store/authStore";
-import type { User } from "../../types";
+import type { CoachVisibility, User } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -26,6 +26,16 @@ type ProfileUpdatePayload = {
   trainingDaysPerWeek?: number | null;
   trainingHoursPerDay?: number | null;
   planAdjustmentMode?: User["planAdjustmentMode"];
+  coachVisibility?: CoachVisibility;
+};
+
+const DEFAULT_COACH_VISIBILITY: CoachVisibility = {
+  workouts: true,
+  nutrition: true,
+  weight: true,
+  goals: true,
+  mealPlans: true,
+  calendar: true,
 };
 
 // â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -92,6 +102,7 @@ function ProfileForm() {
     trainingDaysPerWeek: String(user?.trainingDaysPerWeek ?? ""),
     trainingHoursPerDay: String(user?.trainingHoursPerDay ?? ""),
     planAdjustmentMode:  user?.planAdjustmentMode ?? "suggest",
+    coachVisibility:     user?.coachVisibility ?? DEFAULT_COACH_VISIBILITY,
   });
 
   const [saving,  setSaving]  = useState(false);
@@ -101,6 +112,16 @@ function ProfileForm() {
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [k]: e.target.value }));
+
+  const toggleCoachVisibility = (key: keyof CoachVisibility) => {
+    setForm((prev) => ({
+      ...prev,
+      coachVisibility: {
+        ...prev.coachVisibility,
+        [key]: !prev.coachVisibility[key],
+      },
+    }));
+  };
 
   const [planNudge, setPlanNudge] = useState<number | null>(null);
 
@@ -120,6 +141,7 @@ function ProfileForm() {
       trainingDaysPerWeek: String(user.trainingDaysPerWeek ?? ""),
       trainingHoursPerDay: String(user.trainingHoursPerDay ?? ""),
       planAdjustmentMode:  user.planAdjustmentMode ?? "suggest",
+      coachVisibility:     user.coachVisibility ?? DEFAULT_COACH_VISIBILITY,
     });
   // Only re-sync when key scheduling fields change - avoids fighting the user mid-edit
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,6 +168,7 @@ function ProfileForm() {
     trainingDaysPerWeek: form.trainingDaysPerWeek ? Number(form.trainingDaysPerWeek) : null,
     trainingHoursPerDay: form.trainingHoursPerDay ? Number(form.trainingHoursPerDay) : null,
     planAdjustmentMode: form.planAdjustmentMode as User["planAdjustmentMode"],
+    coachVisibility: form.coachVisibility,
   });
 
   const commitSave = async (payload: ProfileUpdatePayload) => {
@@ -341,6 +364,51 @@ function ProfileForm() {
         <p className="text-xs text-gray-500 dark:text-gray-400 -mt-3">
           Auto mode can tune calories and macros when confidence is high, but goal dates are only suggested for approval.
         </p>
+
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 p-4 space-y-3">
+          <CardHeader
+            title={t("settings.coachPrivacyTitle")}
+            subtitle={t("settings.coachPrivacySubtitle")}
+          />
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              {t("settings.coachPrivacyHelp")}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(
+                [
+                  ["workouts", "settings.coachVisibilityWorkouts"],
+                  ["nutrition", "settings.coachVisibilityNutrition"],
+                  ["weight", "settings.coachVisibilityWeight"],
+                  ["goals", "settings.coachVisibilityGoals"],
+                  ["mealPlans", "settings.coachVisibilityMealPlans"],
+                  ["calendar", "settings.coachVisibilityCalendar"],
+                ] as Array<[keyof CoachVisibility, string]>
+              ).map(([key, labelKey]) => {
+                const enabled = form.coachVisibility[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleCoachVisibility(key)}
+                    className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition ${
+                      enabled
+                        ? "border-brand-300 bg-brand-50 dark:bg-brand-900/20 dark:border-brand-700"
+                        : "border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700"
+                    }`}
+                  >
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                      {t(labelKey as any)}
+                    </span>
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${enabled ? "bg-brand-600 text-white" : "bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200"}`}>
+                      {enabled ? t("common.visible") : t("common.hidden")}
+                    </span>
+                  </button>
+              );
+              })}
+            </div>
+          </div>
+        </div>
 
         <div>
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">

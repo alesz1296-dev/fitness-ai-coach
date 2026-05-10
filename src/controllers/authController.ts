@@ -10,6 +10,7 @@ import { storeToken, consumeToken } from "../lib/tokenStore.js";
 import { sendPasswordResetEmail, sendEmailVerificationEmail } from "../lib/email.js";
 import logger from "../lib/logger.js";
 import { env } from "../config/env.js";
+import { parseCoachVisibility } from "../lib/coachPrivacy.js";
 
 const JWT_SECRET          = env.JWT_SECRET;
 const JWT_EXPIRY          = env.JWT_EXPIRY;
@@ -36,12 +37,14 @@ function parsePermissionFlags(value: unknown): string[] {
   }
 }
 
-function normalizeAuthUser<T extends { permissionFlags?: unknown }>(user: T): T & {
+function normalizeAuthUser<T extends { permissionFlags?: unknown; coachVisibility?: unknown }>(user: T): T & {
   permissionFlags: string[];
+  coachVisibility: ReturnType<typeof parseCoachVisibility>;
 } {
   return {
     ...user,
     permissionFlags: parsePermissionFlags(user.permissionFlags),
+    coachVisibility: parseCoachVisibility(user.coachVisibility),
   };
 }
 
@@ -121,6 +124,7 @@ async function getAuthUser(userId: number) {
       planAdjustmentMode: true,
       role: true,
       permissionFlags: true,
+      coachVisibility: true,
       emailVerified: true,
       createdAt: true,
     },
@@ -276,6 +280,7 @@ export const getMe = async (
         planAdjustmentMode: true,
         role: true,
         permissionFlags: true,
+        coachVisibility: true,
         emailVerified: true,
         createdAt: true,
       },

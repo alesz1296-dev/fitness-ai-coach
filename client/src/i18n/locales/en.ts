@@ -20,7 +20,7 @@ export interface Translation {
     day: string;
     sets: string; reps: string; rpe: string; net: string;
     burned: string; estimated: string; error: string;
-    viewAll: string; manage: string;
+    viewAll: string; manage: string; visible: string; hidden: string;
   };
   dashboard: {
     title: string; goodMorning: string; goodAfternoon: string; goodEvening: string;
@@ -236,7 +236,7 @@ export interface Translation {
   };
   settings: {
     equipment: string; difficulty: string; instructions: string; searchFood: string;
-    savePreferences: string; saveInjuries: string; saveCycleSettings: string; updatePassword: string; currentPassword: string; newPassword: string; confirmPasswordField: string; selectActivityLevel: string; selectFitnessLevel: string; selectSex: string; selectDays: string; selectDuration: string; daysPerWeek: string; hoursPerSession: string; fitnessLevel: string; proteinTarget: string; appliedToCalc: string; whyMatters: string; usedByAI: string; showWaterWidget: string; switchDarkMode: string; controlsAppearance: string; preferenceSaved: string; appearancePreset: string; appearancePresetHelp: string; appearanceOptionSystemClassic: string; appearanceOptionLightClassic: string; appearanceOptionDarkCharcoal: string; appearanceOptionBlackGold: string; appearanceOptionWhiteGreen: string; appearanceOptionMidnightCyan: string; appearanceOptionSoftSand: string; appearanceOptionEditorialRose: string; appearanceOptionIndustrialSlate: string; appearanceOptionPaperIvory: string; appearanceOptionAuroraInk: string; appearanceOptionSunriseAmber: string; colorTheme: string; colorThemeHelp: string; themeOptionDefault: string; themeOptionBlackGold: string; themeOptionWhiteGreen: string; downloadDataDesc: string; irreversibleActions: string; memberSince: string; account: string; username: string; cycleLength: string; firstDayPeriod: string; menstrualCycleTracking: string; cyclePersonalises: string; avgCycleLength: string; commonRanges: string; injuriesExercises: string; trainingSchedule: string; goToPlan: string; goalDescription: string; passwordHint: string; activityLevel: string; injuriesSaved: string; injurySelectHelp: string; activeLimitations: string; injuryWarning: string; injuryLowerBack: string; injuryUpperBack: string; injuryKneeLeft: string; injuryKneeRight: string; injuryShoulderLeft: string; injuryShoulderRight: string; injuryHip: string; injuryElbowLeft: string; injuryElbowRight: string; injuryWristLeft: string; injuryWristRight: string; injuryAnkleLeft: string; injuryAnkleRight: string; injuryRotatorCuff: string; injuryHamstring: string; injuryItBand: string; injuryPlantarFascia: string;
+    savePreferences: string; saveInjuries: string; saveCycleSettings: string; updatePassword: string; currentPassword: string; newPassword: string; confirmPasswordField: string; selectActivityLevel: string; selectFitnessLevel: string; selectSex: string; selectDays: string; selectDuration: string; daysPerWeek: string; hoursPerSession: string; fitnessLevel: string; proteinTarget: string; appliedToCalc: string; whyMatters: string; usedByAI: string; showWaterWidget: string; switchDarkMode: string; controlsAppearance: string; preferenceSaved: string; appearancePreset: string; appearancePresetHelp: string; appearanceOptionSystemClassic: string; appearanceOptionLightClassic: string; appearanceOptionDarkCharcoal: string; appearanceOptionBlackGold: string; appearanceOptionWhiteGreen: string; appearanceOptionMidnightCyan: string; appearanceOptionSoftSand: string; appearanceOptionEditorialRose: string; appearanceOptionIndustrialSlate: string; appearanceOptionPaperIvory: string; appearanceOptionAuroraInk: string; appearanceOptionSunriseAmber: string; colorTheme: string; colorThemeHelp: string; themeOptionDefault: string; themeOptionBlackGold: string; themeOptionWhiteGreen: string; downloadDataDesc: string; irreversibleActions: string; memberSince: string; account: string; username: string; cycleLength: string; firstDayPeriod: string; menstrualCycleTracking: string; cyclePersonalises: string; avgCycleLength: string; commonRanges: string; injuriesExercises: string; trainingSchedule: string; goToPlan: string; goalDescription: string; passwordHint: string; activityLevel: string; injuriesSaved: string; injurySelectHelp: string; activeLimitations: string; injuryWarning: string; injuryLowerBack: string; injuryUpperBack: string; injuryKneeLeft: string; injuryKneeRight: string; injuryShoulderLeft: string; injuryShoulderRight: string; injuryHip: string; injuryElbowLeft: string; injuryElbowRight: string; injuryWristLeft: string; injuryWristRight: string; injuryAnkleLeft: string; injuryAnkleRight: string; injuryRotatorCuff: string; injuryHamstring: string; injuryItBand: string; injuryPlantarFascia: string; coachPrivacyTitle: string; coachPrivacySubtitle: string; coachPrivacyHelp: string; coachVisibilityWorkouts: string; coachVisibilityNutrition: string; coachVisibilityWeight: string; coachVisibilityGoals: string; coachVisibilityMealPlans: string; coachVisibilityCalendar: string;
   };
   auth: {
     login: string; register: string; logout: string; email: string; password: string;
@@ -322,15 +322,18 @@ export interface Translation {
   coach: {
     title: string; subtitle: string; open: string;
     inviteClient: string; inviteClientBody: string; createInviteCode: string; activeCode: string;
-    assignedClients: string; loadingClients: string; noClients: string;
+    assignedClients: string; loadingClients: string; noClients: string; totalClients: string;
     clientOverviewTitle: string; clientOverviewBody: string; backToClients: string;
     currentGoal: string; recentCalories: string; recentProtein: string; pendingProposals: string;
     clientActivity: string; recentWorkouts: string; noLoggedWorkouts: string;
     activeCalorieGoal: string; noActiveCalorieGoal: string; currentMealPlans: string; noMealPlans: string;
+    adherenceWidgets: string; weeklyCheckIns: string; noWeeklyCheckIns: string; calorieWidget: string; proteinWidget: string; workoutWidget: string; weightWidget: string; checkInSummary: string; fatigue: string; soreness: string; hunger: string; sleepQuality: string; performance: string;
+    needsAttentionToday: string; attentionClients: string; attentionClientsSub: string; notifications: string; notificationsSub: string; noNotifications: string; reusableLibraries: string; reusableLibrariesSub: string; workoutLibraries: string; mealLibraries: string; overdueCheckIns: string; swapWorkout: string; swapMeal: string; addCoachNote: string; coachNote: string; notePlaceholder: string; saveNote: string; noWorkoutLibraries: string; noMealLibraries: string; newProposalNotification: string; newProposalsNotification: string; proposalUpdatedNotification: string; proposalAcceptedNotification: string; proposalRejectedNotification: string; proposalCommentSaved: string;
     publishDrafts: string; workoutTemplate: string; selectTemplate: string; overwrite: string;
     sendWorkoutDraft: string; mealPlan: string; selectMealPlan: string; sendMealDraft: string;
     goalMacros: string; selectCalorieGoal: string; fallbackGoalName: string; sendGoalDraft: string;
     proposalHistory: string; noCoachProposals: string;
+    proposalDiff: string; proposalComments: string; noProposalComments: string; addComment: string; commentPlaceholder: string; sendComment: string;
     workoutProposal: string; mealProposal: string; goalProposal: string;
     fromCoach: string; pending: string; accepted: string; rejected: string;
     joinCoach: string; joinCoachBody: string; connect: string;
@@ -366,6 +369,7 @@ export interface Translation {
     recentAuditLogs: string; recentAuditLogsSub: string; noAuditLogs: string; readOnlyView: string;
     readOnlyBannerTitle: string; readOnlyBannerBody: string;
     impersonationBanner: string; endImpersonation: string; startImpersonation: string;
+    coachPrivacyTitle: string; coachPrivacySubtitle: string; coachTestTitle: string; coachTestSub: string; coachTestBody: string; actAsCoachForClient: string; visibleToCoach: string; hiddenFromCoach: string;
     featureFlags: string; featureFlagsSub: string; noFeatureFlags: string; enabled: string; disabled: string;
     contentOps: string; contentOpsSub: string; repairTools: string; repairToolsSub: string;
     repairUserIdLabel: string; repairUserIdPlaceholder: string; repairSyncWeight: string; repairCleanupInvites: string;
@@ -392,7 +396,7 @@ const en: Translation = {
     day: "Day",
     sets: "Sets", reps: "Reps", rpe: "RPE", net: "Net",
     burned: "burned", estimated: "estimated", error: "Error",
-    viewAll: "View all →", manage: "Manage →", custom: "Custom",
+    viewAll: "View all →", manage: "Manage →", visible: "Visible", hidden: "Hidden", custom: "Custom",
   },
   dashboard: {
     title: "Dashboard", goodMorning: "Good morning", goodAfternoon: "Good afternoon",
@@ -1063,6 +1067,15 @@ const en: Translation = {
     appliedToCalc: "Applied to all new calorie goal calculations",
     whyMatters: "Why this matters",
     usedByAI: "Used by the AI and calorie calculator",
+    coachPrivacyTitle: "Coach privacy and consent",
+    coachPrivacySubtitle: "Choose which parts of your profile and activity a coach can see.",
+    coachPrivacyHelp: "These preferences are shown in your settings and used by coach/internal views to respect your sharing choices.",
+    coachVisibilityWorkouts: "Workouts",
+    coachVisibilityNutrition: "Nutrition",
+    coachVisibilityWeight: "Weight",
+    coachVisibilityGoals: "Goals",
+    coachVisibilityMealPlans: "Meal plans",
+    coachVisibilityCalendar: "Calendar",
     showWaterWidget: "Show the water intake widget on the Nutrition page",
     switchDarkMode: "Switch the app to a dark colour scheme",
     controlsAppearance: "Controls appearance and tracking features",
@@ -1295,6 +1308,7 @@ const en: Translation = {
     assignedClients: "Assigned clients",
     loadingClients: "Loading clients...",
     noClients: "No active clients yet. Share an invite code to connect someone.",
+    totalClients: "Total clients",
     clientOverviewTitle: "Full client workspace",
     clientOverviewBody: "Full client workspace, current stats, and coach publishing tools.",
     backToClients: "Back to clients",
@@ -1309,6 +1323,44 @@ const en: Translation = {
     noActiveCalorieGoal: "No active calorie goal.",
     currentMealPlans: "Current meal plans",
     noMealPlans: "No meal plans yet.",
+    adherenceWidgets: "Adherence widgets",
+    weeklyCheckIns: "Weekly check-ins",
+    noWeeklyCheckIns: "No weekly check-ins yet.",
+    calorieWidget: "Calories",
+    proteinWidget: "Protein",
+    workoutWidget: "Workouts",
+    weightWidget: "Weight",
+    checkInSummary: "Latest check-in summary",
+    fatigue: "Fatigue",
+    soreness: "Soreness",
+    hunger: "Hunger",
+    sleepQuality: "Sleep",
+    performance: "Performance",
+    needsAttentionToday: "Needs attention today",
+    attentionClients: "Clients needing attention",
+    attentionClientsSub: "Open a client workspace to review the exact follow-up reasons.",
+    notifications: "Notifications",
+    notificationsSub: "Recent coach events and client follow-ups.",
+    noNotifications: "No recent coach notifications.",
+    reusableLibraries: "Reusable libraries",
+    reusableLibrariesSub: "Favorite templates and meal plans you can reuse quickly.",
+    workoutLibraries: "Workout libraries",
+    mealLibraries: "Meal libraries",
+    overdueCheckIns: "Overdue check-ins",
+    swapWorkout: "Use workout",
+    swapMeal: "Use meal",
+    addCoachNote: "Add coach note",
+    coachNote: "Coach note",
+    notePlaceholder: "Add a note for this check-in...",
+    saveNote: "Save note",
+    noWorkoutLibraries: "No saved workout libraries yet.",
+    noMealLibraries: "No saved meal libraries yet.",
+    newProposalNotification: "New coach proposal received",
+    newProposalsNotification: "{{count}} new coach proposals received",
+    proposalUpdatedNotification: "Coach proposal updated",
+    proposalAcceptedNotification: "Coach proposal accepted",
+    proposalRejectedNotification: "Coach proposal rejected",
+    proposalCommentSaved: "Proposal comment saved",
     publishDrafts: "Publish coach drafts",
     workoutTemplate: "Workout template",
     selectTemplate: "Select template",
@@ -1323,6 +1375,12 @@ const en: Translation = {
     sendGoalDraft: "Send goal draft",
     proposalHistory: "Proposal history",
     noCoachProposals: "No coach proposals yet.",
+    proposalDiff: "What changes",
+    proposalComments: "Comments",
+    noProposalComments: "No comments yet.",
+    addComment: "Add comment",
+    commentPlaceholder: "Write a note or question...",
+    sendComment: "Send comment",
     workoutProposal: "Workout proposal",
     mealProposal: "Meal proposal",
     goalProposal: "Goal proposal",
@@ -1440,6 +1498,14 @@ const en: Translation = {
     impersonationBanner: "{{actor}} is currently impersonating {{user}}.",
     endImpersonation: "End impersonation",
     startImpersonation: "Impersonate",
+    coachPrivacyTitle: "Coach privacy visibility",
+    coachPrivacySubtitle: "See which parts of the client profile are currently shared.",
+    coachTestTitle: "Coach test access",
+    coachTestSub: "Open the selected client in coach mode from this internal workspace.",
+    coachTestBody: "Use this to validate coach-only flows against a specific client without leaving the internal surface.",
+    actAsCoachForClient: "Act as coach for this client",
+    visibleToCoach: "Visible to coach",
+    hiddenFromCoach: "Hidden from coach",
     featureFlags: "Feature flags",
     featureFlagsSub: "Internal rollout switches and controlled behavior toggles.",
     noFeatureFlags: "No feature flags configured yet.",

@@ -25,7 +25,14 @@ import type {
   CustomFood,
   CustomExercise,
   CoachClientLink,
+  CoachAdherenceSummary,
+  CoachClientOverview,
+  CoachDashboardSummary,
+  CoachLibraryFavorite,
+  CoachNotification,
   CoachProposal,
+  ProposalComment,
+  WeeklyReview,
   InternalUserWorkspace,
   InternalSummaryMetrics,
   AuditLogEntry,
@@ -608,15 +615,15 @@ export const coachApi = {
   acceptInvite: (code: string) =>
     api.post<{ message: string }>("/coach/accept-invite", { code }),
   getClientOverview: (clientId: number) =>
-    api.get<{
-      client: User;
-      recentWorkouts: Workout[];
-      activeGoal: CalorieGoal | null;
-      weightLogs: WeightLog[];
-      nutritionSummary: { calories: number; protein: number };
-      plans: MealPlan[];
-      proposals: CoachProposal[];
-    }>(`/coach/clients/${clientId}`),
+    api.get<CoachClientOverview>(`/coach/clients/${clientId}`),
+  getDashboard: () =>
+    api.get<CoachDashboardSummary>("/coach/dashboard"),
+  getLibrary: () =>
+    api.get<{ favorites: CoachLibraryFavorite[]; templates: WorkoutTemplate[]; mealPlans: MealPlan[] }>("/coach/library"),
+  toggleLibraryFavorite: (data: { itemType: "template" | "meal"; sourceId: number }) =>
+    api.post<{ favorite: CoachLibraryFavorite | null }>("/coach/library/favorite", data),
+  getNotifications: () =>
+    api.get<{ notifications: CoachNotification[] }>("/coach/notifications"),
   getClientProposals: (clientId: number) =>
     api.get<{ proposals: CoachProposal[] }>(`/coach/clients/${clientId}/proposals`),
   createProposal: (data: {
@@ -664,6 +671,10 @@ export const coachApi = {
     api.get<{ proposals: CoachProposal[] }>("/coach/proposals/pending"),
   actOnProposal: (id: number, action: "accept" | "reject") =>
     api.post<{ proposal: CoachProposal }>(`/coach/proposals/${id}/action`, { action }),
+  addProposalComment: (id: number, body: string) =>
+    api.post<{ comment: ProposalComment }>(`/coach/proposals/${id}/comments`, { body }),
+  updateWeeklyReviewNote: (clientId: number, weekStart: string, coachNote: string) =>
+    api.put<{ review: WeeklyReview }>(`/coach/clients/${clientId}/weekly-reviews/${encodeURIComponent(weekStart)}/note`, { coachNote }),
 };
 
 export const adminApi = {
@@ -675,6 +686,8 @@ export const adminApi = {
     api.post<{ token: string; user: User }>("/admin/impersonation/start", { userId }),
   stopImpersonation: () =>
     api.post<{ message: string }>("/admin/impersonation/stop"),
+  startCoachTestAccess: (userId: number) =>
+    api.post<{ message: string }>("/admin/coach-test/start", { userId }),
   getFeatureFlags: () =>
     api.get<{ flags: Array<{ id: number; key: string; label: string; description?: string | null; enabled: boolean }> }>("/admin/feature-flags"),
   upsertFeatureFlag: (data: { key: string; label: string; description?: string; enabled: boolean }) =>

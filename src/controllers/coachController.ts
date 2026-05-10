@@ -4,6 +4,7 @@ import prisma from "../lib/prisma.js";
 import { AuthRequest } from "../middleware/auth.js";
 import { createError } from "../middleware/errorHandler.js";
 import { writeAuditLog } from "../lib/audit.js";
+import { parseCoachVisibility } from "../lib/coachPrivacy.js";
 
 const db = prisma as any;
 
@@ -60,7 +61,8 @@ function getMonthRange(startMonth: string, count: number): string[] {
   });
 }
 
-async function ensureCoachClientAccess(coachId: number, clientId: number) {
+async function ensureCoachClientAccess(coachId: number, clientId: number, role?: string) {
+  if (role === "admin" || role === "developer") return null;
   const link = await db.coachClientLink.findFirst({
     where: { coachId, clientId, status: "active" },
   });
@@ -175,6 +177,152 @@ function normalizeDurationWeeks(value: unknown, fallback: number) {
   return Math.min(52, Math.max(1, Number(value ?? fallback)));
 }
 
+const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function weekdayList(days?: number[]) {
+  if (!Array.isArray(days) || days.length === 0) return "unspecified days";
+  return days
+    .map((day) => WEEKDAY_LABELS[Math.max(0, Math.min(6, Number(day)))])
+    .join(", ");
+}
+
+function formatMonthsOrWeeks(weeks: number) {
+  if (weeks % 4 === 0) {
+    const months = weeks / 4;
+    return `${months} ${months === 1 ? "month" : "months"}`;
+  }
+  return `${weeks} ${weeks === 1 ? "week" : "weeks"}`;
+}
+
+function buildProposalDiffSummary(
+  proposal: any,
+  payload: CoachProposalPayload | null,
+  source: any | null,
+): string[] {
+  const summary: string[] = [];
+
+  if (proposal.type === "workout") {
+    if (payload?.mode === "custom") {
+      summary.push(`Custom calendar draft`);
+      summary.push(`Days included: ${Array.isArray(payload.days) ? payload.days.length : 0}`);
+      if (payload.overwrite !== undefined) {
+        summary.push(`Overwrite existing calendar days: ${payload.overwrite ? "Yes" : "No"}`);
+      }
+      return summary;
+    }
+
+    summary.push(`Template: ${source?.name ?? `#${proposal.sourceId}`}`);
+    if (source?.splitType) summary.push(`Split: ${source.splitType}`);
+    if (source?.objective) summary.push(`Objective: ${source.objective}`);
+    if (source?.muscleGroups) {
+      const muscleGroups = parseJson<string[]>(source.muscleGroups, []);
+      if (muscleGroups.length > 0) summary.push(`Muscle groups: ${muscleGroups.join(", ")}`);
+    }
+    if (payload?.weekdays?.length) summary.push(`Schedule: ${weekdayList(payload.weekdays)}`);
+    if (payload?.months) summary.push(`Duration: ${formatMonthsOrWeeks(Math.min(12, Math.max(1, Number(payload.months))) * 4)}`);
+    if (payload?.overwrite !== undefined) {
+      summary.push(`Overwrite existing calendar days: ${payload.overwrite ? "Yes" : "No"}`);
+    }
+    return summary;
+  }
+
+  if (proposal.type === "meal") {
+    if (payload?.mode === "scratch" && payload.mealPlan) {
+      summary.push(`Scratch meal plan: ${payload.mealPlan.name}`);
+      summary.push(`Duration: ${formatMonthsOrWeeks(normalizeDurationWeeks(payload.mealPlan.durationWeeks, 1))}`);
+      summary.push(`Days: ${payload.mealPlan.days.length}`);
+      return summary;
+    }
+
+    summary.push(`Meal plan: ${source?.name ?? `#${proposal.sourceId}`}`);
+    const sourceWeeks = Number(source?.durationWeeks ?? 1);
+    const targetWeeks = normalizeDurationWeeks(payload?.durationWeeks, sourceWeeks);
+    if (targetWeeks !== sourceWeeks) {
+      summary.push(`Duration override: ${formatMonthsOrWeeks(sourceWeeks)} -> ${formatMonthsOrWeeks(targetWeeks)}`);
+    } else {
+      summary.push(`Duration: ${formatMonthsOrWeeks(targetWeeks)}`);
+    }
+    return summary;
+  }
+
+  if (proposal.type === "goal") {
+    summary.push(`Goal: ${source?.name ?? `#${proposal.sourceId}`}`);
+    if (source?.dailyCalories != null) summary.push(`Daily calories: ${Math.round(Number(source.dailyCalories))}`);
+    if (source?.proteinGrams != null || source?.carbsGrams != null || source?.fatsGrams != null) {
+      summary.push(
+        `Macros: ${Math.round(Number(source.proteinGrams ?? 0))}P / ${Math.round(Number(source.carbsGrams ?? 0))}C / ${Math.round(Number(source.fatsGrams ?? 0))}F`,
+      );
+    }
+    if (source?.targetDate) {
+      const targetDate = source.targetDate instanceof Date
+        ? source.targetDate.toISOString().slice(0, 10)
+        : String(source.targetDate).slice(0, 10);
+      summary.push(`Target date: ${targetDate}`);
+    }
+  }
+
+  return summary;
+}
+
+async function enrichCoachProposals(proposals: any[]) {
+  const workoutSourceIds = [...new Set(proposals.filter((proposal) => proposal.type === "workout").map((proposal) => Number(proposal.sourceId)).filter((id) => Number.isInteger(id) && id > 0))];
+  const mealSourceIds = [...new Set(proposals.filter((proposal) => proposal.type === "meal").map((proposal) => Number(proposal.sourceId)).filter((id) => Number.isInteger(id) && id > 0))];
+  const goalSourceIds = [...new Set(proposals.filter((proposal) => proposal.type === "goal").map((proposal) => Number(proposal.sourceId)).filter((id) => Number.isInteger(id) && id > 0))];
+
+  const [workoutSources, mealSources, goalSources] = await Promise.all([
+    workoutSourceIds.length > 0 ? db.workoutTemplate.findMany({
+      where: { id: { in: workoutSourceIds } },
+      select: { id: true, name: true, splitType: true, objective: true, muscleGroups: true },
+    }) : Promise.resolve([]),
+    mealSourceIds.length > 0 ? db.mealPlan.findMany({
+      where: { id: { in: mealSourceIds } },
+      select: { id: true, name: true, durationWeeks: true, weekStart: true },
+    }) : Promise.resolve([]),
+    goalSourceIds.length > 0 ? db.calorieGoal.findMany({
+      where: { id: { in: goalSourceIds } },
+      select: {
+        id: true,
+        name: true,
+        dailyCalories: true,
+        proteinGrams: true,
+        carbsGrams: true,
+        fatsGrams: true,
+        targetDate: true,
+      },
+    }) : Promise.resolve([]),
+  ]);
+
+  const workoutMap = new Map(workoutSources.map((source: any) => [source.id, source]));
+  const mealMap = new Map(mealSources.map((source: any) => [source.id, source]));
+  const goalMap = new Map(goalSources.map((source: any) => [source.id, source]));
+
+  return proposals.map((proposal) => {
+    const payload = parseJson<CoachProposalPayload | null>(proposal.payload, null);
+    const source =
+      proposal.type === "workout"
+        ? workoutMap.get(proposal.sourceId)
+        : proposal.type === "meal"
+          ? mealMap.get(proposal.sourceId)
+          : goalMap.get(proposal.sourceId);
+    return {
+      ...proposal,
+      diffSummary: buildProposalDiffSummary(proposal, payload, source ?? null),
+      comments: (proposal.comments ?? []).map((comment: any) => ({
+        ...comment,
+        author: comment.author
+          ? {
+              id: comment.author.id,
+              username: comment.author.username,
+              firstName: comment.author.firstName,
+              lastName: comment.author.lastName,
+              role: comment.author.role,
+            }
+          : null,
+      })),
+    };
+  });
+}
+
 function buildMealPlanDaysFromPattern(payload: NonNullable<CoachProposalPayload["mealPlan"]>) {
   const durationWeeks = normalizeDurationWeeks(payload.durationWeeks, 1);
   const pattern = payload.days.length > 0 ? payload.days : [{ dayIndex: 0, meals: [] }];
@@ -255,6 +403,298 @@ export const getMyClients = async (
   }
 };
 
+function coachClientDisplayName(client: any): string {
+  return [client?.firstName, client?.lastName].filter(Boolean).join(" ").trim() || client?.username || "Client";
+}
+
+function weekStartFromIso(weekStart: string): Date {
+  const parsed = new Date(`${weekStart}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+export const getCoachDashboard = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const links = await db.coachClientLink.findMany({
+      where: { coachId: req.user!.id, status: "active" },
+      include: {
+        client: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            goal: true,
+            weight: true,
+            trainingDaysPerWeek: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    const clientIds = links.map((link: any) => link.client?.id).filter(Boolean) as number[];
+    const [weeklyReviews, pendingProposals, recentAuditLogs] = await Promise.all([
+      clientIds.length > 0
+        ? db.weeklyReview.findMany({
+            where: { userId: { in: clientIds } },
+            orderBy: [{ userId: "asc" }, { weekStart: "desc" }],
+          })
+        : Promise.resolve([]),
+      clientIds.length > 0
+      ? db.coachProposal.findMany({
+            where: { clientId: { in: clientIds }, status: "pending" },
+            include: {
+              client: {
+                select: { id: true, username: true, firstName: true, lastName: true },
+              },
+              coach: {
+                select: { id: true, username: true, firstName: true, lastName: true },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+          })
+        : Promise.resolve([]),
+      db.auditLog.findMany({
+        where: {
+          OR: [
+            { actorUserId: req.user!.id },
+            { targetUserId: { in: clientIds } },
+          ],
+          action: { startsWith: "coach." },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+      }),
+    ]);
+
+    const latestByClient = new Map<number, any>();
+    for (const review of weeklyReviews as any[]) {
+      if (!latestByClient.has(review.userId)) latestByClient.set(review.userId, review);
+    }
+    const pendingByClient = new Map<number, number>();
+    for (const proposal of pendingProposals as any[]) {
+      pendingByClient.set(proposal.clientId, (pendingByClient.get(proposal.clientId) ?? 0) + 1);
+    }
+
+    const attentionClients = links
+      .map((link: any) => {
+        const client = link.client;
+        if (!client) return null;
+        const latestReview = latestByClient.get(client.id) ?? null;
+        const reasons: string[] = [];
+        const pendingCount = pendingByClient.get(client.id) ?? 0;
+        const latestWeekStart = latestReview?.weekStart ?? null;
+        const latestWeekDate = latestWeekStart ? weekStartFromIso(latestWeekStart) : null;
+        const daysSinceReview = latestWeekDate
+          ? Math.floor((Date.now() - latestWeekDate.getTime()) / (24 * 60 * 60 * 1000))
+          : null;
+        const workoutAdherence = latestReview?.plannedWorkouts
+          ? Math.round((Number(latestReview.workoutsCompleted ?? 0) / Number(latestReview.plannedWorkouts)) * 100)
+          : null;
+        const weightDelta = latestReview?.averageWeight != null && client.weight != null
+          ? Math.round((Number(latestReview.averageWeight) - Number(client.weight)) * 10) / 10
+          : null;
+
+        if (pendingCount > 0) reasons.push(`${pendingCount} pending proposal${pendingCount === 1 ? "" : "s"}`);
+        if (daysSinceReview == null || daysSinceReview >= 7) reasons.push("weekly check-in due");
+        if (workoutAdherence != null && workoutAdherence < 75) reasons.push("workout adherence low");
+        if (latestReview?.proteinAdherence != null && latestReview.proteinAdherence < 80) reasons.push("protein adherence low");
+        if (latestReview?.calorieAdherence != null && latestReview.calorieAdherence < 75) reasons.push("calorie adherence low");
+        if (weightDelta != null && Math.abs(weightDelta) >= 1) reasons.push("weight trend shifted");
+
+        if (reasons.length === 0) return null;
+        return {
+          client: { ...client },
+          pendingProposals: pendingCount,
+          workoutAdherence,
+          proteinAdherence: latestReview?.proteinAdherence ?? null,
+          calorieAdherence: latestReview?.calorieAdherence ?? null,
+          weightDelta,
+          latestWeekStart,
+          reasons,
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 6);
+
+    const notifications = [
+      ...pendingProposals.slice(0, 4).map((proposal: any) => ({
+        id: `proposal-${proposal.id}`,
+        type: "proposal" as const,
+        title: `${coachClientDisplayName(proposal.client)} needs review`,
+        body: `${proposal.type} proposal is waiting for acceptance.`,
+        clientId: proposal.clientId,
+        clientName: coachClientDisplayName(proposal.client),
+        createdAt: proposal.createdAt,
+        action: "coach.proposal.pending",
+      })),
+      ...recentAuditLogs.slice(0, 4).map((log: any) => ({
+        id: `audit-${log.id}`,
+        type: "client" as const,
+        title: log.action.replace("coach.", "").replaceAll("_", " "),
+        body: "Recent coach activity logged.",
+        clientId: log.targetUserId ?? null,
+        clientName: null,
+        createdAt: log.createdAt,
+        action: log.action,
+      })),
+      ...attentionClients.slice(0, 2).map((entry: any) => ({
+        id: `attention-${entry.client.id}`,
+        type: "checkin" as const,
+        title: `${coachClientDisplayName(entry.client)} needs attention`,
+        body: entry.reasons.join(" · "),
+        clientId: entry.client.id,
+        clientName: coachClientDisplayName(entry.client),
+        createdAt: new Date().toISOString(),
+        action: "coach.client.attention",
+      })),
+    ]
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+      .slice(0, 8);
+
+    res.json({
+      totalClients: links.length,
+      pendingProposals: pendingProposals.length,
+      needsAttention: attentionClients.length,
+      overdueCheckIns: attentionClients.filter((item: any) => item.reasons.some((reason: string) => reason.includes("check-in due"))).length,
+      recentNotifications: notifications,
+      attentionClients,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getCoachLibrary = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const [favorites, templates, mealPlans] = await Promise.all([
+      db.coachLibraryFavorite.findMany({
+        where: { coachId: req.user!.id },
+        orderBy: { createdAt: "desc" },
+      }),
+      db.workoutTemplate.findMany({
+        where: { userId: req.user!.id },
+        orderBy: { updatedAt: "desc" },
+        include: { exercises: { orderBy: { order: "asc" } } },
+      }),
+      db.mealPlan.findMany({
+        where: { userId: req.user!.id },
+        orderBy: { updatedAt: "desc" },
+        include: {
+          days: {
+            orderBy: { dayIndex: "asc" },
+            include: { entries: { orderBy: [{ meal: "asc" }, { order: "asc" }] } },
+          },
+        },
+      }),
+    ]);
+    res.json({ favorites, templates, mealPlans });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const toggleCoachLibraryFavorite = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const itemType = String(req.body?.itemType ?? "");
+    const sourceId = Number(req.body?.sourceId);
+    if (!["template", "meal"].includes(itemType) || !Number.isInteger(sourceId) || sourceId < 1) {
+      return next(createError("Invalid library favorite", 400));
+    }
+
+    const existing = await db.coachLibraryFavorite.findUnique({
+      where: {
+        coachId_itemType_sourceId: {
+          coachId: req.user!.id,
+          itemType,
+          sourceId,
+        },
+      },
+    });
+
+    if (existing) {
+      await db.coachLibraryFavorite.delete({ where: { id: existing.id } });
+      await writeAuditLog({
+        req,
+        action: "coach.library.unfavorited",
+        targetType: "coach_library_favorite",
+        targetId: existing.id,
+        metadata: { itemType, sourceId },
+      });
+      res.json({ favorite: null });
+      return;
+    }
+
+    const favorite = await db.coachLibraryFavorite.create({
+      data: {
+        coachId: req.user!.id,
+        itemType,
+        sourceId,
+      },
+    });
+    await writeAuditLog({
+      req,
+      action: "coach.library.favorited",
+      targetType: "coach_library_favorite",
+      targetId: favorite.id,
+      metadata: { itemType, sourceId },
+    });
+    res.status(201).json({ favorite });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateWeeklyReviewNote = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const clientId = Number(req.params.clientId);
+    const weekStart = String(req.params.weekStart ?? "").trim();
+    const coachNote = String(req.body?.coachNote ?? "").trim();
+    await ensureCoachClientAccess(req.user!.id, clientId, req.user?.role);
+    if (!weekStart) return next(createError("Week start is required", 400));
+
+    const review = await db.weeklyReview.findUnique({
+      where: { userId_weekStart: { userId: clientId, weekStart } },
+    });
+    if (!review) return next(createError("Weekly review not found", 404));
+
+    const updated = await db.weeklyReview.update({
+      where: { id: review.id },
+      data: {
+        coachNote: coachNote || null,
+      },
+    });
+
+    await writeAuditLog({
+      req,
+      action: "coach.weekly_review.note_updated",
+      targetType: "weekly_review",
+      targetId: updated.id,
+      targetUserId: clientId,
+      metadata: { weekStart, coachNoteLength: coachNote.length },
+    });
+
+    res.json({ review: updated });
+  } catch (error) {
+    next(error);
+  }
+};
 export const createInvite = async (
   req: AuthRequest,
   res: Response,
@@ -345,8 +785,10 @@ export const getClientOverview = async (
 ): Promise<void> => {
   try {
     const clientId = Number(req.params.clientId);
-    await ensureCoachClientAccess(req.user!.id, clientId);
-    const [client, recentWorkouts, activeGoal, weightLogs, foods, plans, proposals] =
+    await ensureCoachClientAccess(req.user!.id, clientId, req.user?.role);
+    const calendarWindowEnd = new Date();
+    calendarWindowEnd.setDate(calendarWindowEnd.getDate() + 27);
+    const [client, recentWorkouts, activeGoal, weightLogs, foods, plans, proposalsRaw, weeklyReviewsRaw, calendarDays] =
       await Promise.all([
         db.user.findUnique({
           where: { id: clientId },
@@ -363,6 +805,7 @@ export const getClientOverview = async (
             activityLevel: true,
             trainingDaysPerWeek: true,
             trainingHoursPerDay: true,
+            coachVisibility: true,
             createdAt: true,
           },
         }),
@@ -393,10 +836,66 @@ export const getClientOverview = async (
         }),
         db.coachProposal.findMany({
           where: { clientId },
+          include: {
+            coach: {
+              select: { id: true, username: true, firstName: true, lastName: true, email: true },
+            },
+            comments: {
+              include: {
+                author: {
+                  select: { id: true, username: true, firstName: true, lastName: true, role: true },
+                },
+              },
+              orderBy: { createdAt: "asc" },
+            },
+          },
           orderBy: { createdAt: "desc" },
           take: 10,
         }),
+        db.weeklyReview.findMany({
+          where: { userId: clientId },
+          orderBy: { weekStart: "desc" },
+          take: 6,
+        }),
+        db.workoutCalendarDay.findMany({
+          where: {
+            userId: clientId,
+            date: {
+              gte: new Date().toISOString().slice(0, 10),
+              lte: calendarWindowEnd.toISOString().slice(0, 10),
+            },
+          },
+          orderBy: { date: "asc" },
+          take: 20,
+        }),
       ]);
+
+    const coachVisibility = parseCoachVisibility((client as any).coachVisibility);
+    const visibleWorkouts = coachVisibility.workouts;
+    const visibleNutrition = coachVisibility.nutrition;
+    const visibleWeight = coachVisibility.weight;
+    const visibleGoals = coachVisibility.goals;
+    const visibleMealPlans = coachVisibility.mealPlans;
+    const visibleCalendar = coachVisibility.calendar;
+    const weeklyReviews = weeklyReviewsRaw.map((review: any) => ({
+      ...review,
+      averageWeight: visibleWeight ? review.averageWeight : null,
+      calorieAdherence: visibleNutrition && visibleGoals ? review.calorieAdherence : null,
+      proteinAdherence: visibleNutrition && visibleGoals ? review.proteinAdherence : null,
+      workoutsCompleted: visibleWorkouts ? review.workoutsCompleted : 0,
+      plannedWorkouts: visibleWorkouts ? review.plannedWorkouts : null,
+    }));
+    const latestWeeklyReview = weeklyReviews[0] ?? null;
+    const newestWeight = weightLogs[0]?.weight != null ? Number(weightLogs[0].weight) : null;
+    const oldestWeight = weightLogs.length > 1 && weightLogs[weightLogs.length - 1]?.weight != null
+      ? Number(weightLogs[weightLogs.length - 1].weight)
+      : null;
+    const weightDelta = visibleWeight && newestWeight != null && oldestWeight != null
+      ? Math.round((newestWeight - oldestWeight) * 10) / 10
+      : null;
+    const workoutAdherence = latestWeeklyReview?.plannedWorkouts
+      ? Math.round((Number(latestWeeklyReview.workoutsCompleted ?? 0) / Number(latestWeeklyReview.plannedWorkouts)) * 100)
+      : null;
 
     const nutritionSummary = foods.reduce(
       (acc: { calories: number; protein: number }, row: any) => {
@@ -408,13 +907,27 @@ export const getClientOverview = async (
     );
 
     res.json({
-      client,
-      recentWorkouts,
-      activeGoal,
-      weightLogs,
-      nutritionSummary,
-      plans,
-      proposals,
+      client: { ...client, coachVisibility },
+      recentWorkouts: visibleWorkouts ? recentWorkouts : [],
+      activeGoal: visibleGoals ? activeGoal : null,
+      weightLogs: visibleWeight ? weightLogs : [],
+      nutritionSummary: visibleNutrition ? nutritionSummary : { calories: 0, protein: 0 },
+      plans: visibleMealPlans ? plans : [],
+      proposals: await enrichCoachProposals(proposalsRaw),
+      calendarDays: visibleCalendar ? calendarDays : [],
+      visibility: coachVisibility,
+      weeklyReviews,
+      adherenceSummary: {
+        latestWeekStart: latestWeeklyReview?.weekStart ?? null,
+        averageWeight: latestWeeklyReview?.averageWeight ?? null,
+        weightDelta,
+        calorieAdherence: latestWeeklyReview?.calorieAdherence ?? null,
+        proteinAdherence: latestWeeklyReview?.proteinAdherence ?? null,
+        workoutAdherence,
+        workoutsCompleted: latestWeeklyReview?.workoutsCompleted ?? 0,
+        plannedWorkouts: latestWeeklyReview?.plannedWorkouts ?? null,
+        checkInCount: weeklyReviews.length,
+      },
     });
   } catch (error) {
     next(error);
@@ -434,7 +947,7 @@ export const createProposal = async (
       note?: string;
       payload?: CoachProposalPayload;
     };
-    await ensureCoachClientAccess(req.user!.id, Number(clientId));
+    await ensureCoachClientAccess(req.user!.id, Number(clientId), req.user?.role);
 
     if (type === "workout") {
       if (payload?.mode === "custom") {
@@ -497,12 +1010,25 @@ export const listProposalsForClient = async (
 ): Promise<void> => {
   try {
     const clientId = Number(req.params.clientId);
-    await ensureCoachClientAccess(req.user!.id, clientId);
+    await ensureCoachClientAccess(req.user!.id, clientId, req.user?.role);
     const proposals = await db.coachProposal.findMany({
       where: { clientId },
+      include: {
+        coach: {
+          select: { id: true, username: true, firstName: true, lastName: true, email: true },
+        },
+        comments: {
+          include: {
+            author: {
+              select: { id: true, username: true, firstName: true, lastName: true, role: true },
+            },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
-    res.json({ proposals });
+    res.json({ proposals: await enrichCoachProposals(proposals) });
   } catch (error) {
     next(error);
   }
@@ -518,12 +1044,71 @@ export const listMyPendingProposals = async (
       where: { clientId: req.user!.id, status: "pending" },
       include: {
         coach: {
-          select: { id: true, username: true, firstName: true, lastName: true },
+          select: { id: true, username: true, firstName: true, lastName: true, email: true },
+        },
+        comments: {
+          include: {
+            author: {
+              select: { id: true, username: true, firstName: true, lastName: true, role: true },
+            },
+          },
+          orderBy: { createdAt: "asc" },
         },
       },
       orderBy: { createdAt: "desc" },
     });
-    res.json({ proposals });
+    res.json({ proposals: await enrichCoachProposals(proposals) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addProposalComment = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const proposalId = Number(req.params.id);
+    const body = String(req.body?.body ?? "").trim();
+    if (!body) return next(createError("Comment body is required", 400));
+
+    const proposal = await db.coachProposal.findFirst({
+      where: {
+        id: proposalId,
+        OR: [
+          { clientId: req.user!.id },
+          { coachId: req.user!.id },
+        ],
+      },
+    });
+    if (!proposal && req.user?.role !== "admin" && req.user?.role !== "developer") {
+      return next(createError("Proposal not found", 404));
+    }
+
+    const comment = await db.coachProposalComment.create({
+      data: {
+        proposalId,
+        authorUserId: req.user!.id,
+        body,
+      },
+      include: {
+        author: {
+          select: { id: true, username: true, firstName: true, lastName: true, role: true },
+        },
+      },
+    });
+
+    await writeAuditLog({
+      req,
+      action: "coach.proposal.comment_created",
+      targetType: "coach_proposal",
+      targetId: proposalId,
+      targetUserId: proposal?.clientId ?? req.user!.id,
+      metadata: { bodyLength: body.length },
+    });
+
+    res.status(201).json({ comment });
   } catch (error) {
     next(error);
   }

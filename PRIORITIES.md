@@ -75,6 +75,11 @@ _Last updated: 2026-05-09_
 | - | Language-agnostic food search - Nutrition DB search now matches normalized multilingual queries such as `Pan Integral` against English names, aliases, localized names, AI-translated query text, and deterministic term expansions while returning localized display names | Nutrition/i18n | P1 | Done |
 | - | Shared food picker and coach meal editor - Meal Planner and Coach now share localized food picking/scaling, and coach scratch meal plans use structured editable meal cards with flexible week/month duration | Coach Mode/Nutrition UX | P1 | Done |
 | - | Dashboard supplement calorie sync - Dashboard now counts daily protein shake/custom supplement calories and macros from Nutrition's per-day supplement layer | Dashboard/Nutrition | P1 | Done |
+| - | Coach privacy and internal coach-test access - clients can set per-section coach visibility, and dev/admin can open a selected client in coach mode with audit logging | Platform/Coach Mode | P1 | Done |
+| - | Coach proposal diffs/comments - pending coach proposals now show a concise before-accept diff summary and threaded comments in both client and coach views | Platform/Coach Mode | P1 | Done |
+| - | Weekly client check-ins and coach adherence widgets - coach workspace now shows recent weekly reviews as check-ins plus a compact calorie/protein/workout/weight adherence summary | Platform/Coach Mode | P1 | Done |
+| - | Coach libraries, weekly notes, and attention summary - reusable favorites, quick client swap shortcuts, per-week coach notes, and a lightweight "needs attention today" coach dashboard | Platform/Coach Mode | P1 | Done |
+| - | Coach attention drill-down + proposal toasts + admin coach entry - dedicated clients-needing-attention list, client-side proposal update notifications, and coach shell visible from admin/dev navigation | Platform/Coach Mode | P1 | Done |
 
 ---
 
@@ -83,6 +88,7 @@ _Last updated: 2026-05-09_
 Foundation work is complete. The roadmap below only shows live dependencies and remaining work.
 
 Recently cleared:
+- Coach privacy settings now let clients control which sections a coach can see, and internal dev/admin users have an audited coach-test switch for a selected client.
 - Dashboard nutrition cards now include daily supplement macros, so protein shakes counted in Nutrition also affect Dashboard calories/macros.
 - Coach scratch meal planning now has a real food-search editor with editable quantities/macros, per-meal/day totals, and customizable week/month duration.
 - Meal Planner add-food and Nutrition macro scaling now use the shared food-search/scaling foundation instead of separate calculations.

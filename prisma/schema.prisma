@@ -35,6 +35,7 @@ model User {
   planAdjustmentMode   String   @default("suggest") // "suggest" | "confirm" | "auto"
   role                 String   @default("user")
   permissionFlags      String   @default("[]")
+  coachVisibility      String   @default("{\"workouts\":true,\"nutrition\":true,\"weight\":true,\"goals\":true,\"mealPlans\":true,\"calendar\":true}")
   createdAt            DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -118,9 +119,25 @@ model CoachProposal {
 
   coach  User @relation("CoachProposalCreatedBy", fields: [coachId], references: [id], onDelete: Cascade)
   client User @relation("CoachProposalForClient", fields: [clientId], references: [id], onDelete: Cascade)
+  comments CoachProposalComment[] @relation("CoachProposalComments")
 
   @@index([clientId, status])
   @@index([coachId, status])
+}
+
+model CoachProposalComment {
+  id            Int      @id @default(autoincrement())
+  proposalId    Int
+  authorUserId   Int
+  body          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  proposal CoachProposal @relation("CoachProposalComments", fields: [proposalId], references: [id], onDelete: Cascade)
+  author   User          @relation("CoachProposalCommentAuthor", fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId, createdAt])
+  @@index([authorUserId, createdAt])
 }
 
 model WeeklyReview {
@@ -143,6 +160,7 @@ model WeeklyReview {
   sleepQuality        Int?
   stress              Int?
   perceivedPerformance Int?
+  coachNote           String?
   adjustmentStatus    String   @default("suggested")
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -151,6 +169,20 @@ model WeeklyReview {
 
   @@unique([userId, weekStart])
   @@index([userId])
+}
+
+model CoachLibraryFavorite {
+  id        Int      @id @default(autoincrement())
+  coachId   Int
+  itemType  String   // "template" | "meal"
+  sourceId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coach User @relation(fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@unique([coachId, itemType, sourceId])
+  @@index([coachId, itemType])
 }
 
 model IdempotencyRecord {

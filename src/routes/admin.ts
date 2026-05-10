@@ -16,6 +16,7 @@ import {
   listRelationships,
   runRepairAction,
   searchUsers,
+  startCoachTestAccess,
   startImpersonation,
   stopImpersonation,
   upsertFeatureFlag,
@@ -30,6 +31,7 @@ router.get("/summary", getAdminSummary);
 router.get("/audit", requirePermission("manage_users"), listAuditLogs);
 router.post("/impersonation/start", requirePermission("impersonate"), startImpersonation);
 router.post("/impersonation/stop", requirePermission("impersonate"), stopImpersonation);
+router.post("/coach-test/start", requirePermission("manage_relationships"), startCoachTestAccess);
 router.get("/feature-flags", requirePermission("feature_flags"), listFeatureFlags);
 router.put("/feature-flags", requirePermission("feature_flags"), upsertFeatureFlag);
 router.get("/content/summary", requirePermission("manage_content"), getContentSummary);

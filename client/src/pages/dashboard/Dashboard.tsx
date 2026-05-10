@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ResponsiveContainer, ComposedChart, Area, Line, XAxis, YAxis, Tooltip,
@@ -42,7 +42,6 @@ function StatCard({ label, value, sub, color, icon, onClick }: {
     </Tag>
   );
 }
-
 // ── Macro bar ────────────────────────────────────────────────────────────────
 function MacroBar({ label, value, target, color }: {
   label: string; value: number; target?: number; color: string;
@@ -90,6 +89,18 @@ export default function Dashboard() {
   const [pendingCoachProposals, setPendingCoachProposals] = useState<CoachProposal[]>([]);
   const [loadingCoachProposals, setLoadingCoachProposals] = useState(false);
   const [actingProposalId, setActingProposalId] = useState<number | null>(null);
+  const [proposalCommentDrafts, setProposalCommentDrafts] = useState<Record<number, string>>({});
+  const [commentingProposalId, setCommentingProposalId] = useState<number | null>(null);
+  const [proposalUpdateBanner, setProposalUpdateBanner] = useState<string | null>(null);
+  const proposalSignatureRef = useRef<string>("");
+  const proposalCountRef = useRef(0);
+  const proposalLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (!proposalUpdateBanner) return;
+    const timer = window.setTimeout(() => setProposalUpdateBanner(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [proposalUpdateBanner]);
 
   // ── Toast ─────────────────────────────────────────────────────────────────────
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -143,11 +154,34 @@ export default function Dashboard() {
     }
   }).catch(() => {});
 
-  const refreshCoachProposals = async () => {
+  const refreshCoachProposals = async (source?: string) => {
     setLoadingCoachProposals(true);
     try {
       const res = await coachApi.getPendingForMe();
-      setPendingCoachProposals(res.data.proposals ?? []);
+      const nextProposals = res.data.proposals ?? [];
+      const nextSignature = nextProposals
+        .map((proposal) => `${proposal.id}:${proposal.status}:${proposal.updatedAt}:${proposal.comments?.length ?? 0}`)
+        .join("|");
+      if (proposalLoadedRef.current && nextSignature !== proposalSignatureRef.current) {
+        const previousCount = proposalCountRef.current;
+        const nextCount = nextProposals.length;
+        if (nextCount > previousCount) {
+          const delta = nextCount - previousCount;
+          const message = delta === 1
+            ? t("coach.newProposalNotification")
+            : t("coach.newProposalsNotification", { count: delta });
+          showToast(message);
+          setProposalUpdateBanner(message);
+        } else {
+          const message = t("coach.proposalUpdatedNotification");
+          showToast(message);
+          setProposalUpdateBanner(message);
+        }
+      }
+      proposalSignatureRef.current = nextSignature;
+      proposalCountRef.current = nextProposals.length;
+      proposalLoadedRef.current = true;
+      setPendingCoachProposals(nextProposals);
     } catch {
       setPendingCoachProposals([]);
     } finally {
@@ -213,8 +247,23 @@ export default function Dashboard() {
       await coachApi.actOnProposal(proposalId, action);
       await Promise.all([refreshCoachProposals(), refreshDash()]);
       emitDataChanged("coach-proposal");
+      showToast(action === "accept" ? t("coach.proposalAcceptedNotification") : t("coach.proposalRejectedNotification"));
     } finally {
       setActingProposalId(null);
+    }
+  };
+
+  const handleProposalComment = async (proposalId: number) => {
+    const body = (proposalCommentDrafts[proposalId] ?? "").trim();
+    if (!body) return;
+    setCommentingProposalId(proposalId);
+    try {
+      await coachApi.addProposalComment(proposalId, body);
+      setProposalCommentDrafts((prev) => ({ ...prev, [proposalId]: "" }));
+      await refreshCoachProposals();
+      showToast(t("coach.proposalCommentSaved"));
+    } finally {
+      setCommentingProposalId(null);
     }
   };
 
@@ -280,12 +329,20 @@ export default function Dashboard() {
 
   // Re-fetch when any shared nutrition/weight data changes
   useEffect(() => {
-    const handler = () => {
+    const handler = (event: Event) => {
       refreshDash();
-      void refreshCoachProposals();
+      const customEvent = event as CustomEvent<{ source?: string }>;
+      void refreshCoachProposals(customEvent.detail?.source);
     };
     window.addEventListener("fitai:data-changed", handler);
     return () => window.removeEventListener("fitai:data-changed", handler);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void refreshCoachProposals("poll");
+    }, 45000);
+    return () => window.clearInterval(timer);
   }, []);
 
   if (loading) {
@@ -416,7 +473,7 @@ export default function Dashboard() {
   const isCoachRole = user?.role === "coach";
   const isInternalRole = user?.role === "admin" || user?.role === "developer";
   const isCoachShell = isCoachRole || isInternalRole;
-  const coachCardTarget = isInternalRole ? "/internal" : "/coach";
+  const coachCardTarget = "/coach";
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 lg:space-y-8">
@@ -995,6 +1052,11 @@ export default function Dashboard() {
                   <p className="text-sm text-gray-400">{t("coach.noPendingProposals")}</p>
                 ) : (
                   <div className="space-y-3">
+                    {proposalUpdateBanner && (
+                      <div className="rounded-xl border border-brand-200 dark:border-brand-800 bg-brand-50/70 dark:bg-brand-900/20 px-3 py-2 text-xs text-brand-700 dark:text-brand-300">
+                        {proposalUpdateBanner}
+                      </div>
+                    )}
                     {pendingCoachProposals.map((proposal) => {
                       const coachName =
                         proposal.coach?.firstName ||
@@ -1024,10 +1086,66 @@ export default function Dashboard() {
                                   {proposal.note}
                                 </p>
                               )}
+                              {proposal.diffSummary?.length ? (
+                                <div className="mt-3">
+                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                                    {t("coach.proposalDiff")}
+                                  </p>
+                                  <ul className="mt-1 space-y-1 text-xs text-gray-600 dark:text-gray-300">
+                                    {proposal.diffSummary.map((line) => (
+                                      <li key={line} className="flex gap-2">
+                                        <span className="text-brand-500">-</span>
+                                        <span>{line}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null}
                             </div>
                             <span className="text-[11px] rounded-full bg-amber-100 text-amber-700 px-2 py-1 font-semibold">
                               {t("coach.pending")}
                             </span>
+                          </div>
+                          <div className="mt-3 space-y-2">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                                {t("coach.proposalComments")}
+                              </p>
+                              <div className="mt-2 space-y-2">
+                                {(proposal.comments ?? []).length === 0 ? (
+                                  <p className="text-xs text-gray-400">{t("coach.noProposalComments")}</p>
+                                ) : (
+                                  proposal.comments?.map((comment) => (
+                                    <div key={comment.id} className="rounded-lg bg-gray-50 dark:bg-gray-700/60 px-3 py-2">
+                                      <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+                                        {comment.author?.firstName ||
+                                          comment.author?.username ||
+                                          t("coach.title")}
+                                      </p>
+                                      <p className="text-xs text-gray-700 dark:text-gray-200 mt-1">{comment.body}</p>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <input
+                                value={proposalCommentDrafts[proposal.id] ?? ""}
+                                onChange={(e) =>
+                                  setProposalCommentDrafts((prev) => ({ ...prev, [proposal.id]: e.target.value }))
+                                }
+                                placeholder={t("coach.commentPlaceholder")}
+                                className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs"
+                              />
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                loading={commentingProposalId === proposal.id}
+                                onClick={() => void handleProposalComment(proposal.id)}
+                              >
+                                {t("coach.sendComment")}
+                              </Button>
+                            </div>
                           </div>
                           <div className="flex gap-2 mt-3">
                             <Button

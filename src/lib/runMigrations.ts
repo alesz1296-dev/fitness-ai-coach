@@ -185,11 +185,25 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
       "sleepQuality" INTEGER,
       "stress" INTEGER,
       "perceivedPerformance" INTEGER,
+      "coachNote" TEXT,
       "adjustmentStatus" TEXT NOT NULL DEFAULT 'suggested',
       "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,
       UNIQUE ("userId", "weekStart")
+    )`,
+  },
+  {
+    table: "CoachLibraryFavorite",
+    sql: `CREATE TABLE IF NOT EXISTS "CoachLibraryFavorite" (
+      "id" SERIAL PRIMARY KEY,
+      "coachId" INTEGER NOT NULL,
+      "itemType" TEXT NOT NULL,
+      "sourceId" INTEGER NOT NULL,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      FOREIGN KEY ("coachId") REFERENCES "User"("id") ON DELETE CASCADE,
+      UNIQUE ("coachId", "itemType", "sourceId")
     )`,
   },
   {
@@ -258,6 +272,19 @@ const TABLE_MIGRATIONS: Array<{ table: string; sql: string }> = [
       "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       FOREIGN KEY ("coachId") REFERENCES "User"("id") ON DELETE CASCADE,
       FOREIGN KEY ("clientId") REFERENCES "User"("id") ON DELETE CASCADE
+    )`,
+  },
+  {
+    table: "CoachProposalComment",
+    sql: `CREATE TABLE IF NOT EXISTS "CoachProposalComment" (
+      "id" SERIAL PRIMARY KEY,
+      "proposalId" INTEGER NOT NULL,
+      "authorUserId" INTEGER NOT NULL,
+      "body" TEXT NOT NULL,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      FOREIGN KEY ("proposalId") REFERENCES "CoachProposal"("id") ON DELETE CASCADE,
+      FOREIGN KEY ("authorUserId") REFERENCES "User"("id") ON DELETE CASCADE
     )`,
   },
   {
@@ -336,6 +363,8 @@ const MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
     sql: `ALTER TABLE "User" ADD COLUMN "role" TEXT NOT NULL DEFAULT 'user'` },
   { table: "User", column: "permissionFlags",
     sql: `ALTER TABLE "User" ADD COLUMN "permissionFlags" TEXT NOT NULL DEFAULT '[]'` },
+  { table: "User", column: "coachVisibility",
+    sql: `ALTER TABLE "User" ADD COLUMN "coachVisibility" TEXT NOT NULL DEFAULT '{"workouts":true,"nutrition":true,"weight":true,"goals":true,"mealPlans":true,"calendar":true}'` },
   { table: "FoodLog", column: "isCheatMeal",
     sql: `ALTER TABLE "FoodLog" ADD COLUMN "isCheatMeal" BOOLEAN NOT NULL DEFAULT FALSE` },
   { table: "FoodItem", column: "aliases",
@@ -382,6 +411,8 @@ const MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
     sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "restDayCarbs" DOUBLE PRECISION` },
   { table: "CalorieGoal", column: "restDayFats",
     sql: `ALTER TABLE "CalorieGoal" ADD COLUMN "restDayFats" DOUBLE PRECISION` },
+  { table: "WeeklyReview", column: "coachNote",
+    sql: `ALTER TABLE "WeeklyReview" ADD COLUMN "coachNote" TEXT` },
 ];
 
 // Index migrations
@@ -407,6 +438,8 @@ const INDEX_MIGRATIONS: Array<{ name: string; sql: string }> = [
     sql: `CREATE INDEX IF NOT EXISTS "idx_fooditem_name" ON "FoodItem" ("name")` },
   { name: "idx_weeklyreview_userid_weekstart",
     sql: `CREATE INDEX IF NOT EXISTS "idx_weeklyreview_userid_weekstart" ON "WeeklyReview" ("userId", "weekStart")` },
+  { name: "idx_coachlibraryfavorite_coach_itemtype",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_coachlibraryfavorite_coach_itemtype" ON "CoachLibraryFavorite" ("coachId", "itemType")` },
   { name: "idx_idempotencyrecord_userid_method_path",
     sql: `CREATE INDEX IF NOT EXISTS "idx_idempotencyrecord_userid_method_path" ON "IdempotencyRecord" ("userId", "method", "path")` },
   { name: "idx_coachclientlink_coach_status",
@@ -419,6 +452,10 @@ const INDEX_MIGRATIONS: Array<{ name: string; sql: string }> = [
     sql: `CREATE INDEX IF NOT EXISTS "idx_coachproposal_client_status" ON "CoachProposal" ("clientId", "status")` },
   { name: "idx_coachproposal_coach_status",
     sql: `CREATE INDEX IF NOT EXISTS "idx_coachproposal_coach_status" ON "CoachProposal" ("coachId", "status")` },
+  { name: "idx_coachproposalcomment_proposal_createdat",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_coachproposalcomment_proposal_createdat" ON "CoachProposalComment" ("proposalId", "createdAt")` },
+  { name: "idx_coachproposalcomment_author_createdat",
+    sql: `CREATE INDEX IF NOT EXISTS "idx_coachproposalcomment_author_createdat" ON "CoachProposalComment" ("authorUserId", "createdAt")` },
   { name: "idx_exerciseitem_name",
     sql: `CREATE INDEX IF NOT EXISTS "idx_exerciseitem_name" ON "ExerciseItem" ("name")` },
   { name: "idx_exerciseitem_primarymuscle",

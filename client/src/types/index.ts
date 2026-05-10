@@ -23,7 +23,17 @@ export interface User {
   planAdjustmentMode?: "suggest" | "confirm" | "auto" | null;
   role?: "user" | "coach" | "admin" | "developer";
   permissionFlags?: string[] | null;
+  coachVisibility?: CoachVisibility | null;
   createdAt?: string;
+}
+
+export interface CoachVisibility {
+  workouts: boolean;
+  nutrition: boolean;
+  weight: boolean;
+  goals: boolean;
+  mealPlans: boolean;
+  calendar: boolean;
 }
 
 export interface AuthResponse {
@@ -50,6 +60,8 @@ export interface CoachProposal {
   sourceId: number;
   payload?: string | null;
   note?: string | null;
+  diffSummary?: string[] | null;
+  comments?: ProposalComment[] | null;
   acceptedAt?: string | null;
   rejectedAt?: string | null;
   appliedId?: number | null;
@@ -58,7 +70,108 @@ export interface CoachProposal {
   coach?: User;
 }
 
+export interface ProposalComment {
+  id: number;
+  proposalId: number;
+  authorUserId: number;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  author?: User;
+}
+
 // ── Workouts ─────────────────────────────────────────────────────────────────
+
+export interface WeeklyReview {
+  id: number;
+  userId: number;
+  weekStart: string;
+  weekEnd: string;
+  averageWeight?: number | null;
+  calorieAdherence?: number | null;
+  proteinAdherence?: number | null;
+  workoutsCompleted: number;
+  plannedWorkouts?: number | null;
+  performanceTrend?: string | null;
+  planStatus: string;
+  recommendation: string;
+  recommendedAdjustment?: Record<string, unknown> | null;
+  fatigue?: number | null;
+  soreness?: number | null;
+  hunger?: number | null;
+  sleepQuality?: number | null;
+  stress?: number | null;
+  perceivedPerformance?: number | null;
+  coachNote?: string | null;
+  adjustmentStatus?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoachAdherenceSummary {
+  latestWeekStart?: string | null;
+  averageWeight?: number | null;
+  weightDelta?: number | null;
+  calorieAdherence?: number | null;
+  proteinAdherence?: number | null;
+  workoutAdherence?: number | null;
+  workoutsCompleted?: number;
+  plannedWorkouts?: number | null;
+  checkInCount?: number;
+}
+
+export interface CoachClientOverview {
+  client: User;
+  recentWorkouts: Workout[];
+  activeGoal: CalorieGoal | null;
+  weightLogs: WeightLog[];
+  nutritionSummary: { calories: number; protein: number };
+  plans: MealPlan[];
+  proposals: CoachProposal[];
+  calendarDays: WorkoutCalendarDay[];
+  visibility: CoachVisibility;
+  weeklyReviews?: WeeklyReview[];
+  adherenceSummary?: CoachAdherenceSummary | null;
+}
+
+export interface CoachLibraryFavorite {
+  id: number;
+  coachId: number;
+  itemType: "template" | "meal";
+  sourceId: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoachNotification {
+  id: string;
+  type: "proposal" | "checkin" | "invite" | "client";
+  title: string;
+  body: string;
+  clientId?: number | null;
+  clientName?: string | null;
+  createdAt: string;
+  action?: string | null;
+}
+
+export interface CoachDashboardSummary {
+  totalClients: number;
+  pendingProposals: number;
+  needsAttention: number;
+  overdueCheckIns: number;
+  recentNotifications: CoachNotification[];
+  attentionClients: Array<{
+    client: User;
+    pendingProposals: number;
+    workoutAdherence?: number | null;
+    proteinAdherence?: number | null;
+    calorieAdherence?: number | null;
+    weightDelta?: number | null;
+    latestWeekStart?: string | null;
+    reasons: string[];
+  }>;
+}
+
 export interface AuditLogEntry {
   id: number;
   actorUserId?: number | null;

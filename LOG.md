@@ -2,6 +2,82 @@
 
 Most recent session first.
 
+## 2026-05-09 - Coach attention drill-down, proposal toasts, and admin coach entry points
+
+### Goal
+- Turn the coach summary into a real drill-down, surface client-side proposal update notifications on the user dashboard, and make coach navigation visible for admin/developer users too.
+
+### Files modified
+- `client/src/pages/coach/CoachPage.tsx` - added a dedicated clients-needing-attention drill-down card with workspace links
+- `client/src/pages/dashboard/Dashboard.tsx` - added proposal-update toast/banners and dashboard-side notification handling for coach proposal changes
+- `client/src/pages/coach/CoachClientPage.tsx` - emitted the shared proposal-update event after coach comments so the client dashboard can react
+- `client/src/components/layout/Sidebar.tsx`, `client/src/components/layout/BottomNav.tsx` - exposed the coach shell entry for admin/developer users too
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the strings for the coach drill-down and proposal notification toasts
+- `LOG.md`, `CONTEXT.md`, `PRIORITIES.md`, `ARCHITECTURE.md` - updated project memory after the implementation pass
+
+### Notes
+- The dashboard now treats proposal changes as a client-side notification event instead of only a static pending count.
+- Admin/developer users can now reach coach mode directly from the shared navigation, which makes coach testing easier without leaving the internal account.
+
+## 2026-05-09 - Coach libraries, notifications, weekly notes, and attention summary
+
+### Goal
+- Give coaches reusable libraries, quick client swap shortcuts, weekly-check-in notes, and a compact attention summary so the coach workspace feels like a real management surface instead of only a proposal inbox.
+
+### Files modified
+- `src/controllers/coachController.ts` - added coach dashboard summary aggregation, reusable library/favorite endpoints, and weekly review note updates
+- `src/lib/runMigrations.ts`, `prisma/schema.prisma`, `prisma/migrations/20260509020000_add_coach_library_and_weekly_notes/migration.sql` - added the persisted coach library favorite model and weekly review coach note field
+- `src/routes/coach.ts` - exposed the new dashboard/library/note routes
+- `client/src/pages/coach/CoachPage.tsx` - added the coach attention summary, notifications, and reusable library cards
+- `client/src/pages/coach/CoachClientPage.tsx` - added reusable library shortcuts and inline weekly-review coach notes
+- `client/src/types/index.ts`, `client/src/api/index.ts` - added the shared dashboard/library/weekly-note types and API helpers
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the new coach UI labels
+- `LOG.md`, `CONTEXT.md`, `PRIORITIES.md`, `ARCHITECTURE.md` - updated project memory after the implementation pass
+
+### Notes
+- Coaches can now favorite reusable templates and meal plans, then reapply them quickly as client swap shortcuts.
+- Weekly reviews now accept a coach note per week, which keeps the check-in history attached to the same review record instead of creating a separate notes system.
+- The top-level coach page now has a small "needs attention today" summary backed by the same adherence data used elsewhere in the coach workspace.
+
+## 2026-05-09 - Weekly client check-ins and coach adherence widgets
+
+### Goal
+- Surface weekly client check-ins inside the coach workspace and add clearer adherence widgets so coaches can see the latest nutrition, workout, and weight consistency signals at a glance.
+
+### Files modified
+- `src/controllers/coachController.ts` - added weekly-review data and a derived adherence summary to the coach client overview payload
+- `client/src/pages/coach/CoachClientPage.tsx` - added a weekly check-in panel and adherence widgets to the client workspace
+- `client/src/types/index.ts`, `client/src/api/index.ts` - added the shared coach overview, weekly review, and adherence summary types
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the labels for the new coach widgets and check-in panel
+- `client/package.json`, `client/vite.config.js` - kept client build validation reliable in this workspace
+- `LOG.md`, `CONTEXT.md`, `PRIORITIES.md`, `ARCHITECTURE.md` - updated project memory after the implementation pass
+
+### Notes
+- The coach workspace now reuses the existing weekly-review data as the client check-in surface rather than inventing a second feedback tracker.
+- The adherence widgets lean on the latest weekly review when it exists, and they degrade safely when the client has not submitted one yet.
+
+## 2026-05-09 - Coach privacy settings and internal coach-test access
+
+### Goal
+- Give clients a visible per-section coach consent model and add an audited internal switch for developers/admins to jump into a selected client's coach workspace.
+
+### Files modified
+- `prisma/schema.prisma` - added `User.coachVisibility` as a persisted JSON string field with a safe default
+- `prisma/migrations/20260509000000_add_coach_visibility/migration.sql` - added the matching SQL migration for existing databases
+- `src/lib/coachPrivacy.ts` - added shared parse/serialize helpers for coach visibility
+- `src/controllers/authController.ts`, `src/controllers/userController.ts`, `src/controllers/adminController.ts` - threaded coach visibility through auth/profile/internal responses and profile updates
+- `src/controllers/coachController.ts` - filtered coach workspace data by the client's consent flags and allowed admin/developer testing access
+- `src/routes/admin.ts`, `src/lib/runMigrations.ts` - added an audited internal coach-test action and startup migration support
+- `client/src/pages/settings/SettingsPage.tsx` - added a client-facing coach privacy card in the profile/settings flow
+- `client/src/pages/admin/AdminUserPage.tsx` - added the internal "Act as coach for this client" test switch and a visible consent summary
+- `client/src/api/index.ts`, `client/src/types/index.ts`, `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the API/types/localization plumbing for the new consent and coach-test UI
+- `LOG.md`, `CONTEXT.md`, `PRIORITIES.md`, `ARCHITECTURE.md` - updated project memory after the implementation pass
+
+### Notes
+- Coach visibility is now stored on the user profile as a JSON-shaped field so clients can opt in/out of what a coach sees by section.
+- Admin/developer users can now enter a specific client's coach workspace from internal mode with audit logging, which makes coach feature testing much easier.
+- Backend and client builds both passed after the change.
+
 ## 2026-05-09 - Dashboard supplement calories sync
 
 ### Goal
@@ -2317,6 +2393,25 @@ Info chip shown when a frequency match exists: "Showing plans for N×/week — m
 ### Notes
 - The issue was not only “icons removed”; the shared nav files had mojibake in source, so the fix now avoids raw emoji bytes in those files.
 - Using Unicode escapes plus explicit emoji font fallbacks should hold up better on phone browsers and Railway-served builds.
+
+# 2026-05-09 - Coach proposal diffs and threaded comments
+
+### Goal
+- Make coach-authored proposals easier to review by showing a before-accept diff summary and letting coaches/clients leave threaded comments on each pending proposal.
+
+### Files modified
+- `src/controllers/coachController.ts` - enriched pending coach proposals with generated diff summaries, loaded proposal comments with author metadata, and added a comment-creation endpoint
+- `src/routes/coach.ts` - exposed `POST /coach/proposals/:id/comments`
+- `prisma/schema.prisma` and `prisma/migrations/20260509010000_add_coach_proposal_comments/migration.sql` - added persistent proposal comments
+- `client/src/pages/dashboard/Dashboard.tsx` - pending coach proposal cards now show diff summaries, threaded comments, and a comment composer
+- `client/src/pages/coach/CoachClientPage.tsx` - coach workspace proposal cards now show the same diff/comment review experience
+- `client/src/api/index.ts` and `client/src/types/index.ts` - added typed client support for proposal comments
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, and `client/src/i18n/locales/uk.ts` - added proposal diff/comment translations
+
+### Notes
+- Clients can now see the main changes a coach is proposing before they accept or reject a plan.
+- Comments are stored server-side so the review thread survives reloads and can be shared across coach and client surfaces.
+- The same review model is now visible both in the client Dashboard pending-proposal cards and in the coach workspace.
 
 ## 2026-05-03 - Nutrition browse mode + progress ranges + Ukrainian locale wiring
 

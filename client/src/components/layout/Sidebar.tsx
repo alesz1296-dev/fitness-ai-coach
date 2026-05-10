@@ -22,7 +22,7 @@ export function Sidebar() {
     { to: "/settings", icon: "\u2699\uFE0F", label: t("nav.settings") },
   ];
 
-  if (isCoachShell) {
+  if (isCoachShell || isAdminShell) {
     navItems.push({ to: "/coach", icon: "\u{1F465}", label: t("nav.coachMode") });
   }
   if (isAdminShell) {

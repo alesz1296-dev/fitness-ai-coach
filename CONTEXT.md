@@ -4,9 +4,15 @@ Read this at the start of every session before touching any code.
 
 ## Current frontend focus
 
+- Coach client pages now reuse the existing weekly-review data as a visible check-in surface and show adherence widgets for calories, protein, workouts, and weight trend so coaches have a compact summary before drilling into the full client history.
+- Client profile now includes a coach privacy card that controls which sections a coach can see, and internal admin/dev pages now expose an audited "Act as coach for this client" switch for testing coach-only workflows.
 - Dashboard nutrition totals now merge in the same local per-day supplement macros that Nutrition uses, via `client/src/lib/supplementMacros.ts`. This matters because protein shake supplements are not backend food logs, but they still need to count in Dashboard calorie/macros.
 - Food search UX is being consolidated: `client/src/lib/foodSearch.ts` owns shared food normalization, macro scaling, and duration clamping, while `client/src/components/food/FoodPicker.tsx` is now used by Nutrition logging, Meal Planner, and Coach scratch meal planning.
 - Coach scratch meal plans now use structured weekday/meal cards with localized food search, editable quantities/macros, meal/day totals, and customizable week/month duration before creating the existing pending client proposal.
+- Coach libraries now let coaches favorite reusable workout templates and meal plans, reapply them as quick swap shortcuts, and leave weekly-review coach notes directly on each check-in record.
+- The top-level coach shell now includes a small "needs attention today" summary plus recent notifications so coaches can spot overdue follow-ups without opening each client.
+- The coach dashboard now also exposes a dedicated "clients needing attention" drill-down card, and the user dashboard raises client-side proposal update notifications when coach proposal data changes.
+- Coach mode is no longer hidden from admin/developer users in navigation; internal users now see coach as a first-class shell entry alongside `/internal`.
 - Nutrition food search is now expected to be language-agnostic: backend search normalizes accents/case/punctuation, token-matches terms in any order, checks English names, aliases, all stored localized names, AI-translated queries, and deterministic multilingual query expansions before translating returned names into the selected UI language.
 - Shared navigation now uses Unicode escape-based emoji icons in `Sidebar.tsx` and `BottomNav.tsx` instead of raw emoji literals, because the previous source bytes were vulnerable to mojibake.
 - The base font stack now explicitly includes `Apple Color Emoji`, `Segoe UI Emoji`, and `Noto Color Emoji` so page-menu icons survive mobile browser font fallback more reliably.
@@ -1097,6 +1103,19 @@ Updated `AGENT_TOOLS`:
 - Users can clear the current day’s food logs directly from the Nutrition page without manually deleting each logged item.
 - Progress history, predictions, and analytics can now be inspected over shorter and longer ranges, from a single day up to a full year.
 - Ukrainian is now a first-class selectable app language at the wiring level, with the UI able to load safely under the `uk` locale even before a full deep translation pass is finished.
+
+## Session 2026-05-09 - Coach proposal diffs and threaded comments
+
+### What changed
+- Added a proposal-diff layer in `src/controllers/coachController.ts` so pending workout, meal, and goal proposals show a concise before-accept summary instead of only a title and note.
+- Added persistent `CoachProposalComment` records and a coach proposal comment endpoint so coaches and clients can leave threaded review notes on the same proposal.
+- Updated the client Dashboard and Coach workspace proposal cards to render the diff summary, threaded comments, and a composer for new comments.
+- Extended the shared client types and API layer so proposal comments are typed end to end.
+
+### Behavior changes
+- Clients can now review what is changing before they accept a coach-authored plan.
+- Coaches can leave context directly on the proposal card instead of relying on out-of-band chat.
+- The proposal review experience is now available from both the client dashboard and the coach workspace, keeping the flow consistent.
 ## Session 2026-05-04 - Auth hardening + Spanish locale cleanup
 
 ### What changed

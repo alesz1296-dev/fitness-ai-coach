@@ -9,6 +9,7 @@ import {
   upsertWeightLogForDay,
   syncLatestWeight,
 } from "../lib/weightSync.js";
+import { parseCoachVisibility, serializeCoachVisibility } from "../lib/coachPrivacy.js";
 
 function parsePermissionFlags(value: unknown): string[] {
   if (Array.isArray(value)) return value as string[];
@@ -51,6 +52,7 @@ export const getProfile = async (
         periodStart: true,
         cycleLength: true,
         planAdjustmentMode: true,
+        coachVisibility: true,
         role: true,
         permissionFlags: true,
         createdAt: true,
@@ -67,6 +69,7 @@ export const getProfile = async (
       ...user,
       injuries: user.injuries ? JSON.parse(user.injuries as string) : [],
       permissionFlags: parsePermissionFlags(user.permissionFlags),
+      coachVisibility: parseCoachVisibility(user.coachVisibility),
     };
 
     res.json({ user: userOut });
@@ -99,6 +102,7 @@ export const updateProfile = async (
       periodStart,
       cycleLength,
       planAdjustmentMode,
+      coachVisibility,
     } = req.body;
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -129,6 +133,7 @@ export const updateProfile = async (
           cycleLength: cycleLength === null ? null : Math.min(45, Math.max(20, Number(cycleLength))),
         }),
         ...(planAdjustmentMode !== undefined && { planAdjustmentMode }),
+        ...(coachVisibility !== undefined && { coachVisibility: serializeCoachVisibility(coachVisibility) }),
       };
 
       await tx.user.update({
@@ -167,6 +172,7 @@ export const updateProfile = async (
           periodStart: true,
           cycleLength: true,
           planAdjustmentMode: true,
+          coachVisibility: true,
           role: true,
           permissionFlags: true,
           updatedAt: true,
@@ -179,6 +185,7 @@ export const updateProfile = async (
       ...updated,
       injuries: updated?.injuries ? JSON.parse(updated.injuries as string) : [],
       permissionFlags: parsePermissionFlags(updated?.permissionFlags),
+      coachVisibility: parseCoachVisibility(updated?.coachVisibility),
     };
 
     logger.info(`Profile updated for user ${req.user!.id}`);
