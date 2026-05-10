@@ -11,6 +11,7 @@ import { useTranslation } from "../../i18n";
 import { dashboardApi, calorieGoalsApi, coachApi, weightApi } from "../../api";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { OwnershipChip, StatusChip } from "../../components/coach/CoachUi";
 import { UserRoleBadge } from "../../components/user/UserRoleBadge";
 import WeeklyPlanWidget from "../../components/WeeklyPlanWidget";
 import { useIsDark } from "../../hooks/useDarkMode";
@@ -93,6 +94,7 @@ export default function Dashboard() {
   const [proposalCommentDrafts, setProposalCommentDrafts] = useState<Record<number, string>>({});
   const [commentingProposalId, setCommentingProposalId] = useState<number | null>(null);
   const [proposalUpdateBanner, setProposalUpdateBanner] = useState<string | null>(null);
+  const [expandedProposalIds, setExpandedProposalIds] = useState<Record<number, boolean>>({});
   const proposalSignatureRef = useRef<string>("");
   const proposalCountRef = useRef(0);
   const proposalLoadedRef = useRef(false);
@@ -266,6 +268,10 @@ export default function Dashboard() {
     } finally {
       setCommentingProposalId(null);
     }
+  };
+
+  const toggleProposalExpanded = (proposalId: number) => {
+    setExpandedProposalIds((prev) => ({ ...prev, [proposalId]: !prev[proposalId] }));
   };
 
   // ── Dark mode (must be before any early return — Rules of Hooks) ─────────────
@@ -475,6 +481,10 @@ export default function Dashboard() {
   const isInternalRole = user?.role === "admin" || user?.role === "developer";
   const isCoachShell = isCoachRole || isInternalRole;
   const coachCardTarget = "/coach";
+  const showCoachUpdates =
+    !isCoachRole &&
+    !isInternalRole &&
+    (loadingCoachProposals || pendingCoachProposals.length > 0 || Boolean(proposalUpdateBanner));
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 lg:space-y-8">
@@ -498,6 +508,220 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {showCoachUpdates && (
+        <section className="rounded-[28px] border border-brand-200/70 dark:border-brand-800/70 bg-gradient-to-br from-brand-50 via-white to-amber-50 dark:from-brand-950/30 dark:via-gray-900 dark:to-gray-900 shadow-sm overflow-hidden">
+          <div className="border-b border-brand-100 dark:border-brand-900/60 px-5 py-4 sm:px-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-600 text-white text-sm shadow-sm">
+                    C
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brand-600 dark:text-brand-300">
+                      {t("coach.coachUpdates")}
+                    </p>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                      {t("coach.coachUpdatesTitle")}
+                    </h2>
+                  </div>
+                </div>
+                <p className="mt-3 max-w-3xl text-sm text-gray-600 dark:text-gray-300">
+                  {t("coach.coachUpdatesBody")}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 self-start">
+                <span className="inline-flex items-center rounded-full bg-white/80 dark:bg-gray-800/80 px-3 py-1 text-xs font-semibold text-gray-600 dark:text-gray-300 border border-brand-100 dark:border-brand-900/60">
+                  {pendingCoachProposals.length} {t("coach.pendingProposals")}
+                </span>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/notifications")}>
+                  {t("notifications.viewDetails")} →
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-4 py-4 sm:px-6 sm:py-5">
+            {proposalUpdateBanner && (
+              <div className="mb-4 rounded-2xl border border-brand-200 dark:border-brand-800 bg-brand-100/70 dark:bg-brand-900/30 px-4 py-3 text-sm font-medium text-brand-800 dark:text-brand-200">
+                {proposalUpdateBanner}
+              </div>
+            )}
+
+            {loadingCoachProposals ? (
+              <div className="rounded-2xl border border-dashed border-brand-200 dark:border-brand-800 bg-white/70 dark:bg-gray-900/40 px-4 py-5 text-sm text-gray-500 dark:text-gray-400">
+                {t("coach.loadingProposals")}
+              </div>
+            ) : pendingCoachProposals.length === 0 ? null : (
+              <div className="space-y-4">
+                {pendingCoachProposals.map((proposal) => {
+                  const coachName =
+                    proposal.coach?.firstName ||
+                    proposal.coach?.username ||
+                    t("coach.title");
+                  const proposalLabel =
+                    proposal.type === "workout"
+                      ? t("coach.workoutProposal")
+                      : proposal.type === "meal"
+                        ? t("coach.mealProposal")
+                        : t("coach.goalProposal");
+                  const avatarLabel = coachName.trim().charAt(0).toUpperCase() || "C";
+                  const isExpanded = Boolean(expandedProposalIds[proposal.id]);
+                  const summaryLine = proposal.note || proposal.diffSummary?.[0] || t("notifications.proposalWaiting");
+
+                  return (
+                    <article
+                      key={proposal.id}
+                      className="rounded-[24px] border border-brand-200/80 dark:border-brand-800/70 bg-white/90 dark:bg-gray-900/85 shadow-sm"
+                    >
+                      <div className="p-4 sm:p-5">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <OwnershipChip owner="coach" />
+                              <StatusChip status="pending" label={t("coach.pendingYourApproval")} />
+                            </div>
+
+                            <div className="mt-3 flex items-start gap-3">
+                              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-sm font-bold text-white shadow-sm">
+                                {avatarLabel}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                                    {proposalLabel}
+                                  </h3>
+                                  <UserRoleBadge role={proposal.coach?.role} />
+                                </div>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                  {t("coach.fromCoach", { name: coachName })}
+                                </p>
+                                <div className="mt-3 rounded-2xl bg-gray-50 dark:bg-gray-800/80 px-4 py-3 border border-gray-100 dark:border-gray-700">
+                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                                    {t("coach.whyThisChanged")}
+                                  </p>
+                                  <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">
+                                    {summaryLine}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-2">
+                            <Button
+                              size="sm"
+                              className="min-w-[120px]"
+                              onClick={() => handleCoachProposalAction(proposal.id, "accept")}
+                              loading={actingProposalId === proposal.id}
+                            >
+                              {t("coach.accept")}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              className="min-w-[110px]"
+                              onClick={() => handleCoachProposalAction(proposal.id, "reject")}
+                              loading={actingProposalId === proposal.id}
+                            >
+                              {t("coach.reject")}
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 dark:border-gray-800 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 font-medium">
+                              {proposal.comments?.length ?? 0} {t("coach.proposalComments")}
+                            </span>
+                            {proposal.diffSummary?.length ? (
+                              <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 font-medium">
+                                {proposal.diffSummary.length} {t("coach.proposalDiff")}
+                              </span>
+                            ) : null}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => toggleProposalExpanded(proposal.id)}
+                          >
+                            {isExpanded ? t("coach.hideDetails") : t("coach.reviewDetails")}
+                          </Button>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="mt-4 rounded-[22px] border border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40 p-4 space-y-4">
+                            {proposal.diffSummary?.length ? (
+                              <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                                  {t("coach.proposalDiff")}
+                                </p>
+                                <ul className="mt-2 space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                                  {proposal.diffSummary.map((line) => (
+                                    <li key={line} className="flex gap-2">
+                                      <span className="mt-0.5 text-brand-500">•</span>
+                                      <span>{line}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                                {t("coach.proposalComments")}
+                              </p>
+                              <div className="mt-3 space-y-2">
+                                {(proposal.comments ?? []).length === 0 ? (
+                                  <p className="text-sm text-gray-400">{t("coach.noProposalComments")}</p>
+                                ) : (
+                                  proposal.comments?.map((comment) => (
+                                    <div key={comment.id} className="rounded-2xl bg-white dark:bg-gray-900/70 border border-gray-100 dark:border-gray-800 px-3 py-3">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                                          {comment.author?.firstName ||
+                                            comment.author?.username ||
+                                            t("coach.title")}
+                                        </p>
+                                        <UserRoleBadge role={comment.author?.role} className="ml-0" />
+                                      </div>
+                                      <p className="mt-1 text-sm text-gray-700 dark:text-gray-200">{comment.body}</p>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <input
+                                value={proposalCommentDrafts[proposal.id] ?? ""}
+                                onChange={(e) =>
+                                  setProposalCommentDrafts((prev) => ({ ...prev, [proposal.id]: e.target.value }))
+                                }
+                                placeholder={t("coach.commentPlaceholder")}
+                                className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm text-gray-900 dark:text-gray-100"
+                              />
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                loading={commentingProposalId === proposal.id}
+                                onClick={() => void handleProposalComment(proposal.id)}
+                              >
+                                {t("coach.sendComment")}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Top stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1050,7 +1274,21 @@ export default function Dashboard() {
                     {pendingCoachProposals.length}
                   </span>
                 </div>
-                {loadingCoachProposals ? (
+                {!isCoachRole && !isInternalRole && showCoachUpdates ? (
+                  <div className="rounded-xl border border-brand-200 dark:border-brand-800 bg-brand-50/60 dark:bg-brand-900/20 px-3 py-3">
+                    <p className="text-sm font-medium text-brand-800 dark:text-brand-200">
+                      {t("coach.coachUpdatesInlineHint")}
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="mt-2"
+                      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                    >
+                      {t("coach.reviewDetails")}
+                    </Button>
+                  </div>
+                ) : loadingCoachProposals ? (
                   <p className="text-sm text-gray-400">{t("coach.loadingProposals")}</p>
                 ) : pendingCoachProposals.length === 0 ? (
                   <p className="text-sm text-gray-400">{t("coach.noPendingProposals")}</p>
@@ -1097,7 +1335,7 @@ export default function Dashboard() {
                                     {t("coach.proposalDiff")}
                                   </p>
                                   <ul className="mt-1 space-y-1 text-xs text-gray-600 dark:text-gray-300">
-                                    {proposal.diffSummary.map((line) => (
+                                    {proposal.diffSummary.slice(0, 2).map((line) => (
                                       <li key={line} className="flex gap-2">
                                         <span className="text-brand-500">-</span>
                                         <span>{line}</span>
@@ -1107,20 +1345,16 @@ export default function Dashboard() {
                                 </div>
                               ) : null}
                             </div>
-                            <span className="text-[11px] rounded-full bg-amber-100 text-amber-700 px-2 py-1 font-semibold">
-                              {t("coach.pending")}
-                            </span>
+                            <StatusChip status="pending" className="px-2 py-1" />
                           </div>
                           <div className="mt-3 space-y-2">
+                            {(proposal.comments ?? []).length > 0 && (
                             <div>
                               <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
                                 {t("coach.proposalComments")}
                               </p>
                               <div className="mt-2 space-y-2">
-                                {(proposal.comments ?? []).length === 0 ? (
-                                  <p className="text-xs text-gray-400">{t("coach.noProposalComments")}</p>
-                                ) : (
-                                  proposal.comments?.map((comment) => (
+                                  {proposal.comments?.slice(0, 1).map((comment) => (
                                     <div key={comment.id} className="rounded-lg bg-gray-50 dark:bg-gray-700/60 px-3 py-2">
                                       <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
                                         {comment.author?.firstName ||
@@ -1130,10 +1364,10 @@ export default function Dashboard() {
                                       </p>
                                       <p className="text-xs text-gray-700 dark:text-gray-200 mt-1">{comment.body}</p>
                                     </div>
-                                  ))
-                                )}
+                                  ))}
                               </div>
                             </div>
+                            )}
                             <div className="flex gap-2">
                               <input
                                 value={proposalCommentDrafts[proposal.id] ?? ""}

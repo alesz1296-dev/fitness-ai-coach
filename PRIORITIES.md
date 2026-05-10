@@ -82,6 +82,10 @@ _Last updated: 2026-05-10_
 | - | Coach libraries, weekly notes, and attention summary - reusable favorites, quick client swap shortcuts, per-week coach notes, and a lightweight "needs attention today" coach dashboard | Platform/Coach Mode | P1 | Done |
 | - | Coach attention drill-down + proposal toasts + admin coach entry - dedicated clients-needing-attention list, client-side proposal update notifications, and coach shell visible from admin/dev navigation | Platform/Coach Mode | P1 | Done |
 | - | Verified coach identity badges - show a visible `Verified Coach` label next to coach names in proposals, comments, and internal workspaces | Platform/Coach Mode | P2 | Done |
+| UX-C1 | Client dashboard coach-review redesign - dedicated `Coach Updates` block, stronger proposal shells, anchored accept/reject hierarchy, and collapsed review details for mobile readability | Coach UX | P1 | Done |
+| UX-C2 | Coach dashboard command-center layout - `Today / Needs attention / Library / tools` hierarchy, hero attention queue, urgency chips, and timeline-style coach activity feed | Coach UX | P1 | Done |
+| UX-C3 | Coach client workspace hierarchy pass - added a premium `Client snapshot`, explicit consent chips, stronger `This week` check-in treatment, clearer section headers, quick-action tools, and visual separation between create vs review surfaces | Coach UX | P1 | Done |
+| UX-C4 | Notifications center timeline polish - grouped the inbox into `Unread`, `Today`, and `Earlier`; added event badges, softer timeline rows, stronger empty states, and kept the coach attention queue as a distinct side module | Shared UX | P1 | Done |
 
 ---
 
@@ -91,6 +95,7 @@ Foundation work is complete. The roadmap below only shows live dependencies and 
 
 Recently cleared:
 - A shared `/notifications` page now gives coaches a real event feed plus an attention queue, and regular users can see pending coach proposals in the same shell.
+- Dashboard review cards, the coach workspace, and `/notifications` now share one reusable coach/client role-state design system for status chips, ownership labels, visibility chips, and clearer primary vs destructive action emphasis.
 - Coach privacy settings now let clients control which sections a coach can see, and internal dev/admin users have an audited coach-test switch for a selected client.
 - Dashboard nutrition cards now include daily supplement macros, so protein shakes counted in Nutrition also affect Dashboard calories/macros.
 - Coach scratch meal planning now has a real food-search editor with editable quantities/macros, per-meal/day totals, and customizable week/month duration.
@@ -111,6 +116,23 @@ Recently cleared:
 - Internal mode now also has first-pass observability: recent usage metrics, audit logging, and a read-only view path.
 - Internal mode now also supports true impersonation sessions plus first-pass feature flags, content inventory, and repair tools.
 - Shared shell emoji icons for Dashboard / Workouts / Nutrition / Goals / Progress / Reports / Meals / Settings were restored after the nav-icon regression.
+
+---
+
+## PENDING - COACH / CLIENT VISUAL UX OVERHAUL
+
+| # | Task | Category | Pri | Status |
+|---|------|----------|-----|--------|
+| UX-C5 | Shared role-state design system - standardized status pills (`Pending`, `Accepted`, `Rejected`, `Needs attention`, `Overdue`), ownership labels (`Coach plan`, `Your plan`, `AI suggestion`), visibility chips (`Visible to coach`, `Private`), and destructive-vs-primary action hierarchy across dashboard, coach workspace, and notifications | Design System | P1 | Done |
+| UX-C6 | Proposal review clarity pass - show what changed, why it changed, and what happens after accept in a more guided review surface rather than only dense dashboard cards | User Trust UX | P1 | Pending |
+| UX-C7 | Coach triage filters and urgency chips - make the `clients needing attention` queue filterable by overdue check-ins, low adherence, missed workouts, low protein, stalled weight, and pending approvals | Coach UX | P2 | Pending |
+| UX-C8 | Mobile coach/client card compression - shorten summaries, reduce nested sections, keep sticky primary actions, and make proposal/comment cards easier to scan on phones | Mobile UX | P2 | Pending |
+| UX-C9 | Activity-feed consistency - unify timeline visuals across notifications, proposal history, and weekly check-ins so coach/client history surfaces feel like one system | Shared UX | P2 | Pending |
+| UX-C10 | Trust and ownership microcopy pass - keep coach visibility, plan ownership, pending-draft state, and recent-data context explicit across dashboard, coach workspace, and notifications | UX/Content | P2 | Pending |
+
+Implementation order for this lane:
+- `UX-C9` next so the shared feed/history model becomes visually coherent across notifications, proposal history, and check-ins.
+- `UX-C7`, `UX-C8`, and `UX-C10` then polish urgency filtering, mobile density, and trust cues.
 
 ---
 
@@ -237,9 +259,10 @@ Completed prerequisites already done: `#124`, `#114`, `#115`, `#126`.
 ## What to do next
 
 - Start with the remaining system hardening: chat-memory parity, offline replay idempotency, tool-call validation, search scalability, and removing critical `any` bridges.
+- In parallel, continue the coach/client visual UX overhaul with `UX-C5` and `UX-C4` now that `UX-C1`, `UX-C2`, and `UX-C3` are live across the main coach/client surfaces.
 - Start with Goals Overhaul: `#108` plus the chart/validator/panel/wizard items now that their shared UI foundation is done.
 - Then move to AI agents and the AI Coach split, since those depend on the agent/tool work that is already complete.
-- After that, finish the proactive engine so notifications, preferences, and the notification center can land together.
+- After that, finish the proactive engine so server-backed notifications, preferences, and the notification center can land together.
 - Keep infra polish as the next hardening lane: pagination, timeouts, OpenAI error handling, SSE, optimistic UI, suggested JSON persistence, DB indexes, pooling, and CI/CD.
 - Once the core loops are stable, move the next high-priority expansion lane to coaching mode, developer/admin tooling, advanced workout structures, and Apple Watch support.
 - Leave barcode scanning and AI food-photo detection as the final nutrition-convenience wave.

@@ -2,6 +2,96 @@
 
 Most recent session first.
 
+## 2026-05-10 - Shared coach/client role-state design system
+
+### Goal
+- Standardize the cross-cutting coach/client UI language so dashboard review, coach workspace records, and notifications all use the same status, ownership, visibility, and action-priority treatment.
+
+### Files modified
+- `client/src/components/coach/CoachUi.tsx` - added reusable `StatusChip`, `OwnershipChip`, and `VisibilityChip` components for coach/client role-state presentation
+- `client/src/pages/dashboard/Dashboard.tsx` - replaced ad hoc proposal pills with shared ownership/status chips and made proposal rejection visually destructive instead of neutral
+- `client/src/pages/coach/CoachClientPage.tsx` - moved consent tags, proposal history, and weekly follow-up state onto the shared chips and cleaned lingering text corruption in the coach workspace summaries/widgets
+- `client/src/pages/notifications/NotificationsPage.tsx` - reused the shared chips for user proposal status, coach ownership context, and coach attention entries
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the shared status / ownership / visibility locale keys
+- `PRIORITIES.md`, `CONTEXT.md`, `ARCHITECTURE.md`, `LOG.md` - updated the living docs after shipping `UX-C5`
+
+### Notes
+- This finishes the shared role-state foundation the visual UX roadmap called for, so later coach/client polish can build on a single presentation layer instead of continuing to duplicate pills and labels page by page.
+- The remaining follow-up in this lane is less about state semantics now and more about timeline/feed consistency, mobile compression, and trust microcopy.
+
+## 2026-05-10 - Notifications center timeline polish
+
+### Goal
+- Make the shared notifications page feel like a product inbox instead of a utility list, while preserving the shared coach/user behavior already in place.
+
+### Files modified
+- `client/src/pages/notifications/NotificationsPage.tsx` - rebuilt the notifications surface into grouped `Unread`, `Today`, and `Earlier` sections, added stronger mode context for coach vs user, switched the feed to softer timeline rows with event badges, improved unread styling, and kept the coach attention queue as a distinct side module
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the new inbox section labels, mode labels, and richer empty-state copy
+- `PRIORITIES.md`, `CONTEXT.md`, `ARCHITECTURE.md`, `LOG.md` - updated the living docs after shipping `UX-C4`
+
+### Notes
+- Coaches now get a clearer separation between the timeline feed and the attention queue, which makes the page feel closer to an action center than a generic card list.
+- Regular users now get better empty-state language when there are no pending coach updates, while filtered searches also degrade more cleanly.
+- Client build validation passed after the pass; the remaining Vite chunk-size warning is the existing warning, not a new regression.
+
+## 2026-05-10 - Coach client workspace hierarchy pass
+
+### Goal
+- Make the coach client workspace feel like a professional dossier with a clearer top-to-bottom coaching flow instead of a long flat utility page.
+
+### Files modified
+- `client/src/pages/coach/CoachClientPage.tsx` - added a premium `Client snapshot` surface, explicit coach-visibility chips, stronger `This week` treatment for adherence/check-ins, clearer section headers, visual quick-action tools, and stronger create-vs-review separation for publish/history areas
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the new coach workspace section labels and consent/check-in helper copy
+- `PRIORITIES.md`, `CONTEXT.md`, `ARCHITECTURE.md`, `LOG.md` - updated the living docs after shipping `UX-C3`
+
+### Notes
+- The page now starts with a more premium client summary instead of dropping straight into equal-weight cards.
+- Weekly check-ins are visually closer to coaching records now, with visible follow-up state, a stronger score/status treatment, and the coach note box staying attached to each record.
+- Build validation passed after the pass; the remaining chunk-size warning is still the existing Vite warning, not a regression from this change.
+
+## 2026-05-10 - Coach/client visual UX roadmap recorded
+
+### Goal
+- Convert the coach/client visual UX audit into an implementation-ready roadmap so the next UI pass can start from the docs instead of re-planning in chat.
+
+### Files modified
+- `PRIORITIES.md` - added a dedicated coach/client visual UX overhaul lane with concrete tasks for dashboard review, coach dashboard hierarchy, coach workspace structure, notifications timeline polish, and shared role-state design patterns
+- `CONTEXT.md` - captured the current frontend focus for the next coach/client UI pass
+- `ARCHITECTURE.md` - documented the intended role-aware visual system and how the main coach/client surfaces should be reorganized
+- `LOG.md` - recorded the roadmap-writing pass itself
+
+### Notes
+- This pass is documentation-only; it defines the next implementation lane but does not change runtime behavior yet.
+- The visual direction is now explicit: guided client review, command-center coach triage, more deliberate workspace hierarchy, and a shared status/ownership/timeline system across coach-facing UX.
+
+## 2026-05-10 - Dashboard coach review redesign
+
+### Goal
+- Make coach-related dashboard activity feel like a guided review workflow instead of just another stack of generic cards.
+
+### Files modified
+- `client/src/pages/dashboard/Dashboard.tsx` - added a dedicated top-of-page `Coach Updates` block with stronger proposal shells, clearer ownership/status labels, anchored accept/reject actions, and collapsible detail drawers for diffs/comments
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the new review-surface labels and helper copy
+- `PRIORITIES.md`, `CONTEXT.md`, `ARCHITECTURE.md`, `LOG.md` - updated the living docs after shipping the first coach/client visual UX task
+
+### Notes
+- The original sidebar/dashboard coach card still exists for join/invite/admin entry points, but regular-user proposal review is now visually separated near the top of the dashboard.
+- Long diffs and comment threads are hidden behind a review-details toggle so mobile cards stay much easier to scan.
+
+## 2026-05-10 - Coach dashboard command-center redesign
+
+### Goal
+- Turn the coach dashboard into a clearer command center with stronger priority hierarchy, a dominant attention queue, and a cleaner distinction between time-sensitive work and reusable tools.
+
+### Files modified
+- `client/src/pages/coach/CoachPage.tsx` - rebuilt the page into `Today`, hero `Needs attention`, and `Library / tools` lanes; upgraded attention cards into stronger client summaries with urgency chips; converted recent notifications into a timeline-like activity feed
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the new coach dashboard section labels and summary copy
+- `PRIORITIES.md`, `CONTEXT.md`, `ARCHITECTURE.md`, `LOG.md` - updated the living docs after shipping `UX-C2`
+
+### Notes
+- The attention queue now carries more visual weight than libraries or invite tools, which better matches its product importance.
+- Libraries are intentionally smaller and more archival in feel, while recent activity now reads more like a vertical timeline than a generic card list.
+
 ## 2026-05-10 - Shared notification center for coach and user activity
 
 ### Goal

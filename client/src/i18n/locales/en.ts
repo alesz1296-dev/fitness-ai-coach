@@ -329,11 +329,17 @@ export interface Translation {
     activeCalorieGoal: string; noActiveCalorieGoal: string; currentMealPlans: string; noMealPlans: string;
     adherenceWidgets: string; weeklyCheckIns: string; noWeeklyCheckIns: string; calorieWidget: string; proteinWidget: string; workoutWidget: string; weightWidget: string; checkInSummary: string; fatigue: string; soreness: string; hunger: string; sleepQuality: string; performance: string;
     needsAttentionToday: string; attentionClients: string; attentionClientsSub: string; notifications: string; notificationsSub: string; noNotifications: string; reusableLibraries: string; reusableLibrariesSub: string; workoutLibraries: string; mealLibraries: string; overdueCheckIns: string; swapWorkout: string; swapMeal: string; addCoachNote: string; coachNote: string; notePlaceholder: string; saveNote: string; noWorkoutLibraries: string; noMealLibraries: string; newProposalNotification: string; newProposalsNotification: string; proposalUpdatedNotification: string; proposalAcceptedNotification: string; proposalRejectedNotification: string; proposalCommentSaved: string; verifiedCoach: string;
+    clientSnapshot: string; clientSnapshotBody: string; trainingFrequency: string; trainingDaysSummary: string; noTrainingFrequency: string; visibilityConsent: string; noVisibilityData: string; thisWeek: string; plansAndProposals: string; coachTools: string; latestTrendSummary: string; loggedAtLabel: string; needsFollowUp: string; planStatusLabel: string; quickActionsLabel: string; createZone: string; reusePlan: string; reviewZone: string;
+    statusPending: string; statusAccepted: string; statusRejected: string; statusNeedsAttention: string; statusOverdue: string;
+    ownershipCoachPlan: string; ownershipYourPlan: string; ownershipAiSuggestion: string;
+    visibilityVisibleToCoach: string; visibilityPrivate: string; visibilityPendingReview: string;
+    todayPriorities: string; recentCoachActivity: string; libraryTools: string; reusablePlans: string; topConcern: string; latestCheckIn: string; clientsWaitingReview: string;
     publishDrafts: string; workoutTemplate: string; selectTemplate: string; overwrite: string;
     sendWorkoutDraft: string; mealPlan: string; selectMealPlan: string; sendMealDraft: string;
     goalMacros: string; selectCalorieGoal: string; fallbackGoalName: string; sendGoalDraft: string;
     proposalHistory: string; noCoachProposals: string;
     proposalDiff: string; proposalComments: string; noProposalComments: string; addComment: string; commentPlaceholder: string; sendComment: string;
+    coachUpdates: string; coachUpdatesTitle: string; coachUpdatesBody: string; coachProposalLabel: string; pendingYourApproval: string; whyThisChanged: string; reviewDetails: string; hideDetails: string; coachUpdatesInlineHint: string;
     workoutProposal: string; mealProposal: string; goalProposal: string;
     fromCoach: string; pending: string; accepted: string; rejected: string;
     joinCoach: string; joinCoachBody: string; connect: string;
@@ -356,6 +362,9 @@ export interface Translation {
     proposalTimeline: string; coachFeed: string; userFeed: string;
     openCoach: string; openDashboard: string; viewDetails: string;
     attentionQueue: string; attentionQueueSub: string; searchPlaceholder: string; proposalWaiting: string;
+    modeCoach: string; modeUser: string; sectionUnread: string; sectionToday: string; sectionEarlier: string;
+    emptyCoachTitle: string; emptyCoachBody: string; emptyUserTitle: string; emptyUserBody: string;
+    emptyFilteredTitle: string; emptyFilteredBody: string; emptyAttentionTitle: string; emptyAttentionBody: string;
   };
   admin: {
     title: string; subtitle: string; userLookup: string; searchPlaceholder: string; search: string;
@@ -1369,6 +1378,42 @@ const en: Translation = {
     proposalRejectedNotification: "Coach proposal rejected",
     proposalCommentSaved: "Proposal comment saved",
     verifiedCoach: "Verified Coach",
+    clientSnapshot: "Client snapshot",
+    clientSnapshotBody: "A quick dossier of goals, recent trends, and what the client has chosen to share with their coach.",
+    trainingFrequency: "Training frequency",
+    trainingDaysSummary: "{{count}} training days / week",
+    noTrainingFrequency: "No training frequency set yet.",
+    visibilityConsent: "Visibility and consent",
+    visibilityVisibleToCoach: "Visible to coach",
+    visibilityPrivate: "Private",
+    visibilityPendingReview: "Pending review",
+    noVisibilityData: "No visibility settings available yet.",
+    thisWeek: "This week",
+    plansAndProposals: "Plans and proposals",
+    coachTools: "Coach tools",
+    latestTrendSummary: "Latest trend summary",
+    loggedAtLabel: "Last updated",
+    needsFollowUp: "Needs follow-up",
+    planStatusLabel: "Plan status",
+    quickActionsLabel: "Quick actions",
+    createZone: "Create and reuse",
+    reusePlan: "Reuse plan",
+    reviewZone: "Review history and comments",
+    statusPending: "Pending",
+    statusAccepted: "Accepted",
+    statusRejected: "Rejected",
+    statusNeedsAttention: "Needs attention",
+    statusOverdue: "Overdue",
+    ownershipCoachPlan: "Coach plan",
+    ownershipYourPlan: "Your plan",
+    ownershipAiSuggestion: "AI suggestion",
+    todayPriorities: "Today's priorities",
+    recentCoachActivity: "Recent coach activity",
+    libraryTools: "Library / tools",
+    reusablePlans: "Reusable plans",
+    topConcern: "Top concern",
+    latestCheckIn: "Latest check-in",
+    clientsWaitingReview: "clients needing review",
     publishDrafts: "Publish coach drafts",
     workoutTemplate: "Workout template",
     selectTemplate: "Select template",
@@ -1389,6 +1434,15 @@ const en: Translation = {
     addComment: "Add comment",
     commentPlaceholder: "Write a note or question...",
     sendComment: "Send comment",
+    coachUpdates: "Coach updates",
+    coachUpdatesTitle: "Review coach changes before you accept them",
+    coachUpdatesBody: "Coach proposals are shown here first so you can review what changed, ask a question, and decide what to apply.",
+    coachProposalLabel: "Coach proposal",
+    pendingYourApproval: "Pending your approval",
+    whyThisChanged: "Why this changed",
+    reviewDetails: "Review details",
+    hideDetails: "Hide details",
+    coachUpdatesInlineHint: "Coach updates are highlighted above so the rest of the dashboard stays easier to scan.",
     workoutProposal: "Workout proposal",
     mealProposal: "Meal proposal",
     goalProposal: "Goal proposal",
@@ -1443,10 +1497,15 @@ const en: Translation = {
     subtitleUser: "Your recent coach updates, proposals, and saved actions.",
     center: "Notification Center",
     centerSub: "One place for timeline items, attention signals, and proposal updates.",
+    modeCoach: "Coach inbox",
+    modeUser: "User inbox",
     unread: "unread",
     noNotifications: "No notifications yet.",
     markAllRead: "Mark all read",
     markRead: "Mark read",
+    sectionUnread: "Unread",
+    sectionToday: "Today",
+    sectionEarlier: "Earlier",
     proposalTimeline: "Proposal timeline",
     coachFeed: "Coach feed",
     userFeed: "User feed",
@@ -1457,6 +1516,14 @@ const en: Translation = {
     attentionQueueSub: "Reason-based client cards pulled from the shared coach feed.",
     searchPlaceholder: "Search notifications, clients, or reasons...",
     proposalWaiting: "Proposal waiting for review.",
+    emptyCoachTitle: "No coach activity yet",
+    emptyCoachBody: "New proposal updates, check-ins, invites, and follow-ups will show up here.",
+    emptyUserTitle: "All caught up",
+    emptyUserBody: "You have no pending coach proposals or fresh review items right now.",
+    emptyFilteredTitle: "Nothing matched this search",
+    emptyFilteredBody: "Try another keyword or clear the search to see the full inbox again.",
+    emptyAttentionTitle: "No clients need attention right now",
+    emptyAttentionBody: "The shared attention queue will show overdue check-ins, pending approvals, and other follow-up reasons here.",
   },
   admin: {
     title: "Admin / Dev Mode",

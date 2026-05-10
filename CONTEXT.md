@@ -15,6 +15,12 @@ Read this at the start of every session before touching any code.
 - A dedicated `/notifications` page now acts as the shared landing zone for coach events and proposal activity. Coaches see the coach feed plus attention queue there, while regular users see pending proposals and dashboard-linked updates in the same shell.
 - Coach mode is no longer hidden from admin/developer users in navigation; internal users now see coach as a first-class shell entry alongside `/internal`.
 - Coach profiles now render a reusable `Verified Coach` badge beside coach usernames/names in proposals, coach comments, and internal workspace views.
+- The next coach/client frontend lane is now a visual UX overhaul: the client dashboard needs a clearer `Coach Updates` review surface, the coach dashboard needs a stronger `Today / Needs attention / Library` hierarchy, the coach client workspace needs a more deliberate snapshot-to-tools flow, and `/notifications` needs grouped timeline treatment instead of a flat feed.
+- The first visual UX step is now implemented on the client dashboard: pending coach proposals render in a dedicated top-of-page `Coach Updates` block with stronger proposal shells, explicit ownership/status labels, anchored accept/reject actions, and collapsible detail drawers for diffs/comments on mobile.
+- The second visual UX step is now implemented on the coach dashboard: the page is split into clearer `Today`, hero `Needs attention`, and `Library / tools` lanes, with attention cards upgraded into stronger client summaries and recent coach activity rendered as a timeline instead of a generic card stack.
+- The third visual UX step is now implemented on the coach client workspace: `CoachClientPage.tsx` now opens with a premium `Client snapshot`, explicit coach-visibility chips, a stronger `This week` check-in zone, and clearer section framing for `Plans and proposals` versus `Coach tools`.
+- The fourth visual UX step is now implemented on `/notifications`: the inbox is grouped into `Unread`, `Today`, and `Earlier`, uses softer timeline rows instead of flat cards, has stronger empty states, and keeps the coach attention queue visible as a distinct second module.
+- The shared coach/client role-state design system is now live through `client/src/components/coach/CoachUi.tsx`, so dashboard proposal review, coach workspace records, and notifications all reuse the same status chips, ownership labels, visibility chips, and clearer destructive-vs-primary action hierarchy.
 - Nutrition food search is now expected to be language-agnostic: backend search normalizes accents/case/punctuation, token-matches terms in any order, checks English names, aliases, all stored localized names, AI-translated queries, and deterministic multilingual query expansions before translating returned names into the selected UI language.
 - Shared navigation now uses Unicode escape-based emoji icons in `Sidebar.tsx` and `BottomNav.tsx` instead of raw emoji literals, because the previous source bytes were vulnerable to mojibake.
 - The base font stack now explicitly includes `Apple Color Emoji`, `Segoe UI Emoji`, and `Noto Color Emoji` so page-menu icons survive mobile browser font fallback more reliably.
@@ -105,6 +111,7 @@ The frontend uses React page containers plus feature subcomponents, Zustand for 
 - API helpers as the single network boundary
 - appearance presets and surface styling as first-class UX controls rather than a single dark-mode toggle
 - role-aware navigation and scoped workspaces instead of spinning up separate apps for coach/admin
+- a shared visual language for role-aware states: ownership labels, status pills, trust/visibility chips, and timeline/feed patterns across dashboard, coach, and notifications
 
 ## Current Role / Mode Model
 

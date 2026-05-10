@@ -20,6 +20,7 @@ import type {
 } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { OwnershipChip, StatusChip, VisibilityChip } from "../../components/coach/CoachUi";
 import { useAuthStore } from "../../store/authStore";
 import { useTranslation } from "../../i18n";
 import { FoodPicker } from "../../components/food/FoodPicker";
@@ -37,7 +38,6 @@ interface CustomWorkoutPattern {
   isRestDay: boolean;
   notes: string;
 }
-
 interface ScratchMealItem extends ScaledFoodItem {
   id: string;
 }
@@ -140,6 +140,7 @@ export default function CoachClientPage() {
   const { t } = useTranslation();
   const clientNumericId = Number(clientId);
   const [client, setClient] = useState<User | null>(null);
+  const [clientVisibility, setClientVisibility] = useState<CoachClientOverview["visibility"] | null>(null);
   const [recentWorkouts, setRecentWorkouts] = useState<Workout[]>([]);
   const [activeGoal, setActiveGoal] = useState<CalorieGoal | null>(null);
   const [nutritionSummary, setNutritionSummary] = useState({ calories: 0, protein: 0 });
@@ -192,6 +193,7 @@ export default function CoachClientPage() {
     setActiveGoal(data.activeGoal);
     setNutritionSummary(data.nutritionSummary);
     setClientPlans(data.plans);
+    setClientVisibility(data.visibility ?? null);
     setProposals(data.proposals);
     setWeeklyReviews(data.weeklyReviews ?? []);
     setAdherenceSummary(data.adherenceSummary ?? null);
@@ -433,6 +435,50 @@ export default function CoachClientPage() {
   const formatPercent = (value?: number | null) => (value == null ? "--" : `${Math.round(value)}%`);
   const formatWeightDelta = (value?: number | null) =>
     value == null ? "--" : `${value >= 0 ? "+" : ""}${value.toFixed(1)} kg`;
+  const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString() : "--");
+  const visibility = clientVisibility ?? client?.coachVisibility ?? null;
+  const visibilityItems = visibility
+    ? [
+        { key: "workouts", label: t("settings.coachVisibilityWorkouts"), visible: visibility.workouts },
+        { key: "nutrition", label: t("settings.coachVisibilityNutrition"), visible: visibility.nutrition },
+        { key: "weight", label: t("settings.coachVisibilityWeight"), visible: visibility.weight },
+        { key: "goals", label: t("settings.coachVisibilityGoals"), visible: visibility.goals },
+        { key: "mealPlans", label: t("settings.coachVisibilityMealPlans"), visible: visibility.mealPlans },
+        { key: "calendar", label: t("settings.coachVisibilityCalendar"), visible: visibility.calendar },
+      ]
+    : [];
+  const latestTrendSummary = adherenceSummary
+    ? [
+        adherenceSummary.workoutAdherence != null
+          ? `${t("coach.workoutWidget")}: ${formatPercent(adherenceSummary.workoutAdherence)}`
+          : null,
+        adherenceSummary.proteinAdherence != null
+          ? `${t("coach.proteinWidget")}: ${formatPercent(adherenceSummary.proteinAdherence)}`
+          : null,
+        adherenceSummary.weightDelta != null
+          ? `${t("coach.weightWidget")}: ${formatWeightDelta(adherenceSummary.weightDelta)}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" / ")
+    : t("coach.noWeeklyCheckIns");
+  const currentGoalSummary = activeGoal
+    ? `${Math.round(activeGoal.dailyCalories)} kcal / ${Math.round(activeGoal.proteinGrams)}P / ${Math.round(activeGoal.carbsGrams)}C / ${Math.round(activeGoal.fatsGrams)}F`
+    : t("coach.noActiveCalorieGoal");
+  const trainingFrequencySummary =
+    client?.trainingDaysPerWeek != null
+      ? t("coach.trainingDaysSummary", { count: client.trainingDaysPerWeek })
+      : t("coach.noTrainingFrequency");
+  const attentionSummary = weeklyReviews.filter(
+    (review) => !review.adjustmentStatus || review.adjustmentStatus === "saved",
+  ).length;
+  const checkInScore = (review: WeeklyReview) => {
+    const values = [review.calorieAdherence, review.proteinAdherence].filter(
+      (value): value is number => typeof value === "number",
+    );
+    if (values.length === 0) return null;
+    return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+  };
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -450,37 +496,106 @@ export default function CoachClientPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card><div className="p-4"><p className="text-xs text-gray-400">{t("coach.currentGoal")}</p><p className="font-semibold mt-1">{client?.goal || "-"}</p></div></Card>
-        <Card><div className="p-4"><p className="text-xs text-gray-400">{t("coach.recentCalories")}</p><p className="font-semibold mt-1">{Math.round(nutritionSummary.calories)} kcal</p></div></Card>
-        <Card><div className="p-4"><p className="text-xs text-gray-400">{t("coach.recentProtein")}</p><p className="font-semibold mt-1">{Math.round(nutritionSummary.protein)} g</p></div></Card>
-        <Card><div className="p-4"><p className="text-xs text-gray-400">{t("coach.pendingProposals")}</p><p className="font-semibold mt-1">{pendingCount}</p></div></Card>
-      </div>
+      <Card className="overflow-hidden border-brand-100 bg-gradient-to-br from-brand-50/80 via-white to-amber-50/70 dark:from-brand-900/20 dark:via-gray-800 dark:to-gray-900">
+        <div className="grid gap-5 lg:grid-cols-[1.3fr,0.9fr]">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand-600 dark:text-brand-300">
+                  {t("coach.clientSnapshot")}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                    {client?.firstName || client?.username} {client?.lastName || ""}
+                  </h2>
+                  <span className="rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-gray-600 shadow-sm dark:bg-gray-800/80 dark:text-gray-200">
+                    @{client?.username}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                  {t("coach.clientSnapshotBody")}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/60 bg-white/80 px-4 py-3 text-right shadow-sm dark:border-gray-700 dark:bg-gray-800/80">
+                <p className="text-[11px] uppercase tracking-wide text-gray-400">{t("coach.latestTrendSummary")}</p>
+                <p className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-200">{latestTrendSummary}</p>
+              </div>
+            </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <div className="rounded-2xl border border-white/60 bg-white/85 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/80">
+                <p className="text-[11px] uppercase tracking-wide text-gray-400">{t("coach.currentGoal")}</p>
+                <p className="mt-1 text-base font-semibold text-gray-900 dark:text-white">{client?.goal || "-"}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{currentGoalSummary}</p>
+              </div>
+              <div className="rounded-2xl border border-white/60 bg-white/85 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/80">
+                <p className="text-[11px] uppercase tracking-wide text-gray-400">{t("coach.trainingFrequency")}</p>
+                <p className="mt-1 text-base font-semibold text-gray-900 dark:text-white">{trainingFrequencySummary}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("coach.recentWorkouts")}: {recentWorkouts.length}</p>
+              </div>
+              <div className="rounded-2xl border border-white/60 bg-white/85 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/80">
+                <p className="text-[11px] uppercase tracking-wide text-gray-400">{t("coach.recentCalories")}</p>
+                <p className="mt-1 text-base font-semibold text-gray-900 dark:text-white">{Math.round(nutritionSummary.calories)} kcal</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("coach.recentProtein")}: {Math.round(nutritionSummary.protein)} g</p>
+              </div>
+              <div className="rounded-2xl border border-white/60 bg-white/85 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/80">
+                <p className="text-[11px] uppercase tracking-wide text-gray-400">{t("coach.pendingProposals")}</p>
+                <p className="mt-1 text-base font-semibold text-gray-900 dark:text-white">{pendingCount}</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("coach.overdueCheckIns")}: {attentionSummary}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/60 bg-white/85 p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800/85">
+            <CardHeader title={t("coach.visibilityConsent")} subtitle={t("settings.coachPrivacyHelp")} />
+            <div className="flex flex-wrap gap-2">
+              {visibilityItems.length === 0 ? (
+                <p className="text-sm text-gray-400">{t("coach.noVisibilityData")}</p>
+              ) : (
+                visibilityItems.map((item) => (
+                  <VisibilityChip
+                    key={item.key}
+                    state={item.visible ? "visible" : "private"}
+                    audienceLabel={item.label}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <div className="space-y-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">
+            {t("coach.thisWeek")}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{t("coach.checkInSummary")}</h2>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="bg-gradient-to-br from-slate-50 to-white dark:from-gray-900 dark:to-gray-800">
           <CardHeader title={t("coach.adherenceWidgets")} subtitle={latestWeeklyReview ? `${latestWeeklyReview.weekStart} - ${latestWeeklyReview.weekEnd}` : t("coach.noWeeklyCheckIns")} />
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-3">
-              <p className="text-[11px] uppercase tracking-wide text-gray-400">{t("coach.calorieWidget")}</p>
+            <div className="rounded-2xl border border-rose-100 bg-rose-50/70 p-4 dark:border-rose-900/40 dark:bg-rose-900/20">
+              <p className="text-[11px] uppercase tracking-wide text-rose-500">Kcal / {t("coach.calorieWidget")}</p>
               <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
                 {formatPercent(adherenceSummary?.calorieAdherence ?? latestWeeklyReview?.calorieAdherence ?? null)}
               </p>
             </div>
-            <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-3">
-              <p className="text-[11px] uppercase tracking-wide text-gray-400">{t("coach.proteinWidget")}</p>
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 dark:border-emerald-900/40 dark:bg-emerald-900/20">
+              <p className="text-[11px] uppercase tracking-wide text-emerald-600">Prot / {t("coach.proteinWidget")}</p>
               <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
                 {formatPercent(adherenceSummary?.proteinAdherence ?? latestWeeklyReview?.proteinAdherence ?? null)}
               </p>
             </div>
-            <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-3">
-              <p className="text-[11px] uppercase tracking-wide text-gray-400">{t("coach.workoutWidget")}</p>
+            <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-4 dark:border-sky-900/40 dark:bg-sky-900/20">
+              <p className="text-[11px] uppercase tracking-wide text-sky-600">Move / {t("coach.workoutWidget")}</p>
               <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
                 {formatPercent(adherenceSummary?.workoutAdherence ?? null)}
               </p>
             </div>
-            <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-3">
-              <p className="text-[11px] uppercase tracking-wide text-gray-400">{t("coach.weightWidget")}</p>
+            <div className="rounded-2xl border border-amber-100 bg-amber-50/70 p-4 dark:border-amber-900/40 dark:bg-amber-900/20">
+              <p className="text-[11px] uppercase tracking-wide text-amber-600">Trend / {t("coach.weightWidget")}</p>
               <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
                 {formatWeightDelta(adherenceSummary?.weightDelta ?? null)}
               </p>
@@ -493,26 +608,28 @@ export default function CoachClientPage() {
           </div>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-brand-500 bg-white dark:bg-gray-800">
           <CardHeader title={t("coach.weeklyCheckIns")} subtitle={latestWeeklyReview ? t("coach.checkInSummary") : t("coach.noWeeklyCheckIns")} />
           <div className="space-y-3">
             {weeklyReviews.length === 0 ? (
               <p className="text-sm text-gray-400">{t("coach.noWeeklyCheckIns")}</p>
             ) : (
               weeklyReviews.slice(0, 3).map((review) => (
-                <div key={review.id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800">
+                <div key={review.id} className="rounded-2xl border border-gray-200 dark:border-gray-700 p-4 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">
                         {review.weekStart} - {review.weekEnd}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {review.planStatus.replaceAll("_", " ")}
+                        {t("coach.loggedAtLabel")}: {formatDateTime(review.updatedAt)}
                       </p>
                     </div>
-                    <span className="text-[11px] rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-1 text-gray-600 dark:text-gray-300">
-                      {review.adjustmentStatus ?? "saved"}
-                    </span>
+                    {(!review.adjustmentStatus || review.adjustmentStatus === "saved" || (checkInScore(review) != null && checkInScore(review)! < 85)) ? (
+                      <StatusChip status="needs_attention" label={t("coach.needsFollowUp")} />
+                    ) : (
+                      <StatusChip status="accepted" label={review.adjustmentStatus ?? "saved"} />
+                    )}
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-300">
                     <div>{t("coach.calorieWidget")}: {formatPercent(review.calorieAdherence ?? null)}</div>
@@ -520,8 +637,19 @@ export default function CoachClientPage() {
                     <div>{t("coach.workoutWidget")}: {review.workoutsCompleted ?? 0}{review.plannedWorkouts ? ` / ${review.plannedWorkouts}` : ""}</div>
                     <div>{t("coach.weightWidget")}: {review.averageWeight != null ? `${review.averageWeight} kg` : "--"}</div>
                   </div>
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-gray-50/90 p-3 dark:bg-gray-900/40">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{t("coach.planStatusLabel")}</p>
+                      <p className="mt-1 text-sm font-medium capitalize text-gray-800 dark:text-gray-100">
+                        {review.planStatus.replaceAll("_", " ")}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-brand-100 px-3 py-1 text-sm font-semibold text-brand-700 dark:bg-brand-900/30 dark:text-brand-200">
+                      {checkInScore(review) == null ? "--" : `${checkInScore(review)}%`}
+                    </span>
+                  </div>
                   <p className="mt-3 text-sm text-gray-700 dark:text-gray-200">{review.recommendation}</p>
-                  <div className="mt-3 rounded-lg bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+                  <div className="mt-3 rounded-2xl bg-white dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 p-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
                         {t("coach.coachNote")}
@@ -536,7 +664,7 @@ export default function CoachClientPage() {
                       </Button>
                     </div>
                     <textarea
-                      className="w-full min-h-20 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs"
+                      className="w-full min-h-20 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs"
                       placeholder={t("coach.notePlaceholder")}
                       value={weeklyReviewNotes[review.weekStart] ?? ""}
                       onChange={(e) => setWeeklyReviewNotes((prev) => ({ ...prev, [review.weekStart]: e.target.value }))}
@@ -554,10 +682,18 @@ export default function CoachClientPage() {
             )}
           </div>
         </Card>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
+      <div className="space-y-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">
+            {t("coach.plansAndProposals")}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{t("coach.clientActivity")}</h2>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
           <CardHeader title={t("coach.reusableLibraries")} subtitle={t("coach.reusableLibrariesSub")} />
           <div className="space-y-4">
             <div>
@@ -567,7 +703,7 @@ export default function CoachClientPage() {
                   <p className="text-sm text-gray-400">{t("coach.noWorkoutLibraries")}</p>
                 ) : (
                   libraryTemplates.slice(0, 5).map((template) => (
-                    <div key={template.id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800">
+                    <div key={template.id} className="rounded-2xl border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-semibold text-gray-900 dark:text-white">{template.name}</p>
@@ -579,7 +715,7 @@ export default function CoachClientPage() {
                           loading={togglingFavorite === `template:${template.id}`}
                           onClick={() => void toggleFavorite("template", template.id)}
                         >
-                          {isFavorite("template", template.id) ? "★" : "☆"}
+                          {isFavorite("template", template.id) ? "â˜…" : "â˜†"}
                         </Button>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -606,7 +742,7 @@ export default function CoachClientPage() {
                   <p className="text-sm text-gray-400">{t("coach.noMealLibraries")}</p>
                 ) : (
                   libraryMealPlans.slice(0, 5).map((plan) => (
-                    <div key={plan.id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800">
+                    <div key={plan.id} className="rounded-2xl border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-800">
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-semibold text-gray-900 dark:text-white">{plan.name}</p>
@@ -618,7 +754,7 @@ export default function CoachClientPage() {
                           loading={togglingFavorite === `meal:${plan.id}`}
                           onClick={() => void toggleFavorite("meal", plan.id)}
                         >
-                          {isFavorite("meal", plan.id) ? "★" : "☆"}
+                          {isFavorite("meal", plan.id) ? "â˜…" : "â˜†"}
                         </Button>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -641,8 +777,8 @@ export default function CoachClientPage() {
           </div>
         </Card>
 
-        <Card>
-          <CardHeader title={t("coach.needsAttentionToday")} subtitle={t("coach.adherenceWidgets")} />
+        <Card className="border-2 border-dashed border-brand-200 bg-white dark:border-brand-900/40 dark:bg-gray-800">
+          <CardHeader title={t("coach.quickActionsLabel")} subtitle={t("coach.createZone")} />
           <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
             <p>{t("coach.notificationsSub")}</p>
             <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-3">
@@ -660,12 +796,31 @@ export default function CoachClientPage() {
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {t("coach.noNotifications")}
             </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button size="sm" variant="secondary" onClick={() => setMealMode("existing")}>
+                {t("coach.swapMeal")}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setWorkoutMode("quick")}>
+                {t("coach.swapWorkout")}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setMealMode("scratch")}>
+                {t("coach.reusePlan")}
+              </Button>
+            </div>
           </div>
         </Card>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <Card className="xl:col-span-2">
+      <div className="space-y-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400">
+            {t("coach.coachTools")}
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{t("coach.publishDrafts")}</h2>
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <Card className="xl:col-span-2 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
           <CardHeader title={t("coach.clientActivity")} />
           <div className="space-y-3">
             <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-4">
@@ -707,8 +862,8 @@ export default function CoachClientPage() {
           </div>
         </Card>
 
-        <Card>
-          <CardHeader title={t("coach.publishDrafts")} />
+        <Card className="border-2 border-brand-100 bg-brand-50/30 dark:border-brand-900/40 dark:bg-brand-900/10">
+          <CardHeader title={t("coach.publishDrafts")} subtitle={t("coach.createZone")} />
           <div className="space-y-6">
             <section className="space-y-3">
               <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 p-1 text-xs">
@@ -967,17 +1122,19 @@ export default function CoachClientPage() {
             </section>
           </div>
         </Card>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader title={t("coach.proposalHistory")} />
+      <Card className="border-2 border-brand-100 bg-brand-50/30 dark:border-brand-900/40 dark:bg-brand-900/10">
+        <CardHeader title={t("coach.proposalHistory")} subtitle={t("coach.reviewZone")} />
         <div className="space-y-3">
           {proposals.length === 0 ? (
             <p className="text-sm text-gray-400">{t("coach.noCoachProposals")}</p>
           ) : proposals.map((proposal) => (
-            <div key={proposal.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+            <div key={proposal.id} className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <div>
+                <div className="space-y-2">
+                  <OwnershipChip owner="coach" />
                   <p className="font-medium text-gray-900 dark:text-white capitalize">
                     {proposalLabel(proposal)}
                   </p>
@@ -985,15 +1142,16 @@ export default function CoachClientPage() {
                     {proposalStatusLabel(proposal.status)} / {new Date(proposal.createdAt).toLocaleString()}
                   </p>
                 </div>
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                  proposal.status === "accepted"
-                    ? "bg-green-100 text-green-700"
-                    : proposal.status === "rejected"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-amber-100 text-amber-700"
-                }`}>
-                  {proposalStatusLabel(proposal.status)}
-                </span>
+                <StatusChip
+                  status={
+                    proposal.status === "accepted"
+                      ? "accepted"
+                      : proposal.status === "rejected"
+                        ? "rejected"
+                        : "pending"
+                  }
+                  label={proposalStatusLabel(proposal.status)}
+                />
               </div>
               {proposal.diffSummary?.length ? (
                 <div>
