@@ -101,12 +101,21 @@ export default function Dashboard() {
   const coachConnectSectionRef = useRef<HTMLDivElement | null>(null);
   const coachConnectInputRef = useRef<HTMLInputElement | null>(null);
   const [inviteAccepted, setInviteAccepted] = useState(false);
+  const [coachLinkedBadge, setCoachLinkedBadge] = useState(false);
 
   useEffect(() => {
     if (!proposalUpdateBanner) return;
     const timer = window.setTimeout(() => setProposalUpdateBanner(null), 4000);
     return () => window.clearTimeout(timer);
   }, [proposalUpdateBanner]);
+
+  useEffect(() => {
+    if (!user?.id || typeof window === "undefined") {
+      setCoachLinkedBadge(false);
+      return;
+    }
+    setCoachLinkedBadge(localStorage.getItem(`fitai:coach-linked:${user.id}`) === "1");
+  }, [user?.id]);
 
   // ── Toast ─────────────────────────────────────────────────────────────────────
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -226,8 +235,15 @@ export default function Dashboard() {
       await coachApi.acceptInvite(code);
       setInviteStatus(t("coach.coachLinkActivated"));
       setInviteAccepted(true);
+      setCoachLinkedBadge(true);
+      if (user?.id && typeof window !== "undefined") {
+        localStorage.setItem(`fitai:coach-linked:${user.id}`, "1");
+      }
       setInviteCode("");
+      await refreshCoachProposals("invite-accepted");
+      setProposalUpdateBanner(t("coach.coachConnectedBanner"));
       emitDataChanged("coach-link");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error: any) {
       setInviteAccepted(false);
       setInviteStatus(error?.response?.data?.error ?? t("coach.failedAcceptInvite"));
@@ -494,7 +510,7 @@ export default function Dashboard() {
   const showCoachUpdates =
     !isCoachRole &&
     !isInternalRole &&
-    (loadingCoachProposals || pendingCoachProposals.length > 0 || Boolean(proposalUpdateBanner));
+    (loadingCoachProposals || pendingCoachProposals.length > 0 || Boolean(proposalUpdateBanner) || inviteAccepted);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 lg:space-y-8">
@@ -504,9 +520,21 @@ export default function Dashboard() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
             {greeting}, {displayName} 👋
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">{fmtWeekdayFullDate(new Date())}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400">{fmtWeekdayFullDate(new Date())}</p>
+            {coachLinkedBadge ? (
+              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200">
+                {t("coach.coachConnectedBadge")}
+              </span>
+            ) : null}
+          </div>
         </div>
         <div className="flex gap-2 sm:gap-3">
+          {!isCoachRole && !isInternalRole && (
+            <Button variant="secondary" size="sm" onClick={scrollToCoachConnect} className="flex-1 sm:flex-none">
+              {t("coach.haveCoachCode")}
+            </Button>
+          )}
           <Button variant="secondary" size="sm" onClick={() => navigate("/notifications")} className="flex-1 sm:flex-none">
             {t("nav.notifications")}
           </Button>
@@ -1455,13 +1483,16 @@ export default function Dashboard() {
                   {inviteAccepted ? (
                     <div className="space-y-4">
                       <div className="flex items-start gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-green-600 text-lg text-white shadow-sm">
-                          {"\u2713"}
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-lg text-white shadow-sm">
+                          {"\u{1F9D1}"}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                            {t("coach.coachConnectedTitle")}
-                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                              {t("coach.coachConnectedTitle")}
+                            </p>
+                            <UserRoleBadge role="coach" />
+                          </div>
                           <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                             {t("coach.coachConnectedBody")}
                           </p>

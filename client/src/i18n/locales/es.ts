@@ -1230,6 +1230,8 @@ const es: Translation = {
     haveCoachCodeHelp: "Ve directo a la sección para conectar con tu coach.",
     coachConnectedTitle: "Coach conectado",
     coachConnectedBody: "Tu cuenta ya está vinculada. Las actualizaciones y propuestas pendientes del coach aparecerán en tu panel y notificaciones.",
+    coachConnectedBadge: "Conectado con coach",
+    coachConnectedBanner: "Coach conectado. Tus actualizaciones del coach están listas para revisarse arriba.",
     reviewCoachUpdates: "Revisar actualizaciones del coach",
     inviteCodePlaceholder: "AB12CD34",
     connect: "Conectar",

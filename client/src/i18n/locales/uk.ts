@@ -937,6 +937,8 @@ const uk: Translation = {
     haveCoachCodeHelp: "Швидко перейти до секції підключення тренера.",
     coachConnectedTitle: "Тренера підключено",
     coachConnectedBody: "Ваш акаунт уже пов’язано. Оновлення тренера та пропозиції з’являться на панелі й у сповіщеннях.",
+    coachConnectedBadge: "Підключено до тренера",
+    coachConnectedBanner: "Тренера підключено. Оновлення тренера готові для перегляду вище.",
     reviewCoachUpdates: "Переглянути оновлення тренера",
     inviteCodePlaceholder: "AB12CD34",
     connect: "Підключити",

@@ -5,15 +5,15 @@ Most recent session first.
 ## 2026-05-10 - Dashboard coach-code shortcut and success state
 
 ### Goal
-- Make the coach-code entry even easier to discover and feel more complete by adding a top shortcut, auto-scroll/focus behavior, and a clear post-connect success state.
+- Make the coach-code entry even easier to discover and feel more complete by adding a stronger top shortcut, auto-scroll/focus behavior, a small persistent connected badge, and a clear post-connect success state.
 
 ### Files modified
-- `client/src/pages/dashboard/Dashboard.tsx` - added a `Have a coach code?` shortcut near the top of the dashboard, wired it to scroll and focus the end-of-dashboard connect input, and replaced the plain success line with a dedicated coach-connected success card after invite acceptance
+- `client/src/pages/dashboard/Dashboard.tsx` - added a visible `Have a coach code?` header action plus helper shortcut, wired both to scroll and focus the end-of-dashboard connect input, persisted a lightweight connected badge for the dashboard header, and replaced the plain success line with a dedicated coach-connected success card after invite acceptance
 - `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the shortcut, success-state, and follow-up action labels
 
 ### Notes
 - The underlying invite acceptance flow is unchanged; this pass is about visibility, focus, and feedback.
-- After a successful link, the dashboard now confirms the connection more clearly and guides the user toward reviewing coach updates instead of leaving them on a generic status line.
+- After a successful link, the dashboard now shows a top coach-updates banner, a stronger success card, and a small persistent connected badge so the linked state stays visible.
 
 ## 2026-05-10 - Dashboard coach-code entry moved to a dedicated end section
 
