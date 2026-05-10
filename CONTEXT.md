@@ -13,6 +13,7 @@ Read this at the start of every session before touching any code.
 - The top-level coach shell now includes a small "needs attention today" summary plus recent notifications so coaches can spot overdue follow-ups without opening each client.
 - The coach dashboard now also exposes a dedicated "clients needing attention" drill-down card, and the user dashboard raises client-side proposal update notifications when coach proposal data changes.
 - Coach mode is no longer hidden from admin/developer users in navigation; internal users now see coach as a first-class shell entry alongside `/internal`.
+- Coach profiles now render a reusable `Verified Coach` badge beside coach usernames/names in proposals, coach comments, and internal workspace views.
 - Nutrition food search is now expected to be language-agnostic: backend search normalizes accents/case/punctuation, token-matches terms in any order, checks English names, aliases, all stored localized names, AI-translated queries, and deterministic multilingual query expansions before translating returned names into the selected UI language.
 - Shared navigation now uses Unicode escape-based emoji icons in `Sidebar.tsx` and `BottomNav.tsx` instead of raw emoji literals, because the previous source bytes were vulnerable to mojibake.
 - The base font stack now explicitly includes `Apple Color Emoji`, `Segoe UI Emoji`, and `Noto Color Emoji` so page-menu icons survive mobile browser font fallback more reliably.

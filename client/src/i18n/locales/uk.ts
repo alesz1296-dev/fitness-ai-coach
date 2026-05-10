@@ -853,6 +853,7 @@ const uk: Translation = {
     proposalAcceptedNotification: "Пропозицію тренера прийнято",
     proposalRejectedNotification: "Пропозицію тренера відхилено",
     proposalCommentSaved: "Коментар до пропозиції збережено",
+    verifiedCoach: "Підтверджений тренер",
     publishDrafts: "Опублікувати чернетки тренера",
     workoutTemplate: "Шаблон тренування",
     selectTemplate: "Вибрати шаблон",

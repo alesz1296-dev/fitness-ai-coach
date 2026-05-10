@@ -2,6 +2,23 @@
 
 Most recent session first.
 
+## 2026-05-09 - Verified coach identity badges
+
+### Goal
+- Make it obvious when a displayed profile belongs to a coach so users can trust coach-linked names in proposals, comments, and internal workspace views.
+
+### Files modified
+- `client/src/components/user/UserRoleBadge.tsx` - added a reusable role badge for coach profiles
+- `client/src/pages/dashboard/Dashboard.tsx` - showed the badge beside coach proposal authors
+- `client/src/pages/coach/CoachClientPage.tsx` - showed the badge beside proposal comment authors
+- `client/src/pages/admin/AdminUserPage.tsx` - showed the badge beside the internal workspace name when the viewed user is a coach
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the new coach badge label
+- `LOG.md`, `CONTEXT.md`, `PRIORITIES.md`, `ARCHITECTURE.md` - updated project memory after the implementation pass
+
+### Notes
+- The badge is intentionally lightweight and only renders for coach accounts for now.
+- The same reusable component can be extended later for other verified roles if needed.
+
 ## 2026-05-09 - Coach attention drill-down, proposal toasts, and admin coach entry points
 
 ### Goal

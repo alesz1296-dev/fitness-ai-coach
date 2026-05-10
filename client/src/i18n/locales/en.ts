@@ -328,7 +328,7 @@ export interface Translation {
     clientActivity: string; recentWorkouts: string; noLoggedWorkouts: string;
     activeCalorieGoal: string; noActiveCalorieGoal: string; currentMealPlans: string; noMealPlans: string;
     adherenceWidgets: string; weeklyCheckIns: string; noWeeklyCheckIns: string; calorieWidget: string; proteinWidget: string; workoutWidget: string; weightWidget: string; checkInSummary: string; fatigue: string; soreness: string; hunger: string; sleepQuality: string; performance: string;
-    needsAttentionToday: string; attentionClients: string; attentionClientsSub: string; notifications: string; notificationsSub: string; noNotifications: string; reusableLibraries: string; reusableLibrariesSub: string; workoutLibraries: string; mealLibraries: string; overdueCheckIns: string; swapWorkout: string; swapMeal: string; addCoachNote: string; coachNote: string; notePlaceholder: string; saveNote: string; noWorkoutLibraries: string; noMealLibraries: string; newProposalNotification: string; newProposalsNotification: string; proposalUpdatedNotification: string; proposalAcceptedNotification: string; proposalRejectedNotification: string; proposalCommentSaved: string;
+    needsAttentionToday: string; attentionClients: string; attentionClientsSub: string; notifications: string; notificationsSub: string; noNotifications: string; reusableLibraries: string; reusableLibrariesSub: string; workoutLibraries: string; mealLibraries: string; overdueCheckIns: string; swapWorkout: string; swapMeal: string; addCoachNote: string; coachNote: string; notePlaceholder: string; saveNote: string; noWorkoutLibraries: string; noMealLibraries: string; newProposalNotification: string; newProposalsNotification: string; proposalUpdatedNotification: string; proposalAcceptedNotification: string; proposalRejectedNotification: string; proposalCommentSaved: string; verifiedCoach: string;
     publishDrafts: string; workoutTemplate: string; selectTemplate: string; overwrite: string;
     sendWorkoutDraft: string; mealPlan: string; selectMealPlan: string; sendMealDraft: string;
     goalMacros: string; selectCalorieGoal: string; fallbackGoalName: string; sendGoalDraft: string;
@@ -1361,6 +1361,7 @@ const en: Translation = {
     proposalAcceptedNotification: "Coach proposal accepted",
     proposalRejectedNotification: "Coach proposal rejected",
     proposalCommentSaved: "Proposal comment saved",
+    verifiedCoach: "Verified Coach",
     publishDrafts: "Publish coach drafts",
     workoutTemplate: "Workout template",
     selectTemplate: "Select template",

@@ -80,6 +80,7 @@ _Last updated: 2026-05-09_
 | - | Weekly client check-ins and coach adherence widgets - coach workspace now shows recent weekly reviews as check-ins plus a compact calorie/protein/workout/weight adherence summary | Platform/Coach Mode | P1 | Done |
 | - | Coach libraries, weekly notes, and attention summary - reusable favorites, quick client swap shortcuts, per-week coach notes, and a lightweight "needs attention today" coach dashboard | Platform/Coach Mode | P1 | Done |
 | - | Coach attention drill-down + proposal toasts + admin coach entry - dedicated clients-needing-attention list, client-side proposal update notifications, and coach shell visible from admin/dev navigation | Platform/Coach Mode | P1 | Done |
+| - | Verified coach identity badges - show a visible `Verified Coach` label next to coach names in proposals, comments, and internal workspaces | Platform/Coach Mode | P2 | Done |
 
 ---
 

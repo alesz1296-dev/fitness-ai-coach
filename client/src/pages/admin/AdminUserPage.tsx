@@ -4,6 +4,7 @@ import { adminApi } from "../../api";
 import type { InternalUserWorkspace } from "../../types";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { UserRoleBadge } from "../../components/user/UserRoleBadge";
 import { useAuthStore } from "../../store/authStore";
 import { useTranslation } from "../../i18n";
 
@@ -98,7 +99,8 @@ export default function AdminUserPage() {
             {t("admin.backToInternal")}
           </Button>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-            {t("admin.workspaceTitle", { user: profileName })}
+            {t("admin.workspaceTitle", { user: profileName })}{" "}
+            <UserRoleBadge role={workspace.user.role} className="ml-2 align-middle" />
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{workspace.user.email}</p>
         </div>

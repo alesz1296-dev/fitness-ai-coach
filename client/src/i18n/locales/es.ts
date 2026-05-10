@@ -1147,6 +1147,7 @@ const es: Translation = {
     proposalAcceptedNotification: "Propuesta del coach aceptada",
     proposalRejectedNotification: "Propuesta del coach rechazada",
     proposalCommentSaved: "Comentario de la propuesta guardado",
+    verifiedCoach: "Coach verificado",
     publishDrafts: "Publicar borradores del coach",
     workoutTemplate: "Plantilla de entrenamiento",
     selectTemplate: "Seleccionar plantilla",

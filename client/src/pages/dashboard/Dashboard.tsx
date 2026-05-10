@@ -11,6 +11,7 @@ import { useTranslation } from "../../i18n";
 import { dashboardApi, calorieGoalsApi, coachApi, weightApi } from "../../api";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { UserRoleBadge } from "../../components/user/UserRoleBadge";
 import WeeklyPlanWidget from "../../components/WeeklyPlanWidget";
 import { useIsDark } from "../../hooks/useDarkMode";
 import { useDraggableWeightFab } from "../../hooks/useDraggableWeightFab";
@@ -1079,7 +1080,8 @@ export default function Dashboard() {
                                 {proposalLabel}
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {t("coach.fromCoach", { name: coachName })}
+                                {t("coach.fromCoach", { name: coachName })}{" "}
+                                <UserRoleBadge role={proposal.coach?.role} />
                               </p>
                               {proposal.note && (
                                 <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
@@ -1120,7 +1122,8 @@ export default function Dashboard() {
                                       <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
                                         {comment.author?.firstName ||
                                           comment.author?.username ||
-                                          t("coach.title")}
+                                          t("coach.title")}{" "}
+                                        <UserRoleBadge role={comment.author?.role} className="ml-1" />
                                       </p>
                                       <p className="text-xs text-gray-700 dark:text-gray-200 mt-1">{comment.body}</p>
                                     </div>

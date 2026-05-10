@@ -23,6 +23,7 @@ import { Button } from "../../components/ui/Button";
 import { useAuthStore } from "../../store/authStore";
 import { useTranslation } from "../../i18n";
 import { FoodPicker } from "../../components/food/FoodPicker";
+import { UserRoleBadge } from "../../components/user/UserRoleBadge";
 import { durationToWeeks, type ScaledFoodItem } from "../../lib/foodSearch";
 import { emitDataChanged } from "../../lib/appEvents";
 
@@ -1020,7 +1021,8 @@ export default function CoachClientPage() {
                     proposal.comments?.map((comment) => (
                       <div key={comment.id} className="rounded-lg bg-gray-50 dark:bg-gray-800/70 px-3 py-2">
                         <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-                          {comment.author?.firstName || comment.author?.username || t("coach.title")}
+                          {comment.author?.firstName || comment.author?.username || t("coach.title")}{" "}
+                          <UserRoleBadge role={comment.author?.role} className="ml-1" />
                         </p>
                         <p className="text-xs text-gray-700 dark:text-gray-200 mt-1">{comment.body}</p>
                       </div>
