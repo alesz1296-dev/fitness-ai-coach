@@ -62,6 +62,8 @@ model User {
   coachInviteAcceptances CoachInvite[] @relation("CoachInvitesAsClient")
   proposalsCreated CoachProposal[] @relation("CoachProposalCreatedBy")
   proposalsReceived CoachProposal[] @relation("CoachProposalForClient")
+  proposalCommentsAuthored CoachProposalComment[] @relation("CoachProposalCommentAuthor")
+  coachLibraryFavorites CoachLibraryFavorite[]
   auditLogs AuditLog[] @relation("AuditActor")
   featureFlagsUpdated FeatureFlag[] @relation("FeatureFlagUpdatedBy")
   impersonationSessionsCreated ImpersonationSession[] @relation("ImpersonationActor")
