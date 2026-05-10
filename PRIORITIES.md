@@ -1,6 +1,6 @@
 # FitAI Coach - Task Priorities
 
-_Last updated: 2026-05-07_
+_Last updated: 2026-05-09_
 
 > Format: **P1** = must-ship · **P2** = high value · **P3** = deferred/nice-to-have
 
@@ -71,6 +71,10 @@ _Last updated: 2026-05-07_
 | - | Internal metrics + audit + read-only view - `/internal` now shows live usage signals, exposes recent audit logs, and supports a safe read-only user view route with a visible banner | Platform/Internal Tools | P1 | Done |
 | - | Internal impersonation + ops foundation - added `ImpersonationSession`, global impersonation banner, feature-flag management, content inventory, repair tools, and deeper coach/internal audit coverage | Platform/Internal Tools | P1 | Done |
 | - | Navigation emoji rendering repair - replaced corrupted nav emoji literals with Unicode escapes and added explicit emoji font fallbacks for mobile/browser reliability | UX/i18n | P1 | Done |
+| - | Coach scratch meal plans and advanced calendar drafts - coaches can send scratch meal-plan proposals with duration, override duration on existing meal plans, and optionally generate custom per-day workout calendar proposals across weeks/months | Coach Mode | P1 | Done |
+| - | Language-agnostic food search - Nutrition DB search now matches normalized multilingual queries such as `Pan Integral` against English names, aliases, localized names, AI-translated query text, and deterministic term expansions while returning localized display names | Nutrition/i18n | P1 | Done |
+| - | Shared food picker and coach meal editor - Meal Planner and Coach now share localized food picking/scaling, and coach scratch meal plans use structured editable meal cards with flexible week/month duration | Coach Mode/Nutrition UX | P1 | Done |
+| - | Dashboard supplement calorie sync - Dashboard now counts daily protein shake/custom supplement calories and macros from Nutrition's per-day supplement layer | Dashboard/Nutrition | P1 | Done |
 
 ---
 
@@ -79,6 +83,11 @@ _Last updated: 2026-05-07_
 Foundation work is complete. The roadmap below only shows live dependencies and remaining work.
 
 Recently cleared:
+- Dashboard nutrition cards now include daily supplement macros, so protein shakes counted in Nutrition also affect Dashboard calories/macros.
+- Coach scratch meal planning now has a real food-search editor with editable quantities/macros, per-meal/day totals, and customizable week/month duration.
+- Meal Planner add-food and Nutrition macro scaling now use the shared food-search/scaling foundation instead of separate calculations.
+- Nutrition food search now finds foods across languages and returns translated names in the selected app language instead of requiring the user to search in English.
+- Coach/nutritionist publishing now supports scratch meal plans, meal-plan duration selection, and optional advanced per-day workout calendar drafts while keeping client approval required.
 - Shared page-menu emojis now render through Unicode escapes plus emoji-safe font fallbacks instead of brittle raw glyph bytes.
 - Nutrition food database now supports both free-text search and category-browse fallback with a category -> food selector path.
 - Nutrition now exposes a visible clear-day food action in the main header instead of forcing one-by-one deletion.

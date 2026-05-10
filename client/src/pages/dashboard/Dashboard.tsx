@@ -16,6 +16,7 @@ import { useIsDark } from "../../hooks/useDarkMode";
 import { useDraggableWeightFab } from "../../hooks/useDraggableWeightFab";
 import type { CoachProposal, DashboardData } from "../../types";
 import { emitDataChanged, emitWeightLogged } from "../../lib/appEvents";
+import { getSupplementMacrosForDate } from "../../lib/supplementMacros";
 
 // ── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, color, icon, onClick }: {
@@ -94,6 +95,31 @@ export default function Dashboard() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const showToast = (msg: string) => { setToastMsg(msg); setTimeout(() => setToastMsg(null), 3000); };
 
+  const applySupplementTotals = (dashboard: DashboardData): DashboardData => {
+    const supplementTotals = getSupplementMacrosForDate(dashboard.today.date || format(new Date(), "yyyy-MM-dd"));
+    if (
+      !supplementTotals.calories &&
+      !supplementTotals.protein &&
+      !supplementTotals.carbs &&
+      !supplementTotals.fats
+    ) {
+      return dashboard;
+    }
+
+    return {
+      ...dashboard,
+      today: {
+        ...dashboard.today,
+        totals: {
+          calories: dashboard.today.totals.calories + supplementTotals.calories,
+          protein: dashboard.today.totals.protein + supplementTotals.protein,
+          carbs: dashboard.today.totals.carbs + supplementTotals.carbs,
+          fats: dashboard.today.totals.fats + supplementTotals.fats,
+        },
+      },
+    };
+  };
+
   // ── Weight FAB ───────────────────────────────────────────────────────────────
   const [showWeightFab,  setShowWeightFab]  = useState(false);
   const [weightVal,      setWeightVal]      = useState("");
@@ -107,10 +133,11 @@ export default function Dashboard() {
   const [savingEdit, setSavingEdit]   = useState(false);
 
   const refreshDash = () => dashboardApi.get().then((r) => {
-    setData(r.data);
+    const nextDashboard = applySupplementTotals(r.data);
+    setData(nextDashboard);
     // Always re-fetch projection after any weight change — it seeds from latest weight
-    if (r.data.activeGoal) {
-      calorieGoalsApi.getProjection(r.data.activeGoal.id)
+    if (nextDashboard.activeGoal) {
+      calorieGoalsApi.getProjection(nextDashboard.activeGoal.id)
         .then((pr) => setProjection({ projected: pr.data.projected, actual: pr.data.actual }))
         .catch(() => {});
     }
@@ -222,9 +249,10 @@ export default function Dashboard() {
       emitWeightLogged(w);
       // Refresh dashboard AND projection — projection seeds from latest weight so must re-fetch
       dashboardApi.get().then((r) => {
-        setData(r.data);
-        if (r.data.activeGoal) {
-          calorieGoalsApi.getProjection(r.data.activeGoal.id)
+        const nextDashboard = applySupplementTotals(r.data);
+        setData(nextDashboard);
+        if (nextDashboard.activeGoal) {
+          calorieGoalsApi.getProjection(nextDashboard.activeGoal.id)
             .then((pr) => setProjection({ projected: pr.data.projected, actual: pr.data.actual }))
             .catch(() => {});
         }
@@ -236,10 +264,11 @@ export default function Dashboard() {
   useEffect(() => {
     dashboardApi.get()
       .then((res) => {
-        setData(res.data);
+        const nextDashboard = applySupplementTotals(res.data);
+        setData(nextDashboard);
         // Load projection if there's an active goal
-        if (res.data.activeGoal) {
-          calorieGoalsApi.getProjection(res.data.activeGoal.id)
+        if (nextDashboard.activeGoal) {
+          calorieGoalsApi.getProjection(nextDashboard.activeGoal.id)
             .then((pr) => setProjection({ projected: pr.data.projected, actual: pr.data.actual }))
             .catch(() => { /* no projection available */ });
         }

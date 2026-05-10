@@ -11,6 +11,23 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { useAuthStore } from "../../store/authStore";
 import { useTranslation } from "../../i18n";
+import { FoodPicker } from "../../components/food/FoodPicker";
+import { durationToWeeks, type ScaledFoodItem } from "../../lib/foodSearch";
+
+type MealName = "breakfast" | "lunch" | "dinner" | "snack";
+type DurationMode = "weeks" | "months";
+
+interface CustomWorkoutPattern {
+  dayIndex: number;
+  workoutName: string;
+  muscleGroups: string;
+  isRestDay: boolean;
+  notes: string;
+}
+
+interface ScratchMealItem extends ScaledFoodItem {
+  id: string;
+}
 
 const WEEKDAYS = [
   { label: "Mon", value: 0 },
@@ -21,6 +38,88 @@ const WEEKDAYS = [
   { label: "Sat", value: 5 },
   { label: "Sun", value: 6 },
 ];
+
+const MEALS: MealName[] = ["breakfast", "lunch", "dinner", "snack"];
+
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
+const mondayIso = () => {
+  const date = new Date();
+  const day = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - day);
+  return date.toISOString().slice(0, 10);
+};
+
+const addDays = (iso: string, days: number) => {
+  const date = new Date(`${iso}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
+const addMonths = (iso: string, months: number) => {
+  const date = new Date(`${iso}T00:00:00`);
+  date.setMonth(date.getMonth() + months);
+  return date.toISOString().slice(0, 10);
+};
+
+const makeWorkoutPattern = (): CustomWorkoutPattern[] =>
+  WEEKDAYS.map((day) => ({
+    dayIndex: day.value,
+    workoutName: "",
+    muscleGroups: "",
+    isRestDay: day.value >= 5,
+    notes: "",
+  }));
+
+const scratchKey = (dayIndex: number, meal: MealName) => `${dayIndex}:${meal}`;
+
+function sumScratchItems(items: ScratchMealItem[]) {
+  return items.reduce(
+    (acc, item) => ({
+      calories: acc.calories + Number(item.calories || 0),
+      protein: acc.protein + Number(item.protein || 0),
+      carbs: acc.carbs + Number(item.carbs || 0),
+      fats: acc.fats + Number(item.fats || 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fats: 0 },
+  );
+}
+
+function buildCustomWorkoutDays(
+  pattern: CustomWorkoutPattern[],
+  startDate: string,
+  mode: DurationMode,
+  amount: number,
+) {
+  const endDate =
+    mode === "weeks"
+      ? addDays(startDate, Math.max(1, amount) * 7)
+      : addMonths(startDate, Math.max(1, amount));
+  const days = [];
+  let cursor = startDate;
+
+  while (cursor < endDate && days.length < 366) {
+    const date = new Date(`${cursor}T00:00:00`);
+    const isoDay = (date.getDay() + 6) % 7;
+    const day = pattern.find((item) => item.dayIndex === isoDay);
+
+    if (day && (day.isRestDay || day.workoutName.trim())) {
+      days.push({
+        date: cursor,
+        workoutName: day.workoutName.trim() || undefined,
+        muscleGroups: day.muscleGroups
+          .split(",")
+          .map((group) => group.trim())
+          .filter(Boolean),
+        isRestDay: day.isRestDay,
+        notes: day.notes.trim() || undefined,
+      });
+    }
+    cursor = addDays(cursor, 1);
+  }
+
+  return days;
+}
 
 export default function CoachClientPage() {
   const navigate = useNavigate();
@@ -43,7 +142,19 @@ export default function CoachClientPage() {
   const [weekdays, setWeekdays] = useState<number[]>([0]);
   const [months, setMonths] = useState(1);
   const [overwrite, setOverwrite] = useState(false);
+  const [workoutMode, setWorkoutMode] = useState<"quick" | "custom">("quick");
+  const [customStartDate, setCustomStartDate] = useState(todayIso());
+  const [customDurationMode, setCustomDurationMode] = useState<DurationMode>("weeks");
+  const [customDurationValue, setCustomDurationValue] = useState(4);
+  const [customWorkoutPattern, setCustomWorkoutPattern] = useState(makeWorkoutPattern);
+  const [mealMode, setMealMode] = useState<"existing" | "scratch">("existing");
+  const [mealDurationMode, setMealDurationMode] = useState<DurationMode>("weeks");
+  const [mealDurationValue, setMealDurationValue] = useState(4);
+  const [scratchMealName, setScratchMealName] = useState(t("coach.scratchMealDefaultName"));
+  const [scratchWeekStart, setScratchWeekStart] = useState(mondayIso());
+  const [scratchMeals, setScratchMeals] = useState<Record<string, ScratchMealItem[]>>({});
   const [sending, setSending] = useState<null | "workout" | "meal" | "goal">(null);
+  const mealDurationWeeks = durationToWeeks(mealDurationMode, mealDurationValue);
 
   const load = async () => {
     const [overview, templatesRes, mealPlansRes, goalsRes] = await Promise.all([
@@ -82,20 +193,95 @@ export default function CoachClientPage() {
 
   const toggleWeekday = (value: number) => {
     setWeekdays((prev) =>
-      prev.includes(value) ? prev.filter((day) => day !== value) : [...prev, value].sort((a, b) => a - b),
+      prev.includes(value)
+        ? prev.filter((day) => day !== value)
+        : [...prev, value].sort((a, b) => a - b),
     );
   };
 
+  const updateWorkoutPattern = (
+    dayIndex: number,
+    patch: Partial<CustomWorkoutPattern>,
+  ) => {
+    setCustomWorkoutPattern((prev) =>
+      prev.map((day) => (day.dayIndex === dayIndex ? { ...day, ...patch } : day)),
+    );
+  };
+
+  const addScratchMealItem = (dayIndex: number, meal: MealName, food: ScaledFoodItem) => {
+    const key = scratchKey(dayIndex, meal);
+    setScratchMeals((prev) => ({
+      ...prev,
+      [key]: [
+        ...(prev[key] ?? []),
+        { ...food, id: `${Date.now()}-${Math.random().toString(36).slice(2)}` },
+      ],
+    }));
+  };
+
+  const updateScratchMealItem = (
+    dayIndex: number,
+    meal: MealName,
+    itemId: string,
+    patch: Partial<ScratchMealItem>,
+  ) => {
+    const key = scratchKey(dayIndex, meal);
+    setScratchMeals((prev) => ({
+      ...prev,
+      [key]: (prev[key] ?? []).map((item) => (item.id === itemId ? { ...item, ...patch } : item)),
+    }));
+  };
+
+  const removeScratchMealItem = (dayIndex: number, meal: MealName, itemId: string) => {
+    const key = scratchKey(dayIndex, meal);
+    setScratchMeals((prev) => ({
+      ...prev,
+      [key]: (prev[key] ?? []).filter((item) => item.id !== itemId),
+    }));
+  };
+
+  const buildScratchMealPlanDays = () =>
+    WEEKDAYS.map((day) => ({
+      dayIndex: day.value,
+      meals: MEALS.map((meal) => ({
+        meal,
+        items: (scratchMeals[scratchKey(day.value, meal)] ?? []).map(({ id: _id, ...item }) => item),
+      })).filter((meal) => meal.items.length > 0),
+    }));
+
+  const hasScratchMealItems = useMemo(
+    () => Object.values(scratchMeals).some((items) => items.length > 0),
+    [scratchMeals],
+  );
+
   const sendWorkoutProposal = async () => {
-    if (!selectedTemplateId) return;
+    if (workoutMode === "quick" && !selectedTemplateId) return;
     setSending("workout");
     try {
-      await coachApi.createProposal({
-        clientId: clientNumericId,
-        type: "workout",
-        sourceId: Number(selectedTemplateId),
-        payload: { weekdays, months, overwrite },
-      });
+      if (workoutMode === "custom") {
+        await coachApi.createProposal({
+          clientId: clientNumericId,
+          type: "workout",
+          sourceId: 0,
+          payload: {
+            mode: "custom",
+            overwrite,
+            days: buildCustomWorkoutDays(
+              customWorkoutPattern,
+              customStartDate,
+              customDurationMode,
+              customDurationValue,
+            ),
+          },
+        });
+      } else {
+        await coachApi.createProposal({
+          clientId: clientNumericId,
+          type: "workout",
+          sourceId: Number(selectedTemplateId),
+          payload: { mode: "quick", weekdays, months, overwrite },
+        });
+      }
       await load();
     } finally {
       setSending(null);
@@ -103,14 +289,33 @@ export default function CoachClientPage() {
   };
 
   const sendMealProposal = async () => {
-    if (!selectedMealPlanId) return;
+    if (mealMode === "existing" && !selectedMealPlanId) return;
+    if (mealMode === "scratch" && !hasScratchMealItems) return;
     setSending("meal");
     try {
-      await coachApi.createProposal({
-        clientId: clientNumericId,
-        type: "meal",
-        sourceId: Number(selectedMealPlanId),
-      });
+      if (mealMode === "scratch") {
+        await coachApi.createProposal({
+          clientId: clientNumericId,
+          type: "meal",
+          sourceId: 0,
+          payload: {
+            mode: "scratch",
+            mealPlan: {
+              name: scratchMealName,
+              weekStart: scratchWeekStart,
+              durationWeeks: mealDurationWeeks,
+              days: buildScratchMealPlanDays(),
+            },
+          },
+        });
+      } else {
+        await coachApi.createProposal({
+          clientId: clientNumericId,
+          type: "meal",
+          sourceId: Number(selectedMealPlanId),
+          payload: { mode: "existing", durationWeeks: mealDurationWeeks },
+        });
+      }
       await load();
     } finally {
       setSending(null);
@@ -189,7 +394,7 @@ export default function CoachClientPage() {
               {activeGoal ? (
                 <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                   <p>{activeGoal.name}</p>
-                  <p>{Math.round(activeGoal.dailyCalories)} kcal · {Math.round(activeGoal.proteinGrams)}p / {Math.round(activeGoal.carbsGrams)}c / {Math.round(activeGoal.fatsGrams)}f</p>
+                  <p>{Math.round(activeGoal.dailyCalories)} kcal / {Math.round(activeGoal.proteinGrams)}p / {Math.round(activeGoal.carbsGrams)}c / {Math.round(activeGoal.fatsGrams)}f</p>
                 </div>
               ) : (
                 <p className="mt-2 text-sm text-gray-400">{t("coach.noActiveCalorieGoal")}</p>
@@ -202,7 +407,7 @@ export default function CoachClientPage() {
                   <p className="text-sm text-gray-400">{t("coach.noMealPlans")}</p>
                 ) : clientPlans.map((plan) => (
                   <p key={plan.id} className="text-sm text-gray-700 dark:text-gray-300">
-                    {plan.name} · {plan.durationWeeks} week(s)
+                    {plan.name} / {t("coach.weekCount", { count: plan.durationWeeks })}
                   </p>
                 ))}
               </div>
@@ -212,71 +417,248 @@ export default function CoachClientPage() {
 
         <Card>
           <CardHeader title={t("coach.publishDrafts")} />
-          <div className="space-y-5">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("coach.workoutTemplate")}</label>
-              <select
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
-                value={selectedTemplateId}
-                onChange={(e) => setSelectedTemplateId(e.target.value ? Number(e.target.value) : "")}
-              >
-                <option value="">{t("coach.selectTemplate")}</option>
-                {myTemplates.map((template) => (
-                  <option key={template.id} value={template.id}>{template.name}</option>
-                ))}
-              </select>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {WEEKDAYS.map((day) => (
-                  <button
-                    key={day.value}
-                    onClick={() => toggleWeekday(day.value)}
-                    className={`px-2.5 py-1 rounded-full text-xs border ${weekdays.includes(day.value) ? "bg-brand-600 text-white border-brand-600" : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300"}`}
-                  >
-                    {day.label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <select
-                  className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
-                  value={months}
-                  onChange={(e) => setMonths(Number(e.target.value))}
+          <div className="space-y-6">
+            <section className="space-y-3">
+              <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 p-1 text-xs">
+                <button
+                  className={`flex-1 rounded-md px-2 py-1.5 ${workoutMode === "quick" ? "bg-brand-600 text-white" : "text-gray-600 dark:text-gray-300"}`}
+                  onClick={() => setWorkoutMode("quick")}
                 >
-                  <option value={1}>{t("coach.oneMonth")}</option>
-                  <option value={2}>{t("coach.twoMonths")}</option>
-                  <option value={3}>{t("coach.threeMonths")}</option>
-                </select>
-                <label className="text-sm flex items-center gap-2">
-                  <input type="checkbox" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} />
-                  {t("coach.overwrite")}
-                </label>
+                  {t("coach.quickSchedule")}
+                </button>
+                <button
+                  className={`flex-1 rounded-md px-2 py-1.5 ${workoutMode === "custom" ? "bg-brand-600 text-white" : "text-gray-600 dark:text-gray-300"}`}
+                  onClick={() => setWorkoutMode("custom")}
+                >
+                  {t("coach.advancedPerDay")}
+                </button>
               </div>
+
+              {workoutMode === "quick" ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("coach.workoutTemplate")}</label>
+                  <select
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                    value={selectedTemplateId}
+                    onChange={(e) => setSelectedTemplateId(e.target.value ? Number(e.target.value) : "")}
+                  >
+                    <option value="">{t("coach.selectTemplate")}</option>
+                    {myTemplates.map((template) => (
+                      <option key={template.id} value={template.id}>{template.name}</option>
+                    ))}
+                  </select>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {WEEKDAYS.map((day) => (
+                      <button
+                        key={day.value}
+                        onClick={() => toggleWeekday(day.value)}
+                        className={`px-2.5 py-1 rounded-full text-xs border ${weekdays.includes(day.value) ? "bg-brand-600 text-white border-brand-600" : "border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300"}`}
+                      >
+                        {day.label}
+                      </button>
+                    ))}
+                  </div>
+                  <select
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                    value={months}
+                    onChange={(e) => setMonths(Number(e.target.value))}
+                  >
+                    <option value={1}>{t("coach.oneMonth")}</option>
+                    <option value={2}>{t("coach.twoMonths")}</option>
+                    <option value={3}>{t("coach.threeMonths")}</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="text-xs text-gray-500">
+                      {t("coach.startDate")}
+                      <input className="mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-2 text-sm" type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} />
+                    </label>
+                    <label className="text-xs text-gray-500">
+                      {t("coach.duration")}
+                      <div className="mt-1 flex gap-1">
+                        <input className="w-16 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-2 text-sm" type="number" min={1} max={customDurationMode === "weeks" ? 52 : 12} value={customDurationValue} onChange={(e) => setCustomDurationValue(Number(e.target.value))} />
+                        <select className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-2 text-sm" value={customDurationMode} onChange={(e) => setCustomDurationMode(e.target.value as DurationMode)}>
+                          <option value="weeks">{t("coach.weeks")}</option>
+                          <option value="months">{t("coach.months")}</option>
+                        </select>
+                      </div>
+                    </label>
+                  </div>
+                  <div className="space-y-2">
+                    {customWorkoutPattern.map((day) => (
+                      <div key={day.dayIndex} className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold">{WEEKDAYS[day.dayIndex].label}</span>
+                          <label className="flex items-center gap-1 text-xs text-gray-500">
+                            <input type="checkbox" checked={day.isRestDay} onChange={(e) => updateWorkoutPattern(day.dayIndex, { isRestDay: e.target.checked })} />
+                            {t("coach.restDay")}
+                          </label>
+                        </div>
+                        {!day.isRestDay && (
+                          <>
+                            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm" placeholder={t("coach.workoutNamePlaceholder")} value={day.workoutName} onChange={(e) => updateWorkoutPattern(day.dayIndex, { workoutName: e.target.value })} />
+                            <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm" placeholder={t("coach.muscleGroupsPlaceholder")} value={day.muscleGroups} onChange={(e) => updateWorkoutPattern(day.dayIndex, { muscleGroups: e.target.value })} />
+                          </>
+                        )}
+                        <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm" placeholder={t("coach.notesPlaceholder")} value={day.notes} onChange={(e) => updateWorkoutPattern(day.dayIndex, { notes: e.target.value })} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <label className="text-sm flex items-center gap-2">
+                <input type="checkbox" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} />
+                {t("coach.overwrite")}
+              </label>
               <Button className="w-full" loading={sending === "workout"} onClick={sendWorkoutProposal}>
                 {t("coach.sendWorkoutDraft")}
               </Button>
-            </div>
+            </section>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("coach.mealPlan")}</label>
-              <select
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
-                value={selectedMealPlanId}
-                onChange={(e) => setSelectedMealPlanId(e.target.value ? Number(e.target.value) : "")}
+            <section className="space-y-3">
+              <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 p-1 text-xs">
+                <button
+                  className={`flex-1 rounded-md px-2 py-1.5 ${mealMode === "existing" ? "bg-brand-600 text-white" : "text-gray-600 dark:text-gray-300"}`}
+                  onClick={() => setMealMode("existing")}
+                >
+                  {t("coach.existingPlan")}
+                </button>
+                <button
+                  className={`flex-1 rounded-md px-2 py-1.5 ${mealMode === "scratch" ? "bg-brand-600 text-white" : "text-gray-600 dark:text-gray-300"}`}
+                  onClick={() => setMealMode("scratch")}
+                >
+                  {t("coach.createFromScratch")}
+                </button>
+              </div>
+
+              {mealMode === "existing" ? (
+                <select
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                  value={selectedMealPlanId}
+                  onChange={(e) => setSelectedMealPlanId(e.target.value ? Number(e.target.value) : "")}
+                >
+                  <option value="">{t("coach.selectMealPlan")}</option>
+                  {myMealPlans.map((plan) => (
+                    <option key={plan.id} value={plan.id}>{plan.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <div className="space-y-2">
+                  <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" value={scratchMealName} onChange={(e) => setScratchMealName(e.target.value)} />
+                  <input className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm" type="date" value={scratchWeekStart} onChange={(e) => setScratchWeekStart(e.target.value)} />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{t("coach.searchMealBuilderHint")}</p>
+                  <div className="max-h-80 overflow-y-auto space-y-3 pr-1">
+                    {WEEKDAYS.map((day) => (
+                      <div key={day.value} className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold">{day.label}</p>
+                          {(() => {
+                            const dayItems = MEALS.flatMap((meal) => scratchMeals[scratchKey(day.value, meal)] ?? []);
+                            const totals = sumScratchItems(dayItems);
+                            return (
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                {t("coach.dayTotal")}: {Math.round(totals.calories)} kcal / {Math.round(totals.protein)}P / {Math.round(totals.carbs)}C / {Math.round(totals.fats)}F
+                              </p>
+                            );
+                          })()}
+                        </div>
+                        <div className="space-y-3">
+                          {MEALS.map((meal) => {
+                            const items = scratchMeals[scratchKey(day.value, meal)] ?? [];
+                            const totals = sumScratchItems(items);
+                            return (
+                              <div key={meal} className="rounded-lg bg-gray-50 dark:bg-gray-800/70 p-2 space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">{(t as (k: string) => string)(`mealPlanner.${meal}`)}</p>
+                                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                                    {Math.round(totals.calories)} kcal / {Math.round(totals.protein)}P / {Math.round(totals.carbs)}C / {Math.round(totals.fats)}F
+                                  </p>
+                                </div>
+                                {items.length === 0 ? (
+                                  <p className="text-[11px] text-gray-400">{t("coach.emptyMealHint")}</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {items.map((item) => (
+                                      <div key={item.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-2 space-y-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{item.foodName}</p>
+                                          <button
+                                            type="button"
+                                            className="text-xs text-red-500 hover:text-red-600"
+                                            onClick={() => removeScratchMealItem(day.value, meal, item.id)}
+                                          >
+                                            {t("common.delete")}
+                                          </button>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-1">
+                                          <input className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs" type="number" min={0} step="any" value={item.quantity} onChange={(e) => updateScratchMealItem(day.value, meal, item.id, { quantity: Number(e.target.value) })} />
+                                          <input className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs" value={item.unit} onChange={(e) => updateScratchMealItem(day.value, meal, item.id, { unit: e.target.value })} />
+                                          <input className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs" type="number" min={0} step="any" value={item.calories} onChange={(e) => updateScratchMealItem(day.value, meal, item.id, { calories: Number(e.target.value) })} />
+                                          <input className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs" type="number" min={0} step="any" value={item.protein} onChange={(e) => updateScratchMealItem(day.value, meal, item.id, { protein: Number(e.target.value) })} />
+                                          <input className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs" type="number" min={0} step="any" value={item.carbs} onChange={(e) => updateScratchMealItem(day.value, meal, item.id, { carbs: Number(e.target.value) })} />
+                                          <input className="rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1 text-xs" type="number" min={0} step="any" value={item.fats} onChange={(e) => updateScratchMealItem(day.value, meal, item.id, { fats: Number(e.target.value) })} />
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                <FoodPicker
+                                  compact
+                                  allowMacroEdit
+                                  addLabel={t("coach.addFoodToMeal")}
+                                  onAdd={(food) => addScratchMealItem(day.value, meal, food)}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500 dark:text-gray-400">{t("coach.duration")}</label>
+                <div className="flex gap-2">
+                  <input
+                    className="w-24 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                    type="number"
+                    min={1}
+                    max={mealDurationMode === "weeks" ? 52 : 12}
+                    value={mealDurationValue}
+                    onChange={(e) => setMealDurationValue(Number(e.target.value))}
+                  />
+                  <select
+                    className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                    value={mealDurationMode}
+                    onChange={(e) => setMealDurationMode(e.target.value as DurationMode)}
+                  >
+                    <option value="weeks">{t("coach.weeks")}</option>
+                    <option value="months">{t("coach.months")}</option>
+                  </select>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t("coach.computedDuration", { count: mealDurationWeeks })}
+                </p>
+              </div>
+              <Button
+                className="w-full"
+                loading={sending === "meal"}
+                disabled={mealMode === "scratch" ? !hasScratchMealItems : !selectedMealPlanId}
+                onClick={sendMealProposal}
               >
-                <option value="">{t("coach.selectMealPlan")}</option>
-                {myMealPlans.map((plan) => (
-                  <option key={plan.id} value={plan.id}>{plan.name}</option>
-                ))}
-              </select>
-              <Button className="w-full" loading={sending === "meal"} onClick={sendMealProposal}>
                 {t("coach.sendMealDraft")}
               </Button>
-            </div>
+            </section>
 
-            <div className="space-y-2">
+            <section className="space-y-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("coach.goalMacros")}</label>
               <select
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm"
                 value={selectedGoalId}
                 onChange={(e) => setSelectedGoalId(e.target.value ? Number(e.target.value) : "")}
               >
@@ -290,7 +672,7 @@ export default function CoachClientPage() {
               <Button className="w-full" loading={sending === "goal"} onClick={sendGoalProposal}>
                 {t("coach.sendGoalDraft")}
               </Button>
-            </div>
+            </section>
           </div>
         </Card>
       </div>
@@ -301,13 +683,13 @@ export default function CoachClientPage() {
           {proposals.length === 0 ? (
             <p className="text-sm text-gray-400">{t("coach.noCoachProposals")}</p>
           ) : proposals.map((proposal) => (
-            <div key={proposal.id} className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between gap-3">
+            <div key={proposal.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between gap-3">
               <div>
                 <p className="font-medium text-gray-900 dark:text-white capitalize">
                   {proposalLabel(proposal)}
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {proposalStatusLabel(proposal.status)} · {new Date(proposal.createdAt).toLocaleString()}
+                  {proposalStatusLabel(proposal.status)} / {new Date(proposal.createdAt).toLocaleString()}
                 </p>
               </div>
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${

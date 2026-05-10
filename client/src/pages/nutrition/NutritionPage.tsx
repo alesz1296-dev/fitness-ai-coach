@@ -14,8 +14,10 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { Select } from "../../components/ui/Select";
+import { FoodPicker } from "../../components/food/FoodPicker";
 import { useDraggableWeightFab } from "../../hooks/useDraggableWeightFab";
 import { readAppPrefs } from "../../hooks/useDarkMode";
+import { scaleFoodMacro } from "../../lib/foodSearch";
 
 function getMealOptions(t: (k: string) => string) {
   return [
@@ -206,10 +208,7 @@ function calcMacro(
   unit: string,
   defaultQty: number,
 ): number {
-  const isWeightUnit = /^(g|ml|kg|oz|lb)$/i.test(unit.trim());
-  return isWeightUnit
-    ? Math.round(valuePer100g * qty / 100)
-    : Math.round(valuePer100g * qty / defaultQty);
+  return scaleFoodMacro(valuePer100g, qty, unit, defaultQty);
 }
 
 // ── Food tag filter chips — grouped into 3 categories ────────────────────────
@@ -959,6 +958,20 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
     setFats(String(calcMacro(item.fats,         qty, item.defaultUnit, item.defaultQty)));
   };
 
+  const fillFromSharedPicker = (item: { foodName: string; calories: number; protein: number; carbs: number; fats: number; quantity: number; unit: string }) => {
+    setBaseFood(null);
+    setCookingOil("none");
+    setBreading("none");
+    setSweetener("none");
+    setFoodName(item.foodName);
+    setUnit(item.unit);
+    setQuantity(String(item.quantity));
+    setCalories(String(item.calories));
+    setProtein(String(item.protein));
+    setCarbs(String(item.carbs));
+    setFats(String(item.fats));
+  };
+
   // Live recalculation when quantity changes (only if a DB food is selected)
   const handleQuantityChange = (val: string) => {
     setQuantity(val);
@@ -1017,7 +1030,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
       {/* Search — only shown when adding new, not when editing */}
       {!editItem && (
         <>
-          <FoodSearch onSelect={fillFromSearch} />
+          <FoodPicker onAdd={fillFromSharedPicker} addLabel={t("nutrition.logFood")} />
           <p className="text-[11px] text-gray-400 dark:text-gray-500 -mt-1">
             💡 {t("nutrition.haveCustomFoods")}
           </p>
@@ -2453,6 +2466,7 @@ export default function NutritionPage() {
       persistBuiltinSuppsForDate(date, next);
       return next;
     });
+    emitNutritionSync("supplement");
   };
 
   // ── Supplement macro overrides ──────────────────────────────────────────────
@@ -2488,6 +2502,7 @@ export default function NutritionPage() {
       return next;
     });
     setEditingSupp(null);
+    emitNutritionSync("supplement");
   };
 
   const resetSuppEdit = (id: SuppId) => {
@@ -2498,6 +2513,7 @@ export default function NutritionPage() {
       return next;
     });
     setEditingSupp(null);
+    emitNutritionSync("supplement");
   };
 
   // Compute supplement macros to add to totals
@@ -2598,6 +2614,7 @@ export default function NutritionPage() {
       persistCustomSuppStateForDate(date, next);
       return next;
     });
+    emitNutritionSync("supplement");
   };
   const removeCustomSupp = (id: string) => {
     persistCustomSuppDefs(customSuppDefs.filter((s) => s.id !== id));
@@ -2618,6 +2635,7 @@ export default function NutritionPage() {
       try { localStorage.setItem(CUSTOM_SUPP_STORE_KEY, JSON.stringify(nextStore)); } catch { /* ignore */ }
       return nextStore;
     });
+    emitNutritionSync("supplement");
   };
   const [showAddCustomSupp, setShowAddCustomSupp] = useState(false);
   const [newSuppDraft, setNewSuppDraft] = useState({ name: "", emoji: "💊", unit: "caps", defaultQty: 1, cal: 0, p: 0, c: 0, f: 0 });
@@ -2632,6 +2650,7 @@ export default function NutritionPage() {
     });
     setNewSuppDraft({ name: "", emoji: "💊", unit: "caps", defaultQty: 1, cal: 0, p: 0, c: 0, f: 0 });
     setShowAddCustomSupp(false);
+    emitNutritionSync("supplement");
   };
 
   // Include custom supps in total macro count

@@ -2,6 +2,71 @@
 
 Most recent session first.
 
+## 2026-05-09 - Dashboard supplement calories sync
+
+### Goal
+- Make Dashboard calorie and macro totals include the same daily supplement macros already shown in Nutrition, especially protein shake calories.
+
+### Files modified
+- `client/src/lib/supplementMacros.ts` - added a shared reader for per-day built-in and custom supplement macro state, including protein shake overrides
+- `client/src/pages/dashboard/Dashboard.tsx` - overlays today's supplement macros onto the dashboard totals after each dashboard refresh
+- `client/src/pages/nutrition/NutritionPage.tsx` - emits nutrition sync events whenever supplement state or supplement macro overrides change
+- `LOG.md`, `CONTEXT.md`, `PRIORITIES.md`, `ARCHITECTURE.md` - updated project memory after the implementation pass
+
+### Notes
+- Backend diary totals remain unchanged; this is a client-side display merge for Nutrition's local daily supplement layer.
+- Dashboard now refreshes immediately after supplement toggles/quantity changes because Nutrition emits the shared `fitai:data-changed` signal.
+- Root backend build and client production build both passed after the change.
+
+## 2026-05-09 - Shared food picker + coach meal editor upgrade
+
+### Goal
+- Upgrade coach scratch meal-plan creation from raw line text into a structured food-search editor, and start consolidating food search / macro scaling into shared frontend utilities used across user and coach flows.
+
+### Files modified
+- `client/src/lib/foodSearch.ts` - added shared food result normalization, macro scaling, and duration-to-weeks helpers
+- `client/src/components/food/FoodPicker.tsx` - added a reusable localized food picker with quantity/unit scaling and optional macro editing
+- `client/src/pages/coach/CoachClientPage.tsx` - replaced scratch meal textareas with structured weekday/meal cards, shared food search, editable items, meal/day totals, and customizable week/month duration
+- `client/src/pages/mealplanner/MealPlannerPage.tsx` - moved the active add-food modal path onto the shared picker and made create-plan duration customizable
+- `client/src/pages/nutrition/NutritionPage.tsx` - routed the log-food add flow and macro scaling through the shared food picker/helper
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added coach meal-builder labels
+
+### Notes
+- Coach scratch meal plans still use the existing pending proposal payload and client approval flow.
+- Coach meal duration now supports weeks or months and clamps to the backend-safe 1-52 week range.
+- Global multilingual search remains powered by `/api/search/foods`, so user and coach flows benefit from the same language-agnostic lookup.
+
+## 2026-05-09 - Language-agnostic food search hardening
+
+### Goal
+- Make Nutrition food database search find foods regardless of the user's query language and return results in the selected app language.
+
+### Files modified
+- `src/controllers/searchController.ts` - replaced brittle case-only string matching with normalized accent-insensitive token matching, all-localized-name matching, deterministic multilingual query expansion, and a bumped food-search cache version
+
+### Notes
+- Spanish searches like `Pan Integral` can now match English catalog rows such as whole grain / whole wheat bread even when the seeded row has no stored Spanish localized name.
+- Search still prefers stored localized result names first, then AI-translated display names, then English as the fallback.
+- The matcher now applies the same language-aware logic to DB-backed search and static fallback search.
+
+## 2026-05-09 - Coach scratch meal plans + advanced calendar drafts
+
+### Goal
+- Let human coaches/nutritionists create stronger client proposals: scratch meal plans with coach-selected duration, existing meal plans with duration override, and optional advanced per-day workout calendar drafts for arbitrary weeks/months.
+
+### Files modified
+- `src/middleware/schemas.ts` - expanded coach proposal validation for scratch meal-plan payloads, existing meal-plan duration overrides, and custom workout calendar day arrays
+- `src/controllers/coachController.ts` - added application logic for scratch meal-plan proposals, cloned meal plans with overridden duration, and custom per-date workout calendar proposals
+- `client/src/api/index.ts` - widened the typed `coachApi.createProposal` payload contract
+- `client/src/pages/coach/CoachClientPage.tsx` - added quick vs advanced workout scheduling, existing vs scratch meal-plan publishing, duration controls, and a simple 7-day meal pattern editor
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added coach workflow labels for the new controls
+
+### Notes
+- Coach-authored plans still require client approval before they apply.
+- Quick workout scheduling remains the default 1-3 month weekday repeat flow.
+- Advanced workout scheduling now stores concrete calendar dates generated from the coach's weekday pattern over custom weeks or months.
+- Scratch meal plans use a 7-day pattern and repeat it across the selected duration.
+
 ## 2026-05-06 - Session: coach mode, admin mode, and role-aware planning
 
 ### Goal

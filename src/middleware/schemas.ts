@@ -585,16 +585,56 @@ export const acceptCoachInviteSchema = z.object({
   code: z.string().trim().min(4).max(64),
 });
 
+const coachMealPlanItemSchema = z.object({
+  foodName: z.string().trim().min(1).max(300),
+  calories: z.coerce.number().min(0).max(50000).default(0),
+  protein: z.coerce.number().min(0).max(5000).default(0),
+  carbs: z.coerce.number().min(0).max(5000).default(0),
+  fats: z.coerce.number().min(0).max(5000).default(0),
+  quantity: z.coerce.number().positive().default(1),
+  unit: z.string().trim().min(1).max(50).default("serving"),
+});
+
+const coachMealPlanMealSchema = z.object({
+  meal: z.enum(["breakfast", "lunch", "dinner", "snack"]),
+  items: z.array(coachMealPlanItemSchema).max(20).default([]),
+});
+
+const coachMealPlanDaySchema = z.object({
+  dayIndex: z.coerce.number().int().min(0).max(6),
+  meals: z.array(coachMealPlanMealSchema).max(8).default([]),
+});
+
+const coachCustomWorkoutDaySchema = z.object({
+  date: calendarDateString,
+  workoutName: z.string().trim().min(1).max(200).optional(),
+  muscleGroups: z.array(z.string().trim().min(1).max(80)).max(12).optional(),
+  templateId: z.coerce.number().int().positive().nullable().optional(),
+  isRestDay: z.boolean().optional(),
+  notes: z.string().trim().max(1000).optional(),
+});
+
 export const createCoachProposalSchema = z.object({
   clientId: z.coerce.number().int().positive(),
   type: z.enum(["workout", "meal", "goal"]),
-  sourceId: z.coerce.number().int().positive(),
+  sourceId: z.coerce.number().int().min(0).optional().default(0),
   note: z.string().trim().max(1000).optional(),
   payload: z
     .object({
+      mode: z.enum(["quick", "custom", "existing", "scratch"]).optional(),
       weekdays: z.array(z.coerce.number().int().min(0).max(6)).optional(),
       months: z.coerce.number().int().min(1).max(3).optional(),
+      durationWeeks: z.coerce.number().int().min(1).max(52).optional(),
       overwrite: z.boolean().optional(),
+      days: z.array(coachCustomWorkoutDaySchema).max(366).optional(),
+      mealPlan: z
+        .object({
+          name: z.string().trim().min(1).max(200),
+          weekStart: calendarDateString,
+          durationWeeks: z.coerce.number().int().min(1).max(52),
+          days: z.array(coachMealPlanDaySchema).min(1).max(7),
+        })
+        .optional(),
     })
     .optional(),
 });

@@ -338,6 +338,14 @@ export interface Translation {
     coachLinkActivated: string; failedAcceptInvite: string;
     loadingProposals: string; noPendingProposals: string; accept: string; reject: string;
     oneMonth: string; twoMonths: string; threeMonths: string;
+    quickSchedule: string; advancedPerDay: string; startDate: string; duration: string;
+    weeks: string; months: string; restDay: string; workoutNamePlaceholder: string;
+    muscleGroupsPlaceholder: string; notesPlaceholder: string; existingPlan: string;
+    createFromScratch: string; scratchMealDefaultName: string; mealLineFormat: string;
+    searchMealBuilderHint: string; addFoodToMeal: string; emptyMealHint: string;
+    dayTotal: string; computedDuration: string;
+    oneWeek: string; fourWeeks: string; eightWeeks: string; twelveWeeks: string;
+    weekCount: string;
   };
   admin: {
     title: string; subtitle: string; userLookup: string; searchPlaceholder: string; search: string;
@@ -1338,6 +1346,30 @@ const en: Translation = {
     oneMonth: "1 month",
     twoMonths: "2 months",
     threeMonths: "3 months",
+    quickSchedule: "Quick schedule",
+    advancedPerDay: "Advanced per-day",
+    startDate: "Start date",
+    duration: "Duration",
+    weeks: "weeks",
+    months: "months",
+    restDay: "Rest day",
+    workoutNamePlaceholder: "Workout name",
+    muscleGroupsPlaceholder: "Muscle groups, comma-separated",
+    notesPlaceholder: "Notes",
+    existingPlan: "Existing plan",
+    createFromScratch: "Create from scratch",
+    scratchMealDefaultName: "Coach meal plan",
+    mealLineFormat: "One food per line: food | kcal | protein | carbs | fats | quantity | unit",
+    searchMealBuilderHint: "Search foods in any language, add them to each meal, then adjust quantities or macros as needed.",
+    addFoodToMeal: "Add food to meal",
+    emptyMealHint: "No foods yet. Search below to add one.",
+    dayTotal: "Day total",
+    computedDuration: "Planner duration: {{count}} weeks",
+    oneWeek: "1 week",
+    fourWeeks: "4 weeks",
+    eightWeeks: "8 weeks",
+    twelveWeeks: "12 weeks",
+    weekCount: "{{count}} week(s)",
   },
   admin: {
     title: "Admin / Dev Mode",

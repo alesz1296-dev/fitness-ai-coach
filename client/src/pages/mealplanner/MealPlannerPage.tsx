@@ -10,6 +10,8 @@ import { Select } from "../../components/ui/Select";
 import { Modal } from "../../components/ui/Modal";
 import { useTranslation } from "../../i18n";
 import { APP_EVENTS } from "../../lib/appEvents";
+import { FoodPicker } from "../../components/food/FoodPicker";
+import { durationToWeeks, type ScaledFoodItem } from "../../lib/foodSearch";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const MEALS = ["breakfast", "lunch", "dinner", "snack"] as const;
@@ -57,13 +59,6 @@ function dayTotals(day: MealPlanDay) {
     { calories: 0, protein: 0, carbs: 0, fats: 0 }
   );
 }
-
-const PLAN_LENGTH_OPTIONS = [
-  { value: "1", label: "1 week" },
-  { value: "4", label: "4 weeks" },
-  { value: "8", label: "8 weeks" },
-  { value: "12", label: "12 weeks" },
-];
 
 function formatPlanLength(weeks: number) {
   if (weeks === 4) return "4 weeks (about 1 month)";
@@ -218,6 +213,45 @@ function FoodSearchModal({
 }
 
 // ── Entry row ─────────────────────────────────────────────────────────────────
+function SharedFoodSearchModal({
+  onSelect,
+  onClose,
+  defaultMeal,
+}: {
+  onSelect: (food: ScaledFoodItem, meal: MealType) => void;
+  onClose: () => void;
+  defaultMeal: MealType;
+}) {
+  const { t } = useTranslation();
+  const [meal, setMeal] = useState<MealType>(defaultMeal);
+
+  return (
+    <Modal open={true} title={t("mealPlanner.addFood")} onClose={onClose}>
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          {MEALS.map((m) => (
+            <button
+              key={m}
+              onClick={() => setMeal(m)}
+              className={`flex-1 py-1.5 rounded-xl text-xs font-medium capitalize border transition ${
+                meal === m
+                  ? "bg-brand-600 text-white border-brand-600"
+                  : "border-gray-200 text-gray-600 hover:border-brand-300"
+              }`}
+            >
+              {MEAL_ICONS[m]} {(t as (k: string) => string)(`mealPlanner.${m}`)}
+            </button>
+          ))}
+        </div>
+        <FoodPicker
+          onAdd={(food) => onSelect(food, meal)}
+          addLabel={t("mealPlanner.addToMeal", { meal: (t as (k: string) => string)(`mealPlanner.${meal}`) })}
+        />
+      </div>
+    </Modal>
+  );
+}
+
 function EntryRow({
   entry,
   onDelete,
@@ -423,16 +457,18 @@ function CreatePlanModal({ onSave, onClose }: { onSave: (name: string, weekStart
   const { t } = useTranslation();
   const [name, setName]           = useState(t("mealPlanner.defaultPlanName"));
   const [weekStart, setWeekStart] = useState(getMondayOfWeek(new Date()));
-  const [durationWeeks, setDurationWeeks] = useState("1");
+  const [durationMode, setDurationMode] = useState<"weeks" | "months">("weeks");
+  const [durationValue, setDurationValue] = useState("1");
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState("");
+  const computedWeeks = durationToWeeks(durationMode, Number(durationValue));
 
   const handleSubmit = async () => {
     if (!name.trim() || !weekStart) return;
     setSaving(true);
     setError("");
     try {
-      await onSave(name.trim(), weekStart, Number(durationWeeks));
+      await onSave(name.trim(), weekStart, computedWeeks);
     } catch (e: any) {
       setError(e?.response?.data?.error ?? e?.message ?? t("mealPlanner.createFailed"));
       setSaving(false);
@@ -449,12 +485,28 @@ function CreatePlanModal({ onSave, onClose }: { onSave: (name: string, weekStart
           value={weekStart}
           onChange={(e) => setWeekStart(e.target.value)}
         />
-        <Select
-          label={t("mealPlanner.planLength")}
-          value={durationWeeks}
-          onChange={(e) => setDurationWeeks(e.target.value)}
-          options={PLAN_LENGTH_OPTIONS}
-        />
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            label={t("mealPlanner.planLength")}
+            type="number"
+            min="1"
+            max={durationMode === "weeks" ? "52" : "12"}
+            value={durationValue}
+            onChange={(e) => setDurationValue(e.target.value)}
+          />
+          <Select
+            label=" "
+            value={durationMode}
+            onChange={(e) => setDurationMode(e.target.value as "weeks" | "months")}
+            options={[
+              { value: "weeks", label: t("coach.weeks") },
+              { value: "months", label: t("coach.months") },
+            ]}
+          />
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {t("coach.computedDuration", { count: computedWeeks })}
+        </p>
         {error && <p className="text-sm text-red-500">{error}</p>}
         <Button className="w-full" onClick={handleSubmit} disabled={!name || !weekStart || saving} loading={saving}>
           {t("mealPlanner.createPlan")}
@@ -686,9 +738,10 @@ export default function MealPlannerPage() {
         <CreatePlanModal onSave={handleCreate} onClose={() => setShowCreate(false)} />
       )}
       {addFor && (
-        <FoodSearchModal
+        <SharedFoodSearchModal
           onSelect={handleAddFood}
           onClose={() => setAddFor(null)}
+          defaultMeal={addFor.defaultMeal}
         />
       )}
     </div>

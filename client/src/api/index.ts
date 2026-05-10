@@ -622,9 +622,43 @@ export const coachApi = {
   createProposal: (data: {
     clientId: number;
     type: "workout" | "meal" | "goal";
-    sourceId: number;
+    sourceId?: number;
     note?: string;
-    payload?: { weekdays?: number[]; months?: number; overwrite?: boolean };
+    payload?: {
+      mode?: "quick" | "custom" | "existing" | "scratch";
+      weekdays?: number[];
+      months?: number;
+      durationWeeks?: number;
+      overwrite?: boolean;
+      days?: Array<{
+        date: string;
+        workoutName?: string;
+        muscleGroups?: string[];
+        templateId?: number | null;
+        isRestDay?: boolean;
+        notes?: string;
+      }>;
+      mealPlan?: {
+        name: string;
+        weekStart: string;
+        durationWeeks: number;
+        days: Array<{
+          dayIndex: number;
+          meals: Array<{
+            meal: "breakfast" | "lunch" | "dinner" | "snack";
+            items: Array<{
+              foodName: string;
+              calories?: number;
+              protein?: number;
+              carbs?: number;
+              fats?: number;
+              quantity?: number;
+              unit?: string;
+            }>;
+          }>;
+        }>;
+      };
+    };
   }) => api.post<{ proposal: CoachProposal }>("/coach/proposals", data),
   getPendingForMe: () =>
     api.get<{ proposals: CoachProposal[] }>("/coach/proposals/pending"),

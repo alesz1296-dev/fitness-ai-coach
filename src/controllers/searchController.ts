@@ -50,8 +50,172 @@ const LANG_CACHE_TTL = 3600; // 1 hour for translations
 
 type FoodSearchMatchSource = "english-name" | "alias" | "localized-name" | "ai-translated-query";
 
-function includesQuery(value: string | undefined, query: string): boolean {
-  return Boolean(query && value?.toLowerCase().includes(query.toLowerCase()));
+const SEARCH_CACHE_VERSION = "v3";
+
+const QUERY_TERM_TRANSLATIONS: Record<string, string[]> = {
+  aceituna: ["olive"],
+  aceitunas: ["olives"],
+  aguacate: ["avocado"],
+  ajo: ["garlic"],
+  almendra: ["almond"],
+  almendras: ["almonds"],
+  arroz: ["rice"],
+  atun: ["tuna"],
+  avena: ["oats", "oatmeal"],
+  banana: ["banana"],
+  batata: ["sweet potato"],
+  bebida: ["drink", "beverage"],
+  bistec: ["steak"],
+  cafe: ["coffee"],
+  calabacin: ["zucchini"],
+  camaron: ["shrimp"],
+  camarones: ["shrimp"],
+  carne: ["beef", "meat"],
+  cebolla: ["onion"],
+  cereal: ["cereal"],
+  cerdo: ["pork"],
+  champinon: ["mushroom"],
+  champinones: ["mushrooms"],
+  clara: ["egg white"],
+  claras: ["egg whites"],
+  coco: ["coconut"],
+  espinaca: ["spinach"],
+  espinacas: ["spinach"],
+  fresa: ["strawberry"],
+  fresas: ["strawberries"],
+  frijol: ["bean"],
+  frijoles: ["beans"],
+  garbanzo: ["chickpea"],
+  garbanzos: ["chickpeas"],
+  grano: ["grain"],
+  integral: ["whole", "whole grain", "whole wheat", "wholemeal", "brown"],
+  jamon: ["ham"],
+  jugo: ["juice"],
+  leche: ["milk"],
+  lenteja: ["lentil"],
+  lentejas: ["lentils"],
+  limon: ["lemon", "lime"],
+  maiz: ["corn"],
+  manzana: ["apple"],
+  mantequilla: ["butter"],
+  miel: ["honey"],
+  naranja: ["orange"],
+  nuez: ["nut", "walnut"],
+  nueces: ["nuts", "walnuts"],
+  pan: ["bread"],
+  papa: ["potato"],
+  pasta: ["pasta"],
+  pescado: ["fish"],
+  pina: ["pineapple"],
+  platano: ["banana", "plantain"],
+  pollo: ["chicken"],
+  proteina: ["protein"],
+  queso: ["cheese"],
+  quinoa: ["quinoa"],
+  res: ["beef"],
+  salmon: ["salmon"],
+  sandia: ["watermelon"],
+  tofu: ["tofu"],
+  tomate: ["tomato"],
+  tortilla: ["tortilla"],
+  trigo: ["wheat"],
+  uva: ["grape"],
+  uvas: ["grapes"],
+  yogur: ["yogurt"],
+  yogurt: ["yogurt"],
+  zanahoria: ["carrot"],
+  zapallo: ["squash", "pumpkin"],
+  "хліб": ["bread"],
+  "цільнозерновий": ["whole grain", "whole wheat"],
+  "курка": ["chicken"],
+  "яйце": ["egg"],
+  "яйця": ["eggs"],
+  "молоко": ["milk"],
+  "рис": ["rice"],
+  "риба": ["fish"],
+  "сир": ["cheese"],
+  "кава": ["coffee"],
+  "сік": ["juice"],
+};
+
+function normalizeForSearch(value: string | undefined): string {
+  if (!value) return "";
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\u0400-\u04ff]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function tokenizeSearch(value: string | undefined): string[] {
+  return normalizeForSearch(value)
+    .split(" ")
+    .map((token) => token.trim())
+    .filter((token) => token.length > 1);
+}
+
+function uniqueSearchTerms(terms: Array<string | undefined>): string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const term of terms) {
+    const trimmed = term?.trim();
+    const normalized = normalizeForSearch(trimmed);
+    if (!trimmed || !normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    unique.push(trimmed);
+  }
+  return unique;
+}
+
+function buildTranslatedTokenQueries(rawQuery: string): string[] {
+  const tokens = tokenizeSearch(rawQuery);
+  const translatedTokenGroups = tokens.map((token) => QUERY_TERM_TRANSLATIONS[token] ?? [token]);
+  if (!translatedTokenGroups.some((group, index) => group[0] !== tokens[index])) return [];
+
+  const firstVariantQuery = translatedTokenGroups.map((group) => group[0]).join(" ");
+  const singleTokenVariants = translatedTokenGroups.flat();
+  const compactPhraseVariants = translatedTokenGroups.flatMap((group, index) => {
+    if (group.length <= 1) return [];
+    const before = translatedTokenGroups.slice(0, index).map((g) => g[0]);
+    const after = translatedTokenGroups.slice(index + 1).map((g) => g[0]);
+    return group.map((variant) => [...before, variant, ...after].join(" "));
+  });
+
+  return uniqueSearchTerms([
+    firstVariantQuery,
+    ...singleTokenVariants,
+    ...compactPhraseVariants,
+    ...compactPhraseVariants.map((query) => query.split(" ").reverse().join(" ")),
+  ]);
+}
+
+function buildFoodSearchQueries(rawQuery: string, translatedQuery: string): string[] {
+  return uniqueSearchTerms([
+    rawQuery,
+    translatedQuery,
+    ...buildTranslatedTokenQueries(rawQuery),
+    ...buildTranslatedTokenQueries(translatedQuery),
+  ]);
+}
+
+function queryMatchesValue(value: string | undefined, query: string): boolean {
+  const normalizedValue = normalizeForSearch(value);
+  const normalizedQuery = normalizeForSearch(query);
+  if (!normalizedValue || !normalizedQuery) return false;
+  if (normalizedValue.includes(normalizedQuery)) return true;
+
+  const queryTokens = tokenizeSearch(query);
+  if (!queryTokens.length) return false;
+  const valueTokens = tokenizeSearch(value);
+  return queryTokens.every((queryToken) =>
+    valueTokens.some((valueToken) => valueToken === queryToken || valueToken.includes(queryToken))
+  );
+}
+
+function anyQueryMatchesValue(value: string | undefined, queries: string[]): boolean {
+  return queries.some((query) => queryMatchesValue(value, query));
 }
 
 function getFoodSearchMatchSource(
@@ -60,23 +224,38 @@ function getFoodSearchMatchSource(
   translatedQuery: string,
   langKey: string
 ): FoodSearchMatchSource | undefined {
-  const localized = food.localizedNames?.[langKey];
+  const selectedLocalized = food.localizedNames?.[langKey];
+  const allLocalized = Object.values(food.localizedNames ?? {}).filter(Boolean);
   const aliases = food.aliases ?? [];
+  const allQueries = buildFoodSearchQueries(rawQuery, translatedQuery);
+  const translatedQueries = uniqueSearchTerms([
+    translatedQuery,
+    ...buildTranslatedTokenQueries(rawQuery),
+    ...buildTranslatedTokenQueries(translatedQuery),
+  ]);
 
-  if (langKey !== "en" && includesQuery(localized, rawQuery)) return "localized-name";
+  if (anyQueryMatchesValue(food.name, [rawQuery])) return "english-name";
+  if (aliases.some((alias) => anyQueryMatchesValue(alias, [rawQuery]))) return "alias";
+  if (
+    langKey !== "en" &&
+    (anyQueryMatchesValue(selectedLocalized, [rawQuery]) ||
+      allLocalized.some((localized) => anyQueryMatchesValue(localized, [rawQuery])))
+  ) {
+    return "localized-name";
+  }
 
   if (
     langKey !== "en" &&
-    translatedQuery &&
-    translatedQuery.toLowerCase() !== rawQuery.toLowerCase() &&
-    (includesQuery(food.name, translatedQuery) || aliases.some((alias) => includesQuery(alias, translatedQuery)))
+    translatedQueries.length > 0 &&
+    (anyQueryMatchesValue(food.name, translatedQueries) ||
+      aliases.some((alias) => anyQueryMatchesValue(alias, translatedQueries)))
   ) {
     return "ai-translated-query";
   }
 
-  if (includesQuery(food.name, rawQuery) || includesQuery(food.name, translatedQuery)) return "english-name";
-  if (aliases.some((alias) => includesQuery(alias, rawQuery) || includesQuery(alias, translatedQuery))) return "alias";
-  if (includesQuery(localized, translatedQuery)) return "localized-name";
+  if (anyQueryMatchesValue(food.name, allQueries)) return "english-name";
+  if (aliases.some((alias) => anyQueryMatchesValue(alias, allQueries))) return "alias";
+  if (allLocalized.some((localized) => anyQueryMatchesValue(localized, allQueries))) return "localized-name";
 
   return undefined;
 }
@@ -187,10 +366,10 @@ export const foodSearch = async (
 
     // Translate query to English when user is searching in another language
     const q = (langKey !== "en" && rawQ) ? await translateQueryToEnglish(rawQ, langKey) : rawQ;
-    const searchTerms = Array.from(new Set([q, rawQ].map((term) => term.trim()).filter(Boolean)));
+    const searchTerms = buildFoodSearchQueries(rawQ, q);
 
     // ── Redis cache — keyed by translated English query (lang-neutral) ──────
-    const cacheKey = `search:food:${langKey}:${rawQ}:${q}:${tags.join("|")}:${limit}:${offset}`;
+    const cacheKey = `search:food:${SEARCH_CACHE_VERSION}:${langKey}:${rawQ}:${q}:${tags.join("|")}:${limit}:${offset}`;
     const cached   = await cacheGet(cacheKey);
 
     // ── Helper: translate result names when lang !== "en" ────────────────────
@@ -250,6 +429,7 @@ export const foodSearch = async (
             matchSource,
             originalQuery: rawQ,
             translatedQuery: q !== rawQ ? q : undefined,
+            expandedQueries: searchTerms.filter((term) => normalizeForSearch(term) !== normalizeForSearch(rawQ)),
           },
         };
       });
@@ -278,7 +458,7 @@ export const foodSearch = async (
 
     // ── Fallback: static array ────────────────────────────────────────────────
       const rawResults = (searchTerms.length > 0
-        ? Array.from(new Map(searchTerms.flatMap((term) => searchFoods(term, limit, tags)).map((food) => [food.id, food])).values())
+        ? Array.from(new Map(searchTerms.flatMap((term) => searchFoods(term, limit * 2, tags)).map((food) => [food.id, food])).values())
         : searchFoods("", limit, tags)
       )
         .map((f) => ({
@@ -287,8 +467,17 @@ export const foodSearch = async (
             matchSource: getFoodSearchMatchSource(f, rawQ, q, langKey),
             originalQuery: rawQ,
             translatedQuery: q !== rawQ ? q : undefined,
+            expandedQueries: searchTerms.filter((term) => normalizeForSearch(term) !== normalizeForSearch(rawQ)),
           },
         }))
+        .filter((item) => !rawQ || item.searchDebug.matchSource)
+        .sort((a, b) => {
+          const scoreDiff =
+            getFoodSearchMatchRank(b.searchDebug.matchSource) -
+            getFoodSearchMatchRank(a.searchDebug.matchSource);
+          if (scoreDiff !== 0) return scoreDiff;
+          return String(a.name).localeCompare(String(b.name));
+        })
         .slice(0, limit);
       const translatedResults = await applyTranslation(rawResults);
     res.json({ results: translatedResults, total: FOOD_DB.length, source: "static" });

@@ -4,8 +4,14 @@ Read this at the start of every session before touching any code.
 
 ## Current frontend focus
 
+- Dashboard nutrition totals now merge in the same local per-day supplement macros that Nutrition uses, via `client/src/lib/supplementMacros.ts`. This matters because protein shake supplements are not backend food logs, but they still need to count in Dashboard calorie/macros.
+- Food search UX is being consolidated: `client/src/lib/foodSearch.ts` owns shared food normalization, macro scaling, and duration clamping, while `client/src/components/food/FoodPicker.tsx` is now used by Nutrition logging, Meal Planner, and Coach scratch meal planning.
+- Coach scratch meal plans now use structured weekday/meal cards with localized food search, editable quantities/macros, meal/day totals, and customizable week/month duration before creating the existing pending client proposal.
+- Nutrition food search is now expected to be language-agnostic: backend search normalizes accents/case/punctuation, token-matches terms in any order, checks English names, aliases, all stored localized names, AI-translated queries, and deterministic multilingual query expansions before translating returned names into the selected UI language.
 - Shared navigation now uses Unicode escape-based emoji icons in `Sidebar.tsx` and `BottomNav.tsx` instead of raw emoji literals, because the previous source bytes were vulnerable to mojibake.
 - The base font stack now explicitly includes `Apple Color Emoji`, `Segoe UI Emoji`, and `Noto Color Emoji` so page-menu icons survive mobile browser font fallback more reliably.
+- Coach mode now supports two client publishing paths: quick workout template scheduling, and optional advanced per-day calendar drafts generated from a weekday pattern across custom weeks/months.
+- Coach meal-plan proposals can now come from either an existing coach meal plan with a duration override, or a scratch 7-day pattern that repeats across the selected duration.
 
 ---
 

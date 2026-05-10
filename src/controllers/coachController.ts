@@ -7,6 +7,42 @@ import { writeAuditLog } from "../lib/audit.js";
 
 const db = prisma as any;
 
+type CoachProposalPayload = {
+  mode?: "quick" | "custom" | "existing" | "scratch";
+  weekdays?: number[];
+  months?: number;
+  durationWeeks?: number;
+  overwrite?: boolean;
+  days?: Array<{
+    date: string;
+    workoutName?: string;
+    muscleGroups?: string[];
+    templateId?: number | null;
+    isRestDay?: boolean;
+    notes?: string;
+  }>;
+  mealPlan?: {
+    name: string;
+    weekStart: string;
+    durationWeeks: number;
+    days: Array<{
+      dayIndex: number;
+      meals: Array<{
+        meal: "breakfast" | "lunch" | "dinner" | "snack";
+        items: Array<{
+          foodName: string;
+          calories?: number;
+          protein?: number;
+          carbs?: number;
+          fats?: number;
+          quantity?: number;
+          unit?: string;
+        }>;
+      }>;
+    }>;
+  };
+};
+
 function parseJson<T>(value: unknown, fallback: T): T {
   if (typeof value !== "string") return fallback;
   try {
@@ -89,6 +125,103 @@ async function applyWorkoutSchedule(
       });
     }
   }
+}
+
+async function applyCustomWorkoutSchedule(
+  clientId: number,
+  payload: CoachProposalPayload | null,
+) {
+  const days = Array.isArray(payload?.days) ? payload!.days! : [];
+  if (days.length === 0) throw createError("No custom workout days provided", 400);
+  const overwrite = Boolean(payload?.overwrite);
+  let appliedCount = 0;
+
+  for (const day of days) {
+    if (!overwrite) {
+      const existing = await db.workoutCalendarDay.findUnique({
+        where: { userId_date: { userId: clientId, date: day.date } },
+        select: { id: true },
+      });
+      if (existing) continue;
+    }
+
+    await db.workoutCalendarDay.upsert({
+      where: { userId_date: { userId: clientId, date: day.date } },
+      update: {
+        workoutName: day.isRestDay ? null : day.workoutName,
+        muscleGroups: JSON.stringify(day.muscleGroups ?? []),
+        templateId: day.templateId ?? null,
+        isRestDay: Boolean(day.isRestDay),
+        notes: day.notes ?? null,
+        updatedAt: new Date(),
+      },
+      create: {
+        userId: clientId,
+        date: day.date,
+        workoutName: day.isRestDay ? null : day.workoutName,
+        muscleGroups: JSON.stringify(day.muscleGroups ?? []),
+        templateId: day.templateId ?? null,
+        isRestDay: Boolean(day.isRestDay),
+        notes: day.notes ?? null,
+      },
+    });
+    appliedCount += 1;
+  }
+
+  return appliedCount;
+}
+
+function normalizeDurationWeeks(value: unknown, fallback: number) {
+  return Math.min(52, Math.max(1, Number(value ?? fallback)));
+}
+
+function buildMealPlanDaysFromPattern(payload: NonNullable<CoachProposalPayload["mealPlan"]>) {
+  const durationWeeks = normalizeDurationWeeks(payload.durationWeeks, 1);
+  const pattern = payload.days.length > 0 ? payload.days : [{ dayIndex: 0, meals: [] }];
+
+  return Array.from({ length: durationWeeks * 7 }, (_, dayIndex) => {
+    const sourceDay =
+      pattern.find((day) => day.dayIndex === dayIndex % 7) ?? pattern[dayIndex % pattern.length];
+    const entries = (sourceDay?.meals ?? []).flatMap((meal) =>
+      meal.items.map((item, order) => ({
+        meal: meal.meal,
+        foodName: item.foodName,
+        calories: Number(item.calories ?? 0),
+        protein: Number(item.protein ?? 0),
+        carbs: Number(item.carbs ?? 0),
+        fats: Number(item.fats ?? 0),
+        quantity: Number(item.quantity ?? 1),
+        unit: item.unit ?? "serving",
+        order,
+      })),
+    );
+
+    return { dayIndex, entries: { create: entries } };
+  });
+}
+
+function buildClonedMealPlanDays(sourceDays: any[], durationWeeks: number) {
+  const pattern = sourceDays.length > 0 ? sourceDays : [{ entries: [] }];
+  return Array.from({ length: durationWeeks * 7 }, (_, dayIndex) => {
+    const sourceDay = pattern[dayIndex % pattern.length];
+    return {
+      dayIndex,
+      notes: sourceDay?.notes ?? null,
+      entries: {
+        create: (sourceDay?.entries ?? []).map((entry: any) => ({
+          meal: entry.meal,
+          foodName: entry.foodName,
+          calories: entry.calories,
+          protein: entry.protein,
+          carbs: entry.carbs,
+          fats: entry.fats,
+          quantity: entry.quantity,
+          unit: entry.unit,
+          order: entry.order,
+        })),
+      },
+    };
+  });
 }
 
 export const getMyClients = async (
@@ -294,22 +427,38 @@ export const createProposal = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const { clientId, type, sourceId, note, payload } = req.body;
+    const { clientId, type, sourceId = 0, note, payload } = req.body as {
+      clientId: number;
+      type: "workout" | "meal" | "goal";
+      sourceId?: number;
+      note?: string;
+      payload?: CoachProposalPayload;
+    };
     await ensureCoachClientAccess(req.user!.id, Number(clientId));
 
     if (type === "workout") {
-      const template = await prisma.workoutTemplate.findFirst({
-        where: {
-          id: Number(sourceId),
-          OR: [{ userId: req.user!.id }, { isSystem: true }],
-        },
-      });
-      if (!template) return next(createError("Workout template not found", 404));
+      if (payload?.mode === "custom") {
+        if (!Array.isArray(payload.days) || payload.days.length === 0) {
+          return next(createError("Custom workout days are required", 400));
+        }
+      } else {
+        const template = await prisma.workoutTemplate.findFirst({
+          where: {
+            id: Number(sourceId),
+            OR: [{ userId: req.user!.id }, { isSystem: true }],
+          },
+        });
+        if (!template) return next(createError("Workout template not found", 404));
+      }
     } else if (type === "meal") {
-      const plan = await db.mealPlan.findFirst({
-        where: { id: Number(sourceId), userId: req.user!.id },
-      });
-      if (!plan) return next(createError("Meal plan not found", 404));
+      if (payload?.mode === "scratch") {
+        if (!payload.mealPlan) return next(createError("Meal plan payload is required", 400));
+      } else {
+        const plan = await db.mealPlan.findFirst({
+          where: { id: Number(sourceId), userId: req.user!.id },
+        });
+        if (!plan) return next(createError("Meal plan not found", 404));
+      }
     } else if (type === "goal") {
       const goal = await prisma.calorieGoal.findFirst({
         where: { id: Number(sourceId), userId: req.user!.id },
@@ -413,7 +562,7 @@ export const actOnProposal = async (
       return;
     }
 
-    const payload = parseJson<{ weekdays?: number[]; months?: number; overwrite?: boolean } | null>(
+    const payload = parseJson<CoachProposalPayload | null>(
       proposal.payload,
       null,
     );
@@ -422,6 +571,19 @@ export const actOnProposal = async (
       let appliedId: number | null = null;
 
       if (proposal.type === "workout") {
+        if (payload?.mode === "custom") {
+          const appliedCount = await applyCustomWorkoutSchedule(req.user!.id, payload);
+          return (tx as any).coachProposal.update({
+            where: { id: proposal.id },
+            data: {
+              status: "accepted",
+              acceptedAt: new Date(),
+              updatedAt: new Date(),
+              appliedId: appliedCount,
+            },
+          });
+        }
+
         const source = await tx.workoutTemplate.findFirst({
           where: { id: proposal.sourceId },
           include: { exercises: { orderBy: { order: "asc" } } },
@@ -462,46 +624,46 @@ export const actOnProposal = async (
           payload,
         );
       } else if (proposal.type === "meal") {
-        const source = await db.mealPlan.findFirst({
-          where: { id: proposal.sourceId },
-          include: {
-            days: {
-              include: { entries: { orderBy: [{ meal: "asc" }, { order: "asc" }] } },
-              orderBy: { dayIndex: "asc" },
+        let plan: any;
+        if (payload?.mode === "scratch" && payload.mealPlan) {
+          const durationWeeks = normalizeDurationWeeks(payload.mealPlan.durationWeeks, 1);
+          plan = await (tx as any).mealPlan.create({
+            data: {
+              userId: req.user!.id,
+              name: payload.mealPlan.name,
+              weekStart: payload.mealPlan.weekStart,
+              durationWeeks,
+              provenanceRole: "coach",
+              provenanceSourceUserId: proposal.coachId,
+              sourceProposalId: proposal.id,
+              days: { create: buildMealPlanDaysFromPattern(payload.mealPlan) },
             },
-          },
-        });
-        if (!source) throw createError("Source meal plan not found", 404);
-        const plan = await (tx as any).mealPlan.create({
-          data: {
-            userId: req.user!.id,
-            name: source.name,
-            weekStart: source.weekStart,
-            durationWeeks: source.durationWeeks,
-            provenanceRole: "coach",
-            provenanceSourceUserId: proposal.coachId,
-            sourceProposalId: proposal.id,
-            days: {
-              create: source.days.map((day: any) => ({
-                dayIndex: day.dayIndex,
-                notes: day.notes,
-                entries: {
-                  create: day.entries.map((entry: any) => ({
-                    meal: entry.meal,
-                    foodName: entry.foodName,
-                    calories: entry.calories,
-                    protein: entry.protein,
-                    carbs: entry.carbs,
-                    fats: entry.fats,
-                    quantity: entry.quantity,
-                    unit: entry.unit,
-                    order: entry.order,
-                  })),
-                },
-              })),
+          });
+        } else {
+          const source = await (tx as any).mealPlan.findFirst({
+            where: { id: proposal.sourceId },
+            include: {
+              days: {
+                include: { entries: { orderBy: [{ meal: "asc" }, { order: "asc" }] } },
+                orderBy: { dayIndex: "asc" },
+              },
             },
-          },
-        });
+          });
+          if (!source) throw createError("Source meal plan not found", 404);
+          const durationWeeks = normalizeDurationWeeks(payload?.durationWeeks, source.durationWeeks);
+          plan = await (tx as any).mealPlan.create({
+            data: {
+              userId: req.user!.id,
+              name: source.name,
+              weekStart: source.weekStart,
+              durationWeeks,
+              provenanceRole: "coach",
+              provenanceSourceUserId: proposal.coachId,
+              sourceProposalId: proposal.id,
+              days: { create: buildClonedMealPlanDays(source.days, durationWeeks) },
+            },
+          });
+        }
         appliedId = plan.id;
       } else if (proposal.type === "goal") {
         const source = await tx.calorieGoal.findFirst({
