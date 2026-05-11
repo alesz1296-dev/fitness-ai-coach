@@ -11,7 +11,6 @@ import { OfflineBanner } from "./OfflineBanner";
 import { APP_EVENTS } from "../../lib/appEvents";
 import { Button } from "../ui/Button";
 import { useTranslation } from "../../i18n";
-import { BuildVersionBadge } from "../system/BuildVersionBadge";
 import { ServiceWorkerUpdateBanner } from "../system/ServiceWorkerUpdateBanner";
 
 export function Layout() {
@@ -86,7 +85,6 @@ export function Layout() {
         <Outlet />
       </main>
       <BottomNav />
-      <BuildVersionBadge />
       <OnboardingModal
         open={showOnboarding}
         onComplete={dismiss}

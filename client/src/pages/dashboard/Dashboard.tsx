@@ -16,6 +16,7 @@ import { UserRoleBadge } from "../../components/user/UserRoleBadge";
 import WeeklyPlanWidget from "../../components/WeeklyPlanWidget";
 import { useIsDark } from "../../hooks/useDarkMode";
 import { useDraggableWeightFab } from "../../hooks/useDraggableWeightFab";
+import { APP_BUILD_ID, APP_VERSION } from "../../lib/buildInfo";
 import type { CoachProposal, DashboardData } from "../../types";
 import { emitDataChanged, emitWeightLogged } from "../../lib/appEvents";
 import { getSupplementMacrosForDate } from "../../lib/supplementMacros";
@@ -505,16 +506,15 @@ export default function Dashboard() {
   const displayName = user?.firstName || user?.username;
   const isCoachRole = user?.role === "coach";
   const isInternalRole = user?.role === "admin" || user?.role === "developer";
+  const canUseCoachConnect = !isCoachRole;
   const isCoachShell = isCoachRole || isInternalRole;
   const coachCardTarget = "/coach";
   const showCoachConnectOnboarding =
-    !isCoachRole &&
-    !isInternalRole &&
+    canUseCoachConnect &&
     !coachLinkedBadge &&
     !inviteAccepted;
   const showCoachUpdates =
-    !isCoachRole &&
-    !isInternalRole &&
+    canUseCoachConnect &&
     (loadingCoachProposals || pendingCoachProposals.length > 0 || Boolean(proposalUpdateBanner) || inviteAccepted);
 
   return (
@@ -533,6 +533,9 @@ export default function Dashboard() {
               </span>
             ) : null}
           </div>
+          <p className="mt-2 text-[11px] font-medium tracking-wide text-gray-400 dark:text-gray-500">
+            {`v${APP_VERSION} / ${APP_BUILD_ID}`}
+          </p>
         </div>
         <div className="flex gap-2 sm:gap-3">
           {showCoachConnectOnboarding && (
@@ -1352,7 +1355,7 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {!isCoachRole && !isInternalRole && (
+              {canUseCoachConnect && (
                 <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-700/30 p-4">
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {t("coach.coachConnectMovedHint")}
@@ -1369,7 +1372,7 @@ export default function Dashboard() {
                     {pendingCoachProposals.length}
                   </span>
                 </div>
-                {!isCoachRole && !isInternalRole && showCoachUpdates ? (
+                {canUseCoachConnect && showCoachUpdates ? (
                   <div className="rounded-xl border border-brand-200 dark:border-brand-800 bg-brand-50/60 dark:bg-brand-900/20 px-3 py-3">
                     <p className="text-sm font-medium text-brand-800 dark:text-brand-200">
                       {t("coach.coachUpdatesInlineHint")}
@@ -1532,7 +1535,7 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          {!isCoachRole && !isInternalRole && (
+          {canUseCoachConnect && (
             <Card className="overflow-hidden border-brand-200 dark:border-brand-800 bg-gradient-to-br from-brand-50 via-white to-emerald-50 dark:from-brand-900/20 dark:via-gray-900 dark:to-emerald-950/20">
               <div ref={coachConnectSectionRef} />
               <CardHeader

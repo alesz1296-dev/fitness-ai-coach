@@ -2,6 +2,19 @@
 
 Most recent session first.
 
+## 2026-05-10 - Dashboard build-stamp placement and internal coach-connect visibility
+
+### Goal
+- Move the visible frontend build stamp into the dashboard greeting area and stop hiding the new coach-code onboarding UI from admin/developer accounts that still need to test the client linking flow.
+
+### Files modified
+- `client/src/pages/dashboard/Dashboard.tsx` - moved the `v/build` stamp into the greeting block, enabled coach-connect onboarding for any non-coach account, and reused that wider gating for the dashboard coach-connect section and inline coach-updates hints
+- `client/src/components/layout/Layout.tsx` - removed the old floating global build badge so the version stamp no longer covers dashboard content
+
+### Notes
+- Internal accounts now see the same `Have a coach code?` dashboard entry points as regular users unless the account role is actually `coach`.
+- The version stamp still exists in Settings too, but the main always-visible reference is now directly under the dashboard greeting where it is easier to read and compare.
+
 ## 2026-05-10 - Frontend build stamp and service-worker refresh pass
 
 ### Goal

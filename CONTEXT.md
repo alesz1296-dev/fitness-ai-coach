@@ -5,6 +5,7 @@ Read this at the start of every session before touching any code.
 ## Current frontend focus
 
 - Frontend deployment/debug hygiene is now part of the live shell: the authenticated layout shows a visible build/version stamp, Settings exposes the exact app version/build id, and the service worker now raises an explicit update-ready banner instead of silently auto-activating a new cached shell. This matters for Railway/PWA debugging because stale mobile deploys are no longer invisible.
+- That build/version stamp now lives directly under the dashboard greeting instead of floating over the shell, and coach-connect onboarding on the dashboard is now visible to any non-coach account, including admin/developer users who need to test the client linking flow.
 - Coach client pages now reuse the existing weekly-review data as a visible check-in surface and show adherence widgets for calories, protein, workouts, and weight trend so coaches have a compact summary before drilling into the full client history.
 - Client profile now includes a coach privacy card that controls which sections a coach can see, and internal admin/dev pages now expose an audited "Act as coach for this client" switch for testing coach-only workflows.
 - Dashboard nutrition totals now merge in the same local per-day supplement macros that Nutrition uses, via `client/src/lib/supplementMacros.ts`. This matters because protein shake supplements are not backend food logs, but they still need to count in Dashboard calorie/macros.
