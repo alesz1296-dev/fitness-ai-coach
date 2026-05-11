@@ -342,7 +342,7 @@ export interface Translation {
     coachUpdates: string; coachUpdatesTitle: string; coachUpdatesBody: string; coachProposalLabel: string; pendingYourApproval: string; whyThisChanged: string; reviewDetails: string; hideDetails: string; coachUpdatesInlineHint: string;
     workoutProposal: string; mealProposal: string; goalProposal: string;
     fromCoach: string; pending: string; accepted: string; rejected: string;
-    joinCoach: string; joinCoachBody: string; coachConnectSectionTitle: string; coachConnectSectionBody: string; coachConnectSectionHelp: string; coachConnectMovedHint: string; haveCoachCode: string; haveCoachCodeHelp: string; coachConnectedTitle: string; coachConnectedBody: string; coachConnectedBadge: string; coachConnectedBanner: string; reviewCoachUpdates: string; inviteCodePlaceholder: string; connect: string;
+    joinCoach: string; joinCoachBody: string; coachConnectSectionTitle: string; coachConnectSectionBody: string; coachConnectSectionHelp: string; coachConnectMovedHint: string; haveCoachCode: string; haveCoachCodeHelp: string; connectBannerTitle: string; connectBannerBody: string; connectCardTitle: string; connectCardBody: string; coachConnectedTitle: string; coachConnectedBody: string; coachConnectedBadge: string; coachConnectedBanner: string; reviewCoachUpdates: string; inviteCodePlaceholder: string; connect: string;
     createCoachInvite: string; createCoachInviteBody: string; generate: string; inviteCode: string;
     coachLinkActivated: string; failedAcceptInvite: string;
     loadingProposals: string; noPendingProposals: string; accept: string; reject: string;
@@ -1458,6 +1458,10 @@ const en: Translation = {
     coachConnectMovedHint: "The coach code entry now lives at the end of the dashboard so it is easier to find.",
     haveCoachCode: "Have a coach code?",
     haveCoachCodeHelp: "Jump straight to the coach connect section.",
+    connectBannerTitle: "Connect with your coach",
+    connectBannerBody: "Add your coach code to unlock shared plans, feedback, and coach updates.",
+    connectCardTitle: "Got a coach code? Link your account in one step.",
+    connectCardBody: "Use the code your coach sent you to start receiving training plans, meal plans, and review notes inside your dashboard.",
     coachConnectedTitle: "Coach connected",
     coachConnectedBody: "Your account is now linked. Coach updates and pending proposals will appear in your dashboard and notifications.",
     coachConnectedBadge: "Connected to coach",

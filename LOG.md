@@ -2,6 +2,19 @@
 
 Most recent session first.
 
+## 2026-05-10 - Dashboard coach-connect CTA pass
+
+### Goal
+- Make the coach-link flow unmistakable for regular users by adding a real onboarding CTA under the greeting, a temporary dashboard banner, and a sticky mobile shortcut until a coach is linked.
+
+### Files modified
+- `client/src/pages/dashboard/Dashboard.tsx` - added a temporary coach-connect banner, a colored CTA card under the greeting, and a sticky mobile shortcut that jumps to the coach-code input until the user is linked
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added the new banner/card onboarding copy
+
+### Notes
+- The connect prompts now disappear automatically once the dashboard considers the user linked to a coach.
+- This pass is intentionally more visual than structural: same invite flow, much stronger visibility.
+
 ## 2026-05-10 - Dashboard coach-code shortcut and success state
 
 ### Goal

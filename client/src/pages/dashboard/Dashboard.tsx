@@ -507,6 +507,11 @@ export default function Dashboard() {
   const isInternalRole = user?.role === "admin" || user?.role === "developer";
   const isCoachShell = isCoachRole || isInternalRole;
   const coachCardTarget = "/coach";
+  const showCoachConnectOnboarding =
+    !isCoachRole &&
+    !isInternalRole &&
+    !coachLinkedBadge &&
+    !inviteAccepted;
   const showCoachUpdates =
     !isCoachRole &&
     !isInternalRole &&
@@ -530,7 +535,7 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="flex gap-2 sm:gap-3">
-          {!isCoachRole && !isInternalRole && (
+          {showCoachConnectOnboarding && (
             <Button variant="secondary" size="sm" onClick={scrollToCoachConnect} className="flex-1 sm:flex-none">
               {t("coach.haveCoachCode")}
             </Button>
@@ -547,7 +552,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {!isCoachRole && !isInternalRole && (
+      {showCoachConnectOnboarding && (
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -561,6 +566,62 @@ export default function Dashboard() {
             {t("coach.haveCoachCodeHelp")}
           </p>
         </div>
+      )}
+
+      {showCoachConnectOnboarding && (
+        <>
+          <div className="rounded-2xl border border-brand-200 bg-brand-50/90 px-4 py-3 dark:border-brand-800 dark:bg-brand-900/20">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-sm">
+                  {"\u{1F511}"}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-brand-900 dark:text-brand-100">
+                    {t("coach.connectBannerTitle")}
+                  </p>
+                  <p className="text-xs text-brand-700 dark:text-brand-300">
+                    {t("coach.connectBannerBody")}
+                  </p>
+                </div>
+              </div>
+              <Button size="sm" onClick={scrollToCoachConnect} className="sm:min-w-[170px]">
+                {t("coach.haveCoachCode")}
+              </Button>
+            </div>
+          </div>
+
+          <Card className="overflow-hidden border-brand-200 dark:border-brand-800 bg-gradient-to-br from-brand-500 via-brand-600 to-emerald-500 text-white shadow-lg">
+            <div className="p-5 sm:p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="max-w-2xl">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/80">
+                    {t("coach.joinCoach")}
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold">
+                    {t("coach.connectCardTitle")}
+                  </h2>
+                  <p className="mt-2 text-sm text-white/85">
+                    {t("coach.connectCardBody")}
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="border-white/40 bg-white text-brand-700 hover:bg-white/90"
+                    onClick={scrollToCoachConnect}
+                  >
+                    {t("coach.haveCoachCode")}
+                  </Button>
+                  <p className="text-xs text-white/80">
+                    {t("coach.haveCoachCodeHelp")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </>
       )}
 
       {showCoachUpdates && (
@@ -1560,6 +1621,17 @@ export default function Dashboard() {
       </div>
 
       {/* ── Weight FAB ── */}
+      {showCoachConnectOnboarding && (
+        <button
+          type="button"
+          onClick={scrollToCoachConnect}
+          className="sm:hidden fixed bottom-24 left-4 z-40 inline-flex items-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-lg"
+        >
+          <span>{"\u{1F511}"}</span>
+          <span>{t("coach.haveCoachCode")}</span>
+        </button>
+      )}
+
       <div className="fixed inset-0 z-50 pointer-events-none">
         {showWeightFab && (
           <div

@@ -98,6 +98,7 @@ Recently cleared:
 - Dashboard review cards, the coach workspace, and `/notifications` now share one reusable coach/client role-state design system for status chips, ownership labels, visibility chips, and clearer primary vs destructive action emphasis.
 - The regular-user coach invite code entry is now a dedicated end-of-dashboard section instead of being buried inside the mixed proposal card, which makes coach onboarding easier to spot without changing the underlying invite-link flow.
 - The same flow now also has a visible header shortcut, auto-scroll/focus behavior, a small persistent connected badge, and a dedicated post-connect success state so coach onboarding feels intentional instead of form-like.
+- Before a user is linked, the dashboard now also shows a temporary coach-connect onboarding banner, a colored CTA card under the greeting, and a sticky mobile shortcut so the code-entry path is hard to miss on either layout.
 - Coach privacy settings now let clients control which sections a coach can see, and internal dev/admin users have an audited coach-test switch for a selected client.
 - Dashboard nutrition cards now include daily supplement macros, so protein shakes counted in Nutrition also affect Dashboard calories/macros.
 - Coach scratch meal planning now has a real food-search editor with editable quantities/macros, per-meal/day totals, and customizable week/month duration.
