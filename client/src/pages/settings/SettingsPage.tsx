@@ -12,6 +12,7 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
 import { Modal } from "../../components/ui/Modal";
+import { APP_BUILD_ID, APP_VERSION } from "../../lib/buildInfo";
 
 type ProfileUpdatePayload = {
   firstName?: string;
@@ -967,6 +968,14 @@ function AccountInfo() {
             </span>
           </div>
         )}
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-500 dark:text-gray-400">{t("settings.buildVersion")}</span>
+          <span className="font-medium text-gray-800 dark:text-gray-200">{`v${APP_VERSION}`}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-500 dark:text-gray-400">{t("settings.buildId")}</span>
+          <span className="font-medium text-gray-800 dark:text-gray-200">{APP_BUILD_ID}</span>
+        </div>
       </div>
     </Card>
   );

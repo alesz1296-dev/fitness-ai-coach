@@ -11,6 +11,8 @@ import { OfflineBanner } from "./OfflineBanner";
 import { APP_EVENTS } from "../../lib/appEvents";
 import { Button } from "../ui/Button";
 import { useTranslation } from "../../i18n";
+import { BuildVersionBadge } from "../system/BuildVersionBadge";
+import { ServiceWorkerUpdateBanner } from "../system/ServiceWorkerUpdateBanner";
 
 export function Layout() {
   useDarkModeInit();
@@ -58,6 +60,7 @@ export function Layout() {
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
       <OfflineBanner />
+      <ServiceWorkerUpdateBanner />
       {impersonationToken && actorUser && user ? (
         <div className="fixed top-0 inset-x-0 z-[70] bg-amber-500 text-amber-950 border-b border-amber-600 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 py-2 flex flex-col md:flex-row md:items-center md:justify-between gap-2 text-sm">
@@ -83,6 +86,7 @@ export function Layout() {
         <Outlet />
       </main>
       <BottomNav />
+      <BuildVersionBadge />
       <OnboardingModal
         open={showOnboarding}
         onComplete={dismiss}

@@ -2,6 +2,27 @@
 
 Most recent session first.
 
+## 2026-05-10 - Frontend build stamp and service-worker refresh pass
+
+### Goal
+- Make stale Railway/PWA deployments easier to diagnose by surfacing the current frontend build in the UI and switching the service-worker update flow from silent auto-activation to an explicit update-ready prompt.
+
+### Files modified
+- `client/vite.config.js` - defined build-time frontend metadata constants for version, build id, and build label based on package version plus deployment commit/timestamp
+- `client/src/env.d.ts` - declared the build metadata globals and shared service-worker registration handle
+- `client/src/lib/buildInfo.ts` - added a tiny shared accessor for build/version metadata
+- `client/src/components/system/BuildVersionBadge.tsx` - added a persistent visible build stamp badge for quick stale-build checks on mobile and desktop
+- `client/src/components/system/ServiceWorkerUpdateBanner.tsx` - added an in-app update-ready banner that lets users explicitly refresh into the newest build
+- `client/src/main.tsx` - versioned service-worker registration by build id, stored the registration globally, and dispatched a custom update-available event when a newer worker is waiting
+- `client/public/sw.js` - versioned cache names per build and stopped auto-activating updates during install so the refresh banner can control rollout cleanly
+- `client/src/components/layout/Layout.tsx` - mounted the build badge and service-worker update banner globally inside the authenticated shell
+- `client/src/pages/settings/SettingsPage.tsx` - exposed the current app version and build id in account settings for support/debugging
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added localized copy for build/version labels and the update-ready banner
+
+### Notes
+- The app now shows a visible `vX / build` stamp and can surface a user-visible refresh prompt instead of leaving stale deploys ambiguous.
+- Service-worker updates now wait for explicit user refresh instead of auto-swapping immediately on install, which makes production update behavior easier to trust and debug.
+
 ## 2026-05-10 - Dashboard coach-connect CTA pass
 
 ### Goal

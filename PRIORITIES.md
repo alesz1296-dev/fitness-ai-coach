@@ -94,6 +94,7 @@ _Last updated: 2026-05-10_
 Foundation work is complete. The roadmap below only shows live dependencies and remaining work.
 
 Recently cleared:
+- Frontend build/version visibility and service-worker update gating are now in place, so stale Railway/PWA deploys are easier to diagnose from inside the app and users can explicitly refresh into a waiting build instead of relying on cache luck.
 - A shared `/notifications` page now gives coaches a real event feed plus an attention queue, and regular users can see pending coach proposals in the same shell.
 - Dashboard review cards, the coach workspace, and `/notifications` now share one reusable coach/client role-state design system for status chips, ownership labels, visibility chips, and clearer primary vs destructive action emphasis.
 - The regular-user coach invite code entry is now a dedicated end-of-dashboard section instead of being buried inside the mixed proposal card, which makes coach onboarding easier to spot without changing the underlying invite-link flow.

@@ -8,8 +8,9 @@
  *                 when offline; this SW signals the app to flush on reconnect
  */
 
-const SHELL_CACHE = "fitai-shell-v3";
-const API_CACHE   = "fitai-api-v1";
+const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
+const SHELL_CACHE = `fitai-shell-${SW_VERSION}`;
+const API_CACHE   = `fitai-api-${SW_VERSION}`;
 
 // API response TTL — serve stale after this window (ms)
 const API_TTL_MS = 5 * 60 * 1000;   // 5 minutes
@@ -22,7 +23,6 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(SHELL_CACHE).then((cache) => cache.addAll(PRECACHE))
   );
-  self.skipWaiting();
 });
 
 // ── Activate — prune old caches ────────────────────────────────────────────────
@@ -40,6 +40,12 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("sync", (event) => {
   if (event.tag === "fitai-sync-queue") {
     event.waitUntil(broadcastSyncReplay());
+  }
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
   }
 });
 
