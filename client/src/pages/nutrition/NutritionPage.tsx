@@ -14,7 +14,6 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { Select } from "../../components/ui/Select";
-import { FoodPicker } from "../../components/food/FoodPicker";
 import { useDraggableWeightFab } from "../../hooks/useDraggableWeightFab";
 import { readAppPrefs } from "../../hooks/useDarkMode";
 import { scaleFoodMacro } from "../../lib/foodSearch";
@@ -279,6 +278,37 @@ function getFoodCategoryOptions(t: (k: string) => string) {
   ];
 }
 
+const FOOD_SEARCH_PREFS_KEY = "fitai:nutrition-food-search-prefs";
+
+type FoodSearchPrefs = {
+  defaultBrowseMode: "search" | "category";
+  tagsEnabled: boolean;
+};
+
+function loadFoodSearchPrefs(): FoodSearchPrefs {
+  if (typeof window === "undefined") return { defaultBrowseMode: "search", tagsEnabled: true };
+  try {
+    const raw = window.localStorage.getItem(FOOD_SEARCH_PREFS_KEY);
+    if (!raw) return { defaultBrowseMode: "search", tagsEnabled: true };
+    const parsed = JSON.parse(raw) as Partial<FoodSearchPrefs>;
+    return {
+      defaultBrowseMode: parsed.defaultBrowseMode === "category" ? "category" : "search",
+      tagsEnabled: parsed.tagsEnabled !== false,
+    };
+  } catch {
+    return { defaultBrowseMode: "search", tagsEnabled: true };
+  }
+}
+
+function persistFoodSearchPrefs(next: FoodSearchPrefs) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(FOOD_SEARCH_PREFS_KEY, JSON.stringify(next));
+  } catch {
+    // ignore storage failures
+  }
+}
+
 // Flat list for backward-compat tag display in food rows (TAG_COLORS still used)
 const TAG_FILTERS = [
   { tag: "", label: "All", emoji: "🍽️" },
@@ -471,8 +501,9 @@ function CustomFoodModal({
 // ── Food search (global DB + My Foods tab) ────────────────────────────────────
 function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
   const { t, i18n } = useTranslation();
+  const [prefs, setPrefs] = useState<FoodSearchPrefs>(() => loadFoodSearchPrefs());
   const [tab,       setTab]       = useState<"all" | "mine">("all");
-  const [browseMode, setBrowseMode] = useState<"search" | "category">("search");
+  const [browseMode, setBrowseMode] = useState<"search" | "category">(() => loadFoodSearchPrefs().defaultBrowseMode);
   const [query,     setQuery]     = useState("");
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const [results,   setResults]   = useState<any[]>([]);
@@ -486,6 +517,11 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
   const [myFoodsLoaded, setMyFoodsLoaded] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingFood,     setEditingFood]     = useState<CustomFood | null>(null);
+
+  const updatePrefs = (next: FoodSearchPrefs) => {
+    setPrefs(next);
+    persistFoodSearchPrefs(next);
+  };
 
   useEffect(() => {
     if (tab !== "mine" || myFoodsLoaded) return;
@@ -524,6 +560,12 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
     return () => clearTimeout(t);
   }, [query, activeTags, browseMode, selectedCategory, tab, i18n.language]);
 
+  useEffect(() => {
+    if (!prefs.tagsEnabled && activeTags.length > 0) {
+      setActiveTags([]);
+    }
+  }, [prefs.tagsEnabled, activeTags.length]);
+
   const handleTagClick = (tag: string, e: React.MouseEvent) => {
     // Ignore the 2nd click of a double-click sequence (e.detail === 2);
     // the onDoubleClick handler will do the deselect instead.
@@ -544,13 +586,14 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
 
   const focusFoodSearch = useCallback(() => {
     setBrowseMode("search");
+    updatePrefs({ ...prefs, defaultBrowseMode: "search" });
     setSelectedCategory("");
     setOpen(true);
     window.setTimeout(() => {
       searchSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       searchInputRef.current?.focus();
     }, 0);
-  }, []);
+  }, [prefs]);
 
   const filteredMyFoods = myFoods.filter((f) =>
     !myFoodsQuery.trim() || f.name.toLowerCase().includes(myFoodsQuery.toLowerCase())
@@ -623,6 +666,7 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
                 type="button"
                 onClick={() => {
                   setBrowseMode("category");
+                  updatePrefs({ ...prefs, defaultBrowseMode: "category" });
                   setQuery("");
                   setActiveTags([]);
                   setOpen(false);
@@ -635,9 +679,29 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               >
                 {t("nutrition.categoryBrowseMode")}
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = { ...prefs, tagsEnabled: !prefs.tagsEnabled };
+                  updatePrefs(next);
+                  if (!next.tagsEnabled) setActiveTags([]);
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                  prefs.tagsEnabled
+                    ? "bg-emerald-600 text-white border-emerald-600"
+                    : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:border-emerald-400"
+                }`}
+              >
+                {prefs.tagsEnabled ? t("nutrition.tagFiltersOn") : t("nutrition.tagFiltersOff")}
+              </button>
             </div>
+            <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+              {t("nutrition.foodSearchOptionsHelp")}
+            </p>
           </div>
           {browseMode === "search" ? (
+          <>
+          {prefs.tagsEnabled ? (
           <>
           <div className="space-y-1.5">
             <button
@@ -713,6 +777,12 @@ function FoodSearch({ onSelect }: { onSelect: (item: any) => void }) {
               >
                 {t("nutrition.clearAll")}
               </button>
+            </div>
+          )}
+          </>
+          ) : (
+            <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/40 px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+              {t("nutrition.tagsDisabledHint")}
             </div>
           )}
 
@@ -1030,7 +1100,7 @@ function LogFoodForm({ selectedDate, onSave, onClose, editItem }: {
       {/* Search — only shown when adding new, not when editing */}
       {!editItem && (
         <>
-          <FoodPicker onAdd={fillFromSharedPicker} addLabel={t("nutrition.logFood")} />
+          <FoodSearch onSelect={fillFromSearch} />
           <p className="text-[11px] text-gray-400 dark:text-gray-500 -mt-1">
             💡 {t("nutrition.haveCustomFoods")}
           </p>

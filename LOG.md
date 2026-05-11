@@ -2,6 +2,53 @@
 
 Most recent session first.
 
+## 2026-05-11 - Faster draggable weight FAB hold delay
+
+### Goal
+- Make the draggable mobile weight FAB feel more responsive by shortening the long-press delay before drag mode starts.
+
+### Files modified
+- `client/src/hooks/useDraggableWeightFab.ts` - reduced the shared hold-to-drag delay from `2000ms` to `1200ms` for both Dashboard and Nutrition
+
+### Notes
+- Normal tap behavior is unchanged; this only makes drag mode begin sooner after holding the FAB.
+
+## 2026-05-11 - Dashboard coach-link CTA simplification
+
+### Goal
+- Reduce the duplicated coach-link prompts on the dashboard so users see one clear CTA instead of multiple repeated `Have a coach code?` actions.
+
+### Files modified
+- `client/src/pages/dashboard/Dashboard.tsx` - removed the extra coach-code button from the header action row, removed the duplicate inline helper CTA row, removed the duplicate promo card, and removed the sticky mobile shortcut so only the main green top coach-link CTA remains before the actual connect section
+
+### Notes
+- The dashboard now keeps a single top coach-link CTA and the actual connect section, instead of stacking several different discovery layers on top of each other.
+
+## 2026-05-11 - Nutrition food-search preferences
+
+### Goal
+- Let users choose the Nutrition log-food search style that feels most convenient instead of forcing the full tags/category UI every time.
+
+### Files modified
+- `client/src/pages/nutrition/NutritionPage.tsx` - added persisted food-search preferences for the Nutrition log-food browser, including default search mode (`search` vs `category`) and a user-controlled tags on/off toggle inside the food database UI
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added locale copy for the new food-search options and tags-disabled hint
+
+### Notes
+- The richer Nutrition `FoodSearch` browser is still available, but users can now hide the tag chips and keep a simpler search flow if they prefer.
+- Preferences are stored locally so the chosen log-food search setup persists across sessions on the same device/browser.
+
+## 2026-05-11 - Nutrition log-food browser regression fix
+
+### Goal
+- Restore the optional tag/category/database browsing controls in the main Nutrition add-food flow after the simpler shared picker replaced the richer Nutrition-specific browser there.
+
+### Files modified
+- `client/src/pages/nutrition/NutritionPage.tsx` - switched the add-food modal back to the Nutrition `FoodSearch` browser so users can again choose between search mode and category browse mode, use the tag chips, and access My Foods / database browsing from the expected log-food entry point
+
+### Notes
+- The category and tag system was not deleted; it was still implemented inside `FoodSearch`, but the main log-food form had been switched to `FoodPicker`, which only exposed plain text search.
+- This pass restores the richer Nutrition UX in the place users actually use to log foods.
+
 ## 2026-05-10 - Dashboard build-stamp placement and internal coach-connect visibility
 
 ### Goal

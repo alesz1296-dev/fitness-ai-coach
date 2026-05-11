@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 
 const STORAGE_KEY = "fitai:weight-fab-position";
-const HOLD_TO_DRAG_MS = 2000;
+const HOLD_TO_DRAG_MS = 1200;
 const FAB_SIZE = 56;
 const PANEL_WIDTH = 224;
 const PANEL_HEIGHT = 176;

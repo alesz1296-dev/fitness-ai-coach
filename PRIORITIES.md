@@ -94,6 +94,10 @@ _Last updated: 2026-05-10_
 Foundation work is complete. The roadmap below only shows live dependencies and remaining work.
 
 Recently cleared:
+- Mobile weight-FAB dragging is now more responsive: the shared long-press threshold dropped from `2.0s` to `1.2s` on Dashboard and Nutrition.
+- Dashboard coach linking has been visually simplified back down to one clear top CTA, removing the duplicated header/helper/sticky coach-code prompts that were crowding mobile.
+- Nutrition log-food search preferences are now user-tunable: the main food browser keeps both search/category modes, but tag chips can be hidden and the preferred default lookup mode persists locally.
+- Nutrition food logging now uses the richer category/tag/database browser again, so the optional filter chips and category dropdown are back in the main add-food flow instead of only existing in an unused side path.
 - Dashboard deployment-debug polish is now in place: the frontend `v/build` stamp moved into the dashboard greeting, and admin/developer accounts can now see the same coach-code onboarding UI as regular users for testing.
 - Frontend build/version visibility and service-worker update gating are now in place, so stale Railway/PWA deploys are easier to diagnose from inside the app and users can explicitly refresh into a waiting build instead of relying on cache luck.
 - A shared `/notifications` page now gives coaches a real event feed plus an attention queue, and regular users can see pending coach proposals in the same shell.

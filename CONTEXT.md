@@ -4,6 +4,10 @@ Read this at the start of every session before touching any code.
 
 ## Current frontend focus
 
+- The shared draggable weight FAB now enters drag mode after `1200ms` instead of `2000ms`, so the mobile long-press interaction is less sluggish on Dashboard and Nutrition.
+- The dashboard coach-link onboarding has been simplified again: the repeated header shortcut, inline helper CTA, promo card, and sticky mobile shortcut were removed, leaving one clear top green CTA plus the actual connect section farther down.
+- Nutrition log-food search now has a small user preference layer on top of the restored `FoodSearch` browser: users can keep the richer tag-chip UI on, hide it for a simpler flow, and persist their preferred default browse mode (`search` or `category`) locally.
+- The main Nutrition log-food modal now uses the richer in-page `FoodSearch` browser again instead of the simpler shared `FoodPicker`, because users still need the optional tag chips, the category dropdown flow, and the explicit search-vs-category database switch at the primary logging entry point.
 - Frontend deployment/debug hygiene is now part of the live shell: the authenticated layout shows a visible build/version stamp, Settings exposes the exact app version/build id, and the service worker now raises an explicit update-ready banner instead of silently auto-activating a new cached shell. This matters for Railway/PWA debugging because stale mobile deploys are no longer invisible.
 - That build/version stamp now lives directly under the dashboard greeting instead of floating over the shell, and coach-connect onboarding on the dashboard is now visible to any non-coach account, including admin/developer users who need to test the client linking flow.
 - Coach client pages now reuse the existing weekly-review data as a visible check-in surface and show adherence widgets for calories, protein, workouts, and weight trend so coaches have a compact summary before drilling into the full client history.
