@@ -23,6 +23,9 @@ import { calculateCalorieGoal } from "../lib/calorieCalculator.js";
 import logger from "../lib/logger.js";
 
 const VALID_AGENTS: AgentType[] = ["coach", "nutritionist", "general"];
+// AgentMessage may lag behind generated Prisma types in some environments.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = prisma as any;
 
 // ── Local types ───────────────────────────────────────────────────────────────
 
@@ -318,13 +321,25 @@ export const clearHistory = async (
   try {
     const agentType = req.query.agentType as string | undefined;
     const where: Prisma.ConversationWhereInput = { userId: req.user!.id };
+    const agentMessageWhere: { userId: number; agentType?: string } = {
+      userId: req.user!.id,
+    };
 
     if (agentType && VALID_AGENTS.includes(agentType as AgentType)) {
       where.agentType = agentType;
+      agentMessageWhere.agentType = agentType;
     }
 
-    const { count } = await prisma.conversation.deleteMany({ where });
-    res.json({ message: `Cleared ${count} conversation entries` });
+    const [conversationResult, agentMessageResult] = await prisma.$transaction([
+      prisma.conversation.deleteMany({ where }),
+      db.agentMessage.deleteMany({ where: agentMessageWhere }),
+    ]);
+
+    res.json({
+      message: `Cleared ${conversationResult.count} conversation entries and ${agentMessageResult.count} AI memory messages`,
+      conversationCount: conversationResult.count,
+      memoryCount: agentMessageResult.count,
+    });
   } catch (error) {
     next(error);
   }

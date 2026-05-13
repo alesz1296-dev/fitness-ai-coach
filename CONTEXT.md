@@ -4,6 +4,8 @@ Read this at the start of every session before touching any code.
 
 ## Current frontend focus
 
+- The top-priority hardening pass for offline replay is now in place: queued mutations carry a stable `mutationId` plus `idempotencyKey`, IndexedDB merges duplicate queue inserts by that identity, legacy queued rows normalize forward, and `useOfflineSync` now serializes queue flushes so online + service-worker triggers do not race the same replay.
+- Chat history clearing now has parity with agent memory: `DELETE /api/chat/history` removes both `Conversation` transcript rows and `AgentMessage` working-memory rows in one transaction, so users do not clear visible chat while leaving hidden AI context behind.
 - The shared draggable weight FAB now enters drag mode after `1200ms` instead of `2000ms`, so the mobile long-press interaction is less sluggish on Dashboard and Nutrition.
 - The dashboard coach-link onboarding has been simplified again: the repeated header shortcut, inline helper CTA, promo card, and sticky mobile shortcut were removed, leaving one clear top green CTA plus the actual connect section farther down.
 - Nutrition log-food search now has a small user preference layer on top of the restored `FoodSearch` browser: users can keep the richer tag-chip UI on, hide it for a simpler flow, and persist their preferred default browse mode (`search` or `category`) locally.

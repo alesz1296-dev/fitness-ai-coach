@@ -1,5 +1,5 @@
 import axios, { type AxiosRequestConfig } from "axios";
-import { addPendingOp } from "../lib/idb";
+import { addPendingOp, getPendingCount } from "../lib/idb";
 import { useOfflineStore } from "../store/offlineStore";
 import { useAuthStore } from "../store/authStore";
 
@@ -58,6 +58,16 @@ function createIdempotencyKey(): string {
   return `fitai_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
+function getMutationIdFromConfig(config: AxiosRequestConfig): string {
+  const existingMutationId = getHeaderValue(config.headers, "X-Mutation-Id");
+  if (existingMutationId) return existingMutationId;
+
+  const existingIdempotency = getHeaderValue(config.headers, "X-Idempotency-Key");
+  if (existingIdempotency) return existingIdempotency;
+
+  return createIdempotencyKey();
+}
+
 const api = axios.create({
   baseURL: "/api",
   headers: { "Content-Type": "application/json" },
@@ -86,6 +96,8 @@ api.interceptors.request.use((config) => {
     if (!existing) {
       setHeaderValue(config.headers, "X-Idempotency-Key", createIdempotencyKey());
     }
+    const mutationId = getMutationIdFromConfig(config);
+    setHeaderValue(config.headers, "X-Mutation-Id", mutationId);
   }
   return config;
 });
@@ -168,7 +180,9 @@ api.interceptors.response.use(
         const lang = localStorage.getItem("lang");
         if (lang) headers["X-Language"] = lang;
         const idempotencyKey = getHeaderValue(originalRequest.headers, "X-Idempotency-Key") ?? createIdempotencyKey();
+        const mutationId = getHeaderValue(originalRequest.headers, "X-Mutation-Id") ?? idempotencyKey;
         headers["X-Idempotency-Key"] = idempotencyKey;
+        headers["X-Mutation-Id"] = mutationId;
 
         const rawBody = originalRequest.data;
         let body: unknown;
@@ -180,8 +194,17 @@ api.interceptors.response.use(
           }
         }
 
-        addPendingOp({ method, url, body, headers, idempotencyKey, timestamp: Date.now() })
-          .then(() => useOfflineStore.getState().incrementPendingCount())
+        addPendingOp({
+          method,
+          url,
+          body,
+          headers,
+          mutationId,
+          idempotencyKey,
+          timestamp: Date.now(),
+        })
+          .then(() => getPendingCount())
+          .then((count) => useOfflineStore.getState().setPendingCount(count))
           .catch(() => { /* silently ignore IDB errors */ });
       }
     }

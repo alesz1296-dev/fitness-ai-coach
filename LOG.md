@@ -2,6 +2,22 @@
 
 Most recent session first.
 
+## 2026-05-12 - Offline replay idempotency + chat memory parity
+
+### Goal
+- Harden the two highest-priority system risks: duplicate offline replay writes and chat-history clears that left hidden AI memory behind.
+
+### Files modified
+- `client/src/lib/idb.ts` - upgraded the offline queue schema to persist a stable `mutationId` alongside `idempotencyKey`, added unique IndexedDB indexes for both, merged duplicate queued writes by mutation identity, and normalized legacy queued rows forward
+- `client/src/api/axios.ts` - attached `X-Mutation-Id` to queued mutations, preserved that stable identity when offline queuing, and refreshed offline pending counts from IndexedDB after queue inserts
+- `client/src/hooks/useOfflineSync.ts` - serialized queue flushes so only one replay loop can run at a time and kept syncing state/pending-count updates resilient during replay
+- `src/controllers/chatController.ts` - changed `clearHistory` to delete both `Conversation` rows and `AgentMessage` rows in one transaction, returning explicit transcript + memory counts
+- `LOG.md`, `CONTEXT.md`, `PRIORITIES.md`, `ARCHITECTURE.md` - updated the living docs after the hardening pass
+
+### Notes
+- The backend already had route-level idempotency middleware on the queued write surfaces, so this pass focused on preserving one stable client mutation identity and preventing duplicate local queue entries / parallel flushes from turning into duplicate logs.
+- Clearing chat history now matches user expectation and privacy semantics more closely: the visible conversation and the underlying agent-thread memory are cleared together.
+
 ## 2026-05-11 - Faster draggable weight FAB hold delay
 
 ### Goal

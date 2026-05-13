@@ -1,6 +1,6 @@
 # FitAI Coach - Task Priorities
 
-_Last updated: 2026-05-10_
+_Last updated: 2026-05-12_
 
 > Format: **P1** = must-ship · **P2** = high value · **P3** = deferred/nice-to-have
 
@@ -86,6 +86,8 @@ _Last updated: 2026-05-10_
 | UX-C2 | Coach dashboard command-center layout - `Today / Needs attention / Library / tools` hierarchy, hero attention queue, urgency chips, and timeline-style coach activity feed | Coach UX | P1 | Done |
 | UX-C3 | Coach client workspace hierarchy pass - added a premium `Client snapshot`, explicit consent chips, stronger `This week` check-in treatment, clearer section headers, quick-action tools, and visual separation between create vs review surfaces | Coach UX | P1 | Done |
 | UX-C4 | Notifications center timeline polish - grouped the inbox into `Unread`, `Today`, and `Earlier`; added event badges, softer timeline rows, stronger empty states, and kept the coach attention queue as a distinct side module | Shared UX | P1 | Done |
+| S2 | Chat memory parity - clearing chat history now deletes both `Conversation` transcript rows and `AgentMessage` memory rows in one transaction, keeping privacy semantics aligned with the UI | AI/Privacy | P1 | Done |
+| S3 | Offline replay idempotency - queued writes now keep a stable mutation UUID, merge duplicate offline queue entries locally, normalize legacy queued ops, and serialize queue flushes so replay does not double-log the same mutation | Infra/Data | P1 | Done |
 
 ---
 
@@ -94,6 +96,8 @@ _Last updated: 2026-05-10_
 Foundation work is complete. The roadmap below only shows live dependencies and remaining work.
 
 Recently cleared:
+- System hardening is now materially tighter: clearing chat history deletes both the visible transcript and the underlying `AgentMessage` memory rows, so "clear history" actually means the AI thread memory is gone too.
+- Offline replay is now more replay-safe end to end: queued writes persist a stable mutation UUID plus the existing idempotency key, duplicate queue inserts merge locally instead of stacking, older queued ops normalize forward, and queue flushes are serialized so concurrent online/SW triggers do not replay the same mutation twice.
 - Mobile weight-FAB dragging is now more responsive: the shared long-press threshold dropped from `2.0s` to `1.2s` on Dashboard and Nutrition.
 - Dashboard coach linking has been visually simplified back down to one clear top CTA, removing the duplicated header/helper/sticky coach-code prompts that were crowding mobile.
 - Nutrition log-food search preferences are now user-tunable: the main food browser keeps both search/category modes, but tag chips can be hidden and the preferred default lookup mode persists locally.
@@ -149,8 +153,6 @@ Implementation order for this lane:
 
 | # | Task | Category | Pri | Status |
 |---|------|----------|-----|--------|
-| S2 | Chat memory parity - clear `AgentMessage` alongside `Conversation`, or rename the UX so "clear history" only means visible transcript | AI/Privacy | P1 | Pending |
-| S3 | Offline replay idempotency - add mutation UUIDs and server-side dedupe for queued writes to prevent duplicate logs on replay | Infra/Data | P1 | Pending |
 | S4 | Tool-call safety - validate tool arguments before dispatch and append tool results deterministically instead of from parallel callbacks | AI/Tools | P2 | Pending |
 | S5 | Food search scalability - move toward DB-first indexed lookup with cached translations instead of request-path AI + in-memory filtering | Nutrition/Infra | P2 | Pending |
 | S6 | Critical `any` cleanup - remove `prisma as any` bridges from search/context paths once generated client alignment is enforced | Code Quality | P2 | Pending |
@@ -255,7 +257,7 @@ Completed prerequisites already done: `#124`, `#114`, `#115`, `#126`.
 
 | Sprint | Items | Goal |
 |--------|-------|------|
-| 1 | S2, S3, S4, S5, S6 | Harden sync, AI safety, and search before more surface work |
+| 1 | S4, S5, S6 | Finish the remaining AI-safety, search, and type-safety hardening before more surface work |
 | 2 | #108, #109, #110, #111, #113, #112 | Finish goals overhaul now that shared goal UI is already complete |
 | 3 | #116, #117, #122, #123 | Ship specialist AI agents and split the coach UI into clear tabs |
 | 4 | #118, #125, #119, #120, #121 | Finish proactive notifications end to end |
@@ -267,7 +269,7 @@ Completed prerequisites already done: `#124`, `#114`, `#115`, `#126`.
 
 ## What to do next
 
-- Start with the remaining system hardening: chat-memory parity, offline replay idempotency, tool-call validation, search scalability, and removing critical `any` bridges.
+- Start with the remaining system hardening: tool-call validation, search scalability, and removing critical `any` bridges.
 - In parallel, continue the coach/client visual UX overhaul with `UX-C5` and `UX-C4` now that `UX-C1`, `UX-C2`, and `UX-C3` are live across the main coach/client surfaces.
 - Start with Goals Overhaul: `#108` plus the chart/validator/panel/wizard items now that their shared UI foundation is done.
 - Then move to AI agents and the AI Coach split, since those depend on the agent/tool work that is already complete.
