@@ -147,6 +147,7 @@ export const authApi = {
   logout: (allDevices = false) =>
     api.post("/auth/logout", {}, { params: allDevices ? { all: "true" } : {} }),
   me: () => api.get<{ user: User }>("/auth/me"),
+  googleStartUrl: () => "/api/auth/google/start",
 };
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────

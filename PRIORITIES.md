@@ -11,6 +11,7 @@ _Last updated: 2026-05-12_
 | # | Task | Category | Pri | Status |
 |---|------|----------|-----|--------|
 | - | Shared notification center page for coach/user feeds and attention drill-downs | Platform/Coach Mode | P1 | Done |
+| - | Google OAuth alternative sign-in - backend-owned redirect flow, `AuthProvider` federation model, and localized login/register Google entry points | Auth | P1 | Done |
 | - | Full i18n Spanish translation - all pages, hooks, day labels (Intl), chat starters | i18n | P1 | Done |
 | - | Dashboard: macro labels, consumed, chart legend, day-rest, quick actions all dynamic | i18n | P1 | Done |
 | - | WeeklyPlanWidget: Intl day abbreviations, edit schedule, sync to calendar | i18n | P1 | Done |
@@ -96,6 +97,7 @@ _Last updated: 2026-05-12_
 Foundation work is complete. The roadmap below only shows live dependencies and remaining work.
 
 Recently cleared:
+- Google Sign-In now exists as an alternative auth path using backend-owned OAuth redirects, federated `AuthProvider` links, verified-email auto-linking, and the same existing refresh-cookie + `/auth/refresh` session bootstrap flow.
 - System hardening is now materially tighter: clearing chat history deletes both the visible transcript and the underlying `AgentMessage` memory rows, so "clear history" actually means the AI thread memory is gone too.
 - Offline replay is now more replay-safe end to end: queued writes persist a stable mutation UUID plus the existing idempotency key, duplicate queue inserts merge locally instead of stacking, older queued ops normalize forward, and queue flushes are serialized so concurrent online/SW triggers do not replay the same mutation twice.
 - Mobile weight-FAB dragging is now more responsive: the shared long-press threshold dropped from `2.0s` to `1.2s` on Dashboard and Nutrition.

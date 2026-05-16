@@ -3,6 +3,7 @@ import {
   register, login, refresh, logout, getMe,
   forgotPassword, resetPassword,
   sendVerification, verifyEmail,
+  startGoogleAuth, googleCallback,
 } from "../controllers/authController.js";
 import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
@@ -19,6 +20,8 @@ const router = Router();
 // ── Public (rate-limited) ────────────────────────────────────────────────────
 router.post("/register",         authLimiter, validate(registerSchema),       register);
 router.post("/login",            authLimiter, validate(loginSchema),           login);
+router.get("/google/start",      authLimiter,                                  startGoogleAuth);
+router.get("/google/callback",   authLimiter,                                  googleCallback);
 router.post("/refresh",          authLimiter,                                  refresh);
 router.post("/forgot-password",  authLimiter, validate(forgotPasswordSchema),  forgotPassword);
 router.post("/reset-password",   authLimiter, validate(resetPasswordSchema),   resetPassword);

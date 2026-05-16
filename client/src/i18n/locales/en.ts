@@ -245,6 +245,7 @@ export interface Translation {
     createAccount: string; createAccountDesc: string; welcomeBack: string; signInDesc: string;
     firstName: string; lastName: string; username: string; rememberMe: string; passwordRequirements: string;
     serverUnavailable: string; invalidCredentials: string; tooManyAttempts: string; sessionExpired: string;
+    continueWithGoogle: string; orContinueWithEmail: string; googleCompleting: string; googleSignInFailed: string; googleEmailUnverified: string; googleAccountConflict: string; googleAccessDenied: string;
     emailRequired: string; validEmail: string; usernameRequired: string; usernameLength: string;
     usernameChars: string; passwordRequired: string; passwordMinLength: string; confirmPasswordRequired: string;
     passwordsDoNotMatch: string;
@@ -1177,6 +1178,13 @@ const en: Translation = {
     invalidCredentials: "Incorrect email or password.",
     tooManyAttempts: "Too many attempts. Please wait a moment and try again.",
     sessionExpired: "Your session has expired. Please sign in again.",
+    continueWithGoogle: "Continue with Google",
+    orContinueWithEmail: "Or continue with email",
+    googleCompleting: "Completing your Google sign-in...",
+    googleSignInFailed: "Google sign-in failed. Please try again.",
+    googleEmailUnverified: "Your Google email must be verified before you can sign in.",
+    googleAccountConflict: "This Google account is already linked to another FitAI account.",
+    googleAccessDenied: "Google sign-in was canceled before it finished.",
     emailRequired: "Email is required",
     validEmail: "Enter a valid email address",
     usernameRequired: "Username is required",

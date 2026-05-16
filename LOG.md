@@ -2,6 +2,26 @@
 
 Most recent session first.
 
+## 2026-05-16 - Google OAuth alternative sign-in
+
+### Goal
+- Add Google Sign-In as an alternative auth path without replacing the current email/password system or the existing access-token + refresh-cookie session model.
+
+### Files modified
+- `prisma/schema.prisma` and `prisma/migrations/20260516000000_add_auth_providers/migration.sql` - added `AuthProvider` so external identities can be linked to the primary `User` account model
+- `src/config/env.ts` - added `GOOGLE_OAUTH_ENABLED`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI`
+- `src/controllers/authController.ts` - added Google OAuth start/callback flow, verified-email account linking/creation, unique username generation for Google-first users, and reuse of the existing refresh-cookie issuance path
+- `src/routes/auth.ts` - exposed `GET /auth/google/start` and `GET /auth/google/callback`
+- `client/src/api/index.ts` - added a frontend helper to start the backend-owned Google redirect flow
+- `client/src/pages/auth/Login.tsx` and `client/src/pages/auth/Register.tsx` - added `Continue with Google` buttons plus callback success/failure UX on the login surface
+- `client/src/i18n/locales/en.ts`, `client/src/i18n/locales/es.ts`, `client/src/i18n/locales/uk.ts` - added localized Google auth UI and error copy
+- `LOG.md`, `CONTEXT.md`, `PRIORITIES.md`, `ARCHITECTURE.md` - updated the living docs after the auth pass
+
+### Notes
+- Google OAuth is backend-owned and redirect-based, not a frontend token-post flow.
+- Successful Google login still ends in the same app session model: access token in memory, refresh token in an `httpOnly` cookie, and `/auth/refresh` / `/auth/me` remain the frontend hydration path.
+- Verified Google emails auto-link to an existing same-email local account instead of creating duplicates.
+
 ## 2026-05-12 - Offline replay idempotency + chat memory parity
 
 ### Goal

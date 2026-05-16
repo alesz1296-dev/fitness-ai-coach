@@ -25,6 +25,42 @@ const REFRESH_COOKIE_BASE = {
   sameSite: "lax" as const,
   path: REFRESH_COOKIE_PATH,
 };
+const GOOGLE_PROVIDER = "google";
+const GOOGLE_STATE_TTL_SEC = 10 * 60;
+const GOOGLE_CLIENT_BASE_URL = env.CLIENT_URL ?? "http://localhost:5173";
+const GOOGLE_CALLBACK_FAILURES = new Set([
+  "access_denied",
+  "google_not_enabled",
+  "google_missing_code",
+  "google_state_invalid",
+  "google_exchange_failed",
+  "google_profile_failed",
+  "google_email_unverified",
+  "google_account_conflict",
+]);
+// Prisma client generation may lag newly added models in some environments.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = prisma as any;
+
+interface GoogleTokenResponse {
+  access_token?: string;
+  expires_in?: number;
+  id_token?: string;
+  scope?: string;
+  token_type?: string;
+  error?: string;
+  error_description?: string;
+}
+
+interface GoogleUserInfo {
+  sub?: string;
+  email?: string;
+  email_verified?: boolean;
+  given_name?: string;
+  family_name?: string;
+  name?: string;
+  picture?: string;
+}
 
 function parsePermissionFlags(value: unknown): string[] {
   if (Array.isArray(value)) return value as string[];
@@ -46,6 +82,183 @@ function normalizeAuthUser<T extends { permissionFlags?: unknown; coachVisibilit
     permissionFlags: parsePermissionFlags(user.permissionFlags),
     coachVisibility: parseCoachVisibility(user.coachVisibility),
   };
+}
+
+function isGoogleOAuthConfigured(): boolean {
+  return Boolean(
+    env.GOOGLE_OAUTH_ENABLED &&
+    env.GOOGLE_CLIENT_ID &&
+    env.GOOGLE_CLIENT_SECRET &&
+    env.GOOGLE_REDIRECT_URI,
+  );
+}
+
+function buildClientRedirect(pathAndQuery: string): string {
+  return new URL(pathAndQuery, GOOGLE_CLIENT_BASE_URL).toString();
+}
+
+function redirectToGoogleAuthResult(
+  res: Response,
+  status: "success" | "error",
+  reason?: string,
+): void {
+  const params = new URLSearchParams({ googleAuth: status });
+  if (reason) params.set("reason", reason);
+  res.redirect(buildClientRedirect(`/login?${params.toString()}`));
+}
+
+function buildGoogleAuthorizeUrl(state: string): string {
+  const params = new URLSearchParams({
+    client_id: env.GOOGLE_CLIENT_ID ?? "",
+    redirect_uri: env.GOOGLE_REDIRECT_URI ?? "",
+    response_type: "code",
+    scope: "openid email profile",
+    state,
+    prompt: "select_account",
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+async function exchangeGoogleCode(code: string): Promise<GoogleTokenResponse> {
+  const body = new URLSearchParams({
+    code,
+    client_id: env.GOOGLE_CLIENT_ID ?? "",
+    client_secret: env.GOOGLE_CLIENT_SECRET ?? "",
+    redirect_uri: env.GOOGLE_REDIRECT_URI ?? "",
+    grant_type: "authorization_code",
+  });
+
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  const data = (await response.json()) as GoogleTokenResponse;
+  if (!response.ok || !data.access_token) {
+    throw new Error(data.error_description || data.error || "Google token exchange failed");
+  }
+  return data;
+}
+
+async function fetchGoogleUserInfo(accessToken: string): Promise<GoogleUserInfo> {
+  const response = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const data = (await response.json()) as GoogleUserInfo & { error?: string };
+  if (!response.ok || !data.sub || !data.email) {
+    throw new Error(data.error || "Google userinfo fetch failed");
+  }
+  return data;
+}
+
+function generateRandomPassword(): string {
+  return `${crypto.randomBytes(24).toString("hex")}Aa1!`;
+}
+
+async function buildUniqueUsername(seed: string): Promise<string> {
+  const normalizedBase = seed
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "") || "fitai_user";
+  const base = normalizedBase.slice(0, 24);
+
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const suffix = attempt === 0 ? "" : `_${attempt + 1}`;
+    const candidate = `${base.slice(0, 30 - suffix.length)}${suffix}`;
+    const existing = await prisma.user.findUnique({ where: { username: candidate } });
+    if (!existing) return candidate;
+  }
+
+  return `fitai_${crypto.randomBytes(4).toString("hex")}`;
+}
+
+async function resolveUserFromGoogleProfile(profile: GoogleUserInfo) {
+  const provider = await db.authProvider.findFirst({
+    where: {
+      provider: GOOGLE_PROVIDER,
+      providerUserId: profile.sub,
+    },
+  });
+
+  if (provider) {
+    const existingUser = await prisma.user.findUnique({ where: { id: provider.userId } });
+    if (!existingUser) throw new Error("Linked Google account has no user");
+    if (!existingUser.emailVerified) {
+      await prisma.user.update({
+        where: { id: existingUser.id },
+        data: { emailVerified: true },
+      });
+    }
+    return existingUser;
+  }
+
+  const email = profile.email?.trim().toLowerCase();
+  if (!email || !profile.email_verified) {
+    const error = new Error("Google email is not verified");
+    error.name = "google_email_unverified";
+    throw error;
+  }
+
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+  if (existingUser) {
+    const duplicateProvider = await db.authProvider.findFirst({
+      where: {
+        provider: GOOGLE_PROVIDER,
+        email,
+      },
+    });
+    if (duplicateProvider && duplicateProvider.userId !== existingUser.id) {
+      const error = new Error("Google account is already linked elsewhere");
+      error.name = "google_account_conflict";
+      throw error;
+    }
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: existingUser.id },
+        data: { emailVerified: true },
+      }),
+      db.authProvider.create({
+        data: {
+          userId: existingUser.id,
+          provider: GOOGLE_PROVIDER,
+          providerUserId: profile.sub,
+          email,
+          emailVerified: true,
+        },
+      }),
+    ]);
+    return prisma.user.findUniqueOrThrow({ where: { id: existingUser.id } });
+  }
+
+  const usernameSeed = profile.given_name || profile.name || email.split("@")[0] || "fitai_user";
+  const username = await buildUniqueUsername(usernameSeed);
+  const hashedPassword = await bcryptjs.hash(generateRandomPassword(), 12);
+
+  const createdUser = await db.user.create({
+    data: {
+      email,
+      username,
+      password: hashedPassword,
+      firstName: profile.given_name || null,
+      lastName: profile.family_name || null,
+      emailVerified: true,
+    },
+  });
+
+  await db.authProvider.create({
+    data: {
+      userId: createdUser.id,
+      provider: GOOGLE_PROVIDER,
+      providerUserId: profile.sub,
+      email,
+      emailVerified: true,
+    },
+  });
+
+  return createdUser;
 }
 
 // ── Token helpers ──────────────────────────────────────────────────────────────
@@ -201,6 +414,94 @@ export const login = async (
 };
 
 // ── Refresh ────────────────────────────────────────────────────────────────────
+
+export const startGoogleAuth = async (
+  _req: Request, res: Response, next: NextFunction
+): Promise<void> => {
+  try {
+    if (!isGoogleOAuthConfigured()) {
+      redirectToGoogleAuthResult(res, "error", "google_not_enabled");
+      return;
+    }
+
+    const state = crypto.randomBytes(24).toString("hex");
+    await storeToken(`google-oauth:${state}`, "1", GOOGLE_STATE_TTL_SEC);
+    res.redirect(buildGoogleAuthorizeUrl(state));
+  } catch (error) { next(error); }
+};
+
+export const googleCallback = async (
+  req: Request, res: Response, next: NextFunction
+): Promise<void> => {
+  try {
+    if (!isGoogleOAuthConfigured()) {
+      redirectToGoogleAuthResult(res, "error", "google_not_enabled");
+      return;
+    }
+
+    const oauthError = typeof req.query.error === "string" ? req.query.error : null;
+    if (oauthError) {
+      redirectToGoogleAuthResult(
+        res,
+        "error",
+        GOOGLE_CALLBACK_FAILURES.has(oauthError) ? oauthError : "access_denied",
+      );
+      return;
+    }
+
+    const code = typeof req.query.code === "string" ? req.query.code : "";
+    const state = typeof req.query.state === "string" ? req.query.state : "";
+    if (!code) {
+      redirectToGoogleAuthResult(res, "error", "google_missing_code");
+      return;
+    }
+
+    const validState = state ? await consumeToken(`google-oauth:${state}`) : null;
+    if (!validState) {
+      redirectToGoogleAuthResult(res, "error", "google_state_invalid");
+      return;
+    }
+
+    let tokenData: GoogleTokenResponse;
+    try {
+      tokenData = await exchangeGoogleCode(code);
+    } catch (error) {
+      logger.warn(`Google token exchange failed: ${(error as Error).message}`);
+      redirectToGoogleAuthResult(res, "error", "google_exchange_failed");
+      return;
+    }
+
+    let profile: GoogleUserInfo;
+    try {
+      profile = await fetchGoogleUserInfo(tokenData.access_token!);
+    } catch (error) {
+      logger.warn(`Google userinfo fetch failed: ${(error as Error).message}`);
+      redirectToGoogleAuthResult(res, "error", "google_profile_failed");
+      return;
+    }
+
+    let user;
+    try {
+      user = await resolveUserFromGoogleProfile(profile);
+    } catch (error) {
+      const reason =
+        (error as Error).name === "google_account_conflict"
+          ? "google_account_conflict"
+          : (error as Error).name === "google_email_unverified"
+            ? "google_email_unverified"
+            : "google_profile_failed";
+      logger.warn(`Google account resolution failed: ${(error as Error).message}`);
+      redirectToGoogleAuthResult(res, "error", reason);
+      return;
+    }
+
+    const refreshToken = signRefreshToken(user.id, user.email, true);
+    setRefreshCookie(res, refreshToken, true);
+
+    logger.info(`Google login successful for user ${user.id}`);
+    res.redirect(buildClientRedirect("/login?googleAuth=success"));
+  } catch (error) { next(error); }
+};
 
 export const refresh = async (
   req: Request, res: Response, next: NextFunction
